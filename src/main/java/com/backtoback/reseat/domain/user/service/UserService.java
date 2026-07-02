@@ -1,6 +1,7 @@
 package com.backtoback.reseat.domain.user.service;
 
 import com.backtoback.reseat.domain.user.dto.request.UserSignUpRequest;
+import com.backtoback.reseat.domain.user.dto.response.UserSignUpResponse;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.exception.DuplicateEmailException;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
@@ -18,7 +19,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder; //BCryptPasswordEncoder가 주입
 
     @Transactional
-    public Long signUp(UserSignUpRequest request){
+    public UserSignUpResponse signUp(UserSignUpRequest request){
        //1. 이메일 중복 검증
         if(userRepository.existsByEmail(request.getEmail())){
             throw new DuplicateEmailException("이미 존재하는 이메일입니다: "+ request.getEmail());
@@ -38,7 +39,7 @@ public class UserService {
 
         //4.데이터베이스 저장 및 고유 식별자 반환
          User savedUser = userRepository.save(user);
-         return savedUser.getId();
+         return UserSignUpResponse.from(savedUser);
 
 
     }

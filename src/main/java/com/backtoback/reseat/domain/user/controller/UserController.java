@@ -3,6 +3,7 @@
 package com.backtoback.reseat.domain.user.controller;
 
 import com.backtoback.reseat.domain.user.dto.request.UserSignUpRequest;
+import com.backtoback.reseat.domain.user.dto.response.UserSignUpResponse;
 import com.backtoback.reseat.domain.user.service.UserService;
 import com.backtoback.reseat.global.common.ApiResponse;
 import jakarta.validation.Valid;
@@ -22,14 +23,14 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping("/signup")
-    public ResponseEntity<ApiResponse<Long>> signup(@Valid @RequestBody UserSignUpRequest request){
+    public ResponseEntity<ApiResponse<UserSignUpResponse>> signup(@Valid @RequestBody UserSignUpRequest request){
         //비즈니스 로직 수행 후 가입된 유저의 PK ID 확보
-        Long userId = userService.signUp(request);
+        UserSignUpResponse response = userService.signUp(request);
 
         //공통 응답 포맷인 ApiResponse.success에 ID를 담아 반환
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(ApiResponse.success(userId));
+                .body(ApiResponse.success("회원가입 완료", response));
 
     }
 }
