@@ -2,8 +2,8 @@
 
 package com.backtoback.reseat.domain.user.dto.response;
 
-import com.backtoback.reseat.domain.user.entity.Role;
 import com.backtoback.reseat.domain.user.entity.User;
+import com.backtoback.reseat.domain.user.entity.UserRole;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -17,7 +17,7 @@ public class UserSignUpResponse {
     private final Long userId;
     private final String email;
     private final String nickname;
-    private final Role role;
+    private final UserRole role;
     private final UserStatus status;
 
     //엔티티를 받아 응답 DTO로 변환해 주는 정적 팩토리 메서드
