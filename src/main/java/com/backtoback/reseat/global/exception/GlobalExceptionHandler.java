@@ -1,6 +1,6 @@
 //전역 예외
 
-package com.backtoback.reseat.domain.global.exception;
+package com.backtoback.reseat.global.exception;
 
 public class GlobalExceptionHandler {
 }

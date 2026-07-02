@@ -30,21 +30,21 @@ public class User {
     @Column(nullable = false, length = 255)
     private String email;
 
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false, length = 50)
     private String password;
 
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false, length = 50)
     private String name;
 
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false, length = 50)
     private String nickname;
 
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false, length = 20)
     private String phone;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private Role role;
+    private UserRole role;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -53,7 +53,7 @@ public class User {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", nullable = false, updatable = false)
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
 
@@ -63,7 +63,7 @@ public class User {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
         if(this.role == null){
-            this.role = Role.USER;
+            this.role = UserRole.USER;
         }
         if(this.status == null){
             this.status = UserStatus.ACTIVE;
@@ -78,13 +78,13 @@ public class User {
 
     @Builder
     public User(String email, String password, String name, String nickname, String phone,
-                Role role, UserStatus status) {
+                UserRole role, UserStatus status) {
         this.email = email;
         this.password = password;
         this.name = name;
         this.nickname = nickname;
         this.phone = phone;
-        this.role = role != null ? role : Role.USER;
+        this.role = role != null ? role : UserRole.USER;
         this.status = status != null ? status : UserStatus.ACTIVE;
     }
 }

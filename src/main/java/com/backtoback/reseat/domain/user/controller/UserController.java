@@ -2,5 +2,34 @@
 
 package com.backtoback.reseat.domain.user.controller;
 
+import com.backtoback.reseat.domain.user.dto.request.UserSignUpRequest;
+import com.backtoback.reseat.domain.user.service.UserService;
+import com.backtoback.reseat.global.common.ApiResponse;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/v1/auth")
+@RequiredArgsConstructor
 public class UserController {
+
+    private final UserService userService;
+
+    @PostMapping("/signup")
+    public ResponseEntity<ApiResponse<Long>> signup(@Valid @RequestBody UserSignUpRequest request){
+        //비즈니스 로직 수행 후 가입된 유저의 PK ID 확보
+        Long userId = userService.signUp(request);
+
+        //공통 응답 포맷인 ApiResponse.success에 ID를 담아 반환
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiResponse.success(userId));
+
+    }
 }
