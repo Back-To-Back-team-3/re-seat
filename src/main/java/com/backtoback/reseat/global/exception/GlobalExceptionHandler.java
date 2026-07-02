@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class GlobalExceptionHandler {
 
     //이메일 / 닉네임/ 전화번호 중복 예외처리 - 409Error
+    @ExceptionHandler(DuplicateEmailException.class)
     public ResponseEntity<ApiResponse<Void>> handleDuplicateEmailException(DuplicateEmailException e){
         log.warn("DuplicateEmailException 발생: {}", e.getMessage());
 
