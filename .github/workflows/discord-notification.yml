@@ -1,0 +1,290 @@
+name: Discord Notification
+
+on:
+  pull_request:
+    types: [opened, reopened, closed]
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  notify-pr:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    env:
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      DISCORD_MENTION_BEPO03: ${{ vars.DISCORD_MENTION_BEPO03 }}
+      DISCORD_MENTION_LFCKJ: ${{ vars.DISCORD_MENTION_LFCKJ }}
+      DISCORD_MENTION_R1NN_DEV: ${{ vars.DISCORD_MENTION_R1NN_DEV }}
+      DISCORD_MENTION_RMI9394: ${{ vars.DISCORD_MENTION_RMI9394 }}
+
+    steps:
+      - name: Send PR notification
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${DISCORD_WEBHOOK_URL:-}" ]; then
+            echo "DISCORD_WEBHOOK_URL is not configured."
+            exit 1
+          fi
+
+          action="${{ github.event.action }}"
+          merged="$(jq -r '.pull_request.merged // false' "$GITHUB_EVENT_PATH")"
+
+          pr_number="$(jq -r '.pull_request.number' "$GITHUB_EVENT_PATH")"
+          pr_title="$(jq -r '.pull_request.title' "$GITHUB_EVENT_PATH")"
+          author="$(jq -r '.pull_request.user.login' "$GITHUB_EVENT_PATH")"
+          base="$(jq -r '.pull_request.base.ref' "$GITHUB_EVENT_PATH")"
+          head="$(jq -r '.pull_request.head.ref' "$GITHUB_EVENT_PATH")"
+          pr_url="$(jq -r '.pull_request.html_url' "$GITHUB_EVENT_PATH")"
+          additions="$(jq -r '.pull_request.additions // 0' "$GITHUB_EVENT_PATH")"
+          deletions="$(jq -r '.pull_request.deletions // 0' "$GITHUB_EVENT_PATH")"
+          body="$(jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH")"
+
+          changed_lines=$((additions + deletions))
+
+          if [ "$changed_lines" -ge 401 ]; then
+            code_size="🦑 Large"
+          elif [ "$changed_lines" -ge 101 ]; then
+            code_size="🐂 Medium"
+          elif [ "$changed_lines" -ge 21 ]; then
+            code_size="🐇 Small"
+          else
+            code_size="🦔 Tiny"
+          fi
+
+          related_issue="$(
+            printf "%s\n" "$body" \
+              | grep -Eio '(close[sd]?|fix(e[sd])?|resolve[sd]?) #[0-9]+' \
+              | grep -Eo '#[0-9]+' \
+              | head -n 1 || true
+          )"
+
+          if [ -z "$related_issue" ]; then
+            related_issue="-"
+          fi
+
+          extract_section() {
+            local heading="$1"
+            BODY_TEXT="$body" SECTION_HEADING="$heading" python3 -c '
+          import os
+
+          body = os.environ.get("BODY_TEXT", "")
+          heading = os.environ.get("SECTION_HEADING", "")
+          lines = body.splitlines()
+          capturing = False
+          section = []
+
+          for line in lines:
+              stripped = line.strip()
+              heading_text = stripped.lstrip("#").strip()
+              if stripped.startswith("##") and heading_text.endswith(heading):
+                  capturing = True
+                  continue
+              if capturing and stripped.startswith("##"):
+                  break
+              if capturing:
+                  section.append(line)
+
+          text = "\n".join(section).strip()
+          print(text[:800])
+          '
+          }
+
+          overview="$(extract_section "개요")"
+          reviewer_note="$(extract_section "리뷰어에게")"
+
+          if [ -z "$overview" ]; then
+            overview="-"
+          fi
+
+          if [ -z "$reviewer_note" ]; then
+            reviewer_note="-"
+          fi
+
+          mentions=()
+
+          add_reviewer_mention() {
+            local github_user="$1"
+            local discord_mention="$2"
+
+            if [ -n "$discord_mention" ] && [ "$author" != "$github_user" ]; then
+              if [[ "$discord_mention" != \<@* ]]; then
+                discord_mention="<@$discord_mention>"
+              fi
+
+              mentions+=("$discord_mention")
+            fi
+          }
+
+          add_reviewer_mention "bepo03" "$DISCORD_MENTION_BEPO03"
+          add_reviewer_mention "LFCKJ" "$DISCORD_MENTION_LFCKJ"
+          add_reviewer_mention "r1nn-dev" "$DISCORD_MENTION_R1NN_DEV"
+          add_reviewer_mention "rmi9394" "$DISCORD_MENTION_RMI9394"
+
+          reviewer_mentions="$(IFS=' '; echo "${mentions[*]}")"
+
+          if [ "$action" = "closed" ] && [ "$merged" = "true" ]; then
+            jq -n \
+              --arg title "🟣 PR Merged" \
+              --arg description "#${pr_number} ${pr_title}" \
+              --arg url "$pr_url" \
+              --arg author "$author" \
+              --arg base "$base" \
+              --arg issue "$related_issue" \
+              --arg code_size "$code_size" \
+              '{
+                embeds: [{
+                  title: $title,
+                  description: $description,
+                  url: $url,
+                  color: 10181046,
+                  fields: [
+                    { name: "작성자", value: $author, inline: true },
+                    { name: "대상 브랜치", value: $base, inline: true },
+                    { name: "관련 이슈", value: $issue, inline: true },
+                    { name: "코드 변경량", value: $code_size, inline: true }
+                  ]
+                }]
+              }' \
+              | curl -sS -H "Content-Type: application/json" -d @- "$DISCORD_WEBHOOK_URL"
+
+            exit 0
+          fi
+
+          if [ "$action" = "opened" ] || [ "$action" = "reopened" ]; then
+            if [ -n "$reviewer_mentions" ]; then
+              content="$reviewer_mentions 리뷰 부탁드립니다."
+            else
+              content="리뷰 부탁드립니다."
+            fi
+
+            jq -n \
+              --arg content "$content" \
+              --arg title "🟢 PR Opened" \
+              --arg description "#${pr_number} ${pr_title}" \
+              --arg url "$pr_url" \
+              --arg author "$author" \
+              --arg branch "${head} → ${base}" \
+              --arg changed "+${additions} / -${deletions}" \
+              --arg code_size "$code_size" \
+              --arg issue "$related_issue" \
+              --arg overview "$overview" \
+              --arg reviewer_note "$reviewer_note" \
+              '{
+                content: $content,
+                allowed_mentions: { parse: ["users"] },
+                embeds: [{
+                  title: $title,
+                  description: $description,
+                  url: $url,
+                  color: 5763719,
+                  fields: [
+                    { name: "작성자", value: $author, inline: true },
+                    { name: "브랜치", value: $branch, inline: true },
+                    { name: "변경량", value: $changed, inline: true },
+                    { name: "코드 변경량", value: $code_size, inline: true },
+                    { name: "관련 이슈", value: $issue, inline: true },
+                    { name: "개요", value: $overview, inline: false },
+                    { name: "리뷰어에게", value: $reviewer_note, inline: false }
+                  ]
+                }]
+              }' \
+              | curl -sS -H "Content-Type: application/json" -d @- "$DISCORD_WEBHOOK_URL"
+          fi
+
+  notify-ci-failed:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+
+    env:
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      DISCORD_MENTION_BEPO03: ${{ vars.DISCORD_MENTION_BEPO03 }}
+      DISCORD_MENTION_LFCKJ: ${{ vars.DISCORD_MENTION_LFCKJ }}
+      DISCORD_MENTION_R1NN_DEV: ${{ vars.DISCORD_MENTION_R1NN_DEV }}
+      DISCORD_MENTION_RMI9394: ${{ vars.DISCORD_MENTION_RMI9394 }}
+
+    steps:
+      - name: Send CI failed notification
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${DISCORD_WEBHOOK_URL:-}" ]; then
+            echo "DISCORD_WEBHOOK_URL is not configured."
+            exit 1
+          fi
+
+          pr_number="$(jq -r '.workflow_run.pull_requests[0].number // empty' "$GITHUB_EVENT_PATH")"
+          head_branch="$(jq -r '.workflow_run.head_branch // "-"' "$GITHUB_EVENT_PATH")"
+          workflow_name="$(jq -r '.workflow_run.name' "$GITHUB_EVENT_PATH")"
+          run_url="$(jq -r '.workflow_run.html_url' "$GITHUB_EVENT_PATH")"
+          author="$(jq -r '.workflow_run.actor.login // "-"' "$GITHUB_EVENT_PATH")"
+
+          if [ -z "$pr_number" ]; then
+            exit 0
+          fi
+
+          pr_url="https://github.com/${{ github.repository }}/pull/${pr_number}"
+
+          author_mention=""
+
+          case "$author" in
+            bepo03)
+              author_mention="$DISCORD_MENTION_BEPO03"
+              ;;
+            LFCKJ)
+              author_mention="$DISCORD_MENTION_LFCKJ"
+              ;;
+            r1nn-dev)
+              author_mention="$DISCORD_MENTION_R1NN_DEV"
+              ;;
+            rmi9394)
+              author_mention="$DISCORD_MENTION_RMI9394"
+              ;;
+          esac
+
+          if [ -n "$author_mention" ]; then
+            if [[ "$author_mention" != \<@* ]]; then
+              author_mention="<@$author_mention>"
+            fi
+
+            content="$author_mention CI 실패 확인 부탁드립니다."
+          else
+            content="CI 실패 확인 부탁드립니다."
+          fi
+
+          jq -n \
+            --arg content "$content" \
+            --arg title "🔴 CI Failed" \
+            --arg description "#${pr_number} CI check failed" \
+            --arg url "$run_url" \
+            --arg author "$author" \
+            --arg branch "$head_branch" \
+            --arg workflow "$workflow_name" \
+            --arg pr_url "${pr_url:-$run_url}" \
+            '{
+              content: $content,
+              allowed_mentions: { parse: ["users"] },
+              embeds: [{
+                title: $title,
+                description: $description,
+                url: $url,
+                color: 15548997,
+                fields: [
+                  { name: "작성자", value: $author, inline: true },
+                  { name: "브랜치", value: $branch, inline: true },
+                  { name: "실패한 check", value: $workflow, inline: true },
+                  { name: "PR", value: $pr_url, inline: false }
+                ]
+              }]
+            }' \
+            | curl -sS -H "Content-Type: application/json" -d @- "$DISCORD_WEBHOOK_URL"
