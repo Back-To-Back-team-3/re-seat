@@ -30,10 +30,19 @@ public class SeatZone extends BaseEntity {
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
+    /**
+     * 좌석 등급. 내야(1루·3루) = INFIELD, 외야 = OUTFIELD.
+     * 요일·시기·연령 할인은 여기서 다루지 않고 C-2 PricePolicy에서 산정한다.
+     */
     @Enumerated(EnumType.STRING)
     @Column(name = "grade", nullable = false, length = 20)
     private SeatGrade grade;
 
+    /**
+     * 구역 기준 성인 정가. 요일·시기 배수 적용 전 원가.
+     * 화~목 기준: INFIELD=18000, OUTFIELD=16000
+     * 실제 game_seats.price는 C-2 PricePolicy.calculate()가 배수를 곱해 산정한다.
+     */
     @Column(name = "base_price", nullable = false)
     private int basePrice;
 
