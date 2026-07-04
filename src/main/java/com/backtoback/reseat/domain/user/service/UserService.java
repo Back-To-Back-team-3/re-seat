@@ -4,6 +4,7 @@ import com.backtoback.reseat.domain.user.dto.request.UserSignUpRequest;
 import com.backtoback.reseat.domain.user.dto.response.UserSignUpResponse;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.exception.DuplicateEmailException;
+import com.backtoback.reseat.domain.user.exception.DuplicatePhoneException;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,6 +24,11 @@ public class UserService {
        //1. 이메일 중복 검증
         if(userRepository.existsByEmail(request.getEmail())){
             throw new DuplicateEmailException("이미 존재하는 이메일입니다: "+ request.getEmail());
+        }
+
+        //1-2. 전화번호 중복 검증
+        if(userRepository.existsByPhone(request.getPhone())){
+            throw new DuplicatePhoneException("이미 존재하는 전화번호입니다: "+ request.getPhone());
         }
 
         //2. 비밀번호 암호화

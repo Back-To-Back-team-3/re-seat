@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
         name = "users",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_users_email", columnNames = "email"),       // 이메일 중복 방지
-                @UniqueConstraint(name = "uk_users_nickname", columnNames = "nickname"), // 닉네임 중복 방지
+               // @UniqueConstraint(name = "uk_users_nickname", columnNames = "nickname"), // 닉네임 중복 방지
                 @UniqueConstraint(name = "uk_users_phone", columnNames = "phone")        // 전화번호 중복 방지
         }
 )
@@ -36,7 +36,7 @@ public class User {
     @Column(nullable = false, length = 50)
     private String name;
 
-    @Column(nullable = false, length = 50)
+    @Column(nullable = true)
     private String nickname;
 
     @Column(nullable = false, length = 20)

@@ -1,0 +1,39 @@
+services:
+  # 1. Database 서비스
+  mysql-db:
+    image: mysql:8.0
+    container_name: reseat-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root1234
+      MYSQL_DATABASE: reseat
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - reseat-network
+
+  # 2. Spring Boot Application 서비스
+  web-app:
+    build: .
+    container_name: reseat-app
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/reseat?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.MySQLDialect
+      DB_USERNAME: root
+      DB_PASSWORD: root1234
+      JWT_SECRET: c3ByaW5nYm9vdC1zZWN1cml0eS1qd3QtdG9rZW4tc2VjcmV0LWtleS1kZW1vLWJmYWtiZmtiYWZiYWY=
+    depends_on:
+      - mysql-db
+    networks:
+      - reseat-network
+
+volumes:
+  mysql-data:
+
+networks:
+  reseat-network:
+    driver: bridge
