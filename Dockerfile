@@ -1,11 +1,11 @@
 # 1. 유지보수가 잘 되는 eclipse-temurin 이미지 사용
-FROM eclipse-temurin:17-jdk-alpine
+FROM eclipse-temurin:17-jdk
 
 # 컨테이너 내부 작업 디렉토리 지정
 WORKDIR /app
 
 # 2. 보안을 위한 non-root 사용자 및 그룹 생성
-RUN addgroup -S spring && adduser -S spring -G spring
+RUN groupadd --system spring && useradd --system --gid spring --home-dir /app --shell /usr/sbin/nologin spring
 
 # 3. jar 복사 시 소유권을 spring 사용자로 명시하여 보안 강화
 COPY --chown=spring:spring build/libs/app.jar app.jar

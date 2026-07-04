@@ -39,7 +39,6 @@ public class UserService {
                 .email(request.getEmail())
                 .password(encodePassword)
                 .name(request.getName())
-                .nickname(request.getNickname())
                 .phone(request.getPhone())
                 .build();
 
