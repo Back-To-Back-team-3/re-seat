@@ -6,7 +6,6 @@ import com.backtoback.reseat.domain.user.dto.request.UserLoginRequest;
 import com.backtoback.reseat.domain.user.dto.response.TokenResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.apache.coyote.Response;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
