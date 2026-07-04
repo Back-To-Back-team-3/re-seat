@@ -51,4 +51,15 @@ public class Seat extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private SeatStatus status = SeatStatus.ACTIVE;
+
+    public static Seat of(Stadium stadium, SeatZone zone, String seatBlock, String seatRow, String seatNumber) {
+        Seat s = new Seat();
+        s.stadium = stadium;
+        s.zone = zone;
+        s.seatBlock = seatBlock;
+        s.seatRow = seatRow;
+        s.seatNumber = seatNumber;
+        s.status = SeatStatus.ACTIVE;
+        return s;
+    }
 }

@@ -28,4 +28,13 @@ public class Stadium extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private StadiumStatus status = StadiumStatus.ACTIVE;
+
+    public static Stadium of(String name, String address, int totalCapacity) {
+        Stadium s = new Stadium();
+        s.name = name;
+        s.address = address;
+        s.totalCapacity = totalCapacity;
+        s.status = StadiumStatus.ACTIVE;
+        return s;
+    }
 }

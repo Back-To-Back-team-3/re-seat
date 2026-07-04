@@ -36,4 +36,13 @@ public class SeatZone extends BaseEntity {
 
     @Column(name = "base_price", nullable = false)
     private int basePrice;
+
+    public static SeatZone of(Stadium stadium, String name, SeatGrade grade, int basePrice) {
+        SeatZone z = new SeatZone();
+        z.stadium = stadium;
+        z.name = name;
+        z.grade = grade;
+        z.basePrice = basePrice;
+        return z;
+    }
 }
