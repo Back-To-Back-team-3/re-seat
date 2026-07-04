@@ -2,9 +2,7 @@
 
 package com.backtoback.reseat.domain.user.controller;
 
-import com.backtoback.reseat.domain.user.dto.request.UserLoginRequest;
 import com.backtoback.reseat.domain.user.dto.request.UserSignUpRequest;
-import com.backtoback.reseat.domain.user.dto.response.TokenResponse;
 import com.backtoback.reseat.domain.user.dto.response.UserSignUpResponse;
 import com.backtoback.reseat.domain.user.service.UserService;
 import com.backtoback.reseat.domain.user.service.AuthService;
