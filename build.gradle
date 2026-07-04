@@ -74,8 +74,13 @@ spotless {
     }
 
     format 'misc', {
-        target '*.gradle', '**/*.md', '.gitignore', '.gitattributes', '.editorconfig'
+        target '*.gradle', '.gitignore', '.gitattributes', '.editorconfig'
         trimTrailingWhitespace()
+        endWithNewline()
+    }
+
+    format 'markdown', {
+        target '**/*.md'
         endWithNewline()
     }
 }
