@@ -1,0 +1,180 @@
+name: PR Automation
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, closed]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  sync-pr:
+    runs-on: ubuntu-latest
+
+    env:
+      GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+      PROJECT_OWNER: Back-To-Back-team-3
+      PROJECT_NUMBER: "1"
+      PROJECT_ID: PVT_kwDOEcbHvs4BcFPz
+
+      STATUS_FIELD_ID: PVTSSF_lADOEcbHvs4BcFPzzhWwoEk
+      STATUS_DONE_OPTION_ID: 98236657
+
+      CODE_SIZE_FIELD_ID: PVTSSF_lADOEcbHvs4BcFPzzhW8r8U
+
+      REVIEWERS: bepo03 LFCKJ r1nn-dev rmi9394
+
+    steps:
+      - name: Sync PR labels, reviewers, assignee, and project fields
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          repo="${{ github.repository }}"
+          pr_number="${{ github.event.pull_request.number }}"
+          pr_url="${{ github.event.pull_request.html_url }}"
+          pr_node_id="${{ github.event.pull_request.node_id }}"
+          actor="${{ github.event.pull_request.user.login }}"
+          action="${{ github.event.action }}"
+          title="$(jq -r '.pull_request.title // ""' "$GITHUB_EVENT_PATH")"
+          additions="$(jq -r '.pull_request.additions // 0' "$GITHUB_EVENT_PATH")"
+          deletions="$(jq -r '.pull_request.deletions // 0' "$GITHUB_EVENT_PATH")"
+          changed_lines=$((additions + deletions))
+
+          gh pr edit "$pr_number" --repo "$repo" --add-assignee "$actor"
+
+          for label in "💫 feat" "🐛 bug" "⚙️ chore" "📝 docs" "♻️ refactor" "✅ test" "❓ question"; do
+            gh issue edit "$pr_number" --repo "$repo" --remove-label "$label" >/dev/null 2>&1 || true
+          done
+
+          case "$title" in
+            feat\(*|feat:*)
+              gh issue edit "$pr_number" --repo "$repo" --add-label "💫 feat"
+              ;;
+            fix\(*|fix:*)
+              gh issue edit "$pr_number" --repo "$repo" --add-label "🐛 bug"
+              ;;
+            chore\(*|chore:*)
+              gh issue edit "$pr_number" --repo "$repo" --add-label "⚙️ chore"
+              ;;
+            docs\(*|docs:*)
+              gh issue edit "$pr_number" --repo "$repo" --add-label "📝 docs"
+              ;;
+            refactor\(*|refactor:*)
+              gh issue edit "$pr_number" --repo "$repo" --add-label "♻️ refactor"
+              ;;
+            test\(*|test:*)
+              gh issue edit "$pr_number" --repo "$repo" --add-label "✅ test"
+              ;;
+          esac
+
+          if [ "$action" = "opened" ] || [ "$action" = "reopened" ]; then
+            reviewers=()
+            for reviewer in $REVIEWERS; do
+              if [ "$reviewer" != "$actor" ]; then
+                reviewers+=("$reviewer")
+              fi
+            done
+
+            if [ "${#reviewers[@]}" -gt 0 ]; then
+              reviewer_csv="$(IFS=,; echo "${reviewers[*]}")"
+              gh pr edit "$pr_number" --repo "$repo" --add-reviewer "$reviewer_csv"
+            fi
+          fi
+
+          item_id="$(
+            gh project item-list "$PROJECT_NUMBER" \
+              --owner "$PROJECT_OWNER" \
+              --format json \
+              --limit 1000 \
+              --jq ".items[] | select(.content.url == \"$pr_url\") | .id" \
+              | head -n 1
+          )"
+
+          if [ -z "$item_id" ]; then
+            item_id="$(
+              gh api graphql \
+                -f projectId="$PROJECT_ID" \
+                -f contentId="$pr_node_id" \
+                -f query='
+                  mutation($projectId: ID!, $contentId: ID!) {
+                    addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
+                      item {
+                        id
+                      }
+                    }
+                  }
+                ' \
+                --jq '.data.addProjectV2ItemById.item.id'
+            )"
+          fi
+
+          update_code_size() {
+            local option_id="$1"
+
+            gh api graphql \
+              -f projectId="$PROJECT_ID" \
+              -f itemId="$item_id" \
+              -f fieldId="$CODE_SIZE_FIELD_ID" \
+              -f optionId="$option_id" \
+              -f query='
+                mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                  updateProjectV2ItemFieldValue(
+                    input: {
+                      projectId: $projectId
+                      itemId: $itemId
+                      fieldId: $fieldId
+                      value: { singleSelectOptionId: $optionId }
+                    }
+                  ) {
+                    projectV2Item {
+                      id
+                    }
+                  }
+                }
+              ' >/dev/null
+          }
+          
+          update_status() {
+            local option_id="$1"
+
+            gh api graphql \
+              -f projectId="$PROJECT_ID" \
+              -f itemId="$item_id" \
+              -f fieldId="$STATUS_FIELD_ID" \
+              -f optionId="$option_id" \
+              -f query='
+                mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                  updateProjectV2ItemFieldValue(
+                    input: {
+                      projectId: $projectId
+                      itemId: $itemId
+                      fieldId: $fieldId
+                      value: { singleSelectOptionId: $optionId }
+                    }
+                  ) {
+                    projectV2Item {
+                      id
+                    }
+                  }
+                }
+              ' >/dev/null
+          }
+
+          if [ "$changed_lines" -ge 401 ]; then
+            update_code_size "cd453446"
+          elif [ "$changed_lines" -ge 101 ]; then
+            update_code_size "fdae15f1"
+          elif [ "$changed_lines" -ge 21 ]; then
+            update_code_size "8ac9d3ac"
+          else
+            update_code_size "0c7df237"
+          fi
+          
+          merged="$(jq -r '.pull_request.merged // false' "$GITHUB_EVENT_PATH")"
+          
+          if [ "$action" = "closed" ] && [ "$merged" = "true" ]; then
+            update_status "$STATUS_DONE_OPTION_ID"
+          fi
