@@ -2,7 +2,7 @@ name: PR Automation
 
 on:
   pull_request:
-    types: [opened, edited, synchronize, reopened, closed]
+    types: [opened, edited, synchronize, ready_for_review, reopened, closed]
 
 permissions:
   contents: read
@@ -24,7 +24,7 @@ jobs:
 
       CODE_SIZE_FIELD_ID: PVTSSF_lADOEcbHvs4BcFPzzhW8r8U
 
-      REVIEWERS: bepo03 LFCKJ r1nn-dev rmi9394
+      REVIEWERS: bepo03 LFCKJ r1nn-dev rmi9394 Siho-ily
 
     steps:
       - name: Sync PR labels, reviewers, assignee, and project fields
@@ -41,6 +41,7 @@ jobs:
           title="$(jq -r '.pull_request.title // ""' "$GITHUB_EVENT_PATH")"
           additions="$(jq -r '.pull_request.additions // 0' "$GITHUB_EVENT_PATH")"
           deletions="$(jq -r '.pull_request.deletions // 0' "$GITHUB_EVENT_PATH")"
+          draft="$(jq -r '.pull_request.draft // false' "$GITHUB_EVENT_PATH")"
           changed_lines=$((additions + deletions))
 
           gh pr edit "$pr_number" --repo "$repo" --add-assignee "$actor"
@@ -70,7 +71,7 @@ jobs:
               ;;
           esac
 
-          if [ "$action" = "opened" ] || [ "$action" = "reopened" ]; then
+          if { [ "$action" = "opened" ] || [ "$action" = "reopened" ] || [ "$action" = "ready_for_review" ]; } && [ "$draft" != "true" ]; then
             reviewers=()
             for reviewer in $REVIEWERS; do
               if [ "$reviewer" != "$actor" ]; then
