@@ -2,6 +2,7 @@
 
 package com.backtoback.reseat.domain.user.entity;
 
+import com.backtoback.reseat.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -9,6 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+
 
 @Entity
 @Table(
@@ -21,7 +23,8 @@ import java.time.LocalDateTime;
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class User {
+
+public class User extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -55,6 +58,13 @@ public class User {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+    private String ci;
+
+
+    @Column(nullable = false)
+    private boolean isVerified = false;
+
+    private String realName;
 
 
     //JPA 엔티티가 Persist 되기 전 기본값 및 시간 자동 세팅
@@ -77,14 +87,27 @@ public class User {
     }
 
     @Builder
-    public User(String email, String password, String name, String nickname, String phone,
-                UserRole role, UserStatus status) {
+    public User(Long id, String email, String password, String name, String phone,
+                String ci, boolean isVerified, String realName, UserRole role, UserStatus status) {
+        this.id = id;
         this.email = email;
         this.password = password;
         this.name = name;
-        this.nickname = nickname;
+        this.nickname = name;
         this.phone = phone;
-        this.role = role != null ? role : UserRole.USER;
-        this.status = status != null ? status : UserStatus.ACTIVE;
+        this.ci = ci;
+        this.isVerified = isVerified;
+        this.realName = realName;
+        this.role = role;
+        this.status = status;
+    }
+
+    public void completeVerification(String ci, String realName) {
+        if (this.isVerified) {
+            throw new IllegalStateException("이미 본인인증이 완료된 회원입니다.");
+        }
+        this.ci = ci;
+        this.realName = realName;
+        this.isVerified = true;
     }
 }
