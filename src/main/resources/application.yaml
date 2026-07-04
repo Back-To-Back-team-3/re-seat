@@ -1,13 +1,13 @@
-#공통
+# ===================================================================
+# 1. 공통 및 로컬(기본) 개발 환경 설정 블록
+# ===================================================================
 spring:
-  profile:
-    active: local # 기본 구동 환경 local로 설정
+  profiles:
+    active: local
     default: local
----
-#로컬
-spring:
+
   datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_ON_EXIT=FALSE
+    url: jdbc:h2:mem:reseatdb;MODE=MySQL;DB_CLOSE_DELAY=-1
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -20,30 +20,32 @@ spring:
     properties:
       hibernate:
         format_sql: true
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
 
 jwt:
-  # 더미 키 하드코딩
+  # 로컬용 더미 시크릿 키 유지
   secret: c3ByaW5nYm9vdC1zZWN1cml0eS1qd3QtdG9rZW4tc2VjcmV0LWtleS1kZW1vLWJmYWtiZmtiYWZiYWY=
+
 ---
-#Docker
+# ===================================================================
+# 2. 도커 컴포즈 가동을 위한 운영(prod) 환경 설정 블록
+# ===================================================================
 spring:
   config:
     activate:
       on-profile: prod
+
   datasource:
-    url: jdbc:mysql://my-sql:3306/reseat?server?Timezone=Asia/Seoul&characterEncoding=utf8
-    dirver-class-name: com.mysql.cj.jdbc.Driver
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:root1234}
+    url: jdbc:mysql://mysql-db:3306/reseat?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
 
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     show-sql: false
+
 jwt:
-  secret: ${JWT_SECRET:c3ByaW5nYm9vdC1zZWN1cml0eS1qd3QtdG9rZW4tc2VjcmV0LWtleS1kZW1vLWJmYWtiZmtiYWZiYWY=}
+
+  secret: ${JWT_SECRET:?JWT_SECRET environment variable must be set!}

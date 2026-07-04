@@ -34,5 +34,12 @@ public class RefreshToken {
         this.user = user;
         this.tokenValue = tokenValue;
         this.expiredAt = expiredAt;
+
     }
+
+    public void updateTokenValue(String newTokenValue, java.time.LocalDateTime newExpiredAt) {
+        this.tokenValue = newTokenValue;
+        this.expiredAt = newExpiredAt;
+    }
+
 }

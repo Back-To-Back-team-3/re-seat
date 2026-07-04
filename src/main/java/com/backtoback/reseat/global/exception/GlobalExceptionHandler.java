@@ -2,10 +2,7 @@
 
 package com.backtoback.reseat.global.exception;
 
-import com.backtoback.reseat.domain.user.exception.DuplicateEmailException;
-import com.backtoback.reseat.domain.user.exception.DuplicatePhoneException;
-import com.backtoback.reseat.domain.user.exception.InvalidPasswordException;
-import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
+import com.backtoback.reseat.domain.user.exception.*;
 import com.backtoback.reseat.global.common.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -38,7 +35,7 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.failure(errorCode.getCode(), e.getMessage()));
     }
 
-    //이메일 / 닉네임/ 전화번호 중복 예외처리 - 409Error
+    //이메일 / 전화번호 중복 예외처리 - 409Error
     @ExceptionHandler(DuplicateEmailException.class)
     public ResponseEntity<ApiResponse<Void>> handleDuplicateEmailException(DuplicateEmailException e){
         log.warn("DuplicateEmailException 발생: {}", e.getMessage());
@@ -81,6 +78,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.failure("SERVER_ERROR", "서버 내부 에러가 발생했습니다."));
+    }
+    //coderabbit
+    @ExceptionHandler(InvalidTokenException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInvalidTokenException(InvalidTokenException e) {
+        log.warn("인증 실패 (401): {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.failure("UNAUTHORIZED", e.getMessage()));
     }
 
 }

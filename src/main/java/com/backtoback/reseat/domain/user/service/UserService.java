@@ -27,8 +27,8 @@ public class UserService {
         }
 
         //1-2. 전화번호 중복 검증
-        if(userRepository.existsByPhone(request.getPhone())){
-            throw new DuplicatePhoneException("이미 존재하는 전화번호입니다: "+ request.getPhone());
+        if (userRepository.existsByPhone(request.getPhone())) {
+            throw new DuplicatePhoneException("이미 사용 중인 전화번호입니다.");
         }
 
         //2. 비밀번호 암호화
