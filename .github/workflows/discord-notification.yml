@@ -2,7 +2,7 @@ name: Discord Notification
 
 on:
   pull_request:
-    types: [opened, reopened, closed]
+    types: [opened, ready_for_review, reopened, closed]
   workflow_run:
     workflows: ["CI"]
     types: [completed]
@@ -37,6 +37,7 @@ jobs:
 
           action="${{ github.event.action }}"
           merged="$(jq -r '.pull_request.merged // false' "$GITHUB_EVENT_PATH")"
+          draft="$(jq -r '.pull_request.draft // false' "$GITHUB_EVENT_PATH")"
 
           pr_number="$(jq -r '.pull_request.number' "$GITHUB_EVENT_PATH")"
           pr_title="$(jq -r '.pull_request.title' "$GITHUB_EVENT_PATH")"
@@ -47,6 +48,10 @@ jobs:
           additions="$(jq -r '.pull_request.additions // 0' "$GITHUB_EVENT_PATH")"
           deletions="$(jq -r '.pull_request.deletions // 0' "$GITHUB_EVENT_PATH")"
           body="$(jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH")"
+
+          if [ "$draft" = "true" ] && { [ "$action" = "opened" ] || [ "$action" = "reopened" ]; }; then
+            exit 0
+          fi
 
           changed_lines=$((additions + deletions))
 
@@ -159,7 +164,7 @@ jobs:
             exit 0
           fi
 
-          if [ "$action" = "opened" ] || [ "$action" = "reopened" ]; then
+          if [ "$action" = "opened" ] || [ "$action" = "reopened" ] || [ "$action" = "ready_for_review" ]; then
             if [ -n "$reviewer_mentions" ]; then
               content="$reviewer_mentions 리뷰 부탁드립니다."
             else
