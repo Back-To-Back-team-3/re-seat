@@ -24,7 +24,7 @@ jobs:
 
       CODE_SIZE_FIELD_ID: PVTSSF_lADOEcbHvs4BcFPzzhW8r8U
 
-      REVIEWERS: bepo03 LFCKJ r1nn-dev rmi9394
+      REVIEWERS: bepo03 LFCKJ r1nn-dev rmi9394 Siho-ily
 
     steps:
       - name: Sync PR labels, reviewers, assignee, and project fields

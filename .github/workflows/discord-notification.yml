@@ -23,6 +23,7 @@ jobs:
       DISCORD_MENTION_LFCKJ: ${{ vars.DISCORD_MENTION_LFCKJ }}
       DISCORD_MENTION_R1NN_DEV: ${{ vars.DISCORD_MENTION_R1NN_DEV }}
       DISCORD_MENTION_RMI9394: ${{ vars.DISCORD_MENTION_RMI9394 }}
+      DISCORD_MENTION_SIHO_ILY: ${{ vars.DISCORD_MENTION_SIHO_ILY }}
 
     steps:
       - name: Send PR notification
@@ -133,6 +134,7 @@ jobs:
           add_reviewer_mention "LFCKJ" "$DISCORD_MENTION_LFCKJ"
           add_reviewer_mention "r1nn-dev" "$DISCORD_MENTION_R1NN_DEV"
           add_reviewer_mention "rmi9394" "$DISCORD_MENTION_RMI9394"
+          add_reviewer_mention "Siho-ily" "$DISCORD_MENTION_SIHO_ILY"
 
           reviewer_mentions="$(IFS=' '; echo "${mentions[*]}")"
 
@@ -216,6 +218,7 @@ jobs:
       DISCORD_MENTION_LFCKJ: ${{ vars.DISCORD_MENTION_LFCKJ }}
       DISCORD_MENTION_R1NN_DEV: ${{ vars.DISCORD_MENTION_R1NN_DEV }}
       DISCORD_MENTION_RMI9394: ${{ vars.DISCORD_MENTION_RMI9394 }}
+      DISCORD_MENTION_SIHO_ILY: ${{ vars.DISCORD_MENTION_SIHO_ILY }}
 
     steps:
       - name: Send CI failed notification
@@ -254,6 +257,9 @@ jobs:
               ;;
             rmi9394)
               author_mention="$DISCORD_MENTION_RMI9394"
+              ;;
+            Siho-ily)
+              author_mention="$DISCORD_MENTION_SIHO_ILY"
               ;;
           esac
 
