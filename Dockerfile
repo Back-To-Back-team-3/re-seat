@@ -5,7 +5,7 @@ FROM eclipse-temurin:17-jdk
 WORKDIR /app
 
 # 2. 보안을 위한 non-root 사용자 및 그룹 생성
-RUN addgroup -S spring && adduser -S spring -G spring
+RUN groupadd --system spring && useradd --system --gid spring --home-dir /app --shell /usr/sbin/nologin spring
 
 # 3. jar 복사 시 소유권을 spring 사용자로 명시하여 보안 강화
 COPY --chown=spring:spring build/libs/app.jar app.jar

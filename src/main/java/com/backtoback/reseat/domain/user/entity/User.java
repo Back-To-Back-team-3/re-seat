@@ -3,13 +3,19 @@
 package com.backtoback.reseat.domain.user.entity;
 
 import com.backtoback.reseat.global.common.BaseEntity;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 
 @Entity
@@ -53,11 +59,6 @@ public class User extends BaseEntity {
     @Column(nullable = false, length = 20)
     private UserStatus status;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
     private String ci;
 
 
@@ -65,26 +66,6 @@ public class User extends BaseEntity {
     private boolean isVerified = false;
 
     private String realName;
-
-
-    //JPA 엔티티가 Persist 되기 전 기본값 및 시간 자동 세팅
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-        if(this.role == null){
-            this.role = UserRole.USER;
-        }
-        if(this.status == null){
-            this.status = UserStatus.ACTIVE;
-        }
-    }
-
-    //정보 수정 시 수정 일 업데이트 로직
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
 
     @Builder
     public User(Long id, String email, String password, String name, String phone,
@@ -98,8 +79,8 @@ public class User extends BaseEntity {
         this.ci = ci;
         this.isVerified = isVerified;
         this.realName = realName;
-        this.role = role;
-        this.status = status;
+        this.role = role != null ? role : UserRole.USER;
+        this.status = status != null ? status : UserStatus.ACTIVE;
     }
 
     public void completeVerification(String ci, String realName) {
