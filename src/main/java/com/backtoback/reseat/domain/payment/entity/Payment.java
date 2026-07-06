@@ -1,6 +1,6 @@
 // 결제 메인 엔티티 (payments 테이블 매핑)
 
-package com.backtoback.reseat.payment.entity;
+package com.backtoback.reseat.domain.payment.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
