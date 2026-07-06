@@ -1,3 +1,4 @@
+//securityConfig
 package com.backtoback.reseat.global.security;
 
 import lombok.RequiredArgsConstructor;
