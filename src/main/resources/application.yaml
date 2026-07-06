@@ -20,6 +20,11 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  data:
+   redis:
+     host: localhost
+     port: 6379
+     password: "" # 로컬에서는 비번 없이 사용
 
 jwt:
   # 로컬용 더미 시크릿 키 유지
@@ -49,6 +54,12 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: false
+
+  data:
+    redis:
+      host: redis
+      port: 6379
+      password: ${REDIS_PASSWORD} #환경 변수로부터 주입
 
 jwt:
   secret: ${JWT_SECRET:?JWT_SECRET environment variable must be set!}
