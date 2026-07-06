@@ -1,9 +1,9 @@
-package com.backtoback.reseat.domain.user.controller;
+package com.backtoback.reseat.domain.user.auth.controller;
 
-import com.backtoback.reseat.domain.user.dto.request.ReissueRequest;
-import com.backtoback.reseat.domain.user.service.AuthService;
-import com.backtoback.reseat.domain.user.dto.request.UserLoginRequest;
-import com.backtoback.reseat.domain.user.dto.response.TokenResponse;
+import com.backtoback.reseat.domain.user.auth.dto.request.ReissueRequest;
+import com.backtoback.reseat.domain.user.auth.service.AuthService;
+import com.backtoback.reseat.domain.user.auth.dto.request.UserLoginRequest;
+import com.backtoback.reseat.domain.user.auth.dto.response.TokenResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.user.dto.response;
+package com.backtoback.reseat.domain.user.auth.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

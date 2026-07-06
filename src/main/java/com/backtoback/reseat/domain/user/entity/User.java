@@ -2,6 +2,7 @@
 
 package com.backtoback.reseat.domain.user.entity;
 
+import com.backtoback.reseat.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -21,7 +22,7 @@ import java.time.LocalDateTime;
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class User {
+public class User extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -56,6 +57,14 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "ci", nullable = true)
+    private String ci;
+
+    @Column(name="is_verified", nullable = false)
+    private boolean isVerified = false;
+
+    @Column(name="real_name")
+    private String realName;
 
     //JPA 엔티티가 Persist 되기 전 기본값 및 시간 자동 세팅
     @PrePersist
@@ -86,5 +95,14 @@ public class User {
         this.phone = phone;
         this.role = role != null ? role : UserRole.USER;
         this.status = status != null ? status : UserStatus.ACTIVE;
+    }
+
+    public void completeVerification(String ci, String realName){
+        if(this.isVerified){
+            throw new IllegalStateException("이미 본인인증이 완료된 회원입니다");
+        }
+        this.ci = ci;
+        this.realName = realName;
+        this.isVerified = true;
     }
 }
