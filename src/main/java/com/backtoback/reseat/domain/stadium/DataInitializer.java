@@ -1,7 +1,7 @@
-package com.backtoback.reseat.stadium;
+package com.backtoback.reseat.domain.stadium;
 
-import com.backtoback.reseat.stadium.entity.*;
-import com.backtoback.reseat.stadium.repository.*;
+import com.backtoback.reseat.domain.stadium.entity.*;
+import com.backtoback.reseat.domain.stadium.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;

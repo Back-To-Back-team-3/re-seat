@@ -1,4 +1,4 @@
-package com.backtoback.reseat.stadium.entity;
+package com.backtoback.reseat.domain.stadium.entity;
 
 public enum SeatStatus {
     ACTIVE,
