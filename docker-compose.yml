@@ -19,6 +19,23 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7.4-alpine
+    container_name: reseat-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD 환경변수가 누락되었습니다}
+    volumes:
+      - redis-data:/data
+    networks:
+      - reseat-network
+    restart: always
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "$$REDIS_PASSWORD", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   web-app:
     build: .
     container_name: reseat-app
@@ -29,8 +46,11 @@ services:
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     depends_on:
       mysql-db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - reseat-network
@@ -41,3 +61,4 @@ networks:
 
 volumes:
   mysql-data:
+  redis-data:
