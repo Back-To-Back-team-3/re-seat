@@ -1,4 +1,4 @@
-package com.backtoback.reseat.stadium.entity;
+package com.backtoback.reseat.domain.stadium.entity;
 
 import com.backtoback.reseat.global.common.BaseEntity;
 import jakarta.persistence.*;
