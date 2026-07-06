@@ -17,7 +17,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     //전화번호 중복 여부 확인
     boolean existsByPhone(String phone);
-
     Optional<User> findByCi(String ci);
-
 }

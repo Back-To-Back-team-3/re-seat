@@ -16,8 +16,9 @@ public class VerificationService {
 
     @Transactional
     public void verifyAndUpdateUser(Long userId, String impUid) {
+        // 1. 현재 세션 유저 조회
         User user = userRepository.findById(userId)
-            .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
 
         //postman 테스트용 주석처리 -> 실제 연동 시 주석 지우기
          PortoneVerificationResponse portoneData = portoneClient.fetchVerificationInfo(impUid);

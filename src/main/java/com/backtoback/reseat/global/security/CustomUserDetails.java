@@ -21,26 +21,31 @@ public class CustomUserDetails implements UserDetails {
         return user.getId();
     }
     @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
+    public Collection<? extends GrantedAuthority> getAuthorities(){
+        //유저의 권한을 스프링 시큐리티 규격으로 변환
+        return Collections.singletonList(new SimpleGrantedAuthority("ROLE_"+user.getRole().name()));
     }
 
     @Override
-    public String getPassword() {
+    public String getPassword(){
         return user.getPassword();
     }
 
     @Override
-    public String getUsername() {
+    public String getUsername(){
         return user.getEmail();
     }
 
     @Override
-    public boolean isAccountNonExpired() { return true; }
+    public boolean isAccountNonExpired(){return true;}
+
     @Override
-    public boolean isAccountNonLocked() { return true; }
+    public boolean isAccountNonLocked(){return true;}
+
     @Override
-    public boolean isCredentialsNonExpired() { return true; }
+    public boolean isCredentialsNonExpired(){return true;}
+
     @Override
-    public boolean isEnabled() { return true; }
+    public boolean isEnabled(){return true;}
+
 }

@@ -3,6 +3,15 @@
 package com.backtoback.reseat.domain.user.entity;
 
 import com.backtoback.reseat.global.common.BaseEntity;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -22,6 +31,7 @@ import java.time.LocalDateTime;
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+
 public class User extends BaseEntity {
 
     @Id
@@ -86,20 +96,24 @@ public class User extends BaseEntity {
     }
 
     @Builder
-    public User(String email, String password, String name, String nickname, String phone,
-                UserRole role, UserStatus status) {
+    public User(Long id, String email, String password, String name, String phone,
+                String ci, boolean isVerified, String realName, UserRole role, UserStatus status) {
+        this.id = id;
         this.email = email;
         this.password = password;
         this.name = name;
-        this.nickname = nickname;
+        this.nickname = name;
         this.phone = phone;
+        this.ci = ci;
+        this.isVerified = isVerified;
+        this.realName = realName;
         this.role = role != null ? role : UserRole.USER;
         this.status = status != null ? status : UserStatus.ACTIVE;
     }
 
-    public void completeVerification(String ci, String realName){
-        if(this.isVerified){
-            throw new IllegalStateException("이미 본인인증이 완료된 회원입니다");
+    public void completeVerification(String ci, String realName) {
+        if (this.isVerified) {
+            throw new IllegalStateException("이미 본인인증이 완료된 회원입니다.");
         }
         this.ci = ci;
         this.realName = realName;

@@ -6,10 +6,10 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 public class VerificationRequest {
-    private String impUid;
 
-    public VerificationRequest(String impUid) {
-        this.impUid = impUid;
-    }
+     private String impUid;
 
+     public VerificationRequest(String impUid){
+         this.impUid = impUid;
+     }
 }
