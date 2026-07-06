@@ -25,6 +25,10 @@ jwt:
   # 로컬용 더미 시크릿 키 유지
   secret: c3ByaW5nYm9vdC1zZWN1cml0eS1qd3QtdG9rZW4tc2VjcmV0LWtleS1kZW1vLWJmYWtiZmtiYWZiYWY=
 
+#로컬/테스트 환경에서도 읽을 수 있도록 공통 구역으로 이동.
+portone:
+  api-secret: "MOCK_PORTONE_SECRET_TOKEN"
+
 ---
 # ===================================================================
 # 2. 도커 컴포즈 가동을 위한 운영(prod) 환경 설정 블록
@@ -47,5 +51,4 @@ spring:
     show-sql: false
 
 jwt:
-
   secret: ${JWT_SECRET:?JWT_SECRET environment variable must be set!}

@@ -5,7 +5,7 @@ package com.backtoback.reseat.domain.user.controller;
 import com.backtoback.reseat.domain.user.dto.request.UserSignUpRequest;
 import com.backtoback.reseat.domain.user.dto.response.UserSignUpResponse;
 import com.backtoback.reseat.domain.user.service.UserService;
-import com.backtoback.reseat.domain.user.service.AuthService;
+import com.backtoback.reseat.domain.user.auth.service.AuthService;
 import com.backtoback.reseat.global.common.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

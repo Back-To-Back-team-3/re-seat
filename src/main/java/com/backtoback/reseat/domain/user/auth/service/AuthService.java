@@ -1,8 +1,8 @@
-package com.backtoback.reseat.domain.user.service;
+package com.backtoback.reseat.domain.user.auth.service;
 
-import com.backtoback.reseat.domain.user.dto.request.ReissueRequest;
-import com.backtoback.reseat.domain.user.dto.request.UserLoginRequest;
-import com.backtoback.reseat.domain.user.dto.response.TokenResponse;
+import com.backtoback.reseat.domain.user.auth.dto.request.ReissueRequest;
+import com.backtoback.reseat.domain.user.auth.dto.request.UserLoginRequest;
+import com.backtoback.reseat.domain.user.auth.dto.response.TokenResponse;
 import com.backtoback.reseat.domain.user.entity.RefreshToken;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.exception.InvalidPasswordException;

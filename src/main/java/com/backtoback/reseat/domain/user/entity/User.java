@@ -12,11 +12,13 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 
 @Entity
 @Table(
@@ -24,7 +26,8 @@ import lombok.NoArgsConstructor;
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_users_email", columnNames = "email"),       // 이메일 중복 방지
                // @UniqueConstraint(name = "uk_users_nickname", columnNames = "nickname"), // 닉네임 중복 방지
-                @UniqueConstraint(name = "uk_users_phone", columnNames = "phone")        // 전화번호 중복 방지
+                @UniqueConstraint(name = "uk_users_phone", columnNames = "phone"),        // 전화번호 중복 방지
+                @UniqueConstraint(name = "uk_users_ci", columnNames = "ci")
         }
 )
 @Getter
@@ -59,13 +62,21 @@ public class User extends BaseEntity {
     @Column(nullable = false, length = 20)
     private UserStatus status;
 
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
+    @Column(name = "ci", nullable = true)
     private String ci;
 
-
-    @Column(nullable = false)
+    @Column(name="is_verified", nullable = false)
     private boolean isVerified = false;
 
+    @Column(name="real_name")
     private String realName;
+
 
     @Builder
     public User(Long id, String email, String password, String name, String phone,
