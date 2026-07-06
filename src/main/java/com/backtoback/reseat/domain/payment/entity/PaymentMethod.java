@@ -1,6 +1,6 @@
 // 결제 수단 enum
 
-package com.backtoback.reseat.payment.entity;
+package com.backtoback.reseat.domain.payment.entity;
 
 public enum PaymentMethod {
     CARD,
