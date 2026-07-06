@@ -49,3 +49,6 @@ spring:
 jwt:
 
   secret: ${JWT_SECRET:?JWT_SECRET environment variable must be set!}
+
+portone:
+  api-secret: "MOCK_PORTONE_SECRET_TOKEN"
