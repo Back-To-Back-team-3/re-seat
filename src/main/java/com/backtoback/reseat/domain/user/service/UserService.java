@@ -23,7 +23,7 @@ public class UserService {
     public UserSignUpResponse signUp(UserSignUpRequest request){
        //1. 이메일 중복 검증
         if(userRepository.existsByEmail(request.getEmail())){
-            throw new DuplicateEmailException("이미 존재하는 이메일입니다: "+ request.getEmail());
+            throw new DuplicateEmailException("이미 존재하는 이메일입니다.");
         }
 
         //1-2. 전화번호 중복 검증
