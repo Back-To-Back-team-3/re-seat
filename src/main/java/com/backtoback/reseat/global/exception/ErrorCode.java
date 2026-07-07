@@ -28,7 +28,9 @@ public enum ErrorCode {
     PAYMENT_AMOUNT_MISMATCH(HttpStatus.BAD_REQUEST, "PAYMENT_AMOUNT_MISMATCH", "주문 금액과 결제 금액이 일치하지 않습니다."),
     INVALID_PRICE(HttpStatus.BAD_REQUEST, "INVALID_PRICE", "정가 외 등록(재판매)"),
     DUPLICATE_LOGIN_ID(HttpStatus.CONFLICT, "DUPLICATE_LOGIN_ID", "아이디/이메일/닉네임/전화번호 중복"),
-    RESALE_ALREADY_SOLD(HttpStatus.CONFLICT, "RESALE_ALREADY_SOLD", "이미 판매된 재판매 건");
+    RESALE_ALREADY_SOLD(HttpStatus.CONFLICT, "RESALE_ALREADY_SOLD", "이미 판매된 재판매 건"),
+    PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "PAYMENT_NOT_FOUND", "결제 내역을 찾을 수 없습니다."),
+    PAYMENT_ALREADY_FINALIZED(HttpStatus.CONFLICT, "PAYMENT_ALREADY_FINALIZED", "이미 처리 완료된 결제입니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
