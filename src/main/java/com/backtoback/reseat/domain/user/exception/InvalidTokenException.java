@@ -1,7 +1,10 @@
 package com.backtoback.reseat.domain.user.exception;
 
-public class InvalidTokenException extends RuntimeException {
+import com.backtoback.reseat.global.exception.BusinessException;
+import com.backtoback.reseat.global.exception.ErrorCode;
+
+public class InvalidTokenException extends BusinessException {
     public InvalidTokenException(String message) {
-        super(message);
+        super(ErrorCode.UNAUTHORIZED, message);
     }
 }
