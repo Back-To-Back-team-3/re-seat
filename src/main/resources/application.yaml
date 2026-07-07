@@ -46,6 +46,12 @@ jwt:
 portone:
   api-secret: "MOCK_PORTONE_SECRET_TOKEN"
 
+# 토스페이먼츠 문서용 테스트 키(회원가입 없이 공개적으로 쓸 수 있는 공용 테스트 키, 실제 결제는 발생하지 않음).
+toss:
+  client-key: "test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq"
+  secret-key: "test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R"
+  confirm-url: "https://api.tosspayments.com/v1/payments/confirm"
+
 ---
 # ===================================================================
 # 2. 도커 컴포즈 가동을 위한 운영(prod) 환경 설정 블록
