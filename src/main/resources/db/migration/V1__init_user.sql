@@ -27,5 +27,5 @@ CREATE TABLE refresh_token (
                                token_value   VARCHAR(255) NOT NULL UNIQUE,
                                expired_at    TIMESTAMP    NOT NULL,
 
-                               CONSTRAINT fk_refresh_token_user FOREIGN KEY (user_id) REFERENCES users(id)
+                               CONSTRAINT fk_refresh_token_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );

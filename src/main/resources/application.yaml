@@ -71,7 +71,7 @@ spring:
     redis:
       host: redis
       port: 6379
-      password: ${REDIS_PASSWORD:myredispassword} #환경 변수로부터 주입
+      password: ${REDIS_PASSWORD:?REDIS_PASSWORD environment variable must be set!} #환경 변수로부터 주입
 
   flyway:
     enabled: true

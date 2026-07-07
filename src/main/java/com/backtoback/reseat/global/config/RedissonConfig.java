@@ -33,7 +33,7 @@ public class RedissonConfig {
 
         //비밀번호가 설정되어 있다면 Redisson에 주입합니다.
         if (password != null && !password.trim().isEmpty()) {
-            singleServerConfig.setPassword(password);
+            singleServerConfig.setPassword(password.trim());
         }
 
         return Redisson.create(config);
