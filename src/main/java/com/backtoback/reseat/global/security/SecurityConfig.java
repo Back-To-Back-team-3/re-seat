@@ -2,6 +2,7 @@
 package com.backtoback.reseat.global.security;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -36,9 +37,14 @@ public class SecurityConfig {
                 // 3. 엔드포인트별 인가 허용 정책 설정
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers(PathRequest.toH2Console()).permitAll() // H2 콘솔 허용
                         .anyRequest().authenticated()
                 )
 
+                // 4. H2 콘솔의 iframe 사용 허용을 위한 X-Frame-Options 설정
+                .headers(headers -> headers
+                        .frameOptions(frameOptions -> frameOptions.sameOrigin())
+                )
 
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
                         UsernamePasswordAuthenticationFilter.class);

@@ -15,16 +15,28 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
-      ddl-auto: create
+      ddl-auto: validate
     show-sql: true
     properties:
       hibernate:
         format_sql: true
   data:
-   redis:
-     host: localhost
-     port: 6379
-     password: "" # 로컬에서는 비번 없이 사용
+    redis:
+      host: localhost
+      port: 6379
+      password: ${REDIS_PASSWORD:myredispassword} # 로컬 Redis 비밀번호 (환경 변수 또는 기본값)
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true # 이미 데이터가 있는 환경에서도 안전하게 히스토리 시작하는 옵션
+    locations: classpath:db/migration
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: true
 
 jwt:
   # 로컬용 더미 시크릿 키 유지
@@ -52,14 +64,19 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: false
 
   data:
     redis:
       host: redis
       port: 6379
-      password: ${REDIS_PASSWORD} #환경 변수로부터 주입
+      password: ${REDIS_PASSWORD:?REDIS_PASSWORD environment variable must be set!} #환경 변수로부터 주입
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true # 이미 데이터가 있는 환경에서도 안전하게 히스토리 시작하는 옵션
+    locations: classpath:db/migration
 
 jwt:
   secret: ${JWT_SECRET:?JWT_SECRET environment variable must be set!}
