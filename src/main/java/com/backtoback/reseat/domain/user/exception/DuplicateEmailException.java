@@ -1,7 +1,10 @@
 package com.backtoback.reseat.domain.user.exception;
 
-public class DuplicateEmailException extends RuntimeException {
+import com.backtoback.reseat.global.exception.BusinessException;
+import com.backtoback.reseat.global.exception.ErrorCode;
+
+public class DuplicateEmailException extends BusinessException {
     public DuplicateEmailException(String message) {
-        super(message);
+        super(ErrorCode.DUPLICATE_LOGIN_ID, message);
     }
 }
