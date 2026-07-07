@@ -3,7 +3,10 @@ package com.backtoback.reseat.domain.payment.service;
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.entity.OrderStatus;
 import com.backtoback.reseat.domain.order.repository.OrderRepository;
+import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
+import com.backtoback.reseat.domain.payment.dto.request.PaymentFailRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentRequest;
+import com.backtoback.reseat.domain.payment.dto.response.PaymentActionResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentResponse;
 import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentMethod;
@@ -12,13 +15,16 @@ import com.backtoback.reseat.domain.payment.entity.PgProvider;
 import com.backtoback.reseat.domain.payment.exception.IdempotencyKeyConflictException;
 import com.backtoback.reseat.domain.payment.exception.IdempotencyKeyRequiredException;
 import com.backtoback.reseat.domain.payment.exception.InvalidOrderStatusException;
+import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentAmountMismatchException;
 import com.backtoback.reseat.domain.payment.exception.PaymentAccessDeniedException;
+import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
 import com.backtoback.reseat.domain.payment.exception.PaymentOrderNotFoundException;
 import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
-import com.backtoback.reseat.domain.payment.pg.mock.MockPaymentClient;
-import com.backtoback.reseat.domain.payment.pg.mock.MockPaymentResult;
+import com.backtoback.reseat.domain.payment.pg.toss.TossConfirmResponse;
+import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import java.util.UUID;
@@ -36,7 +42,7 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     // TODO: 주문 도메인 결제 조회/검증 API가 생기면 OrderRepository 직접 의존을 제거할 예정.
     private final OrderRepository orderRepository;
-    private final MockPaymentClient mockPaymentClient;
+    private final TossPaymentClient tossPaymentClient;
 
     /**
      * 주문 기준 결제를 요청한다.
@@ -85,6 +91,7 @@ public class PaymentService {
         }
 
         // 결제 정보 생성
+        // 토스 위젯 인증이 끝나야 승인 가능하므로, 여기서는 READY 상태로만 생성하고 승인은 7.2 콜백에서 처리한다.
         Payment payment = Payment.builder()
                 .paymentNo(generatePaymentNo())
                 .orderId(order.getId())
@@ -92,20 +99,121 @@ public class PaymentService {
                 .amount(order.getTotalAmount())
                 .method(resolveMethod(request.getMethod()))
                 .idempotencyKey(idempotencyKey)
-                .pgProvider(PgProvider.MOCK)
+                .status(PaymentStatus.READY)
+                .pgProvider(PgProvider.TOSS)
                 .pgOrderId(order.getOrderNo())
                 .build();
 
-        // MVP에서는 Mock PG가 즉시 승인/실패 결과를 반환한다고 가정한다.
-        MockPaymentResult result = mockPaymentClient.requestPayment();
+        return PaymentResponse.from(paymentRepository.save(payment));
+    }
 
-        if (result.approved()) {
-            payment.approve(result.pgPaymentKey(), result.requestedAt());
-        } else {
-            payment.fail(result.failReason(), result.requestedAt());
+    /**
+     * 토스 위젯 인증 완료 후 전달받은 결제 정보로 토스 승인(confirm) API를 동기 호출해 결제를 확정한다.
+     *
+     * @param userId 현재 사용자 ID
+     * @param paymentId 결제 ID
+     * @param request 토스가 클라이언트에 돌려준 paymentKey/orderId/amount
+     * @return 확정된 결제 결과
+     */
+    @Transactional
+    public PaymentActionResponse completePayment(Long userId, Long paymentId, PaymentCompleteRequest request) {
+        Payment payment = getOwnedPayment(userId, paymentId);
+
+        if (payment.getStatus() != PaymentStatus.READY) {
+            throw new PaymentAlreadyFinalizedException();
+        }
+        validateCallbackAmount(payment, request.getOrderId(), request.getAmount());
+
+        try {
+            TossConfirmResponse response = tossPaymentClient.confirm(
+                    request.getPaymentKey(), request.getOrderId(), request.getAmount());
+            payment.approve(response.getPaymentKey(), parseApprovedAt(response.getApprovedAt()));
+        } catch (IllegalStateException e) {
+            // TossPaymentClient가 4xx/5xx/타임아웃 시 던지는 예외만 좁혀서 결제 실패로 기록한다.
+            payment.fail(e.getMessage(), LocalDateTime.now());
         }
 
-        return PaymentResponse.from(paymentRepository.save(payment));
+        return PaymentActionResponse.from(payment);
+    }
+
+    /**
+     * 위젯 취소 또는 실패 리다이렉트 시 결제를 실패로 기록한다. 토스 API는 호출하지 않는다.
+     *
+     * @param userId 현재 사용자 ID
+     * @param paymentId 결제 ID
+     * @param request 실패 사유(선택)
+     * @return 실패 처리된 결제 결과
+     */
+    @Transactional
+    public PaymentActionResponse failPayment(Long userId, Long paymentId, PaymentFailRequest request) {
+        Payment payment = getOwnedPayment(userId, paymentId);
+
+        if (payment.getStatus() != PaymentStatus.READY) {
+            throw new PaymentAlreadyFinalizedException();
+        }
+        payment.fail(resolveFailReason(request.getFailReason()), LocalDateTime.now());
+
+        return PaymentActionResponse.from(payment);
+    }
+
+    /**
+     * 결제 단건을 조회한다.
+     *
+     * @param userId 현재 사용자 ID
+     * @param paymentId 결제 ID
+     * @return 결제 상세 정보
+     */
+    public PaymentResponse getPayment(Long userId, Long paymentId) {
+        return PaymentResponse.from(getOwnedPayment(userId, paymentId));
+    }
+
+    /**
+     * 결제를 조회하고 요청 사용자가 소유자인지 검증한다.
+     *
+     * @param userId 현재 사용자 ID
+     * @param paymentId 결제 ID
+     * @return 소유자가 확인된 결제
+     */
+    private Payment getOwnedPayment(Long userId, Long paymentId) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(PaymentNotFoundException::new);
+        if (!payment.getUser().getId().equals(userId)) {
+            throw new PaymentAccessDeniedException();
+        }
+        return payment;
+    }
+
+    /**
+     * 콜백으로 전달된 orderId/amount가 저장된 결제 정보와 일치하는지 검증한다 (변조 방지).
+     *
+     * @param payment 저장된 결제
+     * @param orderId 콜백으로 전달된 주문 식별자
+     * @param amount 콜백으로 전달된 결제 금액
+     */
+    private void validateCallbackAmount(Payment payment, String orderId, Integer amount) {
+        if (!payment.getPgOrderId().equals(orderId) || !payment.getAmount().equals(amount)) {
+            throw new PaymentAmountMismatchException();
+        }
+    }
+
+    /**
+     * 실패 사유가 비어 있으면 기본 메시지로 대체한다.
+     *
+     * @param failReason 요청으로 전달된 실패 사유
+     * @return 저장할 실패 사유
+     */
+    private String resolveFailReason(String failReason) {
+        return (failReason == null || failReason.isBlank()) ? "결제 실패" : failReason;
+    }
+
+    /**
+     * 토스 응답의 승인 시각 문자열을 LocalDateTime으로 변환한다.
+     *
+     * @param approvedAt 토스가 반환한 오프셋 포함 시각 문자열
+     * @return 변환된 시각
+     */
+    private LocalDateTime parseApprovedAt(String approvedAt) {
+        return approvedAt != null ? OffsetDateTime.parse(approvedAt).toLocalDateTime() : LocalDateTime.now();
     }
 
     /**
