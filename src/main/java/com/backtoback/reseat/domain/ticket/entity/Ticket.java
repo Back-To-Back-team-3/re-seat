@@ -14,47 +14,38 @@ import lombok.NoArgsConstructor;
 // 결제 성공 후 좌석별로 발급되는 티켓 엔티티
 @Getter
 @Entity
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(
     name = "tickets",
-    indexes = {
-        // 내 티켓 조회/상태별 필터에 쓰는 인덱스
-        @Index(name = "idx_tickets_user_status", columnList = "user_id, status"),
-        // 경기별 티켓 조회 인덱스
-        @Index(name = "idx_tickets_game", columnList = "game_id")
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_tickets_no", columnNames = "ticket_no")
     }
 )
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Ticket extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id; // PK, AUTO_INCREMENT
 
-    @Column(name = "ticket_no", nullable = false, unique = true, length = 50)
+    @Column(name = "ticket_no", nullable = false, length = 50)
     private String ticketNo; // 티켓 번호, 사용자에게 보여줄 외부용 ID
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-        name = "user_id", // 현재 티켓 소유자
-        nullable = false,
-        foreignKey = @ForeignKey(name = "fk_tickets_user")
-    )
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
         name = "order_item_id", // 주문 항목, 주문 항목에서 티켓 하나만 발급되도록 보장
         nullable = false,
-        unique = true,
-        foreignKey = @ForeignKey(name = "fk_tickets_order_item")
+        unique = true
     )
     private OrderItem orderItem;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
         name = "game_id", // 경기
-        nullable = false,
-        foreignKey = @ForeignKey(name = "fk_tickets_game")
+        nullable = false
     )
     private Game game;
 
@@ -62,8 +53,7 @@ public class Ticket extends BaseEntity {
     @JoinColumn(
         name = "game_seat_id", // 경기 좌석
         nullable = false,
-        unique = true,
-        foreignKey = @ForeignKey(name = "fk_tickets_game_seat")
+        unique = true
     )
     private GameSeat gameSeat;
 
@@ -71,7 +61,7 @@ public class Ticket extends BaseEntity {
     @Column(name = "status", nullable = false, length = 20)
     private TicketStatus status; // 티켓 상태
 
-    @Column(name = "qr_token", unique = true, length = 255)
+    @Column(name = "qr_token", length = 255)
     private String qrToken; // QR 토큰, 입장 검증에 사용하는 토큰 값
 
     @Column(name = "issued_at", nullable = false)
@@ -90,6 +80,8 @@ public class Ticket extends BaseEntity {
         GameSeat gameSeat, // 어떤 경기 좌석인지
         String qrToken // QR 토큰 값 (API 쪽에서 생성)
     ) {
+        validateIssueParams(ticketNo, user, orderItem, gameSeat);
+
         Ticket ticket = new Ticket();
         ticket.ticketNo = ticketNo;
         ticket.user = user;
@@ -106,6 +98,9 @@ public class Ticket extends BaseEntity {
         if (this.status == TicketStatus.CANCELED) {
             throw new IllegalStateException("취소된 티켓은 사용할 수 없습니다.");
         }
+        if (this.status == TicketStatus.USED) {
+            throw new IllegalStateException("이미 사용된 티켓입니다.");
+        }
         this.status = TicketStatus.USED; // 입장 완료
         this.usedAt = LocalDateTime.now(); // 현재 시각 기록
     }
@@ -113,6 +108,9 @@ public class Ticket extends BaseEntity {
     public void cancel() {
         if (this.status == TicketStatus.USED) {
             throw new IllegalStateException("이미 사용된 티켓은 취소할 수 없습니다.");
+        }
+        if (this.status == TicketStatus.CANCELED) {
+            throw new IllegalStateException("이미 취소된 티켓입니다.");
         }
         this.status = TicketStatus.CANCELED; // 취소
         this.canceledAt = LocalDateTime.now(); // 현재 시각 기록
@@ -122,6 +120,30 @@ public class Ticket extends BaseEntity {
     // tickets.user_id를 구매자로 변경
     // ticket_transfer_histories 도메인에서 별도 이력 기록 예정
     public void changeOwner(User newOwner) {
+        if (newOwner == null) {
+            throw new IllegalArgumentException("newOwner는 필수입니다.");
+        }
+        if (this.status != TicketStatus.ISSUED) {
+            throw new IllegalStateException("발급 상태의 티켓만 소유자를 변경할 수 있습니다.");
+        }
+        if (this.user.equals(newOwner)) {
+            throw new IllegalArgumentException("현재 소유자와 동일한 사용자로 변경할 수 없습니다.");
+        }
+
         this.user = newOwner;
+    }
+
+    private static void validateIssueParams(
+        String ticketNo,
+        User user,
+        OrderItem orderItem,
+        GameSeat gameSeat
+    ) {
+        if (ticketNo == null || ticketNo.isBlank()) {
+            throw new IllegalArgumentException("ticketNo는 필수입니다.");
+        }
+        if (user == null || orderItem == null || gameSeat == null) {
+            throw new IllegalArgumentException("user, orderItem, gameSeat는 필수입니다.");
+        }
     }
 }
