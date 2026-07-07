@@ -5,11 +5,27 @@ import com.backtoback.reseat.domain.order.entity.OrderItem;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.global.common.BaseEntity;
-import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+import java.util.Objects;
 
 // 결제 성공 후 좌석별로 발급되는 티켓 엔티티
 @Getter
@@ -18,7 +34,16 @@ import lombok.NoArgsConstructor;
 @Table(
     name = "tickets",
     uniqueConstraints = {
-        @UniqueConstraint(name = "uk_tickets_no", columnNames = "ticket_no")
+            @UniqueConstraint(name = "uk_tickets_no", columnNames = "ticket_no"),
+            @UniqueConstraint(name = "uk_tickets_order_item", columnNames = "order_item_id"),
+            @UniqueConstraint(name = "uk_tickets_game_seat", columnNames = "game_seat_id"),
+            @UniqueConstraint(name = "uk_tickets_qr_token", columnNames = "qr_token")
+    },
+    indexes = {
+            // 내 티켓 조회/상태별 필터에 쓰는 인덱스
+            @Index(name = "idx_tickets_user_status", columnList = "user_id, status"),
+            // 경기별 티켓 조회 인덱스
+            @Index(name = "idx_tickets_game", columnList = "game_id")
     }
 )
 public class Ticket extends BaseEntity {
@@ -31,29 +56,34 @@ public class Ticket extends BaseEntity {
     private String ticketNo; // 티켓 번호, 사용자에게 보여줄 외부용 ID
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(
+            name = "user_id", // 현재 티켓 소유자
+            nullable = false,
+            foreignKey = @ForeignKey(name = "fk_tickets_user")
+    )
     private User user;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
-        name = "order_item_id", // 주문 항목, 주문 항목에서 티켓 하나만 발급되도록 보장
-        nullable = false,
-        unique = true
+            name = "order_item_id", // 주문 항목, 주문 항목에서 티켓 하나만 발급되도록 보장
+            nullable = false,
+            foreignKey = @ForeignKey(name = "fk_tickets_order_item")
     )
     private OrderItem orderItem;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
-        name = "game_id", // 경기
-        nullable = false
+            name = "game_id", // 경기
+            nullable = false,
+            foreignKey = @ForeignKey(name = "fk_tickets_game")
     )
     private Game game;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
-        name = "game_seat_id", // 경기 좌석
-        nullable = false,
-        unique = true
+            name = "game_seat_id", // 경기 좌석
+            nullable = false,
+            foreignKey = @ForeignKey(name = "fk_tickets_game_seat")
     )
     private GameSeat gameSeat;
 
@@ -74,11 +104,11 @@ public class Ticket extends BaseEntity {
     private LocalDateTime canceledAt; // 취소 시각
 
     public static Ticket issue(
-        String ticketNo, // 외부 노출용 티켓 번호
-        User user, // 현재 소유자
-        OrderItem orderItem, // 티켓을 생성한 주문 항목
-        GameSeat gameSeat, // 어떤 경기 좌석인지
-        String qrToken // QR 토큰 값 (API 쪽에서 생성)
+            String ticketNo, // 외부 노출용 티켓 번호
+            User user, // 현재 소유자
+            OrderItem orderItem, // 티켓을 생성한 주문 항목
+            GameSeat gameSeat, // 어떤 경기 좌석인지
+            String qrToken // QR 토큰 값 (API 쪽에서 생성)
     ) {
         validateIssueParams(ticketNo, user, orderItem, gameSeat);
 
@@ -126,7 +156,7 @@ public class Ticket extends BaseEntity {
         if (this.status != TicketStatus.ISSUED) {
             throw new IllegalStateException("발급 상태의 티켓만 소유자를 변경할 수 있습니다.");
         }
-        if (this.user.equals(newOwner)) {
+        if (Objects.equals(this.user.getId(), newOwner.getId())) {
             throw new IllegalArgumentException("현재 소유자와 동일한 사용자로 변경할 수 없습니다.");
         }
 
@@ -134,10 +164,10 @@ public class Ticket extends BaseEntity {
     }
 
     private static void validateIssueParams(
-        String ticketNo,
-        User user,
-        OrderItem orderItem,
-        GameSeat gameSeat
+            String ticketNo,
+            User user,
+            OrderItem orderItem,
+            GameSeat gameSeat
     ) {
         if (ticketNo == null || ticketNo.isBlank()) {
             throw new IllegalArgumentException("ticketNo는 필수입니다.");
