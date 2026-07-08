@@ -81,7 +81,7 @@ public class PaymentService {
                 .orElseThrow(PaymentOrderNotFoundException::new);
 
         // 주문 검증
-        validateOrder(userId, request, order);
+        validateOrder(userId, order);
 
         // 같은 주문에 승인된 결제가 있으면 새 PG 요청 없이 기존 결제 결과를 반환한다.
         Optional<Payment> approvedPayment = paymentRepository.findFirstByOrderIdAndStatus(
@@ -248,7 +248,7 @@ public class PaymentService {
     /**
      * 동일한 Idempotency-Key로 저장된 기존 결제 요청을 처리한다.
      *
-     * <p>같은 사용자, 같은 주문, 같은 금액이면 기존 결제 결과를 그대로 반환한다. 요청 정보가 다르면 멱등성 키를 잘못 재사용한 것으로
+     * <p>같은 사용자, 같은 주문, 같은 결제 수단이면 기존 결제 결과를 그대로 반환한다. 요청 정보가 다르면 멱등성 키를 잘못 재사용한 것으로
      * 판단해 예외를 던진다.
      *
      * @param userId 현재 사용자 ID
@@ -261,7 +261,7 @@ public class PaymentService {
             throw new PaymentAccessDeniedException();
         }
 
-        if (!payment.getOrderId().equals(request.getOrderId()) || !payment.getAmount().equals(request.getAmount())) {
+        if (!payment.getOrderId().equals(request.getOrderId()) || payment.getMethod() != request.getMethod()) {
             throw new IdempotencyKeyConflictException();
         }
 
@@ -282,23 +282,18 @@ public class PaymentService {
     /**
      * 결제 요청이 주문 기준과 일치하는지 검증한다.
      *
-     * <p>주문 소유자, 주문 상태, 주문 금액을 확인해 결제 가능한 주문인지 판단한다.
+     * <p>주문 소유자와 주문 상태를 확인해 결제 가능한 주문인지 판단한다. 결제 금액은 프론트 요청값이 아니라 주문 총액을 기준으로 생성한다.
      *
      * @param userId 현재 사용자 ID
-     * @param request 결제 요청 정보
      * @param order 결제 대상 주문
      */
-    private void validateOrder(Long userId, PaymentRequest request, Order order) {
+    private void validateOrder(Long userId, Order order) {
         if (!order.getUser().getId().equals(userId)) {
             throw new PaymentAccessDeniedException();
         }
 
         if (order.getStatus() != OrderStatus.CREATED) {
             throw new InvalidOrderStatusException();
-        }
-
-        if (order.getTotalAmount() != request.getAmount()) {
-            throw new PaymentAmountMismatchException();
         }
     }
 
