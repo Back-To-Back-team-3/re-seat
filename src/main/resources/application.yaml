@@ -48,9 +48,10 @@ portone:
 
 # 토스페이먼츠 문서용 테스트 키(회원가입 없이 공개적으로 쓸 수 있는 공용 테스트 키, 실제 결제는 발생하지 않음).
 toss:
-  client-key: "test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq"
-  secret-key: "test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R"
-  confirm-url: "https://api.tosspayments.com/v1/payments/confirm"
+  # 프론트엔드에서 Toss 결제 위젯을 초기화할 때 사용하는 공개 클라이언트 키.
+  client-key: ${TOSS_CLIENT_KEY:test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq}
+  secret-key: ${TOSS_SECRET_KEY:test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R}
+  confirm-url: ${TOSS_CONFIRM_URL:https://api.tosspayments.com/v1/payments/confirm}
 
 ---
 # ===================================================================
