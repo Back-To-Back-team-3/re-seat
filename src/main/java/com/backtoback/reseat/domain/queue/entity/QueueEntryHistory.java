@@ -82,4 +82,14 @@ public class QueueEntryHistory {
         queueEntryHistory.enteredAt = enteredAt;
         return queueEntryHistory;
     }
+
+    public void cancel(LocalDateTime canceledAt) {
+        this.status = QueueEntryHistoryStatus.CANCELED;
+        this.canceledAt = canceledAt;
+    }
+
+    public void admit(LocalDateTime admittedAt) {
+        this.status = QueueEntryHistoryStatus.ADMITTED;
+        this.admittedAt = admittedAt;
+    }
 }
