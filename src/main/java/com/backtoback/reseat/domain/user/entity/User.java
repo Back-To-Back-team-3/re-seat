@@ -12,6 +12,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -61,25 +63,17 @@ public class User extends BaseEntity {
     @Column(nullable = false, length = 20)
     private UserStatus status;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
-
     @Column(name = "ci", nullable = true)
     private String ci;
 
     @Column(name="is_verified", nullable = false)
     private boolean isVerified = false;
 
-    @Column(name="real_name")
-    private String realName;
 
 
     @Builder
     public User(Long id, String email, String password, String name, String phone,
-                String ci, boolean isVerified, String realName, UserRole role, UserStatus status) {
+                String ci, boolean isVerified, UserRole role, UserStatus status) {
         this.id = id;
         this.email = email;
         this.password = password;
@@ -88,7 +82,6 @@ public class User extends BaseEntity {
         this.phone = phone;
         this.ci = ci;
         this.isVerified = isVerified;
-        this.realName = realName;
         this.role = role != null ? role : UserRole.USER;
         this.status = status != null ? status : UserStatus.ACTIVE;
     }
@@ -98,7 +91,17 @@ public class User extends BaseEntity {
             throw new IllegalStateException("이미 본인인증이 완료된 회원입니다.");
         }
         this.ci = ci;
-        this.realName = realName;
+        this.name = realName;
         this.isVerified = true;
+    }
+
+    public void updateProfile(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
+
+    public void changePassword(String newEncodedPassword) {
+        this.password = newEncodedPassword;
     }
 }
