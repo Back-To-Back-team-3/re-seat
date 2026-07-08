@@ -14,13 +14,13 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class VerificationController {
 
     private final VerificationService verificationService;
 
-    @PostMapping("/verification")
+    @PostMapping("/users/verification")
     public ResponseEntity<Void> verifyIdentity(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody VerificationRequest request
@@ -28,5 +28,4 @@ public class VerificationController {
         verificationService.verifyAndUpdateUser(userDetails.getId(), request.getImpUid());
         return ResponseEntity.ok().build();
     }
-
 }
