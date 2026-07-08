@@ -41,6 +41,9 @@ CREATE TABLE tickets (
                          status            VARCHAR(20)  NOT NULL DEFAULT 'ISSUED',
                          qr_token          VARCHAR(255) NULL,
                          issued_at         TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                         used_at           TIMESTAMP    NULL,
+                         canceled_at       TIMESTAMP    NULL,
+                         created_at        TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
                          updated_at        TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                          CONSTRAINT uk_tickets_no             UNIQUE (ticket_no),
                          CONSTRAINT uk_tickets_order_item     UNIQUE (order_item_id),
@@ -52,5 +55,5 @@ CREATE TABLE tickets (
                          CONSTRAINT fk_tickets_game_seat      FOREIGN KEY (game_seat_id)  REFERENCES game_seats(id)
 );
 
-CREATE INDEX idx_tickets_user   ON tickets (user_id);
-CREATE INDEX idx_tickets_status ON tickets (status);
+CREATE INDEX idx_tickets_user_status   ON tickets (user_id, status);
+CREATE INDEX idx_tickets_game ON tickets (game_id);
