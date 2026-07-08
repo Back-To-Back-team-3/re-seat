@@ -71,6 +71,8 @@ dependencies {
     //MySQL 데이터베이스 호환을 위한 전용 확장 모듈
     implementation 'org.flywaydb:flyway-mysql'
 
+
+
 }
 
 tasks.named('test') {
