@@ -4,6 +4,7 @@ import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentFailRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentRequest;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentActionResponse;
+import com.backtoback.reseat.domain.payment.dto.response.PaymentCreateResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentResponse;
 import com.backtoback.reseat.domain.payment.service.PaymentService;
 import com.backtoback.reseat.global.common.ApiResponse;
@@ -28,12 +29,12 @@ public class PaymentController {
     private final PaymentService paymentService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<PaymentResponse>> requestPayment(
+    public ResponseEntity<ApiResponse<PaymentCreateResponse>> requestPayment(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody PaymentRequest request
     ) {
-        PaymentResponse response = paymentService.requestPayment(
+        PaymentCreateResponse response = paymentService.requestPayment(
                 userDetails.getId(),
                 idempotencyKey,
                 request

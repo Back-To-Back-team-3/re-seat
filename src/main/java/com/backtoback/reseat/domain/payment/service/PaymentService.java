@@ -7,6 +7,7 @@ import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentFailRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentRequest;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentActionResponse;
+import com.backtoback.reseat.domain.payment.dto.response.PaymentCreateResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentResponse;
 import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
@@ -57,7 +58,7 @@ public class PaymentService {
      * @return 결제 처리 결과
      */
     @Transactional
-    public PaymentResponse requestPayment(Long userId, String idempotencyKey, PaymentRequest request) {
+    public PaymentCreateResponse requestPayment(Long userId, String idempotencyKey, PaymentRequest request) {
         validateIdempotencyKey(idempotencyKey);
 
         return paymentRepository.findByIdempotencyKey(idempotencyKey)
@@ -75,7 +76,7 @@ public class PaymentService {
      * @param request 결제 요청 정보
      * @return 새로 생성하거나 이미 승인된 결제 응답
      */
-    private PaymentResponse createPayment(Long userId, String idempotencyKey, PaymentRequest request) {
+    private PaymentCreateResponse createPayment(Long userId, String idempotencyKey, PaymentRequest request) {
         // 주문 조회
         Order order = orderRepository.findById(request.getOrderId())
                 .orElseThrow(PaymentOrderNotFoundException::new);
@@ -89,7 +90,7 @@ public class PaymentService {
                 PaymentStatus.APPROVED
         );
         if (approvedPayment.isPresent()) {
-            return PaymentResponse.from(approvedPayment.get());
+            return PaymentCreateResponse.from(approvedPayment.get());
         }
 
         // 결제 정보 생성
@@ -106,7 +107,7 @@ public class PaymentService {
                 .pgOrderId(order.getOrderNo())
                 .build();
 
-        return PaymentResponse.from(paymentRepository.save(payment));
+        return PaymentCreateResponse.from(paymentRepository.save(payment));
     }
 
     /**
@@ -270,7 +271,7 @@ public class PaymentService {
      * @param payment 멱등성 키로 조회한 기존 결제
      * @return 기존 결제 응답
      */
-    private PaymentResponse resolveExistingPayment(Long userId, PaymentRequest request, Payment payment) {
+    private PaymentCreateResponse resolveExistingPayment(Long userId, PaymentRequest request, Payment payment) {
         if (!payment.getUser().getId().equals(userId)) {
             throw new PaymentAccessDeniedException();
         }
@@ -279,7 +280,7 @@ public class PaymentService {
             throw new IdempotencyKeyConflictException();
         }
 
-        return PaymentResponse.from(payment);
+        return PaymentCreateResponse.from(payment);
     }
 
     /**

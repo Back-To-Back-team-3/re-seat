@@ -4,13 +4,12 @@ import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentMethod;
 import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
 import com.backtoback.reseat.domain.payment.entity.PgProvider;
-import java.time.LocalDateTime;
 import lombok.Builder;
 import lombok.Getter;
 
 @Getter
 @Builder
-public class PaymentResponse {
+public class PaymentCreateResponse {
 
     private final Long paymentId;
     private final String paymentNo;
@@ -19,12 +18,10 @@ public class PaymentResponse {
     private final PaymentMethod method;
     private final PaymentStatus status;
     private final PgProvider pgProvider;
-    private final String failReason;
-    private final LocalDateTime approvedAt;
-    private final LocalDateTime failedAt;
+    private final String pgOrderId;
 
-    public static PaymentResponse from(Payment payment) {
-        return PaymentResponse.builder()
+    public static PaymentCreateResponse from(Payment payment) {
+        return PaymentCreateResponse.builder()
                 .paymentId(payment.getId())
                 .paymentNo(payment.getPaymentNo())
                 .orderId(payment.getOrderId())
@@ -32,9 +29,7 @@ public class PaymentResponse {
                 .method(payment.getMethod())
                 .status(payment.getStatus())
                 .pgProvider(payment.getPgProvider())
-                .failReason(payment.getFailReason())
-                .approvedAt(payment.getApprovedAt())
-                .failedAt(payment.getFailedAt())
+                .pgOrderId(payment.getPgOrderId())
                 .build();
     }
 }
