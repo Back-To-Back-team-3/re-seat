@@ -9,7 +9,6 @@ import com.backtoback.reseat.domain.payment.dto.request.PaymentRequest;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentActionResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentResponse;
 import com.backtoback.reseat.domain.payment.entity.Payment;
-import com.backtoback.reseat.domain.payment.entity.PaymentMethod;
 import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
 import com.backtoback.reseat.domain.payment.entity.PgProvider;
 import com.backtoback.reseat.domain.payment.exception.IdempotencyKeyConflictException;
@@ -29,9 +28,11 @@ import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -97,7 +98,7 @@ public class PaymentService {
                 .orderId(order.getId())
                 .user(order.getUser())
                 .amount(order.getTotalAmount())
-                .method(resolveMethod(request.getMethod()))
+                .method(request.getMethod())
                 .idempotencyKey(idempotencyKey)
                 .status(PaymentStatus.READY)
                 .pgProvider(PgProvider.TOSS)
@@ -124,15 +125,20 @@ public class PaymentService {
         }
         validateCallbackAmount(payment, request.getOrderId(), request.getAmount());
 
+        TossConfirmResponse response;
         try {
-            TossConfirmResponse response = tossPaymentClient.confirm(
+            response = tossPaymentClient.confirm(
                     request.getPaymentKey(), request.getOrderId(), request.getAmount());
-            payment.approve(response.getPaymentKey(), parseApprovedAt(response.getApprovedAt()));
-        } catch (IllegalStateException e) {
-            // TossPaymentClient가 4xx/5xx/타임아웃 시 던지는 예외만 좁혀서 결제 실패로 기록한다.
+        } catch (RuntimeException e) {
+            // confirm() 호출 자체의 실패(토스 4xx/5xx 거절, 타임아웃·연결 실패, 응답 파싱 실패)만 여기서 잡아 결제 실패로 기록한다.
+            // (5xx/타임아웃은 토스 쪽에서 실제로 승인됐을 가능성이 있어 재조회로 확인해야 하나 이번엔 다루지 않음 - 추후 재조회 필요)
+            log.warn("토스 결제 승인 API 호출 실패 (paymentId={})", paymentId, e);
             payment.fail(e.getMessage(), LocalDateTime.now());
+            return PaymentActionResponse.from(payment);
         }
 
+        // confirm()이 정상 응답을 준 이후(=토스 승인은 이미 끝난 상태)의 실패는 결제 실패로 위장시키지 않고 그대로 터뜨린다.
+        payment.approve(response.getPaymentKey(), parseApprovedAt(response.getApprovedAt()));
         return PaymentActionResponse.from(payment);
     }
 
@@ -148,6 +154,7 @@ public class PaymentService {
     public PaymentActionResponse failPayment(Long userId, Long paymentId, PaymentFailRequest request) {
         Payment payment = getOwnedPayment(userId, paymentId);
 
+        // 만약 이미 확정된 결제 사항이라면 이미 완료된 결제 예외를 던짐
         if (payment.getStatus() != PaymentStatus.READY) {
             throw new PaymentAlreadyFinalizedException();
         }
@@ -166,6 +173,9 @@ public class PaymentService {
     public PaymentResponse getPayment(Long userId, Long paymentId) {
         return PaymentResponse.from(getOwnedPayment(userId, paymentId));
     }
+
+
+    // ===== private method =====
 
     /**
      * 결제를 조회하고 요청 사용자가 소유자인지 검증한다.
@@ -271,18 +281,6 @@ public class PaymentService {
         if (order.getTotalAmount() != request.getAmount()) {
             throw new PaymentAmountMismatchException();
         }
-    }
-
-    /**
-     * 요청 결제 수단을 결정한다.
-     *
-     * <p>요청에 결제 수단이 없으면 MVP 기본값인 MOCK을 사용한다.
-     *
-     * @param method 요청 결제 수단
-     * @return 저장할 결제 수단
-     */
-    private PaymentMethod resolveMethod(PaymentMethod method) {
-        return method != null ? method : PaymentMethod.MOCK;
     }
 
     /**

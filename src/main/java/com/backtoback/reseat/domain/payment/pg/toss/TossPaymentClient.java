@@ -26,6 +26,8 @@ public class TossPaymentClient {
     private final WebClient webClient = WebClient.builder().build();
 
     public TossConfirmResponse confirm(String paymentKey, String orderId, Integer amount) {
+        // 토스 API는 표준 HTTP Basic Auth(Base64(아이디:비밀번호)) 규격을 쓰되
+        // 아이디 자리에 시크릿 키를 넣고 비밀번호는 비워두는 방식을 사용한다.
         String encodedAuth = Base64.getEncoder()
                 .encodeToString((secretKey + ":").getBytes(StandardCharsets.UTF_8));
 
@@ -37,6 +39,8 @@ public class TossPaymentClient {
                 .retrieve()
                 //토스 API가 4xx, 5xx 에러를 뱉을 때 에러 본문을 그대로 담아 예외로 던짐
                 .onStatus(HttpStatusCode::isError, response ->
+                        // 에러 본문도 네트워크 응답이라 비동기(Mono)로 읽어야 하고,
+                        // onStatus가 Mono<Throwable>을 요구해서 map이 아닌 flatMap으로 감쌈
                         response.bodyToMono(String.class)
                                 .defaultIfEmpty("응답 본문 없음")
                                 .flatMap(body -> Mono.error(new IllegalStateException(
