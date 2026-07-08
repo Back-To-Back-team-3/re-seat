@@ -3,9 +3,9 @@ package com.backtoback.reseat.domain.payment.exception;
 import com.backtoback.reseat.global.exception.BusinessException;
 import com.backtoback.reseat.global.exception.ErrorCode;
 
-public class PaymentAmountMismatchException extends BusinessException {
+public class PaymentCallbackMismatchException extends BusinessException {
 
-    public PaymentAmountMismatchException() {
-        super(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
+    public PaymentCallbackMismatchException() {
+        super(ErrorCode.PAYMENT_CALLBACK_MISMATCH);
     }
 }

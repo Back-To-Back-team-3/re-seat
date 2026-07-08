@@ -25,7 +25,7 @@ public enum ErrorCode {
     PAYMENT_TIMEOUT(HttpStatus.REQUEST_TIMEOUT, "PAYMENT_TIMEOUT", "결제 제한 시간 초과"),
     PAYMENT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "PAYMENT_ACCESS_DENIED", "해당 결제 요청을 처리할 권한이 없습니다."),
     INVALID_ORDER_STATUS(HttpStatus.CONFLICT, "INVALID_ORDER_STATUS", "결제 가능한 주문 상태가 아닙니다."),
-    PAYMENT_AMOUNT_MISMATCH(HttpStatus.BAD_REQUEST, "PAYMENT_AMOUNT_MISMATCH", "주문 금액과 결제 금액이 일치하지 않습니다."),
+    PAYMENT_CALLBACK_MISMATCH(HttpStatus.BAD_REQUEST, "PAYMENT_CALLBACK_MISMATCH", "결제 콜백 정보가 결제 내역과 일치하지 않습니다."),
     INVALID_PRICE(HttpStatus.BAD_REQUEST, "INVALID_PRICE", "정가 외 등록(재판매)"),
     DUPLICATE_LOGIN_ID(HttpStatus.CONFLICT, "DUPLICATE_LOGIN_ID", "아이디/이메일/닉네임/전화번호 중복"),
     RESALE_ALREADY_SOLD(HttpStatus.CONFLICT, "RESALE_ALREADY_SOLD", "이미 판매된 재판매 건"),

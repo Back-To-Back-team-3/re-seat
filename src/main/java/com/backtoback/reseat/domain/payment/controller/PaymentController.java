@@ -61,13 +61,12 @@ public class PaymentController {
     public ResponseEntity<ApiResponse<PaymentActionResponse>> failPayment(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long paymentId,
-            @RequestBody(required = false) PaymentFailRequest request
+            @Valid @RequestBody PaymentFailRequest request
     ) {
-        PaymentFailRequest safeRequest = request != null ? request : new PaymentFailRequest();
         PaymentActionResponse response = paymentService.failPayment(
                 userDetails.getId(),
                 paymentId,
-                safeRequest
+                request
         );
 
         return ResponseEntity.ok(ApiResponse.success("결제 실패 처리 완료", response));

@@ -15,8 +15,8 @@ import com.backtoback.reseat.domain.payment.exception.IdempotencyKeyConflictExce
 import com.backtoback.reseat.domain.payment.exception.IdempotencyKeyRequiredException;
 import com.backtoback.reseat.domain.payment.exception.InvalidOrderStatusException;
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
-import com.backtoback.reseat.domain.payment.exception.PaymentAmountMismatchException;
 import com.backtoback.reseat.domain.payment.exception.PaymentAccessDeniedException;
+import com.backtoback.reseat.domain.payment.exception.PaymentCallbackMismatchException;
 import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
 import com.backtoback.reseat.domain.payment.exception.PaymentOrderNotFoundException;
 import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
@@ -154,7 +154,7 @@ public class PaymentService {
      *
      * @param userId 현재 사용자 ID
      * @param paymentId 결제 ID
-     * @param request 실패 사유(선택)
+     * @param request 토스가 클라이언트에 돌려준 실패 code/message/orderId
      * @return 실패 처리된 결제 결과
      */
     @Transactional
@@ -165,7 +165,9 @@ public class PaymentService {
         if (payment.getStatus() != PaymentStatus.READY) {
             throw new PaymentAlreadyFinalizedException();
         }
-        payment.fail(resolveFailReason(request.getFailReason()), LocalDateTime.now());
+        validateCallbackOrderId(payment, request.getOrderId());
+
+        payment.fail(resolveFailReason(request), LocalDateTime.now());
 
         return PaymentActionResponse.from(payment);
     }
@@ -209,18 +211,30 @@ public class PaymentService {
      */
     private void validateCallbackAmount(Payment payment, String orderId, Integer amount) {
         if (!payment.getPgOrderId().equals(orderId) || !payment.getAmount().equals(amount)) {
-            throw new PaymentAmountMismatchException();
+            throw new PaymentCallbackMismatchException();
         }
     }
 
     /**
-     * 실패 사유가 비어 있으면 기본 메시지로 대체한다.
+     * 실패 콜백으로 전달된 orderId가 저장된 결제 정보와 일치하는지 검증한다.
      *
-     * @param failReason 요청으로 전달된 실패 사유
+     * @param payment 저장된 결제
+     * @param orderId 실패 콜백으로 전달된 주문 식별자
+     */
+    private void validateCallbackOrderId(Payment payment, String orderId) {
+        if (!payment.getPgOrderId().equals(orderId)) {
+            throw new PaymentCallbackMismatchException();
+        }
+    }
+
+    /**
+     * 토스 실패 코드를 포함해 저장할 실패 사유를 만든다.
+     *
+     * @param request 토스 실패 응답 정보
      * @return 저장할 실패 사유
      */
-    private String resolveFailReason(String failReason) {
-        return (failReason == null || failReason.isBlank()) ? "결제 실패" : failReason;
+    private String resolveFailReason(PaymentFailRequest request) {
+        return "[" + request.getCode() + "] " + request.getMessage();
     }
 
     /**
