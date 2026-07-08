@@ -39,6 +39,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class PaymentService {
 
     private static final DateTimeFormatter PAYMENT_NO_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+    private static final String TOSS_APPROVED_STATUS = "DONE";
 
     private final PaymentRepository paymentRepository;
     // TODO: 주문 도메인 결제 조회/검증 API가 생기면 OrderRepository 직접 의존을 제거할 예정.
@@ -137,7 +138,13 @@ public class PaymentService {
             return PaymentActionResponse.from(payment);
         }
 
-        // confirm()이 정상 응답을 준 이후(=토스 승인은 이미 끝난 상태)의 실패는 결제 실패로 위장시키지 않고 그대로 터뜨린다.
+        // confirm()이 정상 응답을 준 이후(=토스 승인은 이미 끝난 상태) Status가 성공이 아닐 경우
+        if (!TOSS_APPROVED_STATUS.equals(response.getStatus())) {
+            log.warn("토스 결제 승인 상태 불일치 (paymentId={}, tossStatus={})", paymentId, response.getStatus());
+            payment.fail(resolveTossStatusFailReason(response.getStatus()), LocalDateTime.now());
+            return PaymentActionResponse.from(payment);
+        }
+
         payment.approve(response.getPaymentKey(), parseApprovedAt(response.getApprovedAt()));
         return PaymentActionResponse.from(payment);
     }
@@ -214,6 +221,18 @@ public class PaymentService {
      */
     private String resolveFailReason(String failReason) {
         return (failReason == null || failReason.isBlank()) ? "결제 실패" : failReason;
+    }
+
+    /**
+     * 토스 승인 응답 상태가 완료 상태가 아닐 때 저장할 실패 사유를 만든다.
+     *
+     * @param tossStatus 토스 결제 상태
+     * @return 저장할 실패 사유
+     */
+    private String resolveTossStatusFailReason(String tossStatus) {
+        return tossStatus == null || tossStatus.isBlank()
+                ? "토스 결제 승인 상태가 비어 있습니다."
+                : "토스 결제 승인 상태가 완료가 아닙니다. status=" + tossStatus;
     }
 
     /**
