@@ -12,13 +12,12 @@ CREATE TABLE users (
                        status          VARCHAR(20)  NOT NULL DEFAULT 'ACTIVE',
                        ci              VARCHAR(255) NULL,
                        is_verified     BOOLEAN      NOT NULL DEFAULT FALSE,
-                       real_name       VARCHAR(50)  NULL,
                        created_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
                        updated_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
                        CONSTRAINT uk_users_email  UNIQUE (email),
                        CONSTRAINT uk_users_phone  UNIQUE (phone),
-                       CONSTRAINT uk_users_ci     UNIQUE (ci)                  
+                       CONSTRAINT uk_users_ci     UNIQUE (ci)
 );
 
 CREATE TABLE refresh_token (
