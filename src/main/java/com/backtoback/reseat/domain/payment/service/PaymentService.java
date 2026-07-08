@@ -146,7 +146,13 @@ public class PaymentService {
             return PaymentActionResponse.from(payment);
         }
 
-        payment.approve(response.getPaymentKey(), parseApprovedAt(response.getApprovedAt()));
+        try {
+            payment.approve(response.getPaymentKey(), parseApprovedAt(response.getApprovedAt()));
+        } catch (RuntimeException e) {
+            log.error("토스 승인 성공 후 로컬 반영 실패 - 재조회 필요 (paymentId={}, paymentKey={})",
+                    paymentId, response.getPaymentKey(), e);
+            throw e;
+        }
         return PaymentActionResponse.from(payment);
     }
 
