@@ -24,8 +24,7 @@ import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
 import com.backtoback.reseat.domain.payment.exception.PaymentOrderNotFoundException;
 import com.backtoback.reseat.domain.payment.exception.PaymentOrderNotPayableException;
 import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
-import com.backtoback.reseat.domain.payment.pg.toss.TossCancelResponse;
-import com.backtoback.reseat.domain.payment.pg.toss.TossConfirmResponse;
+import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -47,6 +46,8 @@ public class PaymentService {
     private static final String TOSS_APPROVED_STATUS = "DONE";
     private static final String TOSS_CANCELED_STATUS = "CANCELED";
     private static final String TOSS_PARTIAL_CANCELED_STATUS = "PARTIAL_CANCELED";
+    private static final String TOSS_ABORTED_STATUS = "ABORTED";
+    private static final String TOSS_EXPIRED_STATUS = "EXPIRED";
 
     private final PaymentRepository paymentRepository;
     // TODO: 주문 도메인 결제 조회/검증 API가 생기면 OrderRepository 직접 의존을 제거할 예정.
@@ -136,7 +137,7 @@ public class PaymentService {
      */
     @Transactional
     public PaymentActionResponse completePayment(Long userId, Long paymentId, PaymentCompleteRequest request) {
-        Payment payment = getOwnedPayment(userId, paymentId);
+        Payment payment = getOwnedPaymentWithPessimisticWriteLock(userId, paymentId);
 
         if (payment.getStatus() != PaymentStatus.READY) {
             throw new PaymentAlreadyFinalizedException();
@@ -146,16 +147,34 @@ public class PaymentService {
             throw new PaymentCallbackMismatchException();
         }
 
-        TossConfirmResponse response;
+        TossPaymentResponse response;
         try {
             response = tossPaymentClient.confirm(
                     request.getPaymentKey(), request.getOrderId(), request.getAmount());
         } catch (RuntimeException e) {
-            // confirm() 호출 자체의 실패(토스 4xx/5xx 거절, 타임아웃·연결 실패, 응답 파싱 실패)만 여기서 잡아 결제 실패로 기록한다.
-            // (5xx/타임아웃은 토스 쪽에서 실제로 승인됐을 가능성이 있어 재조회로 확인해야 하나 이번엔 다루지 않음 - 추후 재조회 필요)
             log.warn("토스 결제 승인 API 호출 실패 (paymentId={})", paymentId, e);
-            payment.fail(e.getMessage(), LocalDateTime.now());
-            return PaymentActionResponse.from(payment);
+            TossPaymentResponse tossPayment = findTossPaymentOrNull(request.getPaymentKey(), paymentId);
+            if (tossPayment != null && TOSS_APPROVED_STATUS.equals(tossPayment.getStatus())) {
+                if (!payment.getPgOrderId().equals(tossPayment.getOrderId())
+                        || (tossPayment.getTotalAmount() != null
+                        && !payment.getAmount().equals(tossPayment.getTotalAmount()))) {
+                    throw new PaymentCallbackMismatchException();
+                }
+                payment.approve(tossPayment.getPaymentKey(), resolveApprovedAt(tossPayment.getApprovedAt()));
+                return PaymentActionResponse.from(payment);
+            }
+
+            if (tossPayment != null
+                    && (TOSS_ABORTED_STATUS.equals(tossPayment.getStatus())
+                    || TOSS_EXPIRED_STATUS.equals(tossPayment.getStatus())
+                    || TOSS_CANCELED_STATUS.equals(tossPayment.getStatus()))) {
+                payment.fail("토스 결제 최종 상태가 실패입니다. status=" + tossPayment.getStatus(), LocalDateTime.now());
+                return PaymentActionResponse.from(payment);
+            }
+
+            // 승인 여부가 불명확한 경우에는 로컬 상태를 FAILED로 바꾸지 않는다.
+            // 사용자가 같은 paymentKey로 재시도하거나 운영자가 Toss 조회 후 수동 보정할 수 있게 READY 상태를 유지한다.
+            throw e;
         }
 
         // confirm()이 정상 응답을 준 이후(=토스 승인은 이미 끝난 상태) Status가 성공이 아닐 경우
@@ -169,10 +188,7 @@ public class PaymentService {
         }
 
         try {
-            LocalDateTime approvedAt = response.getApprovedAt() != null
-                    ? OffsetDateTime.parse(response.getApprovedAt()).toLocalDateTime()
-                    : LocalDateTime.now();
-            payment.approve(response.getPaymentKey(), approvedAt);
+            payment.approve(response.getPaymentKey(), resolveApprovedAt(response.getApprovedAt()));
         } catch (RuntimeException e) {
             log.error("토스 승인 성공 후 로컬 반영 실패 - 재조회 필요 (paymentId={}, paymentKey={})",
                     paymentId, response.getPaymentKey(), e);
@@ -191,7 +207,7 @@ public class PaymentService {
      */
     @Transactional
     public PaymentActionResponse failPayment(Long userId, Long paymentId, PaymentFailRequest request) {
-        Payment payment = getOwnedPayment(userId, paymentId);
+        Payment payment = getOwnedPaymentWithPessimisticWriteLock(userId, paymentId);
 
         // 만약 이미 확정된 결제 사항이라면 이미 완료된 결제 예외를 던짐
         if (payment.getStatus() != PaymentStatus.READY) {
@@ -218,7 +234,7 @@ public class PaymentService {
      */
     @Transactional
     public PaymentActionResponse cancelPayment(Long userId, Long paymentId, PaymentCancelRequest request) {
-        Payment payment = getOwnedPayment(userId, paymentId);
+        Payment payment = getOwnedPaymentWithPessimisticWriteLock(userId, paymentId);
 
         if (payment.getStatus() != PaymentStatus.APPROVED) {
             throw new PaymentCancelNotAllowedException();
@@ -228,11 +244,18 @@ public class PaymentService {
             throw new PaymentCancelNotAllowedException("PG 결제 키가 없어 결제를 취소할 수 없습니다.");
         }
 
-        TossCancelResponse response;
+        TossPaymentResponse response;
         try {
             response = tossPaymentClient.cancel(payment.getPgPaymentKey(), request.getCancelReason());
         } catch (RuntimeException e) {
             log.warn("토스 결제 취소 API 호출 실패 (paymentId={})", paymentId, e);
+            TossPaymentResponse tossPayment = findTossPaymentOrNull(payment.getPgPaymentKey(), paymentId);
+            if (tossPayment != null
+                    && (TOSS_CANCELED_STATUS.equals(tossPayment.getStatus())
+                    || TOSS_PARTIAL_CANCELED_STATUS.equals(tossPayment.getStatus()))) {
+                payment.cancel();
+                return PaymentActionResponse.from(payment);
+            }
             throw new PaymentCancelFailedException(e.getMessage());
         }
 
@@ -263,26 +286,40 @@ public class PaymentService {
      * @return 결제 상세 정보
      */
     public PaymentResponse getPayment(Long userId, Long paymentId) {
-        return PaymentResponse.from(getOwnedPayment(userId, paymentId));
-    }
-
-
-    // ===== private method =====
-
-    /**
-     * 결제를 조회하고 요청 사용자가 소유자인지 검증한다.
-     *
-     * @param userId 현재 사용자 ID
-     * @param paymentId 결제 ID
-     * @return 소유자가 확인된 결제
-     */
-    private Payment getOwnedPayment(Long userId, Long paymentId) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(PaymentNotFoundException::new);
         if (!payment.getUser().getId().equals(userId)) {
             throw new PaymentAccessDeniedException();
         }
+        return PaymentResponse.from(payment);
+    }
+
+
+    // ===== private method =====
+
+    private Payment getOwnedPaymentWithPessimisticWriteLock(Long userId, Long paymentId) {
+        Payment payment = paymentRepository.findByIdWithPessimisticWriteLock(paymentId)
+                .orElseThrow(PaymentNotFoundException::new);
+        if (!payment.getUser().getId().equals(userId)) {
+            throw new PaymentAccessDeniedException();
+        }
         return payment;
+    }
+
+    private TossPaymentResponse findTossPaymentOrNull(String paymentKey, Long paymentId) {
+        try {
+            return tossPaymentClient.getPayment(paymentKey);
+        } catch (RuntimeException requeryException) {
+            log.warn("토스 결제 재조회 실패 (paymentId={}, paymentKey={})", paymentId, paymentKey, requeryException);
+            // TODO: 단발성 재조회 실패 시 PG와 로컬 상태가 어긋날 수 있으므로 비동기 재동기화 작업을 추가할 필요성이 있습니다.
+            return null;
+        }
+    }
+
+    private LocalDateTime resolveApprovedAt(String approvedAt) {
+        return approvedAt != null
+                ? OffsetDateTime.parse(approvedAt).toLocalDateTime()
+                : LocalDateTime.now();
     }
 
 }

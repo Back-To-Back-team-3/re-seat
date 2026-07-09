@@ -4,6 +4,9 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
 
+import com.backtoback.reseat.domain.payment.pg.toss.dto.request.TossCancelRequest;
+import com.backtoback.reseat.domain.payment.pg.toss.dto.request.TossConfirmRequest;
+import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
@@ -18,6 +21,7 @@ public class TossPaymentClient {
 
     private static final String CONFIRM_PATH = "/v1/payments/confirm";
     private static final String CANCEL_PATH = "/v1/payments/{paymentKey}/cancel";
+    private static final String PAYMENT_PATH = "/v1/payments/{paymentKey}";
 
     //하드코딩 유출 방지를 위해 application.yaml 또는 환경변수에서 키 주입
     @Value("${toss.secret-key}")
@@ -28,7 +32,7 @@ public class TossPaymentClient {
 
     private final WebClient webClient = WebClient.builder().build();
 
-    public TossConfirmResponse confirm(String paymentKey, String orderId, Integer amount) {
+    public TossPaymentResponse confirm(String paymentKey, String orderId, Integer amount) {
         return webClient.post()
                 .uri(baseUrl + CONFIRM_PATH)
                 .header(HttpHeaders.AUTHORIZATION, authorizationHeader())
@@ -43,12 +47,12 @@ public class TossPaymentClient {
                                 .defaultIfEmpty("응답 본문 없음")
                                 .flatMap(body -> Mono.error(new IllegalStateException(
                                         "토스페이먼츠 결제 승인 API 호출 실패: " + body))))
-                .bodyToMono(TossConfirmResponse.class)
+                .bodyToMono(TossPaymentResponse.class)
                 //무한 대기로 인한 스레드 고갈 방지를 위해 5초 타임아웃(Timeout) 적용
                 .block(Duration.ofSeconds(5));
     }
 
-    public TossCancelResponse cancel(String paymentKey, String cancelReason) {
+    public TossPaymentResponse cancel(String paymentKey, String cancelReason) {
         return webClient.post()
                 .uri(baseUrl + CANCEL_PATH, paymentKey)
                 .header(HttpHeaders.AUTHORIZATION, authorizationHeader())
@@ -60,7 +64,21 @@ public class TossPaymentClient {
                                 .defaultIfEmpty("응답 본문 없음")
                                 .flatMap(body -> Mono.error(new IllegalStateException(
                                         "토스페이먼츠 결제 취소 API 호출 실패: " + body))))
-                .bodyToMono(TossCancelResponse.class)
+                .bodyToMono(TossPaymentResponse.class)
+                .block(Duration.ofSeconds(5));
+    }
+
+    public TossPaymentResponse getPayment(String paymentKey) {
+        return webClient.get()
+                .uri(baseUrl + PAYMENT_PATH, paymentKey)
+                .header(HttpHeaders.AUTHORIZATION, authorizationHeader())
+                .retrieve()
+                .onStatus(HttpStatusCode::isError, response ->
+                        response.bodyToMono(String.class)
+                                .defaultIfEmpty("응답 본문 없음")
+                                .flatMap(body -> Mono.error(new IllegalStateException(
+                                        "토스페이먼츠 결제 조회 API 호출 실패: " + body))))
+                .bodyToMono(TossPaymentResponse.class)
                 .block(Duration.ofSeconds(5));
     }
 
