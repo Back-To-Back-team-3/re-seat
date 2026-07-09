@@ -2,6 +2,7 @@ package com.backtoback.reseat.domain.game.dto;
 
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
+import com.backtoback.reseat.domain.stadium.dto.StadiumSummaryResponse;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.time.LocalDateTime;
@@ -15,9 +16,9 @@ import java.time.LocalDateTime;
 public record GameDetailResponse(
     Long gameId,
     String title,
-    TeamResponse homeTeam,
-    TeamResponse awayTeam,
-    StadiumResponse stadium,
+    TeamSummaryResponse homeTeam,
+    TeamSummaryResponse awayTeam,
+    StadiumSummaryResponse stadium,
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime gameAt,
@@ -41,9 +42,9 @@ public record GameDetailResponse(
         return new GameDetailResponse(
             game.getId(),
             game.getTitle(),
-            TeamResponse.from(game.getHomeTeam().getId(), game.getHomeTeam().getName()),
-            TeamResponse.from(game.getAwayTeam().getId(), game.getAwayTeam().getName()),
-            StadiumResponse.from(game.getStadium().getId(), game.getStadium().getName()),
+            TeamSummaryResponse.from(game.getHomeTeam()),
+            TeamSummaryResponse.from(game.getAwayTeam()),
+            StadiumSummaryResponse.from(game.getStadium()),
             game.getGameAt(),
             game.getBookingOpenAt(),
             game.getBookingCloseAt(),
