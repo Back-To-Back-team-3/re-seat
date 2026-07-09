@@ -8,6 +8,7 @@ import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
 import com.backtoback.reseat.domain.user.exception.DeleteUserException;
 import com.backtoback.reseat.domain.user.exception.InvalidPasswordException;
+import com.backtoback.reseat.domain.user.exception.InvalidTokenException;
 import com.backtoback.reseat.domain.user.exception.SuspendedUserException;
 import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
 import com.backtoback.reseat.domain.user.repository.RefreshTokenRepository;
@@ -80,8 +81,7 @@ public class AuthService {
 
         // 1. Refresh Token 유효성 및 만료 검증 (포맷 자체가 깨진 경우)
         if (refreshToken == null || !jwtTokenProvider.validateToken(refreshToken)) {
-            // 💡 추후 GlobalExceptionHandler에 InvalidTokenException(401) 매핑하는 걸 권장
-            throw new IllegalArgumentException("유효하지 않거나 만료된 RefreshToken 입니다.");
+            throw new InvalidTokenException("유효하지 않거나 만료된 RefreshToken 입니다.");
         }
 
         // 2. Refresh Token에서 사용자 식별 정보(userId) 추출
@@ -91,6 +91,7 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("존재하지 않는 회원입니다."));
 
+        // [CodeRabbit 피드백 반영] DB에 저장된 실제 토큰과 클라이언트가 보낸 토큰이 일치하는지 검증
         //토큰 재발급을 받으려는 사용자 상태 체크
         if(user.getStatus() == UserStatus.SUSPENDED){
             throw new SuspendedUserException("이용이 정지된 계정입니다");
@@ -101,10 +102,10 @@ public class AuthService {
 
         // [CodeRabbit 피드백 반영] DB에 저장된 실제 토큰과 클라이언트가 보낸 토큰이 유치하는지 검증
         RefreshToken dbRefreshToken = refreshTokenRepository.findByUser(user)
-                .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 인증 정보입니다."));
+                .orElseThrow(() -> new InvalidTokenException("유효하지 않은 인증 정보입니다."));
 
         if (!dbRefreshToken.getTokenValue().equals(refreshToken)) {
-            throw new IllegalArgumentException("토큰 정보가 일치하지 않습니다.");
+            throw new InvalidTokenException("토큰 정보가 일치하지 않습니다.");
         }
 
         // 4. 새로운 토큰 쌍 생성 및 토큰 회전(Rotation)
