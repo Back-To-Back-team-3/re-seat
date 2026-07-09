@@ -15,7 +15,6 @@ import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
 import com.backtoback.reseat.domain.payment.entity.PgProvider;
 import com.backtoback.reseat.domain.payment.exception.IdempotencyKeyConflictException;
 import com.backtoback.reseat.domain.payment.exception.IdempotencyKeyRequiredException;
-import com.backtoback.reseat.domain.payment.exception.InvalidOrderStatusException;
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentAccessDeniedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCallbackMismatchException;
@@ -23,6 +22,7 @@ import com.backtoback.reseat.domain.payment.exception.PaymentCancelFailedExcepti
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelNotAllowedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
 import com.backtoback.reseat.domain.payment.exception.PaymentOrderNotFoundException;
+import com.backtoback.reseat.domain.payment.exception.PaymentOrderNotPayableException;
 import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
 import com.backtoback.reseat.domain.payment.pg.toss.TossCancelResponse;
 import com.backtoback.reseat.domain.payment.pg.toss.TossConfirmResponse;
@@ -396,7 +396,7 @@ public class PaymentService {
         }
 
         if (order.getStatus() != OrderStatus.CREATED) {
-            throw new InvalidOrderStatusException();
+            throw new PaymentOrderNotPayableException();
         }
     }
 
