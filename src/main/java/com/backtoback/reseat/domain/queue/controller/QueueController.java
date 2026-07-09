@@ -24,6 +24,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+/**
+ * 대기열 API Controller
+ *
+ * <p>대기열 진입, 상태 조회, SSE 순번 스트림, 취소, MVP용 입장 허용 처리를 제공한다.</p>
+ */
 @RestController
 @RequestMapping("/api/v1/queues")
 @RequiredArgsConstructor

@@ -24,6 +24,11 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 대기열 통과 대상자에게 입장 토큰을 발급하는 서비스
+ *
+ * <p>경기별 분산 락으로 admission 중복 실행을 막고, DB 커밋 성공 후 Redis 대기열에서 입장 허용 사용자를 제거한다.</p>
+ */
 @Service
 @RequiredArgsConstructor
 public class AdmissionTokenService {
@@ -40,6 +45,15 @@ public class AdmissionTokenService {
     private final GameRepository gameRepository;
     private final UserRepository userRepository;
 
+    /**
+     * Redis 대기열 앞쪽 사용자들을 입장 허용 처리하고 입장 토큰을 발급한다.
+     *
+     * <p>동시에 같은 경기 admission이 실행되지 않도록 경기별 Redisson 락을 사용한다.</p>
+     *
+     * @param gameId 경기 ID
+     * @param limit 입장 허용 처리할 최대 사용자 수
+     * @return 실제 입장 허용 처리된 사용자 수
+     */
     @Transactional
     public int admit(Long gameId, int limit) {
 
@@ -47,6 +61,7 @@ public class AdmissionTokenService {
             return 0;
         }
 
+        // 경기별 admission 동시 실행을 막아 같은 사용자가 중복 선발되지 않도록 한다.
         RLock lock = redissonClient.getLock(admitLockKey(gameId));
         boolean locked = false;
 
@@ -65,7 +80,7 @@ public class AdmissionTokenService {
 
             String redisKey = redisKey(gameId);
 
-            // Redis ZSet 앞쪽 사용자부터 최대 safeLimit명 까지 입장 허용 대상 조
+            // Redis ZSet 앞쪽 사용자부터 최대 safeLimit명 까지 입장 허용 대상으로 조회한다.
             int safeLimit = Math.min(limit, MAX_ADMIT_LIMIT);
             Set<String> members = queueZSet.range(redisKey, 0, safeLimit - 1);
 
@@ -101,7 +116,7 @@ public class AdmissionTokenService {
                 admittedCount++;
             }
 
-            // DB 커밋이 성공한 뒤 입장 허용된 사용자는 Redis 대기열 순번에서 제거
+            // DB 커밋이 성공한 뒤 입장 허용된 사용자를 Redis ZSet에서 제거한다.
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
