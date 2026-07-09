@@ -1,6 +1,8 @@
 package com.backtoback.reseat.domain.game.service;
 
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
+import com.backtoback.reseat.domain.game.exception.InvalidGameSearchConditionException;
+
 import java.time.LocalDate;
 
 /**
@@ -28,7 +30,9 @@ public record GameSearchCondition(
      */
     public void validate() {
         if (from != null && to != null && from.isAfter(to)) {
-            throw new IllegalArgumentException("검색 시작일은 종료일보다 늦을 수 없습니다.");
+            throw new InvalidGameSearchConditionException(
+                "검색 시작일(from)은 종료일(to)보다 늦을 수 없습니다."
+            );
         }
     }
 }
