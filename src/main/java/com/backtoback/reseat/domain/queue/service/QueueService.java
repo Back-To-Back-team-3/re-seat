@@ -1,6 +1,7 @@
 package com.backtoback.reseat.domain.queue.service;
 
 import com.backtoback.reseat.domain.game.entity.Game;
+import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
 import com.backtoback.reseat.domain.queue.dto.response.AdmitEventResponse;
 import com.backtoback.reseat.domain.queue.dto.response.QueueCancelResponse;
@@ -10,6 +11,9 @@ import com.backtoback.reseat.domain.queue.entity.AdmissionToken;
 import com.backtoback.reseat.domain.queue.entity.AdmissionTokenStatus;
 import com.backtoback.reseat.domain.queue.entity.QueueEntryHistory;
 import com.backtoback.reseat.domain.queue.entity.QueueEntryHistoryStatus;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryNotFoundException;
+import com.backtoback.reseat.domain.queue.exception.QueueRegistrationFailedException;
+import com.backtoback.reseat.domain.queue.exception.QueueTokenRequiredException;
 import com.backtoback.reseat.domain.queue.repository.AdmissionTokenRepository;
 import com.backtoback.reseat.domain.queue.repository.QueueEntryHistoryRepository;
 import com.backtoback.reseat.domain.user.entity.User;
@@ -55,9 +59,8 @@ public class QueueService {
 
         ZSetOperations<String, String> queueZSet = getZSetOperations();
 
-        // Game - Exception 생기면 변경 (현재 임시)
         Game game = gameRepository.findById(gameId)
-                .orElseThrow(() -> new IllegalArgumentException("경기를 찾을 수 없습니다."));
+                .orElseThrow(() -> new GameNotFoundException(gameId));
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
 
@@ -96,7 +99,7 @@ public class QueueService {
         }
 
         if (Objects.isNull(redisRank)) {
-            throw new IllegalStateException("대기열 등록에 실패했습니다.");
+            throw new QueueRegistrationFailedException();
         }
 
         // 최초 대기열 진입 이력을 저장하되, 동시 진입으로 queue_key 유니크 제약 충돌이 발생하면 기존 이력을 다시 조회한다.
@@ -107,7 +110,7 @@ public class QueueService {
                                 QueueEntryHistory.of(game, user, queueKey, LocalDateTime.now()));
                     } catch (DataIntegrityViolationException e) {
                         return queueEntryHistoryRepository.findByQueueKey(queueKey)
-                                .orElseThrow(() -> new IllegalStateException("대기열 진입 이력 저장에 실패했습니다.", e));
+                                .orElseThrow(QueueRegistrationFailedException::new);
                     }
                 });
 
@@ -162,7 +165,7 @@ public class QueueService {
 
         // Redis에 없으면 현재 대기열에 등록된 사용자가 아님
         if (Objects.isNull(redisRank)) {
-            throw new IllegalArgumentException("대기열 진입 이력이 없습니다.");
+            throw new QueueEntryNotFoundException();
         }
 
         return QueueStatusResponse.builder()
@@ -190,7 +193,7 @@ public class QueueService {
                         userId,
                         AdmissionTokenStatus.ACTIVE,
                         LocalDateTime.now())
-                .orElseThrow(() -> new IllegalArgumentException("활성화된 입장 토큰이 없습니다."));
+                .orElseThrow(QueueTokenRequiredException::new);
 
         return AdmitEventResponse.builder()
                 .admitted(true)
@@ -220,7 +223,7 @@ public class QueueService {
         // DB 상태를 CANCELED로 전이한 뒤 Redis 대기열에서 제거한다.
         QueueEntryHistory queueEntryHistory =
                 queueEntryHistoryRepository.findByQueueKey(queueKey)
-                .orElseThrow(() -> new IllegalArgumentException("대기열 진입 이력이 없습니다."));
+                .orElseThrow(QueueEntryNotFoundException::new);
 
         queueEntryHistory.cancel(LocalDateTime.now());
 

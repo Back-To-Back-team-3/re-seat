@@ -1,9 +1,12 @@
 package com.backtoback.reseat.domain.queue.service;
 
 import com.backtoback.reseat.domain.game.entity.Game;
+import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
 import com.backtoback.reseat.domain.queue.entity.AdmissionToken;
 import com.backtoback.reseat.domain.queue.entity.QueueEntryHistory;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryNotFoundException;
+import com.backtoback.reseat.domain.queue.exception.QueueRegistrationFailedException;
 import com.backtoback.reseat.domain.queue.repository.AdmissionTokenRepository;
 import com.backtoback.reseat.domain.queue.repository.QueueEntryHistoryRepository;
 import com.backtoback.reseat.domain.user.entity.User;
@@ -89,7 +92,7 @@ public class AdmissionTokenService {
             }
 
             Game game = gameRepository.findById(gameId)
-                    .orElseThrow(() -> new IllegalArgumentException("경기를 찾을 수 없습니다."));
+                    .orElseThrow(() -> new GameNotFoundException(gameId));
 
             LocalDateTime issuedAt = LocalDateTime.now();
             LocalDateTime expiresAt = issuedAt.plusMinutes(TOKEN_TTL_MINUTES);
@@ -109,7 +112,7 @@ public class AdmissionTokenService {
 
                 QueueEntryHistory queueEntryHistory =
                         queueEntryHistoryRepository.findByQueueKey(queueKey)
-                                .orElseThrow(() -> new IllegalArgumentException("대기열 진입 이력이 없습니다."));
+                                .orElseThrow(QueueEntryNotFoundException::new);
 
                 queueEntryHistory.admit(issuedAt);
 
@@ -127,7 +130,7 @@ public class AdmissionTokenService {
             return admittedCount;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return 0;
+            throw new QueueRegistrationFailedException("입장 허용 처리 중 문제가 발생했습니다.");
         } finally {
             if (locked && lock.isHeldByCurrentThread()) {
                 lock.unlock();
@@ -155,7 +158,11 @@ public class AdmissionTokenService {
     }
 
     private Long parseUserId(String member) {
-        return Long.parseLong(member.replace("user:", ""));
+        try {
+            return Long.parseLong(member.replace("user:", ""));
+        } catch (NumberFormatException e) {
+            throw new QueueRegistrationFailedException("대기열 사용자 정보가 올바르지 않습니다.");
+        }
     }
 
     private String createQueueToken() {

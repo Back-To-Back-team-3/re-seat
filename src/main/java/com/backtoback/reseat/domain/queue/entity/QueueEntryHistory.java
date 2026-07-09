@@ -1,6 +1,7 @@
 package com.backtoback.reseat.domain.queue.entity;
 
 import com.backtoback.reseat.domain.game.entity.Game;
+import com.backtoback.reseat.domain.queue.exception.QueueInvalidStatusException;
 import com.backtoback.reseat.domain.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -91,7 +92,7 @@ public class QueueEntryHistory {
     // WAITING 상태에서만 CANCELED로 전이할 수 있다.
     public void cancel(LocalDateTime canceledAt) {
         if (this.status != QueueEntryHistoryStatus.WAITING) {
-            throw new IllegalStateException("대기 중인 상태만 취소할 수 있습니다.");
+            throw new QueueInvalidStatusException("대기 중인 상태만 취소할 수 있습니다.");
         }
 
         this.status = QueueEntryHistoryStatus.CANCELED;
@@ -101,7 +102,7 @@ public class QueueEntryHistory {
     // WAITING 상태에서만 ADMITTED로 전이할 수 있다.
     public void admit(LocalDateTime admittedAt) {
         if (this.status != QueueEntryHistoryStatus.WAITING) {
-            throw new IllegalStateException("대기 중인 상태만 입장 허용할 수 있습니다.");
+            throw new QueueInvalidStatusException("대기 중인 상태만 입장 허용할 수 있습니다.");
         }
 
         this.status = QueueEntryHistoryStatus.ADMITTED;
