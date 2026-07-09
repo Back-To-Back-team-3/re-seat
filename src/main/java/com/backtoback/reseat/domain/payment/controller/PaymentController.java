@@ -1,6 +1,7 @@
 package com.backtoback.reseat.domain.payment.controller;
 
 import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
+import com.backtoback.reseat.domain.payment.dto.request.PaymentCancelRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentFailRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentRequest;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentActionResponse;
@@ -71,6 +72,21 @@ public class PaymentController {
         );
 
         return ResponseEntity.ok(ApiResponse.success("결제 실패 처리 완료", response));
+    }
+
+    @PostMapping("/{paymentId}/cancel")
+    public ResponseEntity<ApiResponse<PaymentActionResponse>> cancelPayment(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long paymentId,
+            @Valid @RequestBody PaymentCancelRequest request
+    ) {
+        PaymentActionResponse response = paymentService.cancelPayment(
+                userDetails.getId(),
+                paymentId,
+                request
+        );
+
+        return ResponseEntity.ok(ApiResponse.success("결제 취소 처리 완료", response));
     }
 
     @GetMapping("/{paymentId}")

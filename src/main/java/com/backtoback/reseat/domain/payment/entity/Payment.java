@@ -125,4 +125,11 @@ public class Payment extends BaseEntity {
         this.failReason = failReason;
         this.failedAt = failedAt;
     }
+
+    // 결제 취소 처리
+    public void cancel() {
+        this.status = PaymentStatus.CANCELED;
+        this.failReason = null;
+        this.failedAt = null;
+    }
 }

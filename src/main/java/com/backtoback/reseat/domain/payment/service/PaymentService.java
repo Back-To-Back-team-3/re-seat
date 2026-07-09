@@ -3,6 +3,7 @@ package com.backtoback.reseat.domain.payment.service;
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.entity.OrderStatus;
 import com.backtoback.reseat.domain.order.repository.OrderRepository;
+import com.backtoback.reseat.domain.payment.dto.request.PaymentCancelRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentFailRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentRequest;
@@ -18,9 +19,12 @@ import com.backtoback.reseat.domain.payment.exception.InvalidOrderStatusExceptio
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentAccessDeniedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCallbackMismatchException;
+import com.backtoback.reseat.domain.payment.exception.PaymentCancelFailedException;
+import com.backtoback.reseat.domain.payment.exception.PaymentCancelNotAllowedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
 import com.backtoback.reseat.domain.payment.exception.PaymentOrderNotFoundException;
 import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
+import com.backtoback.reseat.domain.payment.pg.toss.TossCancelResponse;
 import com.backtoback.reseat.domain.payment.pg.toss.TossConfirmResponse;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
 import java.time.LocalDateTime;
@@ -41,6 +45,8 @@ public class PaymentService {
 
     private static final DateTimeFormatter PAYMENT_NO_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final String TOSS_APPROVED_STATUS = "DONE";
+    private static final String TOSS_CANCELED_STATUS = "CANCELED";
+    private static final String TOSS_PARTIAL_CANCELED_STATUS = "PARTIAL_CANCELED";
 
     private final PaymentRepository paymentRepository;
     // TODO: 주문 도메인 결제 조회/검증 API가 생기면 OrderRepository 직접 의존을 제거할 예정.
@@ -190,6 +196,45 @@ public class PaymentService {
         return PaymentResponse.from(getOwnedPayment(userId, paymentId));
     }
 
+    /**
+     * 승인된 결제를 전액 취소한다.
+     *
+     * <p>Toss 취소 API가 성공한 뒤에만 로컬 결제 상태를 CANCELED로 변경한다. 주문/좌석/티켓 상태 전파는 각 도메인과 합의 후 후속 작업에서 연결한다.
+     *
+     * @param userId 현재 사용자 ID
+     * @param paymentId 결제 ID
+     * @param request 결제 취소 요청 정보
+     * @return 취소 처리된 결제 결과
+     */
+    @Transactional
+    public PaymentActionResponse cancelPayment(Long userId, Long paymentId, PaymentCancelRequest request) {
+        Payment payment = getOwnedPayment(userId, paymentId);
+
+        validateCancelablePayment(payment);
+
+        TossCancelResponse response;
+        try {
+            response = tossPaymentClient.cancel(payment.getPgPaymentKey(), request.getCancelReason());
+        } catch (RuntimeException e) {
+            log.warn("토스 결제 취소 API 호출 실패 (paymentId={})", paymentId, e);
+            throw new PaymentCancelFailedException(e.getMessage());
+        }
+
+        if (!isTossCanceledStatus(response.getStatus())) {
+            throw new PaymentCancelFailedException(resolveTossCancelFailReason(response.getStatus()));
+        }
+
+        try {
+            payment.cancel();
+        } catch (RuntimeException e) {
+            log.error("토스 취소 성공 후 로컬 반영 실패 - 재조회 필요 (paymentId={}, paymentKey={})",
+                    paymentId, payment.getPgPaymentKey(), e);
+            throw e;
+        }
+
+        return PaymentActionResponse.from(payment);
+    }
+
 
     // ===== private method =====
 
@@ -235,6 +280,21 @@ public class PaymentService {
     }
 
     /**
+     * 결제 취소가 가능한 상태인지 검증한다.
+     *
+     * @param payment 저장된 결제
+     */
+    private void validateCancelablePayment(Payment payment) {
+        if (payment.getStatus() != PaymentStatus.APPROVED) {
+            throw new PaymentCancelNotAllowedException();
+        }
+
+        if (payment.getPgPaymentKey() == null || payment.getPgPaymentKey().isBlank()) {
+            throw new PaymentCancelNotAllowedException("PG 결제 키가 없어 결제를 취소할 수 없습니다.");
+        }
+    }
+
+    /**
      * 토스 실패 코드를 포함해 저장할 실패 사유를 만든다.
      *
      * @param request 토스 실패 응답 정보
@@ -254,6 +314,28 @@ public class PaymentService {
         return tossStatus == null || tossStatus.isBlank()
                 ? "토스 결제 승인 상태가 비어 있습니다."
                 : "토스 결제 승인 상태가 완료가 아닙니다. status=" + tossStatus;
+    }
+
+    /**
+     * 토스 취소 응답 상태가 취소 상태가 아닐 때 저장할 실패 사유를 만든다.
+     *
+     * @param tossStatus 토스 결제 상태
+     * @return 저장할 실패 사유
+     */
+    private String resolveTossCancelFailReason(String tossStatus) {
+        return tossStatus == null || tossStatus.isBlank()
+                ? "토스 결제 취소 상태가 비어 있습니다."
+                : "토스 결제 취소 상태가 완료가 아닙니다. status=" + tossStatus;
+    }
+
+    /**
+     * 토스 결제 취소 성공 상태인지 확인한다.
+     *
+     * @param tossStatus 토스 결제 상태
+     * @return 취소 성공 여부
+     */
+    private boolean isTossCanceledStatus(String tossStatus) {
+        return TOSS_CANCELED_STATUS.equals(tossStatus) || TOSS_PARTIAL_CANCELED_STATUS.equals(tossStatus);
     }
 
     /**

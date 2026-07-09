@@ -16,24 +16,22 @@ import reactor.core.publisher.Mono;
 @Component
 public class TossPaymentClient {
 
+    private static final String CONFIRM_PATH = "/v1/payments/confirm";
+    private static final String CANCEL_PATH = "/v1/payments/{paymentKey}/cancel";
+
     //하드코딩 유출 방지를 위해 application.yaml 또는 환경변수에서 키 주입
     @Value("${toss.secret-key}")
     private String secretKey;
 
-    @Value("${toss.confirm-url}")
-    private String confirmUrl;
+    @Value("${toss.base-url}")
+    private String baseUrl;
 
     private final WebClient webClient = WebClient.builder().build();
 
     public TossConfirmResponse confirm(String paymentKey, String orderId, Integer amount) {
-        // 토스 API는 표준 HTTP Basic Auth(Base64(아이디:비밀번호)) 규격을 쓰되
-        // 아이디 자리에 시크릿 키를 넣고 비밀번호는 비워두는 방식을 사용한다.
-        String encodedAuth = Base64.getEncoder()
-                .encodeToString((secretKey + ":").getBytes(StandardCharsets.UTF_8));
-
         return webClient.post()
-                .uri(confirmUrl)
-                .header(HttpHeaders.AUTHORIZATION, "Basic " + encodedAuth)
+                .uri(baseUrl + CONFIRM_PATH)
+                .header(HttpHeaders.AUTHORIZATION, authorizationHeader())
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(new TossConfirmRequest(paymentKey, orderId, amount))
                 .retrieve()
@@ -48,5 +46,29 @@ public class TossPaymentClient {
                 .bodyToMono(TossConfirmResponse.class)
                 //무한 대기로 인한 스레드 고갈 방지를 위해 5초 타임아웃(Timeout) 적용
                 .block(Duration.ofSeconds(5));
+    }
+
+    public TossCancelResponse cancel(String paymentKey, String cancelReason) {
+        return webClient.post()
+                .uri(baseUrl + CANCEL_PATH, paymentKey)
+                .header(HttpHeaders.AUTHORIZATION, authorizationHeader())
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(new TossCancelRequest(cancelReason))
+                .retrieve()
+                .onStatus(HttpStatusCode::isError, response ->
+                        response.bodyToMono(String.class)
+                                .defaultIfEmpty("응답 본문 없음")
+                                .flatMap(body -> Mono.error(new IllegalStateException(
+                                        "토스페이먼츠 결제 취소 API 호출 실패: " + body))))
+                .bodyToMono(TossCancelResponse.class)
+                .block(Duration.ofSeconds(5));
+    }
+
+    private String authorizationHeader() {
+        // 토스 API는 표준 HTTP Basic Auth(Base64(아이디:비밀번호)) 규격을 쓰되
+        // 아이디 자리에 시크릿 키를 넣고 비밀번호는 비워두는 방식을 사용한다.
+        String encodedAuth = Base64.getEncoder()
+                .encodeToString((secretKey + ":").getBytes(StandardCharsets.UTF_8));
+        return "Basic " + encodedAuth;
     }
 }
