@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.payment.pg.toss;
+package com.backtoback.reseat.domain.payment.pg.toss.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
