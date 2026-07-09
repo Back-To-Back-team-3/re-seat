@@ -7,6 +7,9 @@ import com.backtoback.reseat.domain.game.service.GameSearchCondition;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import java.util.List;
+
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +31,9 @@ class GameRepositoryTest {
 
     @Autowired
     private GameRepository gameRepository;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @Test
     @DisplayName("경기 목록 조회 시 팀과 구장 정보를 함께 조회한다")
@@ -70,5 +76,30 @@ class GameRepositoryTest {
         JPAQueryFactory jpaQueryFactory(EntityManager entityManager) {
             return new JPAQueryFactory(entityManager);
         }
+    }
+
+    @Test
+    @DisplayName("경기 목록 조회 시 팀·구장을 fetch join하여 추가 쿼리가 발생하지 않는다")
+    void should_notCauseNPlusOne_when_fetchJoinApplied() {
+        Statistics statistics = entityManager.getEntityManagerFactory()
+            .unwrap(SessionFactory.class)
+            .getStatistics();
+        statistics.clear();
+        entityManager.clear();
+
+        Page<Game> result = gameRepository.searchGames(
+            new GameSearchCondition(null, null, null, null),
+            PageRequest.of(0, 20)
+        );
+
+        // 프록시 강제 초기화 — fetch join이 없으면 여기서 N+1이 터진다
+        result.getContent().forEach(game -> {
+            game.getHomeTeam().getName();
+            game.getAwayTeam().getName();
+            game.getStadium().getName();
+        });
+
+        assertThat(result.getContent()).hasSize(20);
+        assertThat(statistics.getPrepareStatementCount()).isEqualTo(2); // content 1 + count 1
     }
 }
