@@ -44,7 +44,8 @@ public class GameRepositoryImpl implements GameRepositoryCustom {
             .join(game.awayTeam, awayTeam).fetchJoin()
             .join(game.stadium, stadium).fetchJoin()
             .where(
-                teamIdEq(condition.teamId()),
+                homeTeamIdEq(condition.homeTeamId()),
+                awayTeamIdEq(condition.awayTeamId()),
                 gameAtGoe(condition.from()),
                 gameAtLt(condition.to()),
                 bookingStatusEq(condition.bookingStatus())
@@ -58,7 +59,8 @@ public class GameRepositoryImpl implements GameRepositoryCustom {
             .select(game.count())
             .from(game)
             .where(
-                teamIdEq(condition.teamId()),
+                homeTeamIdEq(condition.homeTeamId()),
+                awayTeamIdEq(condition.awayTeamId()),
                 gameAtGoe(condition.from()),
                 gameAtLt(condition.to()),
                 bookingStatusEq(condition.bookingStatus())
@@ -69,15 +71,14 @@ public class GameRepositoryImpl implements GameRepositoryCustom {
     }
 
     /**
-     * 특정 팀이 홈팀 또는 원정팀으로 포함된 경기를 조회한다.
+     * 홈팀 ID가 일치하는 경기를 조회한다.
      */
-    private BooleanExpression teamIdEq(Long teamId) {
-        if (teamId == null) {
+    private BooleanExpression homeTeamIdEq(Long homeTeamId) {
+        if (homeTeamId == null) {
             return null;
         }
 
-        return game.homeTeam.id.eq(teamId)
-            .or(game.awayTeam.id.eq(teamId));
+        return game.homeTeam.id.eq(homeTeamId);
     }
 
     /**
@@ -91,6 +92,17 @@ public class GameRepositoryImpl implements GameRepositoryCustom {
         }
 
         return game.gameAt.goe(from.atStartOfDay());
+    }
+
+    /**
+     * 원정팀 ID가 일치하는 경기를 조회한다.
+     */
+    private BooleanExpression awayTeamIdEq(Long awayTeamId) {
+        if (awayTeamId == null) {
+            return null;
+        }
+
+        return game.awayTeam.id.eq(awayTeamId);
     }
 
     /**
