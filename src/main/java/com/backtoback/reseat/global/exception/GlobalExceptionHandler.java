@@ -46,9 +46,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleAllException(Exception e) {
         log.error("예상치 못한 서버 에러 발생: ", e);
 
+        ErrorCode errorCode = ErrorCode.INTERNAL_SERVER_ERROR;
+
         return ResponseEntity
-                   .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                   .body(ApiResponse.failure("SERVER_ERROR", "서버 내부 에러가 발생했습니다."));
+            .status(errorCode.getHttpStatus())
+            .body(ApiResponse.failure(errorCode.getCode(), errorCode.getMessage()));
     }
 
     //HTTP 요청 파라미터 타입 불일치

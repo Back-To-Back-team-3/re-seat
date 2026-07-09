@@ -19,6 +19,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.List;
+
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -55,7 +57,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/games", "/api/v1/games/*").permitAll()
 
                     //관리자 전용 API 인가 적용
-                .requestMatchers("api/v1/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
             //Spring Security 필터 단의 예외(401, 403)
@@ -83,7 +85,14 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.addAllowedOriginPattern("*"); // 배포 시 프론트엔드 특정 도메인으로 제한
+
+            configuration.setAllowedOrigins(List.of(
+                "http://localhost:3000",             // React 개발용 로컬 주소
+                "http://localhost:5173",             // Vite 개발용 로컬 주소
+                "https://re-seat.netlify.app",        // 프론트엔드 임시/배포 주소 예시
+                "https://your-frontend-domain.com"   // 실서버 프론트엔드 도메인 (필요시 추가)
+            ));
+
         configuration.addAllowedMethod("*");      // GET, POST, PUT, DELETE 등 전체 허용
         configuration.addAllowedHeader("*");      // Authorization, Queue-Token, Idempotency-Key 등 허용
         configuration.setAllowCredentials(true);
