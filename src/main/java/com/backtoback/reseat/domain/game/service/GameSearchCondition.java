@@ -11,13 +11,15 @@ import java.time.LocalDate;
  * <p>컨트롤러의 여러 RequestParam을 하나의 객체로 묶어
  * 서비스와 Repository 계층의 파라미터 개수를 줄인다.</p>
  *
- * @param teamId 홈팀 또는 원정팀 ID
+ * @param homeTeamId 홈팀 ID
+ * @param awayTeamId 원정팀 ID
  * @param from 경기 시작일 검색 시작 날짜
  * @param to 경기 시작일 검색 종료 날짜
  * @param bookingStatus 예매 상태
  */
 public record GameSearchCondition(
-    Long teamId,
+    Long homeTeamId,
+    Long awayTeamId,
     LocalDate from,
     LocalDate to,
     BookingStatus bookingStatus
