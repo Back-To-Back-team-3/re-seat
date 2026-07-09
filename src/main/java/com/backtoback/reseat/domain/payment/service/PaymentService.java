@@ -65,10 +65,23 @@ public class PaymentService {
      */
     @Transactional
     public PaymentCreateResponse requestPayment(Long userId, String idempotencyKey, PaymentRequest request) {
-        validateIdempotencyKey(idempotencyKey);
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            throw new IdempotencyKeyRequiredException();
+        }
 
         return paymentRepository.findByIdempotencyKey(idempotencyKey)
-                .map(payment -> resolveExistingPayment(userId, request, payment))
+                .map(payment -> {
+                    if (!payment.getUser().getId().equals(userId)) {
+                        throw new PaymentAccessDeniedException();
+                    }
+
+                    if (!payment.getOrderId().equals(request.getOrderId())
+                            || payment.getMethod() != request.getMethod()) {
+                        throw new IdempotencyKeyConflictException();
+                    }
+
+                    return PaymentCreateResponse.from(payment);
+                })
                 .orElseGet(() -> createPayment(userId, idempotencyKey, request));
     }
 
@@ -88,7 +101,13 @@ public class PaymentService {
                 .orElseThrow(PaymentOrderNotFoundException::new);
 
         // 주문 검증
-        validateOrder(userId, order);
+        if (!order.getUser().getId().equals(userId)) {
+            throw new PaymentAccessDeniedException();
+        }
+
+        if (order.getStatus() != OrderStatus.CREATED) {
+            throw new PaymentOrderNotPayableException();
+        }
 
         // 같은 주문에 승인된 결제가 있으면 새 PG 요청 없이 기존 결제 결과를 반환한다.
         Optional<Payment> approvedPayment = paymentRepository.findFirstByOrderIdAndStatus(
@@ -101,8 +120,11 @@ public class PaymentService {
 
         // 결제 정보 생성
         // 토스 위젯 인증이 끝나야 승인 가능하므로, 여기서는 READY 상태로만 생성하고 승인은 7.2 콜백에서 처리한다.
+        String timestamp = LocalDateTime.now().format(PAYMENT_NO_DATE_FORMAT);
+        String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+
         Payment payment = Payment.builder()
-                .paymentNo(generatePaymentNo())
+                .paymentNo("PAY-" + timestamp + "-" + suffix)
                 .orderId(order.getId())
                 .user(order.getUser())
                 .amount(order.getTotalAmount())
@@ -131,7 +153,10 @@ public class PaymentService {
         if (payment.getStatus() != PaymentStatus.READY) {
             throw new PaymentAlreadyFinalizedException();
         }
-        validateCallbackAmount(payment, request.getOrderId(), request.getAmount());
+        if (!payment.getPgOrderId().equals(request.getOrderId())
+                || !payment.getAmount().equals(request.getAmount())) {
+            throw new PaymentCallbackMismatchException();
+        }
 
         TossConfirmResponse response;
         try {
@@ -148,12 +173,18 @@ public class PaymentService {
         // confirm()이 정상 응답을 준 이후(=토스 승인은 이미 끝난 상태) Status가 성공이 아닐 경우
         if (!TOSS_APPROVED_STATUS.equals(response.getStatus())) {
             log.warn("토스 결제 승인 상태 불일치 (paymentId={}, tossStatus={})", paymentId, response.getStatus());
-            payment.fail(resolveTossStatusFailReason(response.getStatus()), LocalDateTime.now());
+            String failReason = response.getStatus() == null || response.getStatus().isBlank()
+                    ? "토스 결제 승인 상태가 비어 있습니다."
+                    : "토스 결제 승인 상태가 완료가 아닙니다. status=" + response.getStatus();
+            payment.fail(failReason, LocalDateTime.now());
             return PaymentActionResponse.from(payment);
         }
 
         try {
-            payment.approve(response.getPaymentKey(), parseApprovedAt(response.getApprovedAt()));
+            LocalDateTime approvedAt = response.getApprovedAt() != null
+                    ? OffsetDateTime.parse(response.getApprovedAt()).toLocalDateTime()
+                    : LocalDateTime.now();
+            payment.approve(response.getPaymentKey(), approvedAt);
         } catch (RuntimeException e) {
             log.error("토스 승인 성공 후 로컬 반영 실패 - 재조회 필요 (paymentId={}, paymentKey={})",
                     paymentId, response.getPaymentKey(), e);
@@ -178,22 +209,13 @@ public class PaymentService {
         if (payment.getStatus() != PaymentStatus.READY) {
             throw new PaymentAlreadyFinalizedException();
         }
-        validateCallbackOrderId(payment, request.getOrderId());
+        if (!payment.getPgOrderId().equals(request.getOrderId())) {
+            throw new PaymentCallbackMismatchException();
+        }
 
-        payment.fail(resolveFailReason(request), LocalDateTime.now());
+        payment.fail("[" + request.getCode() + "] " + request.getMessage(), LocalDateTime.now());
 
         return PaymentActionResponse.from(payment);
-    }
-
-    /**
-     * 결제 단건을 조회한다.
-     *
-     * @param userId 현재 사용자 ID
-     * @param paymentId 결제 ID
-     * @return 결제 상세 정보
-     */
-    public PaymentResponse getPayment(Long userId, Long paymentId) {
-        return PaymentResponse.from(getOwnedPayment(userId, paymentId));
     }
 
     /**
@@ -210,7 +232,13 @@ public class PaymentService {
     public PaymentActionResponse cancelPayment(Long userId, Long paymentId, PaymentCancelRequest request) {
         Payment payment = getOwnedPayment(userId, paymentId);
 
-        validateCancelablePayment(payment);
+        if (payment.getStatus() != PaymentStatus.APPROVED) {
+            throw new PaymentCancelNotAllowedException();
+        }
+
+        if (payment.getPgPaymentKey() == null || payment.getPgPaymentKey().isBlank()) {
+            throw new PaymentCancelNotAllowedException("PG 결제 키가 없어 결제를 취소할 수 없습니다.");
+        }
 
         TossCancelResponse response;
         try {
@@ -220,8 +248,12 @@ public class PaymentService {
             throw new PaymentCancelFailedException(e.getMessage());
         }
 
-        if (!isTossCanceledStatus(response.getStatus())) {
-            throw new PaymentCancelFailedException(resolveTossCancelFailReason(response.getStatus()));
+        if (!TOSS_CANCELED_STATUS.equals(response.getStatus())
+                && !TOSS_PARTIAL_CANCELED_STATUS.equals(response.getStatus())) {
+            String failReason = response.getStatus() == null || response.getStatus().isBlank()
+                    ? "토스 결제 취소 상태가 비어 있습니다."
+                    : "토스 결제 취소 상태가 완료가 아닙니다. status=" + response.getStatus();
+            throw new PaymentCancelFailedException(failReason);
         }
 
         try {
@@ -233,6 +265,17 @@ public class PaymentService {
         }
 
         return PaymentActionResponse.from(payment);
+    }
+
+    /**
+     * 결제 단건을 조회한다.
+     *
+     * @param userId 현재 사용자 ID
+     * @param paymentId 결제 ID
+     * @return 결제 상세 정보
+     */
+    public PaymentResponse getPayment(Long userId, Long paymentId) {
+        return PaymentResponse.from(getOwnedPayment(userId, paymentId));
     }
 
 
@@ -254,160 +297,4 @@ public class PaymentService {
         return payment;
     }
 
-    /**
-     * 콜백으로 전달된 orderId/amount가 저장된 결제 정보와 일치하는지 검증한다 (변조 방지).
-     *
-     * @param payment 저장된 결제
-     * @param orderId 콜백으로 전달된 주문 식별자
-     * @param amount 콜백으로 전달된 결제 금액
-     */
-    private void validateCallbackAmount(Payment payment, String orderId, Integer amount) {
-        if (!payment.getPgOrderId().equals(orderId) || !payment.getAmount().equals(amount)) {
-            throw new PaymentCallbackMismatchException();
-        }
-    }
-
-    /**
-     * 실패 콜백으로 전달된 orderId가 저장된 결제 정보와 일치하는지 검증한다.
-     *
-     * @param payment 저장된 결제
-     * @param orderId 실패 콜백으로 전달된 주문 식별자
-     */
-    private void validateCallbackOrderId(Payment payment, String orderId) {
-        if (!payment.getPgOrderId().equals(orderId)) {
-            throw new PaymentCallbackMismatchException();
-        }
-    }
-
-    /**
-     * 결제 취소가 가능한 상태인지 검증한다.
-     *
-     * @param payment 저장된 결제
-     */
-    private void validateCancelablePayment(Payment payment) {
-        if (payment.getStatus() != PaymentStatus.APPROVED) {
-            throw new PaymentCancelNotAllowedException();
-        }
-
-        if (payment.getPgPaymentKey() == null || payment.getPgPaymentKey().isBlank()) {
-            throw new PaymentCancelNotAllowedException("PG 결제 키가 없어 결제를 취소할 수 없습니다.");
-        }
-    }
-
-    /**
-     * 토스 실패 코드를 포함해 저장할 실패 사유를 만든다.
-     *
-     * @param request 토스 실패 응답 정보
-     * @return 저장할 실패 사유
-     */
-    private String resolveFailReason(PaymentFailRequest request) {
-        return "[" + request.getCode() + "] " + request.getMessage();
-    }
-
-    /**
-     * 토스 승인 응답 상태가 완료 상태가 아닐 때 저장할 실패 사유를 만든다.
-     *
-     * @param tossStatus 토스 결제 상태
-     * @return 저장할 실패 사유
-     */
-    private String resolveTossStatusFailReason(String tossStatus) {
-        return tossStatus == null || tossStatus.isBlank()
-                ? "토스 결제 승인 상태가 비어 있습니다."
-                : "토스 결제 승인 상태가 완료가 아닙니다. status=" + tossStatus;
-    }
-
-    /**
-     * 토스 취소 응답 상태가 취소 상태가 아닐 때 저장할 실패 사유를 만든다.
-     *
-     * @param tossStatus 토스 결제 상태
-     * @return 저장할 실패 사유
-     */
-    private String resolveTossCancelFailReason(String tossStatus) {
-        return tossStatus == null || tossStatus.isBlank()
-                ? "토스 결제 취소 상태가 비어 있습니다."
-                : "토스 결제 취소 상태가 완료가 아닙니다. status=" + tossStatus;
-    }
-
-    /**
-     * 토스 결제 취소 성공 상태인지 확인한다.
-     *
-     * @param tossStatus 토스 결제 상태
-     * @return 취소 성공 여부
-     */
-    private boolean isTossCanceledStatus(String tossStatus) {
-        return TOSS_CANCELED_STATUS.equals(tossStatus) || TOSS_PARTIAL_CANCELED_STATUS.equals(tossStatus);
-    }
-
-    /**
-     * 토스 응답의 승인 시각 문자열을 LocalDateTime으로 변환한다.
-     *
-     * @param approvedAt 토스가 반환한 오프셋 포함 시각 문자열
-     * @return 변환된 시각
-     */
-    private LocalDateTime parseApprovedAt(String approvedAt) {
-        return approvedAt != null ? OffsetDateTime.parse(approvedAt).toLocalDateTime() : LocalDateTime.now();
-    }
-
-    /**
-     * 동일한 Idempotency-Key로 저장된 기존 결제 요청을 처리한다.
-     *
-     * <p>같은 사용자, 같은 주문, 같은 결제 수단이면 기존 결제 결과를 그대로 반환한다. 요청 정보가 다르면 멱등성 키를 잘못 재사용한 것으로
-     * 판단해 예외를 던진다.
-     *
-     * @param userId 현재 사용자 ID
-     * @param request 결제 요청 정보
-     * @param payment 멱등성 키로 조회한 기존 결제
-     * @return 기존 결제 응답
-     */
-    private PaymentCreateResponse resolveExistingPayment(Long userId, PaymentRequest request, Payment payment) {
-        if (!payment.getUser().getId().equals(userId)) {
-            throw new PaymentAccessDeniedException();
-        }
-
-        if (!payment.getOrderId().equals(request.getOrderId()) || payment.getMethod() != request.getMethod()) {
-            throw new IdempotencyKeyConflictException();
-        }
-
-        return PaymentCreateResponse.from(payment);
-    }
-
-    /**
-     * Idempotency-Key 헤더가 유효한지 검증한다.
-     *
-     * @param idempotencyKey 중복 결제 방지 키
-     */
-    private void validateIdempotencyKey(String idempotencyKey) {
-        if (idempotencyKey == null || idempotencyKey.isBlank()) {
-            throw new IdempotencyKeyRequiredException();
-        }
-    }
-
-    /**
-     * 결제 요청이 주문 기준과 일치하는지 검증한다.
-     *
-     * <p>주문 소유자와 주문 상태를 확인해 결제 가능한 주문인지 판단한다. 결제 금액은 프론트 요청값이 아니라 주문 총액을 기준으로 생성한다.
-     *
-     * @param userId 현재 사용자 ID
-     * @param order 결제 대상 주문
-     */
-    private void validateOrder(Long userId, Order order) {
-        if (!order.getUser().getId().equals(userId)) {
-            throw new PaymentAccessDeniedException();
-        }
-
-        if (order.getStatus() != OrderStatus.CREATED) {
-            throw new PaymentOrderNotPayableException();
-        }
-    }
-
-    /**
-     * 내부 결제 번호를 생성한다.
-     *
-     * @return PAY-시각-랜덤값 형식의 결제 번호
-     */
-    private String generatePaymentNo() {
-        String timestamp = LocalDateTime.now().format(PAYMENT_NO_DATE_FORMAT);
-        String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
-        return "PAY-" + timestamp + "-" + suffix;
-    }
 }
