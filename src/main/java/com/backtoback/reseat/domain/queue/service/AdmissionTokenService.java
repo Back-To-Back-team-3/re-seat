@@ -10,22 +10,31 @@ import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
 public class AdmissionTokenService {
 
     private static final long TOKEN_TTL_MINUTES = 5L;
+    private static final long ADMIT_LOCK_WAIT_SECONDS = 1L;
+    private static final long ADMIT_LOCK_LEASE_SECONDS = 10L;
+    private static final int MAX_ADMIT_LIMIT = 100;
 
     private final RedisTemplate<String, String> redisTemplate;
+    private final RedissonClient redissonClient;
     private final AdmissionTokenRepository admissionTokenRepository;
     private final QueueEntryHistoryRepository queueEntryHistoryRepository;
     private final GameRepository gameRepository;
@@ -33,48 +42,82 @@ public class AdmissionTokenService {
 
     @Transactional
     public int admit(Long gameId, int limit) {
-        ZSetOperations<String, String> queueZSet = getZSetOperations();
 
-        String redisKey = redisKey(gameId);
-
-        // Redis ZSet 앞쪽 사용자부터 limit명 까지 입장 허용 대상
-        Set<String> members = queueZSet.range(redisKey, 0, limit - 1);
-
-        if (members == null || members.isEmpty()) {
+        if (limit <= 0) {
             return 0;
         }
 
-        Game game = gameRepository.findById(gameId)
-                .orElseThrow(() -> new IllegalArgumentException("경기를 찾을 수 없습니다."));
+        RLock lock = redissonClient.getLock(admitLockKey(gameId));
+        boolean locked = false;
 
-        LocalDateTime issuedAt = LocalDateTime.now();
-        LocalDateTime expiresAt = issuedAt.plusMinutes(TOKEN_TTL_MINUTES);
+        try {
+            locked = lock.tryLock(
+                    ADMIT_LOCK_WAIT_SECONDS,
+                    ADMIT_LOCK_LEASE_SECONDS,
+                    TimeUnit.SECONDS
+            );
 
-        int admittedCount = 0;
+            if (!locked) {
+                return 0;
+            }
 
-        for (String member: members) {
-            Long userId = parseUserId(member);
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
+            ZSetOperations<String, String> queueZSet = getZSetOperations();
 
-            String token = createQueueToken();
+            String redisKey = redisKey(gameId);
 
-            admissionTokenRepository.save(AdmissionToken.of(game, user, token, issuedAt, expiresAt));
+            // Redis ZSet 앞쪽 사용자부터 최대 safeLimit명 까지 입장 허용 대상 조
+            int safeLimit = Math.min(limit, MAX_ADMIT_LIMIT);
+            Set<String> members = queueZSet.range(redisKey, 0, safeLimit - 1);
 
-            String queueKey = queueKey(gameId, userId);
+            if (members == null || members.isEmpty()) {
+                return 0;
+            }
 
-            QueueEntryHistory queueEntryHistory =
-                    queueEntryHistoryRepository.findByQueueKey(queueKey)
-                            .orElseThrow(() -> new IllegalArgumentException("대기열 진입 이력이 없습니다."));
+            Game game = gameRepository.findById(gameId)
+                    .orElseThrow(() -> new IllegalArgumentException("경기를 찾을 수 없습니다."));
 
-            queueEntryHistory.admit(issuedAt);
+            LocalDateTime issuedAt = LocalDateTime.now();
+            LocalDateTime expiresAt = issuedAt.plusMinutes(TOKEN_TTL_MINUTES);
 
-            // 입장 허용된 사용자는 대기열 순번에서 제거
-            queueZSet.remove(redisKey, member);
-            admittedCount++;
+            int admittedCount = 0;
+
+            for (String member: members) {
+                Long userId = parseUserId(member);
+                User user = userRepository.findById(userId)
+                        .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
+
+                String token = createQueueToken();
+
+                admissionTokenRepository.save(AdmissionToken.of(game, user, token, issuedAt, expiresAt));
+
+                String queueKey = queueKey(gameId, userId);
+
+                QueueEntryHistory queueEntryHistory =
+                        queueEntryHistoryRepository.findByQueueKey(queueKey)
+                                .orElseThrow(() -> new IllegalArgumentException("대기열 진입 이력이 없습니다."));
+
+                queueEntryHistory.admit(issuedAt);
+
+                admittedCount++;
+            }
+
+            // DB 커밋이 성공한 뒤 입장 허용된 사용자는 Redis 대기열 순번에서 제거
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    members.forEach(member -> queueZSet.remove(redisKey, member));
+                }
+            });
+
+            return admittedCount;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return 0;
+        } finally {
+            if (locked && lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
         }
-
-        return admittedCount;
     }
 
     private ZSetOperations<String, String> getZSetOperations() {
@@ -102,5 +145,9 @@ public class AdmissionTokenService {
 
     private String createQueueToken() {
         return "qt_" + UUID.randomUUID();
+    }
+
+    private String admitLockKey(Long gameId) {
+        return "lock:queue:admit:" + gameId;
     }
 }

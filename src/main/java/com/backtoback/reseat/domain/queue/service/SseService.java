@@ -8,7 +8,9 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 @RequiredArgsConstructor
@@ -16,16 +18,30 @@ public class SseService {
 
     // 연결 유지 시간은 60초
     private static final long SSE_TIMEOUT_MILLIS = 60L * 1000L;
+    private static final int SSE_SCHEDULER_POOL_SIZE = 8;
 
-    // SSE 연결마다 현재 순번을 주기적으로 내려주기 위한 스케쥴러
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    // 여러 SSE 연결의 순번 전송 작업을 처리하는 스케줄러
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(SSE_SCHEDULER_POOL_SIZE);
 
     private final QueueService queueService;
 
     public SseEmitter streamMyQueue(Long gameId, Long userId) {
-        SseEmitter sseEmitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
 
-        var future = scheduler.scheduleAtFixedRate(() -> {
+        SseEmitter sseEmitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
+        AtomicReference<ScheduledFuture<?>> futureRef = new AtomicReference<>();
+
+        Runnable cancelTask = () -> {
+            ScheduledFuture<?> future = futureRef.get();
+            if (future != null) {
+                future.cancel(true);
+            }
+        };
+
+        sseEmitter.onCompletion(cancelTask);
+        sseEmitter.onTimeout(cancelTask);
+        sseEmitter.onError(t -> cancelTask.run());
+
+        ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(() -> {
             try {
                 // 연결된 동안 현재 대기 상태를 rank 이벤트로 주기적으로 전송
                 QueueStatusResponse response =
@@ -50,9 +66,7 @@ public class SseService {
             }
         }, 0L, 3L, TimeUnit.SECONDS);
 
-        sseEmitter.onCompletion(() -> future.cancel(true));
-        sseEmitter.onTimeout(() -> future.cancel(true));
-        sseEmitter.onError(t -> future.cancel(true));
+        futureRef.set(future);
 
         return sseEmitter;
     }

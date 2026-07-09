@@ -8,10 +8,12 @@ import com.backtoback.reseat.domain.queue.service.QueueService;
 import com.backtoback.reseat.domain.queue.service.SseService;
 import com.backtoback.reseat.global.common.ApiResponse;
 import com.backtoback.reseat.global.security.CustomUserDetails;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -121,15 +123,16 @@ public class QueueController {
      * @param limit 입장 허용 처리할 사용자 수
      * @return 입장 허용 처리된 사용자 수
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{gameId}/admit")
     public ResponseEntity<ApiResponse<Integer>> admit(
             @PathVariable Long gameId,
-            @RequestParam(defaultValue = "20") int limit
+            @RequestParam(defaultValue = "20") @Min(1) int limit
     ) {
         int admittedCount = admissionTokenService.admit(gameId, limit);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(ApiResponse.success(limit + "명 입장 허용 처리", admittedCount));
+                .body(ApiResponse.success(admittedCount + "명 입장 허용 처리", admittedCount));
     }
 }

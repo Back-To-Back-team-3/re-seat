@@ -16,6 +16,7 @@ import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
@@ -84,10 +85,17 @@ public class QueueService {
         }
 
         // 최초 대기열 진입일 경우에만 DB에 이력을 저장
+        // 동시 진입으로 unique 충돌이 발생하면 이미 저장된 이력을 다시 조회
         queueEntryHistoryRepository.findByQueueKey(queueKey)
-                .orElseGet(() -> queueEntryHistoryRepository.save(
-                        QueueEntryHistory.of(game, user, queueKey, LocalDateTime.now())
-                ));
+                .orElseGet(() -> {
+                    try {
+                        return queueEntryHistoryRepository.saveAndFlush(
+                                QueueEntryHistory.of(game, user, queueKey, LocalDateTime.now()));
+                    } catch (DataIntegrityViolationException e) {
+                        return queueEntryHistoryRepository.findByQueueKey(queueKey)
+                                .orElseThrow(() -> new IllegalStateException("대기열 진입 이력 저장에 실패했습니다.", e));
+                    }
+                });
 
         long rank = redisRank + 1;
 
@@ -170,14 +178,14 @@ public class QueueService {
         String redisMember = redisMember(userId);
         String queueKey = queueKey(gameId, userId);
 
-        // 대기열 취소 시 Redis 순번 정보 삭제 및 DB 이력 상태 변경
-        queueZSet.remove(redisKey, redisMember);
-
+        // 취소 가능한 상태인지 확인 후 Redis 대기열에서 제거
         QueueEntryHistory queueEntryHistory =
                 queueEntryHistoryRepository.findByQueueKey(queueKey)
                 .orElseThrow(() -> new IllegalArgumentException("대기열 진입 이력이 없습니다."));
 
         queueEntryHistory.cancel(LocalDateTime.now());
+
+        queueZSet.remove(redisKey, redisMember);
 
         return QueueCancelResponse.builder()
                 .gameId(gameId)

@@ -84,11 +84,19 @@ public class QueueEntryHistory {
     }
 
     public void cancel(LocalDateTime canceledAt) {
+        if (this.status != QueueEntryHistoryStatus.WAITING) {
+            throw new IllegalStateException("대기 중인 상태만 취소할 수 있습니다.");
+        }
+
         this.status = QueueEntryHistoryStatus.CANCELED;
         this.canceledAt = canceledAt;
     }
 
     public void admit(LocalDateTime admittedAt) {
+        if (this.status != QueueEntryHistoryStatus.WAITING) {
+            throw new IllegalStateException("대기 중인 상태만 입장 허용할 수 있습니다.");
+        }
+
         this.status = QueueEntryHistoryStatus.ADMITTED;
         this.admittedAt = admittedAt;
     }
