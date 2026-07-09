@@ -82,60 +82,48 @@ public class PaymentService {
 
                     return PaymentCreateResponse.from(payment);
                 })
-                .orElseGet(() -> createPayment(userId, idempotencyKey, request));
-    }
+                .orElseGet(() -> {
+                    // 주문 조회
+                    Order order = orderRepository.findById(request.getOrderId())
+                            .orElseThrow(PaymentOrderNotFoundException::new);
 
-    /**
-     * 주문 정보를 검증한 뒤 새 결제 요청을 생성한다.
-     *
-     * <p>이미 승인된 결제가 있으면 추가 결제를 생성하지 않고 기존 승인 결제 결과를 반환한다.
-     *
-     * @param userId 현재 사용자 ID
-     * @param idempotencyKey 중복 결제 방지 키
-     * @param request 결제 요청 정보
-     * @return 새로 생성하거나 이미 승인된 결제 응답
-     */
-    private PaymentCreateResponse createPayment(Long userId, String idempotencyKey, PaymentRequest request) {
-        // 주문 조회
-        Order order = orderRepository.findById(request.getOrderId())
-                .orElseThrow(PaymentOrderNotFoundException::new);
+                    // 주문 검증
+                    if (!order.getUser().getId().equals(userId)) {
+                        throw new PaymentAccessDeniedException();
+                    }
 
-        // 주문 검증
-        if (!order.getUser().getId().equals(userId)) {
-            throw new PaymentAccessDeniedException();
-        }
+                    if (order.getStatus() != OrderStatus.CREATED) {
+                        throw new PaymentOrderNotPayableException();
+                    }
 
-        if (order.getStatus() != OrderStatus.CREATED) {
-            throw new PaymentOrderNotPayableException();
-        }
+                    // 같은 주문에 승인된 결제가 있으면 새 PG 요청 없이 기존 결제 결과를 반환한다.
+                    Optional<Payment> approvedPayment = paymentRepository.findFirstByOrderIdAndStatus(
+                            order.getId(),
+                            PaymentStatus.APPROVED
+                    );
+                    if (approvedPayment.isPresent()) {
+                        return PaymentCreateResponse.from(approvedPayment.get());
+                    }
 
-        // 같은 주문에 승인된 결제가 있으면 새 PG 요청 없이 기존 결제 결과를 반환한다.
-        Optional<Payment> approvedPayment = paymentRepository.findFirstByOrderIdAndStatus(
-                order.getId(),
-                PaymentStatus.APPROVED
-        );
-        if (approvedPayment.isPresent()) {
-            return PaymentCreateResponse.from(approvedPayment.get());
-        }
+                    // 결제 정보 생성
+                    // 토스 위젯 인증이 끝나야 승인 가능하므로, 여기서는 READY 상태로만 생성하고 승인은 7.2 콜백에서 처리한다.
+                    String timestamp = LocalDateTime.now().format(PAYMENT_NO_DATE_FORMAT);
+                    String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
 
-        // 결제 정보 생성
-        // 토스 위젯 인증이 끝나야 승인 가능하므로, 여기서는 READY 상태로만 생성하고 승인은 7.2 콜백에서 처리한다.
-        String timestamp = LocalDateTime.now().format(PAYMENT_NO_DATE_FORMAT);
-        String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+                    Payment payment = Payment.builder()
+                            .paymentNo("PAY-" + timestamp + "-" + suffix)
+                            .orderId(order.getId())
+                            .user(order.getUser())
+                            .amount(order.getTotalAmount())
+                            .method(request.getMethod())
+                            .idempotencyKey(idempotencyKey)
+                            .status(PaymentStatus.READY)
+                            .pgProvider(PgProvider.TOSS)
+                            .pgOrderId(order.getOrderNo())
+                            .build();
 
-        Payment payment = Payment.builder()
-                .paymentNo("PAY-" + timestamp + "-" + suffix)
-                .orderId(order.getId())
-                .user(order.getUser())
-                .amount(order.getTotalAmount())
-                .method(request.getMethod())
-                .idempotencyKey(idempotencyKey)
-                .status(PaymentStatus.READY)
-                .pgProvider(PgProvider.TOSS)
-                .pgOrderId(order.getOrderNo())
-                .build();
-
-        return PaymentCreateResponse.from(paymentRepository.save(payment));
+                    return PaymentCreateResponse.from(paymentRepository.save(payment));
+                });
     }
 
     /**
