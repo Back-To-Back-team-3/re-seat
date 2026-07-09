@@ -67,4 +67,15 @@ public class UserController {
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success("비밀번호 변경 완료", null));
     }
+
+    @DeleteMapping("/users/me")
+    public ResponseEntity<ApiResponse<Void>> withdraw(
+        @AuthenticationPrincipal CustomUserDetails customUser
+    ){
+        userService.withdraw(customUser.getId());
+
+        return ResponseEntity
+            .status(HttpStatus.OK)
+            .body(ApiResponse.success("회원 탈퇴 완료", null));
+    }
 }
