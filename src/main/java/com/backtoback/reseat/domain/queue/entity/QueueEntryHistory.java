@@ -1,6 +1,7 @@
 package com.backtoback.reseat.domain.queue.entity;
 
 import com.backtoback.reseat.domain.game.entity.Game;
+import com.backtoback.reseat.domain.queue.exception.QueueInvalidStatusException;
 import com.backtoback.reseat.domain.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -22,6 +23,11 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/**
+ * 경기별 사용자 대기열 진입 이력 Entity
+ *
+ * <p>실시간 순번은 Redis ZSet에서 관리하고, 이 Entity는 진입/입장 허용/취소 상태 이력을 저장한다.</p>
+ */
 @Entity
 @Table(
         name = "queue_entry_histories",
@@ -81,5 +87,25 @@ public class QueueEntryHistory {
         queueEntryHistory.status = QueueEntryHistoryStatus.WAITING;
         queueEntryHistory.enteredAt = enteredAt;
         return queueEntryHistory;
+    }
+
+    // WAITING 상태에서만 CANCELED로 전이할 수 있다.
+    public void cancel(LocalDateTime canceledAt) {
+        if (this.status != QueueEntryHistoryStatus.WAITING) {
+            throw new QueueInvalidStatusException("대기 중인 상태만 취소할 수 있습니다.");
+        }
+
+        this.status = QueueEntryHistoryStatus.CANCELED;
+        this.canceledAt = canceledAt;
+    }
+
+    // WAITING 상태에서만 ADMITTED로 전이할 수 있다.
+    public void admit(LocalDateTime admittedAt) {
+        if (this.status != QueueEntryHistoryStatus.WAITING) {
+            throw new QueueInvalidStatusException("대기 중인 상태만 입장 허용할 수 있습니다.");
+        }
+
+        this.status = QueueEntryHistoryStatus.ADMITTED;
+        this.admittedAt = admittedAt;
     }
 }

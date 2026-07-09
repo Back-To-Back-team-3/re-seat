@@ -22,6 +22,11 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/**
+ * 대기열 통과 후 예매 화면 입장을 허용하는 토큰 Entity
+ *
+ * <p>ACTIVE 토큰은 expiresAt 전까지 유효하며, 예매 진입 검증에 사용된다.</p>
+ */
 @Entity
 @Table(
         name = "admission_tokens",
