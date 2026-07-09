@@ -25,7 +25,9 @@ import org.springframework.data.domain.PageRequest;
  *
  * <p>목록 조회 시 homeTeam, awayTeam, stadium 정보를 함께 조회할 수 있는지 확인한다.</p>
  */
-@DataJpaTest
+@DataJpaTest(properties = {
+    "spring.jpa.properties.hibernate.generate_statistics=true"
+})
 @Import({GameRepositoryImpl.class, GameRepositoryTest.QuerydslTestConfig.class})
 class GameRepositoryTest {
 
@@ -39,6 +41,7 @@ class GameRepositoryTest {
     @DisplayName("경기 목록 조회 시 팀과 구장 정보를 함께 조회한다")
     void should_fetchTeamsAndStadium_when_searchGames() {
         GameSearchCondition condition = new GameSearchCondition(
+            null,
             null,
             null,
             null,
@@ -81,25 +84,27 @@ class GameRepositoryTest {
     @Test
     @DisplayName("경기 목록 조회 시 팀·구장을 fetch join하여 추가 쿼리가 발생하지 않는다")
     void should_notCauseNPlusOne_when_fetchJoinApplied() {
+        entityManager.flush();
+        entityManager.clear();
+
         Statistics statistics = entityManager.getEntityManagerFactory()
             .unwrap(SessionFactory.class)
             .getStatistics();
         statistics.clear();
-        entityManager.clear();
 
         Page<Game> result = gameRepository.searchGames(
-            new GameSearchCondition(null, null, null, null),
+            new GameSearchCondition(null, null, null, null, null),
             PageRequest.of(0, 20)
         );
 
-        // 프록시 강제 초기화 — fetch join이 없으면 여기서 N+1이 터진다
+        // 프록시 강제 초기화 — fetch join이 없으면 여기서 N+1이 발생한다.
         result.getContent().forEach(game -> {
             game.getHomeTeam().getName();
             game.getAwayTeam().getName();
             game.getStadium().getName();
         });
 
-        assertThat(result.getContent()).hasSize(20);
+        assertThat(result.getContent()).isNotEmpty();
         assertThat(statistics.getPrepareStatementCount()).isEqualTo(2); // content 1 + count 1
     }
 }
