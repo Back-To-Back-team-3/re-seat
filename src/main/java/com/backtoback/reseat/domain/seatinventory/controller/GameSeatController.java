@@ -110,6 +110,9 @@ public class GameSeatController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200", description = "조회 성공"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "401", description = "UNAUTHORIZED",
+            content = @io.swagger.v3.oas.annotations.media.Content),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "404", description = "GAME_NOT_FOUND",
             content = @io.swagger.v3.oas.annotations.media.Content),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
