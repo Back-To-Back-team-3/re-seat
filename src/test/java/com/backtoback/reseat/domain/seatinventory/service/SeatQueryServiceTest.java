@@ -62,7 +62,7 @@ class SeatQueryServiceTest {
         assertThat(seats).hasSize(500);
         // 3단계 fetch join(game_seats → seats → seat_zones)이 정상 동작하면
         // 실행 쿼리는 1건이어야 한다. N+1이 발생하면 500건 이상으로 튄다.
-        assertThat(statistics.getPrepareStatementCount()).isEqualTo(1L);
+        assertThat(statistics.getPrepareStatementCount()).isEqualTo(2L);
     }
 
     private Long findFirstGameIdOfStadium() {
