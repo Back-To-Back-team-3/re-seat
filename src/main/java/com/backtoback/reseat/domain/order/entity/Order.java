@@ -67,6 +67,15 @@ public class Order extends BaseEntity {
     @Column(name = "status", nullable = false, length = 20)
     private OrderStatus status;
 
+    /**
+     * 주문 Entity를 생성한다.
+     *
+     * @param orderNo 주문 번호
+     * @param user 주문 사용자
+     * @param reservation 주문으로 전환할 예약
+     * @param totalAmount 총 주문 금액
+     * @return CREATE 상태의 주문
+     */
     public static Order of(String orderNo, User user, Reservation reservation, int totalAmount) {
         Order order = new Order();
         order.orderNo = orderNo;
