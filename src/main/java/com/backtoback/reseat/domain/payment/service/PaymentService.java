@@ -26,9 +26,12 @@ import com.backtoback.reseat.domain.payment.exception.PaymentOrderNotPayableExce
 import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -39,6 +42,9 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PaymentService {
+
+    private static final Duration READY_PAYMENT_REUSE_DURATION = Duration.ofMinutes(30);
+    private static final DateTimeFormatter PAYMENT_NO_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     private final PaymentRepository paymentRepository;
     // TODO: 주문 도메인 결제 조회/검증 API가 생기면 OrderRepository 직접 의존을 제거할 예정.
@@ -176,13 +182,36 @@ public class PaymentService {
 
         return findApprovedPayment(order.getId())
                 .map(PaymentCreateResponse::from)
-                .orElseGet(() -> PaymentCreateResponse.from(createReadyPayment(order, request, idempotencyKey)));
+                .orElseGet(() -> resolveReadyPaymentOrCreate(order, request, idempotencyKey));
+    }
+
+    /** 같은 주문의 최근 READY 결제는 재사용하고, 만료된 READY 결제는 실패로 닫은 뒤 새로 생성한다. */
+    private PaymentCreateResponse resolveReadyPaymentOrCreate(Order order, PaymentRequest request, String idempotencyKey) {
+        Optional<Payment> readyPayment = findReadyPayment(order.getId());
+        if (readyPayment.isPresent()) {
+            Payment payment = readyPayment.get();
+            if (isReusableReadyPayment(payment, request)) {
+                return PaymentCreateResponse.from(payment);
+            }
+            payment.fail("토스 결제 유효 시간이 만료되었습니다.", LocalDateTime.now());
+        }
+
+        return PaymentCreateResponse.from(createReadyPayment(order, request, idempotencyKey));
+    }
+
+    /** 토스 결제 유효 시간 안에 생성된 READY 결제인지 확인한다. */
+    private boolean isReusableReadyPayment(Payment payment, PaymentRequest request) {
+        LocalDateTime createdAt = payment.getCreatedAt();
+        return payment.getMethod() == request.getMethod()
+                && createdAt != null
+                && !createdAt.isBefore(LocalDateTime.now().minus(READY_PAYMENT_REUSE_DURATION));
     }
 
     /** 토스 위젯 인증 전 단계의 로컬 READY 결제를 생성한다. */
     private Payment createReadyPayment(Order order, PaymentRequest request, String idempotencyKey) {
         // 토스 위젯 인증이 끝나야 승인 가능하므로, 여기서는 READY 상태로만 생성하고 승인은 콜백을 통해 completePayment에서 처리한다.
         Payment payment = Payment.builder()
+                .paymentNo(generatePaymentNo())
                 .orderId(order.getId())
                 .user(order.getUser())
                 .amount(order.getTotalAmount())
@@ -194,6 +223,13 @@ public class PaymentService {
                 .build();
 
         return paymentRepository.save(payment);
+    }
+
+    /** 서비스 내부에서 사용할 결제 번호를 생성한다. */
+    private String generatePaymentNo() {
+        String timestamp = LocalDateTime.now().format(PAYMENT_NO_DATE_FORMAT);
+        String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+        return "PAY-" + timestamp + "-" + suffix;
     }
 
     // ===== confirm helpers =====
@@ -314,7 +350,12 @@ public class PaymentService {
 
     /** 같은 주문에 이미 승인된 결제가 있는지 조회한다. */
     private Optional<Payment> findApprovedPayment(Long orderId) {
-        return paymentRepository.findFirstByOrderIdAndStatus(orderId, PaymentStatus.APPROVED);
+        return paymentRepository.findFirstByOrderIdAndStatusOrderByCreatedAtDesc(orderId, PaymentStatus.APPROVED);
+    }
+
+    /** 같은 주문에 아직 승인/실패/취소되지 않은 결제 요청이 있는지 조회한다. */
+    private Optional<Payment> findReadyPayment(Long orderId) {
+        return paymentRepository.findFirstByOrderIdAndStatusOrderByCreatedAtDesc(orderId, PaymentStatus.READY);
     }
 
     /** 결제 요청 가능한 주문을 조회하고 소유자와 주문 상태를 검증한다. */

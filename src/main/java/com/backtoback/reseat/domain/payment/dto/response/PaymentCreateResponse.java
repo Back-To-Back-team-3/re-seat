@@ -12,6 +12,7 @@ import lombok.Getter;
 public class PaymentCreateResponse {
 
     private final Long paymentId;
+    private final String paymentNo;
     private final Long orderId;
     private final Integer amount;
     private final PaymentMethod method;
@@ -22,6 +23,7 @@ public class PaymentCreateResponse {
     public static PaymentCreateResponse from(Payment payment) {
         return PaymentCreateResponse.builder()
                 .paymentId(payment.getId())
+                .paymentNo(payment.getPaymentNo())
                 .orderId(payment.getOrderId())
                 .amount(payment.getAmount())
                 .method(payment.getMethod())
