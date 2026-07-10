@@ -135,6 +135,9 @@ public class PaymentService {
     @Transactional
     public PaymentActionResponse cancelPayment(Long userId, Long paymentId, PaymentCancelRequest request) {
         Payment payment = getOwnedPaymentWithPessimisticWriteLock(userId, paymentId);
+        if (payment.getStatus() == PaymentStatus.CANCELED) {
+            return PaymentActionResponse.from(payment);
+        }
         validatePaymentCanBeCanceled(payment);
 
         TossPaymentResponse response;
