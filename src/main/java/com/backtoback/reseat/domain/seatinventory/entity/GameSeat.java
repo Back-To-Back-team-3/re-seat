@@ -55,7 +55,12 @@ public class GameSeat extends BaseEntity {
             foreignKey = @ForeignKey(name = "fk_game_seats_seat"))
     private Seat seat;
 
-    // PricePolicy.calculate() 결과가 들어감 (C-2)
+    /**
+     * 경기별 판매 가격 (원).
+     * <p>
+     * PricePolicy.calculate() 결과가 들어감
+     * 구역 성인 기본가(요일 반영) × 시기 배수까지만 반영되어 있다.
+     */
     @Column(name = "price", nullable = false)
     private int price;
 
@@ -63,7 +68,12 @@ public class GameSeat extends BaseEntity {
     @Column(name = "status", nullable = false, length = 20)
     private GameSeatStatus status;
 
-    // 낙관적 락. Long/Integer만 가능(int/long은 null 표현 불가). C-4 락 전략 비교에서 사용.
+    /**
+     * 낙관적 락 버전.
+     *
+     * <p>생성 시 Hibernate가 0으로 자동 세팅한다. 빌더에서 다루지 않는다.
+     * 실제 활용은 C-4 좌석 선점(HOLD) 동시성 제어에서 이뤄진다.
+     */
     @Version
     @Column(name = "version", nullable = false)
     private Long version;
