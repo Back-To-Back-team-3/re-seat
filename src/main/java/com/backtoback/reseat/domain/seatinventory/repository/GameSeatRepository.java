@@ -11,7 +11,7 @@ public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
      * @param gameId 경기 ID
      * @return       재고가 1건 이상 존재하면 true
      */
-    boolean existsBySeatId(Long gameId);
+    boolean existsByGameId(Long gameId);
 
     // 이후에 추가 예정:
     //   findByIdWithPessimisticLock(Long id)  — @Lock(PESSIMISTIC_WRITE)
