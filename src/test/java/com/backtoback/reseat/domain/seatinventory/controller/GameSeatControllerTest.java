@@ -19,6 +19,8 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 /**
  * 경기 좌석 현황·구역 요약 조회 API 통합 테스트.
  */
@@ -80,17 +82,42 @@ class GameSeatControllerTest {
         mockMvc.perform(get(SEATS_URI, gameIdWithSeats).param("grade", SeatGrade.INFIELD.name()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
-            .andExpect(jsonPath("$.data[0].grade").value(SeatGrade.INFIELD.name()));
+            .andExpect(jsonPath("$.data[*].grade")
+                .value(org.hamcrest.Matchers.everyItem(
+                    org.hamcrest.Matchers.is(SeatGrade.INFIELD.name()))))
+            .andExpect(jsonPath("$.data.length()").value(org.hamcrest.Matchers.greaterThan(0)));
     }
 
     @DisplayName("status로 필터링하면 해당 상태의 좌석만 반환한다")
     @WithMockUser
     @Test
     void should_filterByStatus_when_statusGiven() throws Exception {
-        // given: 재고 오픈 직후엔 전량 AVAILABLE
-        mockMvc.perform(get(SEATS_URI, gameIdWithSeats).param("status", GameSeatStatus.AVAILABLE.name()))
+        // given: 좌석 일부를 SOLD로 바꿔 AVAILABLE/SOLD가 섞인 상태를 만든다
+        markSomeSeatsSold(gameIdWithSeats);
+
+        mockMvc.perform(get(SEATS_URI, gameIdWithSeats).param("status", GameSeatStatus.SOLD.name()))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.length()").value(500));
+            .andExpect(jsonPath("$.data.length()").value(10))
+            .andExpect(jsonPath("$.data[*].status")
+                .value(org.hamcrest.Matchers.everyItem(
+                    org.hamcrest.Matchers.is(GameSeatStatus.SOLD.name()))));
+    }
+
+    // 헬퍼: N건만 SOLD로 변경 (기존 markAllSeatsSold와 구분)
+    private void markSomeSeatsSold(Long gameId) {
+        List<Long> targetIds = entityManager.createQuery(
+                "SELECT gs.id FROM GameSeat gs WHERE gs.game.id = :gameId ORDER BY gs.id ASC",
+                Long.class)
+            .setParameter("gameId", gameId)
+            .setMaxResults(10)
+            .getResultList();
+
+        entityManager.createQuery("UPDATE GameSeat gs SET gs.status = :status WHERE gs.id IN :ids")
+            .setParameter("status", GameSeatStatus.SOLD)
+            .setParameter("ids", targetIds)
+            .executeUpdate();
+        entityManager.flush();
+        entityManager.clear();
     }
 
     @DisplayName("존재하지 않는 경기를 조회하면 404 GAME_NOT_FOUND를 반환한다")
