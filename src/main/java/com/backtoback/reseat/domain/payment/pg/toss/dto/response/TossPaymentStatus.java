@@ -25,7 +25,7 @@ public enum TossPaymentStatus {
     }
 
     public boolean isCancelCompleted() {
-        return this == CANCELED || this == PARTIAL_CANCELED;
+        return this == CANCELED;
     }
 
     public boolean isConfirmFailureStatus() {
