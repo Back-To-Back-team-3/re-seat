@@ -1,5 +1,6 @@
 package com.backtoback.reseat.domain.order.entity;
 
+import com.backtoback.reseat.domain.order.exception.InvalidOrderStatusException;
 import com.backtoback.reseat.domain.reservation.entity.Reservation;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.global.common.BaseEntity;
@@ -21,6 +22,8 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(
@@ -63,17 +66,50 @@ public class Order extends BaseEntity {
     @Column(name = "total_amount", nullable = false)
     private int totalAmount;
 
+    @Column(name = "payment_deadline", nullable = false)
+    private LocalDateTime paymentDeadline;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private OrderStatus status;
 
-    public static Order of(String orderNo, User user, Reservation reservation, int totalAmount) {
+    /**
+     * 주문 Entity를 생성한다.
+     *
+     * @param orderNo 주문 번호
+     * @param user 주문 사용자
+     * @param reservation 주문으로 전환할 예약
+     * @param totalAmount 총 주문 금액
+     * @return CREATE 상태의 주문
+     */
+    public static Order of(
+            String orderNo,
+            User user,
+            Reservation reservation,
+            int totalAmount,
+            LocalDateTime paymentDeadline
+    ) {
         Order order = new Order();
         order.orderNo = orderNo;
         order.user = user;
         order.reservation = reservation;
         order.totalAmount = totalAmount;
+        order.paymentDeadline = paymentDeadline;
         order.status = OrderStatus.CREATED;
         return order;
+    }
+
+    /**
+     * 주문을 취소 상태로 변경한다.
+     *
+     * <p>결제 전 CREATED 상태의 주문만 취소할 수 있다.</p>
+     */
+    public void cancel() {
+
+        if (this.status != OrderStatus.CREATED) {
+            throw new InvalidOrderStatusException();
+        }
+
+        this.status = OrderStatus.CANCELED;
     }
 }

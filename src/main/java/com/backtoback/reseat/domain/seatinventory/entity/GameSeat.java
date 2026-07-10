@@ -93,4 +93,15 @@ public class GameSeat extends BaseEntity {
         this.price = price;
         this.status = (status != null) ? status : GameSeatStatus.AVAILABLE;
     }
+
+    /**
+     * 경기 좌석을 예매 가능 상태로 되돌린다.
+     *
+     * <p>선점 해제 또는 주문 취소 시 좌석 상태를 AVAILABLE로 변경하고 선점 만료 시간을 초기화 한다.</p>
+     */
+    public void available() {
+
+        this.status = GameSeatStatus.AVAILABLE;
+        this.holdExpiresAt = null;
+    }
 }
