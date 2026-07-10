@@ -22,6 +22,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(
         name = "orders",
@@ -63,6 +65,9 @@ public class Order extends BaseEntity {
     @Column(name = "total_amount", nullable = false)
     private int totalAmount;
 
+    @Column(name = "payment_deadline", nullable = false)
+    private LocalDateTime paymentDeadline;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private OrderStatus status;
@@ -76,12 +81,19 @@ public class Order extends BaseEntity {
      * @param totalAmount 총 주문 금액
      * @return CREATE 상태의 주문
      */
-    public static Order of(String orderNo, User user, Reservation reservation, int totalAmount) {
+    public static Order of(
+            String orderNo,
+            User user,
+            Reservation reservation,
+            int totalAmount,
+            LocalDateTime paymentDeadline
+    ) {
         Order order = new Order();
         order.orderNo = orderNo;
         order.user = user;
         order.reservation = reservation;
         order.totalAmount = totalAmount;
+        order.paymentDeadline = paymentDeadline;
         order.status = OrderStatus.CREATED;
         return order;
     }

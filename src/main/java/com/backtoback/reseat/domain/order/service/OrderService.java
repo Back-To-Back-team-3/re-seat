@@ -44,6 +44,7 @@ public class OrderService {
     private final UserRepository userRepository;
 
     private static final DateTimeFormatter ORDER_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final long PAYMENT_DEADLINE_MINUTES = 8;
 
     /**
      * 예약 선점 정보를 기반으로 주문을 생성한다.
@@ -79,7 +80,9 @@ public class OrderService {
                 .mapToInt(ReservationSeat::getPrice)
                 .sum();
 
-        Order order = Order.of(orderNo, user, reservation, totalAmount);
+        LocalDateTime paymentDeadline = now.plusMinutes(PAYMENT_DEADLINE_MINUTES);
+
+        Order order = Order.of(orderNo, user, reservation, totalAmount, paymentDeadline);
         Order saveOrder = orderRepository.save(order);
 
         // 예약 좌석을 기준으로 주문 목록을 생성한다.
@@ -92,7 +95,6 @@ public class OrderService {
 
         return OrderResponse.from(
                 saveOrder,
-                reservation.getHoldExpiresAt(),
                 saveOrderItems
         );
     }

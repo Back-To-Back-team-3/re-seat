@@ -36,13 +36,11 @@ public class OrderResponse {
      * Order Entity와 주문 항목 목록을 주문 응답 DTO로 변환한다.
      *
      * @param order 주문 Entity
-     * @param paymentDeadline 결제 제한 시간
      * @param orderItems 저장된 주문 항목 목록
      * @return 주문 응답 DTO
      */
     public static OrderResponse from(
             Order order,
-            LocalDateTime paymentDeadline,
             List<OrderItem> orderItems
     ) {
         return OrderResponse.builder()
@@ -50,7 +48,7 @@ public class OrderResponse {
                 .orderNo(order.getOrderNo())
                 .totalAmount(order.getTotalAmount())
                 .status(order.getStatus())
-                .paymentDeadline(paymentDeadline)
+                .paymentDeadline(order.getPaymentDeadline())
                 .orderItems(orderItems.stream()
                         .map(OrderItemResponse::from)
                         .toList())
