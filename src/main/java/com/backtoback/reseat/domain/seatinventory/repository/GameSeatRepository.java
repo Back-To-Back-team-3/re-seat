@@ -1,5 +1,6 @@
 package com.backtoback.reseat.domain.seatinventory.repository;
 
+import com.backtoback.reseat.domain.seatinventory.dto.ZoneSummaryResponse;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
 import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
@@ -67,6 +68,39 @@ public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
         @Param("status") GameSeatStatus status
     );
 
+    /**
+     * 경기의 구역별 잔여 좌석 수를 집계한다.
+     *
+     * <p>SeatZone을 기준으로 LEFT JOIN해 잔여수가 0인 구역도 결과에 포함한다.
+     * AVAILABLE 상태인 game_seats만 카운트한다.
+     *
+     * <p>현재 totalCount는 50으로 고정 (V4 시드 기준 구역당 50석).
+     * 구장·구역 구성이 바뀌면 COUNT(s)로 교체한다.
+     *
+     * @param gameId    경기 ID
+     * @param stadiumId 구장 ID (해당 구장의 구역만 조회)
+     * @return 구역별 요약 목록
+     */
+    @Query("""
+            select new com.backtoback.reseat.domain.seatinventory.dto.ZoneSummaryResponse(
+                z.id,
+                z.name,
+                z.grade,
+                z.basePrice,
+                50,
+                cast(count(case when gs.status = 'AVAILABLE' then 1 end) as int)
+            )
+            from SeatZone z
+            left join GameSeat gs on gs.seat.zone.id = z.id
+                                 and gs.game.id = :gameId
+            where z.stadium.id = :stadiumId
+            group by z.id, z.name, z.grade, z.basePrice
+            order by z.id asc
+            """)
+    List<ZoneSummaryResponse> findZoneSummariesByGameId(
+        @Param("gameId") Long gameId,
+        @Param("stadiumId") Long stadiumId
+    );
 
     // 이후에 추가 예정:
     //   findByIdWithPessimisticLock(Long id)  — @Lock(PESSIMISTIC_WRITE)
