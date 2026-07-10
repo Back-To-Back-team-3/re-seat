@@ -10,6 +10,7 @@ import com.backtoback.reseat.global.exception.ErrorCode;
  */
 public class PaymentOrderNotPayableException extends BusinessException {
 
+    /** 결제 불가 주문 상태 에러 코드로 예외를 생성한다. */
     public PaymentOrderNotPayableException() {
         super(ErrorCode.INVALID_ORDER_STATUS);
     }

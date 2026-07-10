@@ -10,6 +10,7 @@ import com.backtoback.reseat.global.exception.ErrorCode;
  */
 public class IdempotencyKeyRequiredException extends BusinessException {
 
+    /** 멱등키 필수 에러 코드로 예외를 생성한다. */
     public IdempotencyKeyRequiredException() {
         super(ErrorCode.IDEMPOTENCY_KEY_REQUIRED);
     }

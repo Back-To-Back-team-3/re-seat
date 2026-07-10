@@ -10,6 +10,7 @@ import com.backtoback.reseat.global.exception.ErrorCode;
  */
 public class IdempotencyKeyConflictException extends BusinessException {
 
+    /** 멱등키 충돌 에러 코드로 예외를 생성한다. */
     public IdempotencyKeyConflictException() {
         super(ErrorCode.IDEMPOTENCY_KEY_CONFLICT);
     }

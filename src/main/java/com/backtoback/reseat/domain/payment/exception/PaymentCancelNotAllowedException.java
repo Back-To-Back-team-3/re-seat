@@ -10,10 +10,12 @@ import com.backtoback.reseat.global.exception.ErrorCode;
  */
 public class PaymentCancelNotAllowedException extends BusinessException {
 
+    /** 결제 취소 불가 에러 코드로 예외를 생성한다. */
     public PaymentCancelNotAllowedException() {
         super(ErrorCode.PAYMENT_CANCEL_NOT_ALLOWED);
     }
 
+    /** 결제 취소 불가 에러 코드와 상세 메시지로 예외를 생성한다. */
     public PaymentCancelNotAllowedException(String message) {
         super(ErrorCode.PAYMENT_CANCEL_NOT_ALLOWED, message);
     }
