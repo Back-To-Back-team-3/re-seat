@@ -214,9 +214,14 @@ class GameSeatControllerTest {
      */
     private Long findFirstGameIdOfDifferentStadium() {
         return entityManager.createQuery(
-                "SELECT g.id FROM Game g WHERE g.stadium.id <> :stadiumId ORDER BY g.id ASC",
+                """
+                SELECT g.id FROM Game g
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM GameSeat gs WHERE gs.game.id = g.id
+                )
+                ORDER BY g.id ASC
+                """,
                 Long.class)
-            .setParameter("stadiumId", SEEDED_STADIUM_ID)
             .setMaxResults(1)
             .getSingleResult();
     }
