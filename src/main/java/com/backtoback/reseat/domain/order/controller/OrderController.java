@@ -1,6 +1,7 @@
 package com.backtoback.reseat.domain.order.controller;
 
 import com.backtoback.reseat.domain.order.dto.request.OrderCreateRequest;
+import com.backtoback.reseat.domain.order.dto.response.OrderCancelResponse;
 import com.backtoback.reseat.domain.order.dto.response.OrderResponse;
 import com.backtoback.reseat.domain.order.service.OrderService;
 import com.backtoback.reseat.global.common.ApiResponse;
@@ -20,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 주문 API Controller
  *
- * <p>예약 선점 정보를 바탕으로 주문을 생성하는 API를 제공한다.</p>
+ * <p>예약 기반 주문 생성, 주문 조회, 주문 취소 API를 제공한다.</p>
  */
 @RestController
 @RequestMapping("/api/v1/orders")
@@ -67,5 +68,26 @@ public class OrderController {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success("주문 조회", response));
+    }
+
+    /**
+     * 6.3 주문 취소
+     *
+     * @param orderId 취소할 주문 ID
+     * @param userDetails JWT 인증 사용자
+     * @return 취소된 주문 정보
+     */
+    @PostMapping("/{orderId}/cancel")
+    public ResponseEntity<ApiResponse<OrderCancelResponse>> cancelOrder(
+            @PathVariable Long orderId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+
+        Long userId = userDetails.getId();
+        OrderCancelResponse response = orderService.cancelOrder(userId, orderId);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success("주문 취소", response));
     }
 }

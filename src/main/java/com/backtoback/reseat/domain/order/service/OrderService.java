@@ -1,8 +1,11 @@
 package com.backtoback.reseat.domain.order.service;
 
+import com.backtoback.reseat.domain.order.dto.response.OrderCancelResponse;
 import com.backtoback.reseat.domain.order.dto.response.OrderResponse;
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.entity.OrderItem;
+import com.backtoback.reseat.domain.order.entity.OrderStatus;
+import com.backtoback.reseat.domain.order.exception.InvalidOrderStatusException;
 import com.backtoback.reseat.domain.order.exception.OrderAccessDeniedException;
 import com.backtoback.reseat.domain.order.exception.OrderNotFoundException;
 import com.backtoback.reseat.domain.order.repository.OrderItemRepository;
@@ -18,6 +21,7 @@ import com.backtoback.reseat.domain.reservation.exception.ReservationNotFoundExc
 import com.backtoback.reseat.domain.reservation.exception.ReservationSeatNotFoundException;
 import com.backtoback.reseat.domain.reservation.repository.ReservationRepository;
 import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
+import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
@@ -33,7 +37,7 @@ import java.util.UUID;
 /**
  * 주문을 담당하는 서비스
  *
- * <p>HOLDING 상태의 예약을 검증하고, 예약 좌석 가격 합계로 주문과 주문 항목을 생성한다.</p>
+ * <p>예약 기반 주문 생성, 주문 조회, 결제 전 주문 취소 흐름을 처리한다.</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -121,6 +125,46 @@ public class OrderService {
         List<OrderItem> orderItems = orderItemRepository.findByOrder_Id(orderId);
 
         return OrderResponse.from(order, orderItems);
+    }
+
+    /**
+     * 결제 전 주문을 취소한다.
+     *
+     * <p>CREATE 상태 주문만 취소할 수 있으며, 주문 취소와 함께 예약을 취소하고 선점 좌석을 해제한다.</p>
+     *
+     * @param userId 현재 사용자 ID
+     * @param orderId 취소할 주문 ID
+     * @return 주문 취소 응답 DTO
+     */
+    @Transactional
+    public OrderCancelResponse cancelOrder(Long userId, Long orderId) {
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(OrderNotFoundException::new);
+
+        if (!order.getUser().getId().equals(userId)) {
+            throw new OrderAccessDeniedException();
+        }
+
+        if (order.getStatus() != OrderStatus.CREATED) {
+            throw new InvalidOrderStatusException();
+        }
+
+        Reservation reservation = order.getReservation();
+
+        // 주문 생성의 근거가 된 예약도 취소해 선점 상태 정합성을 맞춘다.
+        order.cancel();
+        reservation.cancel();
+
+        List<OrderItem> orderItems = orderItemRepository.findByOrder_Id(orderId);
+
+        // 주문 항목의 경기 좌석을 다시 예매 가능 상태로 되돌린다.
+        orderItems.forEach(orderItem -> {
+            GameSeat gameSeat = orderItem.getGameSeat();
+            gameSeat.available();
+        });
+
+        return OrderCancelResponse.from(order);
     }
 
     /**

@@ -1,5 +1,6 @@
 package com.backtoback.reseat.domain.order.entity;
 
+import com.backtoback.reseat.domain.order.exception.InvalidOrderStatusException;
 import com.backtoback.reseat.domain.reservation.entity.Reservation;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.global.common.BaseEntity;
@@ -96,5 +97,19 @@ public class Order extends BaseEntity {
         order.paymentDeadline = paymentDeadline;
         order.status = OrderStatus.CREATED;
         return order;
+    }
+
+    /**
+     * 주문을 취소 상태로 변경한다.
+     *
+     * <p>결제 전 CREATED 상태의 주문만 취소할 수 있다.</p>
+     */
+    public void cancel() {
+
+        if (this.status != OrderStatus.CREATED) {
+            throw new InvalidOrderStatusException();
+        }
+
+        this.status = OrderStatus.CANCELED;
     }
 }

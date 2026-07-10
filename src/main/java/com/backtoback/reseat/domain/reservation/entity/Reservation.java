@@ -1,6 +1,7 @@
 package com.backtoback.reseat.domain.reservation.entity;
 
 import com.backtoback.reseat.domain.game.entity.Game;
+import com.backtoback.reseat.domain.reservation.exception.InvalidReservationStatusException;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.global.common.BaseEntity;
 import jakarta.persistence.Column;
@@ -73,5 +74,23 @@ public class Reservation extends BaseEntity {
         this.game = game;
         this.status = (status != null) ? status : ReservationStatus.HOLDING;
         this.holdExpiresAt = holdExpiresAt;
+    }
+
+    /**
+     * 예약을 취소 상태로 변경한다.
+     *
+     * <p>HOLDING 상태의 예약만 취소할 수 있으며, 이미 취소된 예약은 그대로 둔다.</p>
+     */
+    public void cancel() {
+
+        if (this.status == ReservationStatus.CANCELED) {
+            return;
+        }
+
+        if (this.status != ReservationStatus.HOLDING) {
+            throw new InvalidReservationStatusException();
+        }
+
+        this.status = ReservationStatus.CANCELED;
     }
 }
