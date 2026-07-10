@@ -43,11 +43,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class PaymentService {
 
     private static final DateTimeFormatter PAYMENT_NO_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-    private static final String TOSS_APPROVED_STATUS = "DONE";
-    private static final String TOSS_CANCELED_STATUS = "CANCELED";
-    private static final String TOSS_PARTIAL_CANCELED_STATUS = "PARTIAL_CANCELED";
-    private static final String TOSS_ABORTED_STATUS = "ABORTED";
-    private static final String TOSS_EXPIRED_STATUS = "EXPIRED";
 
     private final PaymentRepository paymentRepository;
     // TODO: 주문 도메인 결제 조회/검증 API가 생기면 OrderRepository 직접 의존을 제거할 예정.
@@ -70,61 +65,60 @@ public class PaymentService {
             throw new IdempotencyKeyRequiredException();
         }
 
-        return paymentRepository.findByIdempotencyKey(idempotencyKey)
-                .map(payment -> {
-                    if (!payment.getUser().getId().equals(userId)) {
-                        throw new PaymentAccessDeniedException();
-                    }
+        // 같은 멱등키로 들어온 재시도 요청이면 새 결제를 만들지 않고 기존 결제 정보를 검증해 반환한다.
+        Optional<Payment> existingPayment = paymentRepository.findByIdempotencyKey(idempotencyKey);
+        if (existingPayment.isPresent()) {
+            Payment payment = existingPayment.get();
+            if (!payment.getUser().getId().equals(userId)) {
+                throw new PaymentAccessDeniedException();
+            }
 
-                    if (!payment.getOrderId().equals(request.getOrderId())
-                            || payment.getMethod() != request.getMethod()) {
-                        throw new IdempotencyKeyConflictException();
-                    }
+            if (!payment.getOrderId().equals(request.getOrderId())
+                    || payment.getMethod() != request.getMethod()) {
+                throw new IdempotencyKeyConflictException();
+            }
 
-                    return PaymentCreateResponse.from(payment);
-                })
-                .orElseGet(() -> {
-                    // 주문 조회
-                    Order order = orderRepository.findById(request.getOrderId())
-                            .orElseThrow(PaymentOrderNotFoundException::new);
+            return PaymentCreateResponse.from(payment);
+        }
 
-                    // 주문 검증
-                    if (!order.getUser().getId().equals(userId)) {
-                        throw new PaymentAccessDeniedException();
-                    }
+        // 처음 보는 멱등키라면 주문을 기준으로 새 결제를 생성할 수 있는지 확인한다.
+        Order order = orderRepository.findById(request.getOrderId())
+                .orElseThrow(PaymentOrderNotFoundException::new);
 
-                    if (order.getStatus() != OrderStatus.CREATED) {
-                        throw new PaymentOrderNotPayableException();
-                    }
+        if (!order.getUser().getId().equals(userId)) {
+            throw new PaymentAccessDeniedException();
+        }
 
-                    // 같은 주문에 승인된 결제가 있으면 새 PG 요청 없이 기존 결제 결과를 반환한다.
-                    Optional<Payment> approvedPayment = paymentRepository.findFirstByOrderIdAndStatus(
-                            order.getId(),
-                            PaymentStatus.APPROVED
-                    );
-                    if (approvedPayment.isPresent()) {
-                        return PaymentCreateResponse.from(approvedPayment.get());
-                    }
+        if (order.getStatus() != OrderStatus.CREATED) {
+            throw new PaymentOrderNotPayableException();
+        }
 
-                    // 결제 정보 생성
-                    // 토스 위젯 인증이 끝나야 승인 가능하므로, 여기서는 READY 상태로만 생성하고 승인은 7.2 콜백에서 처리한다.
-                    String timestamp = LocalDateTime.now().format(PAYMENT_NO_DATE_FORMAT);
-                    String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+        // 같은 주문에 승인된 결제가 있으면 새 PG 요청 없이 기존 결제 결과를 반환한다.
+        Optional<Payment> approvedPayment = paymentRepository.findFirstByOrderIdAndStatus(
+                order.getId(),
+                PaymentStatus.APPROVED
+        );
+        if (approvedPayment.isPresent()) {
+            return PaymentCreateResponse.from(approvedPayment.get());
+        }
 
-                    Payment payment = Payment.builder()
-                            .paymentNo("PAY-" + timestamp + "-" + suffix)
-                            .orderId(order.getId())
-                            .user(order.getUser())
-                            .amount(order.getTotalAmount())
-                            .method(request.getMethod())
-                            .idempotencyKey(idempotencyKey)
-                            .status(PaymentStatus.READY)
-                            .pgProvider(PgProvider.TOSS)
-                            .pgOrderId(order.getOrderNo())
-                            .build();
+        // 토스 위젯 인증이 끝나야 승인 가능하므로, 여기서는 READY 상태로만 생성하고 승인은 콜백을 통해 completePayment에서 처리한다.
+        String timestamp = LocalDateTime.now().format(PAYMENT_NO_DATE_FORMAT);
+        String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
 
-                    return PaymentCreateResponse.from(paymentRepository.save(payment));
-                });
+        Payment payment = Payment.builder()
+                .paymentNo("PAY-" + timestamp + "-" + suffix)
+                .orderId(order.getId())
+                .user(order.getUser())
+                .amount(order.getTotalAmount())
+                .method(request.getMethod())
+                .idempotencyKey(idempotencyKey)
+                .status(PaymentStatus.READY)
+                .pgProvider(PgProvider.TOSS)
+                .pgOrderId(order.getOrderNo())
+                .build();
+
+        return PaymentCreateResponse.from(paymentRepository.save(payment));
     }
 
     /**
@@ -139,48 +133,49 @@ public class PaymentService {
     public PaymentActionResponse completePayment(Long userId, Long paymentId, PaymentCompleteRequest request) {
         Payment payment = getOwnedPaymentWithPessimisticWriteLock(userId, paymentId);
 
+        // READY 결제만 승인 시도할 수 있으며, 토스가 돌려준 주문/금액이 로컬 결제와 맞아야 한다.
         if (payment.getStatus() != PaymentStatus.READY) {
             throw new PaymentAlreadyFinalizedException();
         }
-        if (!payment.getPgOrderId().equals(request.getOrderId())
-                || !payment.getAmount().equals(request.getAmount())) {
-            throw new PaymentCallbackMismatchException();
-        }
+        validatePgOrderIdMatches(payment, request.getOrderId());
+        validatePaymentAmountMatches(payment, request.getAmount());
 
         TossPaymentResponse response;
         try {
             response = tossPaymentClient.confirm(
                     request.getPaymentKey(), request.getOrderId(), request.getAmount());
         } catch (RuntimeException e) {
-            log.warn("토스 결제 승인 API 호출 실패 (paymentId={})", paymentId, e);
             TossPaymentResponse tossPayment = findTossPaymentOrNull(request.getPaymentKey(), paymentId);
-            if (tossPayment != null && TOSS_APPROVED_STATUS.equals(tossPayment.getStatus())) {
-                if (!payment.getPgOrderId().equals(tossPayment.getOrderId())
-                        || (tossPayment.getTotalAmount() != null
-                        && !payment.getAmount().equals(tossPayment.getTotalAmount()))) {
-                    throw new PaymentCallbackMismatchException();
+            // 승인 API 성공 응답은 못 받았지만, 재조회로 승인이 확인되면 정상 승인 흐름으로 복구한다.
+            if (tossPayment != null && tossPayment.isApproved()) {
+                validatePgOrderIdMatches(payment, tossPayment.getOrderId());
+                if (tossPayment.getTotalAmount() != null) {
+                    validatePaymentAmountMatches(payment, tossPayment.getTotalAmount());
                 }
+
+                log.info("토스 결제 승인 API 성공 응답 없이 재조회로 승인 확인 (paymentId={})", paymentId);
                 payment.approve(tossPayment.getPaymentKey(), resolveApprovedAt(tossPayment.getApprovedAt()));
                 return PaymentActionResponse.from(payment);
             }
 
-            if (tossPayment != null
-                    && (TOSS_ABORTED_STATUS.equals(tossPayment.getStatus())
-                    || TOSS_EXPIRED_STATUS.equals(tossPayment.getStatus())
-                    || TOSS_CANCELED_STATUS.equals(tossPayment.getStatus()))) {
+            // 토스 최종 상태가 실패라면 로컬 결제도 실패로 닫는다.
+            if (tossPayment != null && tossPayment.isConfirmFailureStatus()) {
+                log.info("토스 결제 승인 API 성공 응답 없이 재조회로 실패 상태 확인 (paymentId={}, tossStatus={})",
+                        paymentId, tossPayment.getStatus());
                 payment.fail("토스 결제 최종 상태가 실패입니다. status=" + tossPayment.getStatus(), LocalDateTime.now());
                 return PaymentActionResponse.from(payment);
             }
 
-            // 승인 여부가 불명확한 경우에는 로컬 상태를 FAILED로 바꾸지 않는다.
-            // 사용자가 같은 paymentKey로 재시도하거나 운영자가 Toss 조회 후 수동 보정할 수 있게 READY 상태를 유지한다.
+            // TODO: 승인 여부가 불명확한 READY 결제는 비동기 재동기화 작업에서 Toss 상태를 다시 확인한다.
+            log.warn("토스 결제 승인 API 호출 실패 - 재조회로 승인 여부 확인 불가 (paymentId={})", paymentId, e);
             throw e;
         }
 
-        // confirm()이 정상 응답을 준 이후(=토스 승인은 이미 끝난 상태) Status가 성공이 아닐 경우
-        if (!TOSS_APPROVED_STATUS.equals(response.getStatus())) {
-            log.warn("토스 결제 승인 상태 불일치 (paymentId={}, tossStatus={})", paymentId, response.getStatus());
-            String failReason = response.getStatus() == null || response.getStatus().isBlank()
+        // 승인 API 응답은 받았지만 승인 완료 상태가 아니라면 로컬 결제를 실패로 닫는다.
+        if (!response.isApproved()) {
+            String status = response.getStatus();
+            log.warn("토스 결제 승인 상태 불일치 (paymentId={}, tossStatus={})", paymentId, status);
+            String failReason = status == null || status.isBlank()
                     ? "토스 결제 승인 상태가 비어 있습니다."
                     : "토스 결제 승인 상태가 완료가 아닙니다. status=" + response.getStatus();
             payment.fail(failReason, LocalDateTime.now());
@@ -190,8 +185,9 @@ public class PaymentService {
         try {
             payment.approve(response.getPaymentKey(), resolveApprovedAt(response.getApprovedAt()));
         } catch (RuntimeException e) {
-            log.error("토스 승인 성공 후 로컬 반영 실패 - 재조회 필요 (paymentId={}, paymentKey={})",
+            log.error("토스 승인 성공 후 로컬 반영 실패 - 재동기화 필요 (paymentId={}, paymentKey={})",
                     paymentId, response.getPaymentKey(), e);
+            // TODO: Toss 승인은 확정됐으므로 로컬 반영 실패 건을 비동기 재동기화 작업에서 보정한다.
             throw e;
         }
         return PaymentActionResponse.from(payment);
@@ -209,13 +205,11 @@ public class PaymentService {
     public PaymentActionResponse failPayment(Long userId, Long paymentId, PaymentFailRequest request) {
         Payment payment = getOwnedPaymentWithPessimisticWriteLock(userId, paymentId);
 
-        // 만약 이미 확정된 결제 사항이라면 이미 완료된 결제 예외를 던짐
+        // 이미 승인/실패/취소된 결제는 실패 리다이렉트로 덮어쓰지 않는다.
         if (payment.getStatus() != PaymentStatus.READY) {
             throw new PaymentAlreadyFinalizedException();
         }
-        if (!payment.getPgOrderId().equals(request.getOrderId())) {
-            throw new PaymentCallbackMismatchException();
-        }
+        validatePgOrderIdMatches(payment, request.getOrderId());
 
         payment.fail("[" + request.getCode() + "] " + request.getMessage(), LocalDateTime.now());
 
@@ -236,6 +230,7 @@ public class PaymentService {
     public PaymentActionResponse cancelPayment(Long userId, Long paymentId, PaymentCancelRequest request) {
         Payment payment = getOwnedPaymentWithPessimisticWriteLock(userId, paymentId);
 
+        // PG 승인까지 끝난 결제만 취소할 수 있다.
         if (payment.getStatus() != PaymentStatus.APPROVED) {
             throw new PaymentCancelNotAllowedException();
         }
@@ -248,30 +243,32 @@ public class PaymentService {
         try {
             response = tossPaymentClient.cancel(payment.getPgPaymentKey(), request.getCancelReason());
         } catch (RuntimeException e) {
-            log.warn("토스 결제 취소 API 호출 실패 (paymentId={})", paymentId, e);
             TossPaymentResponse tossPayment = findTossPaymentOrNull(payment.getPgPaymentKey(), paymentId);
-            if (tossPayment != null
-                    && (TOSS_CANCELED_STATUS.equals(tossPayment.getStatus())
-                    || TOSS_PARTIAL_CANCELED_STATUS.equals(tossPayment.getStatus()))) {
+            // 취소 API 성공 응답은 못 받았지만, 재조회로 취소가 확인되면 정상 취소 흐름으로 복구한다.
+            if (tossPayment != null && tossPayment.isCancelCompleted()) {
+                log.info("토스 결제 취소 API 성공 응답 없이 재조회로 취소 확인 (paymentId={})", paymentId);
                 payment.cancel();
                 return PaymentActionResponse.from(payment);
             }
+            // TODO: 취소 여부가 불명확한 APPROVED 결제는 비동기 재동기화 작업에서 Toss 상태를 다시 확인한다.
+            log.warn("토스 결제 취소 API 호출 실패 - 재조회로 취소 확인 불가 (paymentId={})", paymentId, e);
             throw new PaymentCancelFailedException(e.getMessage());
         }
 
-        if (!TOSS_CANCELED_STATUS.equals(response.getStatus())
-                && !TOSS_PARTIAL_CANCELED_STATUS.equals(response.getStatus())) {
+        if (!response.isCancelCompleted()) {
             String failReason = response.getStatus() == null || response.getStatus().isBlank()
                     ? "토스 결제 취소 상태가 비어 있습니다."
                     : "토스 결제 취소 상태가 완료가 아닙니다. status=" + response.getStatus();
             throw new PaymentCancelFailedException(failReason);
         }
 
+        // 토스 취소가 확인된 뒤에만 로컬 결제를 취소 상태로 변경한다.
         try {
             payment.cancel();
         } catch (RuntimeException e) {
-            log.error("토스 취소 성공 후 로컬 반영 실패 - 재조회 필요 (paymentId={}, paymentKey={})",
+            log.error("토스 취소 성공 후 로컬 반영 실패 - 재동기화 필요 (paymentId={}, paymentKey={})",
                     paymentId, payment.getPgPaymentKey(), e);
+            // TODO: Toss 취소는 확정됐으므로 로컬 반영 실패 건을 비동기 재동기화 작업에서 보정한다.
             throw e;
         }
 
@@ -288,6 +285,7 @@ public class PaymentService {
     public PaymentResponse getPayment(Long userId, Long paymentId) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(PaymentNotFoundException::new);
+        // 단순 조회는 락을 잡지 않고 소유자만 확인한다.
         if (!payment.getUser().getId().equals(userId)) {
             throw new PaymentAccessDeniedException();
         }
@@ -311,8 +309,20 @@ public class PaymentService {
             return tossPaymentClient.getPayment(paymentKey);
         } catch (RuntimeException requeryException) {
             log.warn("토스 결제 재조회 실패 (paymentId={}, paymentKey={})", paymentId, paymentKey, requeryException);
-            // TODO: 단발성 재조회 실패 시 PG와 로컬 상태가 어긋날 수 있으므로 비동기 재동기화 작업을 추가할 필요성이 있습니다.
+            // TODO: 단발성 재조회 실패 시 PG와 로컬 상태가 어긋날 수 있으므로 비동기 재동기화 작업에서 다시 확인한다.
             return null;
+        }
+    }
+
+    private void validatePgOrderIdMatches(Payment payment, String pgOrderId) {
+        if (!payment.getPgOrderId().equals(pgOrderId)) {
+            throw new PaymentCallbackMismatchException();
+        }
+    }
+
+    private void validatePaymentAmountMatches(Payment payment, Integer amount) {
+        if (!payment.getAmount().equals(amount)) {
+            throw new PaymentCallbackMismatchException();
         }
     }
 

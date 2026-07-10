@@ -39,16 +39,14 @@ public class TossPaymentClient {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(new TossConfirmRequest(paymentKey, orderId, amount))
                 .retrieve()
-                //토스 API가 4xx, 5xx 에러를 뱉을 때 에러 본문을 그대로 담아 예외로 던짐
+                // 토스 API 오류 응답은 에러 본문을 포함해 호출부로 전파한다.
                 .onStatus(HttpStatusCode::isError, response ->
-                        // 에러 본문도 네트워크 응답이라 비동기(Mono)로 읽어야 하고,
-                        // onStatus가 Mono<Throwable>을 요구해서 map이 아닌 flatMap으로 감쌈
                         response.bodyToMono(String.class)
                                 .defaultIfEmpty("응답 본문 없음")
                                 .flatMap(body -> Mono.error(new IllegalStateException(
                                         "토스페이먼츠 결제 승인 API 호출 실패: " + body))))
                 .bodyToMono(TossPaymentResponse.class)
-                //무한 대기로 인한 스레드 고갈 방지를 위해 5초 타임아웃(Timeout) 적용
+                // 외부 API 응답 지연으로 요청 스레드가 오래 묶이지 않게 최대 5초만 기다린다.
                 .block(Duration.ofSeconds(5));
     }
 
