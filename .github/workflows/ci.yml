@@ -39,3 +39,5 @@ jobs:
 
       - name: Build and test
         run: ./gradlew clean test
+        env:
+          REDIS_PASSWORD: ""
