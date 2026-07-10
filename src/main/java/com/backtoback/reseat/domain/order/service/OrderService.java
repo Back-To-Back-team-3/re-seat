@@ -3,6 +3,8 @@ package com.backtoback.reseat.domain.order.service;
 import com.backtoback.reseat.domain.order.dto.response.OrderResponse;
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.entity.OrderItem;
+import com.backtoback.reseat.domain.order.exception.OrderAccessDeniedException;
+import com.backtoback.reseat.domain.order.exception.OrderNotFoundException;
 import com.backtoback.reseat.domain.order.repository.OrderItemRepository;
 import com.backtoback.reseat.domain.order.repository.OrderRepository;
 import com.backtoback.reseat.domain.reservation.entity.Reservation;
@@ -97,6 +99,28 @@ public class OrderService {
                 saveOrder,
                 saveOrderItems
         );
+    }
+
+    /**
+     * 주문 ID로 주문 상세 정보를 조회한다.
+     *
+     * @param userId 현재 사용자 ID
+     * @param orderId 조회할 주문 ID
+     * @return 주문 상세 응답 DTO
+     */
+    @Transactional(readOnly = true)
+    public OrderResponse getOrder(Long userId, Long orderId) {
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(OrderNotFoundException::new);
+
+        if (!order.getUser().getId().equals(userId)) {
+            throw new OrderAccessDeniedException();
+        }
+
+        List<OrderItem> orderItems = orderItemRepository.findByOrder_Id(orderId);
+
+        return OrderResponse.from(order, orderItems);
     }
 
     /**
