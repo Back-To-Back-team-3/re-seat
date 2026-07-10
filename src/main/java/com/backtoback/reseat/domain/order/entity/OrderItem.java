@@ -55,6 +55,14 @@ public class OrderItem {
     @Column(name = "created_at", updatable = false, nullable = false)
     private LocalDateTime createdAt;
 
+    /**
+     * 주문 항목 Entity를 생성한다.
+     *
+     * @param order 주문
+     * @param gameSeat 주문 대상의 경기 좌석
+     * @param price 주문 항목 가격
+     * @return 주문 항목 Entity
+     */
     public static OrderItem of(Order order, GameSeat gameSeat, int price) {
         OrderItem orderItem = new OrderItem();
         orderItem.order = order;
