@@ -13,7 +13,6 @@ import lombok.Getter;
 public class PaymentResponse {
 
     private final Long paymentId;
-    private final String paymentNo;
     private final Long orderId;
     private final Integer amount;
     private final PaymentMethod method;
@@ -26,7 +25,6 @@ public class PaymentResponse {
     public static PaymentResponse from(Payment payment) {
         return PaymentResponse.builder()
                 .paymentId(payment.getId())
-                .paymentNo(payment.getPaymentNo())
                 .orderId(payment.getOrderId())
                 .amount(payment.getAmount())
                 .method(payment.getMethod())

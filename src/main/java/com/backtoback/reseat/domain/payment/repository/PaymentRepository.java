@@ -11,8 +11,6 @@ import org.springframework.data.repository.query.Param;
 
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
-    Optional<Payment> findByPaymentNo(String paymentNo);
-
     Optional<Payment> findByIdempotencyKey(String idempotencyKey);
 
     Optional<Payment> findByPgPaymentKey(String pgPaymentKey);
