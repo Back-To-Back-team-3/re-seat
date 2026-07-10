@@ -5,8 +5,11 @@ import com.backtoback.reseat.domain.user.auth.dto.request.UserLoginRequest;
 import com.backtoback.reseat.domain.user.auth.dto.response.TokenResponse;
 import com.backtoback.reseat.domain.user.entity.RefreshToken;
 import com.backtoback.reseat.domain.user.entity.User;
+import com.backtoback.reseat.domain.user.entity.UserStatus;
+import com.backtoback.reseat.domain.user.exception.DeleteUserException;
 import com.backtoback.reseat.domain.user.exception.InvalidPasswordException;
 import com.backtoback.reseat.domain.user.exception.InvalidTokenException;
+import com.backtoback.reseat.domain.user.exception.SuspendedUserException;
 import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
 import com.backtoback.reseat.domain.user.repository.RefreshTokenRepository;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
@@ -33,6 +36,14 @@ public class AuthService {
         // 1. 이메일 존재 여부 확인
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new UserNotFoundException("존재하지 않는 이메일입니다."));
+
+        //로그인 요청을 보낸 사용자의 상태 체크
+        if(user.getStatus() == UserStatus.SUSPENDED){
+            throw new SuspendedUserException("이용이 정지된 계정입니다");
+        }
+        if(user.getStatus() == UserStatus.DELETED){
+            throw new DeleteUserException("탈퇴 처리된 계정입니다");
+        }
 
         // 2. 비밀번호 일치 여부 확인 (BCrypt 매칭 필수)
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
@@ -81,6 +92,15 @@ public class AuthService {
                 .orElseThrow(() -> new UserNotFoundException("존재하지 않는 회원입니다."));
 
         // [CodeRabbit 피드백 반영] DB에 저장된 실제 토큰과 클라이언트가 보낸 토큰이 일치하는지 검증
+        //토큰 재발급을 받으려는 사용자 상태 체크
+        if(user.getStatus() == UserStatus.SUSPENDED){
+            throw new SuspendedUserException("이용이 정지된 계정입니다");
+        }
+        if(user.getStatus() == UserStatus.DELETED){
+            throw new DeleteUserException("탈퇴 처리된 계정입니다.");
+        }
+
+        // [CodeRabbit 피드백 반영] DB에 저장된 실제 토큰과 클라이언트가 보낸 토큰이 유치하는지 검증
         RefreshToken dbRefreshToken = refreshTokenRepository.findByUser(user)
                 .orElseThrow(() -> new InvalidTokenException("유효하지 않은 인증 정보입니다."));
 

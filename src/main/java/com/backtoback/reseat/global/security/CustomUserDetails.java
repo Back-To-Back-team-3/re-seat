@@ -5,7 +5,7 @@ import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-
+import com.backtoback.reseat.domain.user.entity.UserStatus;
 import java.util.Collection;
 import java.util.Collections;
 
@@ -40,12 +40,17 @@ public class CustomUserDetails implements UserDetails {
     public boolean isAccountNonExpired(){return true;}
 
     @Override
-    public boolean isAccountNonLocked(){return true;}
+    public boolean isAccountNonLocked(){
+        //이용정지 회원이 아닌 경우에만 TRUE
+        return user.getStatus() != UserStatus.SUSPENDED;}
 
     @Override
     public boolean isCredentialsNonExpired(){return true;}
 
     @Override
-    public boolean isEnabled(){return true;}
+    public boolean isEnabled(){
+        //탈토회원 아닐 경우~
+        return user.getStatus() != UserStatus.DELETED;}
+
 
 }

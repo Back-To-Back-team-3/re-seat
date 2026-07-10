@@ -104,4 +104,20 @@ public class User extends BaseEntity {
     public void changePassword(String newEncodedPassword) {
         this.password = newEncodedPassword;
     }
+    public void withdraw(){
+        //회원상태 DELETE로 변경
+        this.status = UserStatus.DELETED;
+
+        //이메일 중복 제약 조건을 우회, 개인 정보를 식별할 수 없게 처리
+        this.email = "deleted_" + this.id + "_" + this.email;
+
+        //이름 및 닉네임 비식별화
+        this.name = "탈퇴회원";
+        this.nickname = "탈퇴회원";
+
+        //전화번호 및 본인인증 정보 초기화
+        this.phone = "000-0000-0000";
+        this.ci = null;
+        this.isVerified = false;
+    }
 }
