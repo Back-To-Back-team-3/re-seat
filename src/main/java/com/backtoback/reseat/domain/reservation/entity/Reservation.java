@@ -18,10 +18,14 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.OneToMany;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import java.util.ArrayList;
+import java.util.List;
 
 import java.time.LocalDateTime;
 
@@ -66,6 +70,11 @@ public class Reservation extends BaseEntity {
     @Column(name = "hold_expires_at", nullable = false)
     private LocalDateTime holdExpiresAt;
 
+    // 예약에 묶인 좌석 목록
+    //
+    @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ReservationSeat> reservationSeats = new ArrayList<>();
+
     @Builder
     private Reservation(String reservationNo, User user, Game game,
                         ReservationStatus status, LocalDateTime holdExpiresAt) {
@@ -92,5 +101,14 @@ public class Reservation extends BaseEntity {
         }
 
         this.status = ReservationStatus.CANCELED;
+
+    }
+
+    /**
+    * 연관관계 편의 메서드. ReservationSeat을 이 예약에 연결한다.
+    */
+    public void addReservationSeat(ReservationSeat seat) {
+        this.reservationSeats.add(seat);
+        seat.assignReservation(this);    // ReservationSeat 쪽 역방향 세팅
     }
 }
