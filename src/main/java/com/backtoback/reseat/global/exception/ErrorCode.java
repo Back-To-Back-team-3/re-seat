@@ -62,6 +62,7 @@ public enum ErrorCode {
     INVALID_RESERVATION_STATUS(HttpStatus.CONFLICT, "요청을 처리할 수 있는 예약 상태가 아닙니다."),
     RESERVATION_ALREADY_ORDERED(HttpStatus.CONFLICT, "이미 주문이 생성된 예약입니다."),
     PRE_RESERVATION_EXPIRED(HttpStatus.GONE, "좌석 선점 시간이 만료되었습니다."),
+    RESERVATION_SEAT_NOT_FOUND(HttpStatus.NOT_FOUND, "예약 좌석을 찾을 수 없습니다."),
 
     // 주문 (orders)
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "주문을 찾을 수 없습니다."),
@@ -78,6 +79,8 @@ public enum ErrorCode {
     PAYMENT_ALREADY_FINALIZED(HttpStatus.CONFLICT, "이미 처리 완료된 결제입니다."),
     PAYMENT_CALLBACK_MISMATCH(HttpStatus.BAD_REQUEST, "결제 콜백 정보가 결제 내역과 일치하지 않습니다."),
     PAYMENT_TIMEOUT(HttpStatus.REQUEST_TIMEOUT, "결제 제한 시간이 초과되었습니다."),
+    PAYMENT_CANCEL_NOT_ALLOWED(HttpStatus.CONFLICT, "취소할 수 없는 결제 상태입니다."),
+    PAYMENT_CANCEL_FAILED(HttpStatus.BAD_GATEWAY, "결제 취소 처리에 실패했습니다."),
 
     // 티켓 (tickets)
     TICKET_NOT_FOUND(HttpStatus.NOT_FOUND, "티켓을 찾을 수 없습니다."),

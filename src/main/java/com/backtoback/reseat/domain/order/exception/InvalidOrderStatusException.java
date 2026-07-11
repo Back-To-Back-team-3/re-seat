@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.payment.exception;
+package com.backtoback.reseat.domain.order.exception;
 
 import com.backtoback.reseat.global.exception.BusinessException;
 import com.backtoback.reseat.global.exception.ErrorCode;

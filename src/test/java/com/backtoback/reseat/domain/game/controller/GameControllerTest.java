@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.backtoback.reseat.domain.game.dto.GameListResponse;
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
+import com.backtoback.reseat.domain.game.exception.InvalidGameSearchConditionException;
 import com.backtoback.reseat.domain.game.service.GameQueryService;
 import com.backtoback.reseat.global.exception.GlobalExceptionHandler;
 import java.util.List;
@@ -103,5 +104,19 @@ class GameControllerTest {
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.errorCode").value("GAME_NOT_FOUND"));
+    }
+
+    @Test
+    @DisplayName("검색 시작일이 종료일보다 늦으면 400 응답을 반환한다")
+    void should_return400_when_fromIsAfterTo() throws Exception {
+        when(gameQueryService.getGames(any(), any()))
+            .thenThrow(new InvalidGameSearchConditionException("검색 시작일(from)은 종료일(to)보다 늦을 수 없습니다."));
+
+        mockMvc.perform(get("/api/v1/games")
+                .param("from", "2026-08-01")
+                .param("to", "2026-07-01"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"));
     }
 }

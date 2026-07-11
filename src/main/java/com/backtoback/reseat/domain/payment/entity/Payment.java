@@ -34,7 +34,7 @@ public class Payment extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // 결제 번호
+    // 서비스 내부 결제 번호
     @Column(name = "payment_no", nullable = false, length = 50)
     private String paymentNo;
 
@@ -124,5 +124,12 @@ public class Payment extends BaseEntity {
         this.status = PaymentStatus.FAILED;
         this.failReason = failReason;
         this.failedAt = failedAt;
+    }
+
+    // 결제 취소 처리
+    public void cancel() {
+        this.status = PaymentStatus.CANCELED;
+        this.failReason = null;
+        this.failedAt = null;
     }
 }
