@@ -104,6 +104,15 @@ public class User extends BaseEntity {
     public void changePassword(String newEncodedPassword) {
         this.password = newEncodedPassword;
     }
+
+    public void updateRole(UserRole role) {
+        this.role = role;
+    }
+
+    public void updateStatus(UserStatus status) {
+        this.status = status;
+    }
+
     public void withdraw(){
         //회원상태 DELETE로 변경
         this.status = UserStatus.DELETED;
