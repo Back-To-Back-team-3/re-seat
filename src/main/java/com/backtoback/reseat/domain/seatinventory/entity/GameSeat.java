@@ -104,4 +104,14 @@ public class GameSeat extends BaseEntity {
         this.status = GameSeatStatus.AVAILABLE;
         this.holdExpiresAt = null;
     }
+
+    /** 좌석 판매 상태 전이. 상태 전이 검증(AVAILABLE→HELD 등)은 C-3에서 도메인에 추가. */
+    public void updateStatus(GameSeatStatus status) {
+        this.status = status;
+    }
+
+    /** 선점 만료 시각 세팅. 해제 시 null로 초기화. */
+    public void updateHoldExpiresAt(LocalDateTime holdExpiresAt) {
+        this.holdExpiresAt = holdExpiresAt;
+    }
 }
