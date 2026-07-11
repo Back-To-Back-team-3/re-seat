@@ -2,7 +2,6 @@ package com.backtoback.reseat.domain.user.verification.service;
 
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
-import com.backtoback.reseat.domain.user.verification.dto.response.PortoneVerificationResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
