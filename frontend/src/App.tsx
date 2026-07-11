@@ -12,6 +12,7 @@ import {
   getGame,
   getGameSeats,
   getGameZones,
+  getOrder,
   getQueueStatus,
   getReservationHoldTime,
   getTickets,
@@ -46,6 +47,16 @@ const steps: Array<{ id: Step; label: string }> = [
 
 const TOSS_CLIENT_KEY = import.meta.env.VITE_TOSS_CLIENT_KEY ?? "";
 const PAYMENT_WINDOW_SECONDS = 8 * 60;
+const PENDING_PAYMENT_KEY = "pendingTossPayment";
+const PAYMENT_CALLBACK_KEY_PREFIX = "tossPaymentCallback:";
+
+function getInitialStep(): Step {
+  const params = new URLSearchParams(window.location.search);
+  const hasPaymentResult = params.has("paymentId")
+    && (params.has("paymentKey") || params.has("code"));
+
+  return hasPaymentResult ? "payment" : "games";
+}
 
 function formatPrice(value: number) {
   return new Intl.NumberFormat("ko-KR").format(value) + "원";
@@ -119,19 +130,22 @@ function Countdown({ target, maxMinutes }: { target?: string | null; maxMinutes?
   return <span className={left === "만료" ? "timer expired" : "timer"}>{left}</span>;
 }
 
-function SecondsCountdown({ seconds }: { seconds: number | null }) {
-  const [left, setLeft] = useState(seconds);
+function DeadlineCountdown({ deadlineAt }: { deadlineAt: number | null }) {
+  const calculateSeconds = () => deadlineAt === null
+    ? null
+    : Math.max(0, Math.ceil((deadlineAt - Date.now()) / 1000));
+  const [left, setLeft] = useState(calculateSeconds);
 
   useEffect(() => {
-    setLeft(seconds);
-    if (seconds === null) return;
+    setLeft(calculateSeconds());
+    if (deadlineAt === null) return;
 
     const timerId = window.setInterval(() => {
-      setLeft((current) => current === null ? null : Math.max(0, current - 1));
+      setLeft(calculateSeconds());
     }, 1000);
 
     return () => window.clearInterval(timerId);
-  }, [seconds]);
+  }, [deadlineAt]);
 
   if (left === null) return <span className="timer">-</span>;
   if (left === 0) return <span className="timer expired">만료</span>;
@@ -142,7 +156,7 @@ function SecondsCountdown({ seconds }: { seconds: number | null }) {
 }
 
 function App() {
-  const [activeStep, setActiveStep] = useState<Step>("games");
+  const [activeStep, setActiveStep] = useState<Step>(getInitialStep);
   const [theme, setTheme] = useState(localStorage.getItem("theme") ?? "light");
   const [isAuthed, setIsAuthed] = useState(Boolean(localStorage.getItem("accessToken")));
   const [authedEmail, setAuthedEmail] = useState(localStorage.getItem("userEmail") ?? "");
@@ -168,9 +182,9 @@ function App() {
   const [seatsResult, setSeatsResult] = useState<ApiResult<GameSeat[]> | null>(null);
   const [selectedSeatIds, setSelectedSeatIds] = useState<number[]>([]);
   const [reservationResult, setReservationResult] = useState<ApiResult<ReservationResponse> | null>(null);
-  const [holdRemainingSeconds, setHoldRemainingSeconds] = useState<number | null>(null);
+  const [holdDeadlineAt, setHoldDeadlineAt] = useState<number | null>(null);
   const [orderResult, setOrderResult] = useState<ApiResult<OrderResponse> | null>(null);
-  const [paymentRemainingSeconds, setPaymentRemainingSeconds] = useState<number | null>(null);
+  const [paymentDeadlineAt, setPaymentDeadlineAt] = useState<number | null>(null);
   const [paymentResult, setPaymentResult] = useState<ApiResult<PaymentCreateResponse> | null>(null);
   const [ticketsResult, setTicketsResult] = useState<ApiResult<TicketSummary[]> | null>(null);
 
@@ -257,15 +271,56 @@ function App() {
       return;
     }
 
-    run(async () => {
-      if (paymentKey && orderId && amount) {
-        await completePayment(paymentId, { paymentKey, orderId, amount });
-        setToast("결제 승인 처리가 완료되었습니다.");
-      } else if (code && message && orderId) {
-        await failPayment(paymentId, { code, message, orderId });
-        setError(`결제 실패: ${message}`);
-      }
+    const callbackKey = `${PAYMENT_CALLBACK_KEY_PREFIX}${paymentId}:${paymentKey ?? code}`;
+    if (sessionStorage.getItem(callbackKey)) {
       window.history.replaceState({}, "", window.location.pathname);
+      return;
+    }
+
+    sessionStorage.setItem(callbackKey, "processing");
+    window.history.replaceState({}, "", window.location.pathname);
+
+    run(async () => {
+      try {
+        const pendingPayment = JSON.parse(
+          sessionStorage.getItem(PENDING_PAYMENT_KEY) ?? "null"
+        ) as { orderId: number; payment: PaymentCreateResponse } | null;
+
+        if (paymentKey && orderId && amount) {
+          await completePayment(paymentId, { paymentKey, orderId, amount });
+          sessionStorage.setItem(callbackKey, "completed");
+
+          if (pendingPayment) {
+            const order = await getOrder(pendingPayment.orderId);
+            setOrderResult(order);
+            setPaymentResult({
+              data: { ...pendingPayment.payment, status: "APPROVED" },
+              source: "api"
+            });
+          }
+
+          setPaymentDeadlineAt(Date.now());
+          setActiveStep("payment");
+          setToast("결제 승인 처리가 완료되었습니다.");
+        } else if (code && message && orderId) {
+          await failPayment(paymentId, { code, message, orderId });
+          sessionStorage.setItem(callbackKey, "completed");
+          setPaymentResult(pendingPayment ? {
+            data: { ...pendingPayment.payment, status: "FAILED" },
+            source: "api"
+          } : null);
+          setActiveStep("payment");
+          setError(`결제 실패: ${message}`);
+          sessionStorage.setItem(callbackKey, "completed");
+        }
+      } catch (callbackError) {
+        if (sessionStorage.getItem(callbackKey) !== "completed") {
+          sessionStorage.removeItem(callbackKey);
+        }
+        throw callbackError;
+      } finally {
+        sessionStorage.removeItem(PENDING_PAYMENT_KEY);
+      }
     });
   }, []);
 
@@ -321,9 +376,9 @@ function App() {
     setSeatsResult(null);
     setSelectedSeatIds([]);
     setReservationResult(null);
-    setHoldRemainingSeconds(null);
+    setHoldDeadlineAt(null);
     setOrderResult(null);
-    setPaymentRemainingSeconds(null);
+    setPaymentDeadlineAt(null);
     setPaymentResult(null);
     setTicketsResult(null);
     const result = await run(() => enterQueue(selectedGame.gameId), "대기열에 진입했습니다.");
@@ -367,9 +422,9 @@ function App() {
     }
     setSelectedSeatIds([]);
     setReservationResult(null);
-    setHoldRemainingSeconds(null);
+    setHoldDeadlineAt(null);
     setOrderResult(null);
-    setPaymentRemainingSeconds(null);
+    setPaymentDeadlineAt(null);
     setPaymentResult(null);
     const result = await run(async () => {
       const zones = await getGameZones(selectedGame.gameId);
@@ -399,7 +454,7 @@ function App() {
       setSeatsResult(result);
       setSelectedSeatIds([]);
       setReservationResult(null);
-      setHoldRemainingSeconds(null);
+      setHoldDeadlineAt(null);
     }
   }
 
@@ -414,7 +469,9 @@ function App() {
     if (result) {
       setReservationResult(result);
       const holdTime = await run(() => getReservationHoldTime(result.data.reservationId));
-      setHoldRemainingSeconds(holdTime?.remainingSeconds ?? null);
+      setHoldDeadlineAt(
+        holdTime ? Date.now() + holdTime.remainingSeconds * 1000 : null
+      );
     }
   }
 
@@ -426,7 +483,7 @@ function App() {
     );
     if (result) {
       setReservationResult(null);
-      setHoldRemainingSeconds(null);
+      setHoldDeadlineAt(null);
       setSelectedSeatIds([]);
       if (selectedGame) {
         const seats = await run(() => getGameSeats(selectedGame.gameId, selectedZoneId ?? undefined));
@@ -445,7 +502,7 @@ function App() {
     );
     if (result) {
       setOrderResult(result);
-      setPaymentRemainingSeconds(PAYMENT_WINDOW_SECONDS);
+      setPaymentDeadlineAt(Date.now() + PAYMENT_WINDOW_SECONDS * 1000);
       setActiveStep("order");
     }
   }
@@ -458,7 +515,7 @@ function App() {
         ...orderResult,
         data: { ...orderResult.data, status: result.data.status }
       });
-      setPaymentRemainingSeconds(0);
+      setPaymentDeadlineAt(Date.now());
     }
   }
 
@@ -485,6 +542,11 @@ function App() {
     const payment = paymentResult.data;
     const baseUrl = window.location.origin + window.location.pathname;
     const tossPayments = window.TossPayments(TOSS_CLIENT_KEY);
+
+    sessionStorage.setItem(PENDING_PAYMENT_KEY, JSON.stringify({
+      orderId: orderResult?.data.orderId ?? payment.orderId,
+      payment
+    }));
 
     await run(() =>
       tossPayments.requestPayment("카드", {
@@ -514,9 +576,9 @@ function App() {
       return;
     }
     setReservationResult(null);
-    setHoldRemainingSeconds(null);
+    setHoldDeadlineAt(null);
     setOrderResult(null);
-    setPaymentRemainingSeconds(null);
+    setPaymentDeadlineAt(null);
     setPaymentResult(null);
     setSelectedSeatIds((prev) => {
       if (prev.includes(seat.gameSeatId)) {
@@ -543,7 +605,7 @@ function App() {
     setSeatsResult(null);
     setSelectedSeatIds([]);
     setReservationResult(null);
-    setHoldRemainingSeconds(null);
+    setHoldDeadlineAt(null);
     setOrderResult(null);
     setPaymentResult(null);
     setTicketsResult(null);
@@ -770,7 +832,7 @@ function App() {
                   {reservationResult && (
                     <div className="timer-box">
                       <span>좌석 선점 남은 시간</span>
-                      <strong><SecondsCountdown seconds={holdRemainingSeconds} /></strong>
+                      <strong><DeadlineCountdown deadlineAt={holdDeadlineAt} /></strong>
                     </div>
                   )}
                   {selectedSeats.length === 0 ? (
@@ -832,7 +894,7 @@ function App() {
               <OrderPanel
                 order={orderResult?.data ?? null}
                 seats={selectedSeats}
-                paymentRemainingSeconds={paymentRemainingSeconds}
+                paymentDeadlineAt={paymentDeadlineAt}
               />
             </section>
           )}
@@ -850,7 +912,7 @@ function App() {
                     <dt>금액</dt><dd>{paymentResult ? formatPrice(paymentResult.data.amount) : "-"}</dd>
                     <dt>상태</dt><dd>{paymentResult?.data.status ?? "-"}</dd>
                     <dt>PG 주문 ID</dt><dd>{paymentResult?.data.pgOrderId ?? "-"}</dd>
-                    <dt>남은 시간</dt><dd><SecondsCountdown seconds={paymentRemainingSeconds} /></dd>
+                    <dt>남은 시간</dt><dd><DeadlineCountdown deadlineAt={paymentDeadlineAt} /></dd>
                   </dl>
                 </div>
               </div>
@@ -903,11 +965,11 @@ function App() {
 function OrderPanel({
   order,
   seats,
-  paymentRemainingSeconds
+  paymentDeadlineAt
 }: {
   order: OrderResponse | null;
   seats: GameSeat[];
-  paymentRemainingSeconds: number | null;
+  paymentDeadlineAt: number | null;
 }) {
   return (
     <aside className="order-panel">
@@ -919,7 +981,7 @@ function OrderPanel({
           <dl>
             <dt>주문 번호</dt><dd>{order.orderNo}</dd>
             <dt>상태</dt><dd>{order.status}</dd>
-            <dt>남은 시간</dt><dd><SecondsCountdown seconds={paymentRemainingSeconds} /></dd>
+            <dt>남은 시간</dt><dd><DeadlineCountdown deadlineAt={paymentDeadlineAt} /></dd>
             <dt>총 금액</dt><dd>{formatPrice(order.totalAmount)}</dd>
           </dl>
           <div className="order-items">
