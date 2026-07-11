@@ -71,7 +71,7 @@ public class Reservation extends BaseEntity {
     private LocalDateTime holdExpiresAt;
 
     // 예약에 묶인 좌석 목록
-    //
+    // Reservation.java 필드 선언부 — 컬렉션 초기화 보장 + cascade로 자식 저장
     @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ReservationSeat> reservationSeats = new ArrayList<>();
 
@@ -102,6 +102,11 @@ public class Reservation extends BaseEntity {
 
         this.status = ReservationStatus.CANCELED;
 
+    }
+
+    /** 예약 상태 전이. 상태 전이 검증은 C-3에서 추가. */
+    public void updateStatus(ReservationStatus status) {
+        this.status = status;
     }
 
     /**
