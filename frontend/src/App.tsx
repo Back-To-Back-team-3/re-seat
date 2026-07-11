@@ -11,7 +11,9 @@ import {
   getGames,
   getGame,
   getGameSeats,
+  getGameZones,
   getQueueStatus,
+  getReservationHoldTime,
   getTickets,
   login,
   requestPayment,
@@ -22,6 +24,7 @@ import { clearTokens, getAccessTokenRole, setQueueToken } from "./api/client";
 import type {
   ApiResult,
   GameSeat,
+  GameZone,
   GameSummary,
   OrderResponse,
   PaymentCreateResponse,
@@ -42,6 +45,7 @@ const steps: Array<{ id: Step; label: string }> = [
 ];
 
 const TOSS_CLIENT_KEY = import.meta.env.VITE_TOSS_CLIENT_KEY ?? "";
+const PAYMENT_WINDOW_SECONDS = 8 * 60;
 
 function formatPrice(value: number) {
   return new Intl.NumberFormat("ko-KR").format(value) + "원";
@@ -115,6 +119,28 @@ function Countdown({ target, maxMinutes }: { target?: string | null; maxMinutes?
   return <span className={left === "만료" ? "timer expired" : "timer"}>{left}</span>;
 }
 
+function SecondsCountdown({ seconds }: { seconds: number | null }) {
+  const [left, setLeft] = useState(seconds);
+
+  useEffect(() => {
+    setLeft(seconds);
+    if (seconds === null) return;
+
+    const timerId = window.setInterval(() => {
+      setLeft((current) => current === null ? null : Math.max(0, current - 1));
+    }, 1000);
+
+    return () => window.clearInterval(timerId);
+  }, [seconds]);
+
+  if (left === null) return <span className="timer">-</span>;
+  if (left === 0) return <span className="timer expired">만료</span>;
+
+  const minutes = Math.floor(left / 60);
+  const remainingSeconds = left % 60;
+  return <span className="timer">{minutes}:{remainingSeconds.toString().padStart(2, "0")}</span>;
+}
+
 function App() {
   const [activeStep, setActiveStep] = useState<Step>("games");
   const [theme, setTheme] = useState(localStorage.getItem("theme") ?? "light");
@@ -137,10 +163,14 @@ function App() {
   const [gamesResult, setGamesResult] = useState<ApiResult<GameSummary[]> | null>(null);
   const [selectedGame, setSelectedGame] = useState<GameSummary | null>(null);
   const [queueResult, setQueueResult] = useState<ApiResult<QueueEnterResponse> | null>(null);
+  const [zonesResult, setZonesResult] = useState<ApiResult<GameZone[]> | null>(null);
+  const [selectedZoneId, setSelectedZoneId] = useState<number | null>(null);
   const [seatsResult, setSeatsResult] = useState<ApiResult<GameSeat[]> | null>(null);
   const [selectedSeatIds, setSelectedSeatIds] = useState<number[]>([]);
   const [reservationResult, setReservationResult] = useState<ApiResult<ReservationResponse> | null>(null);
+  const [holdRemainingSeconds, setHoldRemainingSeconds] = useState<number | null>(null);
   const [orderResult, setOrderResult] = useState<ApiResult<OrderResponse> | null>(null);
+  const [paymentRemainingSeconds, setPaymentRemainingSeconds] = useState<number | null>(null);
   const [paymentResult, setPaymentResult] = useState<ApiResult<PaymentCreateResponse> | null>(null);
   const [ticketsResult, setTicketsResult] = useState<ApiResult<TicketSummary[]> | null>(null);
 
@@ -148,6 +178,16 @@ function App() {
     () => (seatsResult?.data ?? []).filter((seat) => selectedSeatIds.includes(seat.gameSeatId)),
     [seatsResult, selectedSeatIds]
   );
+
+  const seatRows = useMemo(() => {
+    const rows = new Map<string, GameSeat[]>();
+    (seatsResult?.data ?? []).forEach((seat) => {
+      const row = rows.get(seat.seatRow) ?? [];
+      row.push(seat);
+      rows.set(seat.seatRow, row);
+    });
+    return Array.from(rows.entries());
+  }, [seatsResult]);
 
   const totalAmount = selectedSeats.reduce((sum, seat) => sum + seat.price, 0);
 
@@ -276,10 +316,14 @@ function App() {
     if (!selectedGame) return;
     setQueueToken(null);
     setQueueResult(null);
+    setZonesResult(null);
+    setSelectedZoneId(null);
     setSeatsResult(null);
     setSelectedSeatIds([]);
     setReservationResult(null);
+    setHoldRemainingSeconds(null);
     setOrderResult(null);
+    setPaymentRemainingSeconds(null);
     setPaymentResult(null);
     setTicketsResult(null);
     const result = await run(() => enterQueue(selectedGame.gameId), "대기열에 진입했습니다.");
@@ -323,12 +367,39 @@ function App() {
     }
     setSelectedSeatIds([]);
     setReservationResult(null);
+    setHoldRemainingSeconds(null);
     setOrderResult(null);
+    setPaymentRemainingSeconds(null);
     setPaymentResult(null);
-    const result = await run(() => getGameSeats(selectedGame.gameId), "좌석 정보를 불러왔습니다.");
+    const result = await run(async () => {
+      const zones = await getGameZones(selectedGame.gameId);
+      const zoneId = selectedZoneId && zones.data.some((zone) => zone.zoneId === selectedZoneId)
+        ? selectedZoneId
+        : zones.data[0]?.zoneId;
+      const seats = await getGameSeats(selectedGame.gameId, zoneId);
+      return { zones, seats, zoneId: zoneId ?? null };
+    }, "좌석 정보를 불러왔습니다.");
     if (result) {
-      setSeatsResult(result);
+      setZonesResult(result.zones);
+      setSelectedZoneId(result.zoneId);
+      setSeatsResult(result.seats);
       setActiveStep("seats");
+    }
+  }
+
+  async function handleSelectZone(zoneId: number) {
+    if (!selectedGame || zoneId === selectedZoneId) return;
+    if (reservationResult) {
+      setError("선점한 좌석을 해제한 뒤 다른 구역을 선택할 수 있습니다.");
+      return;
+    }
+    const result = await run(() => getGameSeats(selectedGame.gameId, zoneId));
+    if (result) {
+      setSelectedZoneId(zoneId);
+      setSeatsResult(result);
+      setSelectedSeatIds([]);
+      setReservationResult(null);
+      setHoldRemainingSeconds(null);
     }
   }
 
@@ -342,6 +413,8 @@ function App() {
     );
     if (result) {
       setReservationResult(result);
+      const holdTime = await run(() => getReservationHoldTime(result.data.reservationId));
+      setHoldRemainingSeconds(holdTime?.remainingSeconds ?? null);
     }
   }
 
@@ -353,9 +426,10 @@ function App() {
     );
     if (result) {
       setReservationResult(null);
+      setHoldRemainingSeconds(null);
       setSelectedSeatIds([]);
       if (selectedGame) {
-        const seats = await run(() => getGameSeats(selectedGame.gameId));
+        const seats = await run(() => getGameSeats(selectedGame.gameId, selectedZoneId ?? undefined));
         if (seats) setSeatsResult(seats);
       }
     }
@@ -371,6 +445,7 @@ function App() {
     );
     if (result) {
       setOrderResult(result);
+      setPaymentRemainingSeconds(PAYMENT_WINDOW_SECONDS);
       setActiveStep("order");
     }
   }
@@ -383,6 +458,7 @@ function App() {
         ...orderResult,
         data: { ...orderResult.data, status: result.data.status }
       });
+      setPaymentRemainingSeconds(0);
     }
   }
 
@@ -433,8 +509,14 @@ function App() {
 
   function toggleSeat(seat: GameSeat) {
     if (seat.status !== "AVAILABLE") return;
+    if (reservationResult) {
+      setError("선점한 좌석을 해제한 뒤 좌석 선택을 변경할 수 있습니다.");
+      return;
+    }
     setReservationResult(null);
+    setHoldRemainingSeconds(null);
     setOrderResult(null);
+    setPaymentRemainingSeconds(null);
     setPaymentResult(null);
     setSelectedSeatIds((prev) => {
       if (prev.includes(seat.gameSeatId)) {
@@ -456,9 +538,12 @@ function App() {
     setAuthedEmail("");
     setAuthedRole("");
     setQueueResult(null);
+    setZonesResult(null);
+    setSelectedZoneId(null);
     setSeatsResult(null);
     setSelectedSeatIds([]);
     setReservationResult(null);
+    setHoldRemainingSeconds(null);
     setOrderResult(null);
     setPaymentResult(null);
     setTicketsResult(null);
@@ -646,19 +731,38 @@ function App() {
                 <button className="ghost-button" onClick={handleLoadSeats} disabled={!selectedGame || busy}>좌석 불러오기</button>
               </div>
               <SourceNotice result={seatsResult} />
+              <div className="zone-list" aria-label="좌석 구역">
+                {(zonesResult?.data ?? []).map((zone) => (
+                  <button
+                    key={zone.zoneId}
+                    className={selectedZoneId === zone.zoneId ? "active" : ""}
+                    onClick={() => handleSelectZone(zone.zoneId)}
+                    disabled={busy}
+                  >
+                    <strong>{zone.zoneName}</strong>
+                    <span>{zone.availableCount}/{zone.totalCount}석</span>
+                  </button>
+                ))}
+              </div>
               <div className="seat-area">
-                <div className="seat-grid" aria-label="좌석 그리드">
-                  {(seatsResult?.data ?? []).map((seat) => (
-                    <button
-                      key={seat.gameSeatId}
-                      className={`seat ${seat.status.toLowerCase()} ${selectedSeatIds.includes(seat.gameSeatId) ? "picked" : ""}`}
-                      onClick={() => toggleSeat(seat)}
-                      disabled={seat.status !== "AVAILABLE"}
-                      title={`${seat.zoneName} ${seat.seatRow}열 ${seat.seatNumber}번 ${formatPrice(seat.price)}`}
-                    >
-                      <span>{seat.seatRow}</span>
-                      {seat.seatNumber}
-                    </button>
+                <div className="seat-map" aria-label="좌석 배치도">
+                  {seatRows.map(([rowName, rowSeats]) => (
+                    <div className="seat-row" key={rowName}>
+                      <strong className="seat-row-label">{rowName}</strong>
+                      <div className="seat-grid">
+                        {rowSeats.map((seat) => (
+                          <button
+                            key={seat.gameSeatId}
+                            className={`seat ${seat.status.toLowerCase()} ${selectedSeatIds.includes(seat.gameSeatId) ? "picked" : ""}`}
+                            onClick={() => toggleSeat(seat)}
+                            disabled={seat.status !== "AVAILABLE"}
+                            title={`${seat.zoneName} ${seat.seatRow}열 ${seat.seatNumber}번 ${formatPrice(seat.price)}`}
+                          >
+                            {seat.seatNumber}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
                 <aside className="selection-panel">
@@ -666,7 +770,7 @@ function App() {
                   {reservationResult && (
                     <div className="timer-box">
                       <span>좌석 선점 남은 시간</span>
-                      <strong><Countdown target={reservationResult.data.holdExpiresAt} maxMinutes={5} /></strong>
+                      <strong><SecondsCountdown seconds={holdRemainingSeconds} /></strong>
                     </div>
                   )}
                   {selectedSeats.length === 0 ? (
@@ -725,7 +829,11 @@ function App() {
                   </button>
                 </div>
               </div>
-              <OrderPanel order={orderResult?.data ?? null} />
+              <OrderPanel
+                order={orderResult?.data ?? null}
+                seats={selectedSeats}
+                paymentRemainingSeconds={paymentRemainingSeconds}
+              />
             </section>
           )}
 
@@ -742,7 +850,7 @@ function App() {
                     <dt>금액</dt><dd>{paymentResult ? formatPrice(paymentResult.data.amount) : "-"}</dd>
                     <dt>상태</dt><dd>{paymentResult?.data.status ?? "-"}</dd>
                     <dt>PG 주문 ID</dt><dd>{paymentResult?.data.pgOrderId ?? "-"}</dd>
-                    <dt>남은 시간</dt><dd><Countdown target={orderResult?.data.paymentDeadline} maxMinutes={8} /></dd>
+                    <dt>남은 시간</dt><dd><SecondsCountdown seconds={paymentRemainingSeconds} /></dd>
                   </dl>
                 </div>
               </div>
@@ -792,7 +900,15 @@ function App() {
   );
 }
 
-function OrderPanel({ order }: { order: OrderResponse | null }) {
+function OrderPanel({
+  order,
+  seats,
+  paymentRemainingSeconds
+}: {
+  order: OrderResponse | null;
+  seats: GameSeat[];
+  paymentRemainingSeconds: number | null;
+}) {
   return (
     <aside className="order-panel">
       <h2>주문 상세</h2>
@@ -803,14 +919,13 @@ function OrderPanel({ order }: { order: OrderResponse | null }) {
           <dl>
             <dt>주문 번호</dt><dd>{order.orderNo}</dd>
             <dt>상태</dt><dd>{order.status}</dd>
-            <dt>결제 제한</dt><dd>{order.paymentDeadline}</dd>
-            <dt>남은 시간</dt><dd><Countdown target={order.paymentDeadline} maxMinutes={8} /></dd>
+            <dt>남은 시간</dt><dd><SecondsCountdown seconds={paymentRemainingSeconds} /></dd>
             <dt>총 금액</dt><dd>{formatPrice(order.totalAmount)}</dd>
           </dl>
           <div className="order-items">
             {order.orderItems.map((item) => (
               <div key={item.orderItemId}>
-                <span>좌석 #{item.gameSeatId}</span>
+                <span>{formatOrderSeat(item.gameSeatId, seats)}</span>
                 <strong>{formatPrice(item.price)}</strong>
               </div>
             ))}
@@ -819,6 +934,12 @@ function OrderPanel({ order }: { order: OrderResponse | null }) {
       )}
     </aside>
   );
+}
+
+function formatOrderSeat(gameSeatId: number, seats: GameSeat[]) {
+  const seat = seats.find((candidate) => candidate.gameSeatId === gameSeatId);
+  if (!seat) return `좌석 ID ${gameSeatId}`;
+  return `${seat.zoneName} ${seat.seatRow}열 ${seat.seatNumber}번`;
 }
 
 export default App;

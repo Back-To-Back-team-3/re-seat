@@ -69,6 +69,15 @@ export type GameSeat = {
   status: GameSeatStatus;
 };
 
+export type GameZone = {
+  zoneId: number;
+  zoneName: string;
+  grade: "INFIELD" | "OUTFIELD";
+  basePrice: number;
+  totalCount: number;
+  availableCount: number;
+};
+
 export type ReservationResponse = {
   reservationId: number;
   reservationNo: string;
@@ -80,6 +89,13 @@ export type ReservationResponse = {
   }>;
   holdExpiresAt: string;
   gameAt?: string;
+};
+
+export type HoldTimeResponse = {
+  reservationId: number;
+  remainingSeconds: number;
+  status: ReservationResponse["status"];
+  expiresAt: string;
 };
 
 export type OrderResponse = {

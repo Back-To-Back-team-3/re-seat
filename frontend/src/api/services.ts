@@ -3,6 +3,7 @@ import {
   ApiResult,
   ApiResponse,
   GameSeat,
+  GameZone,
   GameSummary,
   OrderResponse,
   PageResponse,
@@ -10,6 +11,7 @@ import {
   QueueEnterResponse,
   QueueAdmitEvent,
   QueueStatusResponse,
+  HoldTimeResponse,
   ReservationResponse,
   TicketSummary,
   TokenResponse
@@ -101,9 +103,19 @@ export async function admitQueue(gameId: number, limit = 20) {
   } satisfies ApiResult<QueueEnterResponse>;
 }
 
-export async function getGameSeats(gameId: number) {
-  const response = await apiRequest<ApiResponse<GameSeat[]>>(`/games/${gameId}/seats`);
-  return { data: unwrap(response), source: "api" } satisfies ApiResult<GameSeat[]>;
+export async function getGameSeats(gameId: number, zoneId?: number) {
+  const query = zoneId ? `?zoneId=${zoneId}` : "";
+  const response = await apiRequest<ApiResponse<GameSeat[]>>(`/games/${gameId}/seats${query}`);
+  const seats = unwrap(response).sort((left, right) =>
+    left.seatRow.localeCompare(right.seatRow, "ko", { numeric: true })
+      || left.seatNumber.localeCompare(right.seatNumber, "ko", { numeric: true })
+  );
+  return { data: seats, source: "api" } satisfies ApiResult<GameSeat[]>;
+}
+
+export async function getGameZones(gameId: number) {
+  const response = await apiRequest<ApiResponse<GameZone[]>>(`/games/${gameId}/zones`);
+  return { data: unwrap(response), source: "api" } satisfies ApiResult<GameZone[]>;
 }
 
 export async function createReservation(gameId: number, gameSeatIds: number[]) {
@@ -118,6 +130,13 @@ export async function cancelReservation(reservationId: number) {
   const response = await apiRequest<ApiResponse<{ reservationId: number; status: ReservationResponse["status"] }>>(
     `/reservations/${reservationId}`,
     { method: "DELETE" }
+  );
+  return unwrap(response);
+}
+
+export async function getReservationHoldTime(reservationId: number) {
+  const response = await apiRequest<ApiResponse<HoldTimeResponse>>(
+    `/reservations/${reservationId}/hold-time`
   );
   return unwrap(response);
 }
