@@ -83,5 +83,32 @@ public class ReservationController {
             .body(ApiResponse.success(response));
     }
 
+    /** GET /api/v1/reservations/{reservationId}/hold-time */
+    @Operation(
+        summary = "선점 남은 시간 조회",
+        description = """
+                    선점 만료까지 남은 시간(초)을 반환합니다. 이미 만료된 경우 remainingSeconds = 0.
+                    410 Gone 처리는 C-3에서 추가 예정.
+                    """,
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200", description = "조회 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "404", description = "RESERVATION_NOT_FOUND",
+            content = @Content)
+    })
+    @GetMapping("/{reservationId}/hold-time")
+    public ApiResponse<HoldTimeResponse> getHoldTime(
+        @Parameter(description = "예약 ID", example = "1001")
+        @PathVariable Long reservationId
+    ) {
+        HoldTimeResponse response = reservationService.getHoldTime(reservationId);
+        return ApiResponse.success(response);
+    }
+
+
+    /**  */
 
 }
