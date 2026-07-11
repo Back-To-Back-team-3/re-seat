@@ -76,7 +76,7 @@ public class ReservationController {
         @AuthenticationPrincipal CustomUserDetails userDetails,
         @Valid @RequestBody SeatHoldRequest request
     ) {
-        Long userId = userDetails.getUserId();
+        Long userId = userDetails.getId();
         ReservationResponse response = reservationService.holdSeats(userId, request);
         return ResponseEntity
             .status(HttpStatus.CREATED)
@@ -108,7 +108,34 @@ public class ReservationController {
         return ApiResponse.success(response);
     }
 
-
-    /**  */
+    /** DELETE /api/v1/reservations/{reservationId} */
+    @Operation(
+        summary = "선점 해제",
+        description = """
+                    선점된 좌석을 해제합니다. 좌석은 즉시 AVAILABLE 상태로 복귀합니다.
+                    소유자 검증 강화(403) 및 상태 전이 예외(410)는 C-3 예정.
+                    """,
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200", description = "해제 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "403", description = "FORBIDDEN — 타인 예약",
+            content = @Content),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "404", description = "RESERVATION_NOT_FOUND",
+            content = @Content)
+    })
+    @DeleteMapping("/{reservationId}")
+    public ApiResponse<ReservationCancelResponse> releaseHold(
+        @Parameter(description = "예약 ID", example = "1001")
+        @PathVariable Long reservationId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Long userId = userDetails.getId();
+        ReservationCancelResponse response = reservationService.releaseHold(reservationId, userId);
+        return ApiResponse.success(response);
+    }
 
 }
