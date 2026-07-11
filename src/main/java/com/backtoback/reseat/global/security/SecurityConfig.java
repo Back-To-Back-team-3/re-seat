@@ -49,7 +49,7 @@ public class SecurityConfig {
             //엔드 포인트별 인가 허용 정책 설정
             .authorizeHttpRequests(auth -> auth
                 //인증이 불필요한 경로 허용
-                .requestMatchers("api/v1/auth/**").permitAll()
+                .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers(PathRequest.toH2Console()).permitAll()
                 .requestMatchers("/swagger-ui/**","/v3/api-docs/**").permitAll()
 
