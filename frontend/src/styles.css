@@ -1,0 +1,642 @@
+:root {
+  color: #17202a;
+  background: #f5f7fb;
+  font-family: Inter, Pretendard, "Segoe UI", Arial, sans-serif;
+  line-height: 1.5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+:root[data-theme="dark"] {
+  color: #eef2f7;
+  background: #0f141b;
+}
+
+:root[data-theme="dark"] body {
+  background: #0f141b;
+  color: #eef2f7;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px 32px;
+  background: #ffffff;
+  border-bottom: 1px solid #dfe5ee;
+}
+
+.brand {
+  font-size: 28px;
+  font-weight: 800;
+  color: #c8202f;
+}
+
+.topbar p,
+.workspace p,
+.flow-box p,
+.summary-card p,
+.order-panel p,
+.selection-panel p {
+  margin: 4px 0 0;
+  color: #687486;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  min-height: calc(100vh - 91px);
+}
+
+.sidebar {
+  padding: 24px;
+  background: #111827;
+  color: #ffffff;
+}
+
+.panel,
+.workspace,
+.flow-box,
+.selection-panel,
+.order-panel,
+.summary-card,
+.ticket-card {
+  background: #ffffff;
+  border: 1px solid #dfe5ee;
+  border-radius: 8px;
+}
+
+.auth-panel {
+  padding: 18px;
+  color: #17202a;
+}
+
+.auth-panel h2,
+.workspace h1,
+.workspace h2,
+.flow-box h2,
+.selection-panel h2,
+.order-panel h2 {
+  margin: 0;
+}
+
+.auth-panel label {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.auth-panel input,
+.auth-panel select {
+  width: 100%;
+  border: 1px solid #cdd5df;
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #ffffff;
+}
+
+.inline-field {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.inline-field input {
+  width: 100%;
+  border: 1px solid #cdd5df;
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #ffffff;
+}
+
+.auth-state {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.auth-state strong {
+  color: #16703a;
+}
+
+.auth-state span {
+  color: #4b5563;
+  word-break: break-all;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin: 14px 0;
+  background: #edf1f7;
+  border-radius: 8px;
+}
+
+.segmented button {
+  border: 0;
+  border-radius: 6px;
+  padding: 8px;
+  background: transparent;
+  color: #4b5563;
+}
+
+.segmented button.active {
+  background: #ffffff;
+  color: #111827;
+  font-weight: 700;
+}
+
+.step-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.step-list button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #263244;
+  border-radius: 8px;
+  padding: 12px;
+  background: #172033;
+  color: #cbd5e1;
+  text-align: left;
+}
+
+.step-list button.active {
+  background: #c8202f;
+  border-color: #c8202f;
+  color: #ffffff;
+}
+
+.step-list span {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 12px;
+}
+
+.content {
+  padding: 28px;
+}
+
+.workspace {
+  padding: 24px;
+}
+
+.two-column {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 18px;
+}
+
+.section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.primary-button,
+.ghost-button {
+  border-radius: 7px;
+  padding: 10px 14px;
+  font-weight: 700;
+}
+
+.primary-button {
+  border: 1px solid #c8202f;
+  background: #c8202f;
+  color: #ffffff;
+}
+
+.ghost-button {
+  border: 1px solid #cdd5df;
+  background: #ffffff;
+  color: #17202a;
+}
+
+.full {
+  width: 100%;
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.auth-badge,
+.status-pill {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.auth-badge {
+  background: #fff4d8;
+  color: #8a5a00;
+}
+
+.status-pill {
+  background: #e8eef7;
+  color: #354256;
+}
+
+.status-pill.open,
+.status-pill.issued {
+  background: #e6f6ec;
+  color: #16703a;
+}
+
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+.game-card {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #dfe5ee;
+  border-radius: 8px;
+  padding: 16px;
+  background: #ffffff;
+  text-align: left;
+}
+
+.game-card.selected {
+  border-color: #c8202f;
+  box-shadow: 0 0 0 3px rgba(200, 32, 47, 0.12);
+}
+
+.game-card strong {
+  font-size: 18px;
+}
+
+.game-card small {
+  color: #687486;
+}
+
+.notice,
+.alert {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.notice {
+  background: #fff8e6;
+  border: 1px solid #ffe1a3;
+  color: #7c5200;
+}
+
+.alert.success {
+  background: #e6f6ec;
+  border: 1px solid #b8e4c6;
+  color: #176b38;
+}
+
+.alert.error {
+  background: #fff0f0;
+  border: 1px solid #ffc4c4;
+  color: #9d1c1c;
+}
+
+.alert button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: 800;
+}
+
+.metric-board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.metric-board div {
+  border: 1px solid #dfe5ee;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.metric-board span,
+.summary-card dt,
+.order-panel dt {
+  display: block;
+  color: #687486;
+  font-size: 13px;
+}
+
+.metric-board strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 24px;
+}
+
+.flow-box,
+.selection-panel,
+.order-panel,
+.summary-card {
+  padding: 18px;
+}
+
+.seat-area {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+  gap: 18px;
+  min-width: 0;
+}
+
+.seat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(42px, 1fr));
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid #dfe5ee;
+  border-radius: 8px;
+  background: #f9fbfe;
+  min-width: 0;
+}
+
+.seat {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #cdd5df;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #17202a;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.seat span {
+  font-size: 10px;
+  color: #687486;
+}
+
+.seat.picked {
+  border-color: #c8202f;
+  background: #c8202f;
+  color: #ffffff;
+}
+
+.seat.picked span {
+  color: #ffffff;
+}
+
+.seat.held {
+  background: #fff0d9;
+  color: #8a5a00;
+}
+
+.seat.sold {
+  background: #edf0f5;
+  color: #6b7280;
+}
+
+.seat.blocked {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.selected-seat,
+.order-items div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #edf1f7;
+}
+
+.total-line {
+  display: flex;
+  justify-content: space-between;
+  margin: 16px 0;
+  font-size: 18px;
+}
+
+.timer-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid #dfe5ee;
+  border-radius: 8px;
+  background: #f9fbfe;
+}
+
+.timer-box span {
+  color: #687486;
+  font-size: 13px;
+}
+
+.timer,
+.timer-box strong {
+  color: #c8202f;
+  font-variant-numeric: tabular-nums;
+}
+
+.timer.expired {
+  color: #6b7280;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 8px 12px;
+  margin: 14px 0 0;
+}
+
+dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.ticket-list {
+  display: grid;
+  gap: 12px;
+}
+
+.ticket-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px;
+}
+
+.ticket-card h2 {
+  margin: 8px 0 4px;
+}
+
+.qr-box {
+  display: grid;
+  place-items: center;
+  min-width: 170px;
+  border: 1px dashed #8b95a5;
+  border-radius: 8px;
+  background: #f9fbfe;
+  font-family: monospace;
+  font-size: 12px;
+  text-align: center;
+}
+
+:root[data-theme="dark"] .topbar,
+:root[data-theme="dark"] .panel,
+:root[data-theme="dark"] .workspace,
+:root[data-theme="dark"] .flow-box,
+:root[data-theme="dark"] .selection-panel,
+:root[data-theme="dark"] .order-panel,
+:root[data-theme="dark"] .summary-card,
+:root[data-theme="dark"] .ticket-card {
+  background: #171d26;
+  border-color: #303a49;
+  color: #eef2f7;
+}
+
+:root[data-theme="dark"] .sidebar {
+  background: #090d13;
+}
+
+:root[data-theme="dark"] .topbar p,
+:root[data-theme="dark"] .workspace p,
+:root[data-theme="dark"] .flow-box p,
+:root[data-theme="dark"] .summary-card p,
+:root[data-theme="dark"] .order-panel p,
+:root[data-theme="dark"] .selection-panel p,
+:root[data-theme="dark"] .game-card small,
+:root[data-theme="dark"] .metric-board span,
+:root[data-theme="dark"] .summary-card dt,
+:root[data-theme="dark"] .order-panel dt,
+:root[data-theme="dark"] .timer-box span,
+:root[data-theme="dark"] .auth-panel label,
+:root[data-theme="dark"] .inline-field,
+:root[data-theme="dark"] .auth-state span {
+  color: #9aa6b5;
+}
+
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] .ghost-button,
+:root[data-theme="dark"] .game-card,
+:root[data-theme="dark"] .seat {
+  background: #111821;
+  border-color: #303a49;
+  color: #eef2f7;
+}
+
+:root[data-theme="dark"] .segmented,
+:root[data-theme="dark"] .seat-grid,
+:root[data-theme="dark"] .timer-box,
+:root[data-theme="dark"] .qr-box {
+  background: #111821;
+  border-color: #303a49;
+}
+
+:root[data-theme="dark"] .segmented button {
+  color: #9aa6b5;
+}
+
+:root[data-theme="dark"] .segmented button.active {
+  background: #222b38;
+  color: #eef2f7;
+}
+
+:root[data-theme="dark"] .notice,
+:root[data-theme="dark"] .auth-badge {
+  background: #2a2313;
+  border-color: #6f5520;
+  color: #ffd37a;
+}
+
+:root[data-theme="dark"] .alert.success,
+:root[data-theme="dark"] .status-pill.open,
+:root[data-theme="dark"] .status-pill.issued {
+  background: #10271b;
+  border-color: #285b3c;
+  color: #7ee0a0;
+}
+
+:root[data-theme="dark"] .status-pill {
+  background: #222b38;
+  color: #d8dee8;
+}
+
+:root[data-theme="dark"] .metric-board div,
+:root[data-theme="dark"] .selected-seat,
+:root[data-theme="dark"] .order-items div {
+  border-color: #303a49;
+}
+
+@media (max-width: 980px) {
+  .layout,
+  .two-column,
+  .seat-area {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    order: 2;
+  }
+
+  .seat-grid {
+    grid-template-columns: repeat(5, minmax(44px, 1fr));
+  }
+}

@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.tsbuildinfo
+frontend-dev*.log
+frontend-dev*.pid
+.env
+.env.*
+!.env.example
