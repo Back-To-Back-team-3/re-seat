@@ -645,6 +645,21 @@ dd {
   color: #9aa6b5;
 }
 
+:root[data-theme="dark"] .seat.held {
+  background: #3a2f12;
+  color: #ffd37a;
+}
+
+:root[data-theme="dark"] .seat.sold {
+  background: #222b38;
+  color: #9aa6b5;
+}
+
+:root[data-theme="dark"] .seat.blocked {
+  background: #3a1f1f;
+  color: #ff9b9b;
+}
+
 :root[data-theme="dark"] .segmented button.active {
   background: #222b38;
   color: #eef2f7;

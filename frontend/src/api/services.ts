@@ -165,11 +165,15 @@ export async function cancelOrder(orderId: number) {
   }>;
 }
 
-export async function requestPayment(orderId: number, method: PaymentCreateResponse["method"]) {
+export async function requestPayment(
+  orderId: number,
+  method: PaymentCreateResponse["method"],
+  idempotencyKey: string
+) {
   const response = await apiRequest<ApiResponse<PaymentCreateResponse>>("/payments", {
     method: "POST",
     headers: {
-      "Idempotency-Key": crypto.randomUUID()
+      "Idempotency-Key": idempotencyKey
     },
     body: JSON.stringify({ orderId, method })
   });

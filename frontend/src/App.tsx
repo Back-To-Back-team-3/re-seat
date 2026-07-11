@@ -49,6 +49,7 @@ const TOSS_CLIENT_KEY = import.meta.env.VITE_TOSS_CLIENT_KEY ?? "";
 const PAYMENT_WINDOW_SECONDS = 8 * 60;
 const PENDING_PAYMENT_KEY = "pendingTossPayment";
 const PAYMENT_CALLBACK_KEY_PREFIX = "tossPaymentCallback:";
+const PAYMENT_IDEMPOTENCY_KEY_PREFIX = "paymentIdempotencyKey:";
 
 function getInitialStep(): Step {
   const params = new URLSearchParams(window.location.search);
@@ -408,7 +409,12 @@ function App() {
 
   async function handleAdmitQueue() {
     if (!selectedGame) return;
-    const result = await run(() => admitQueue(selectedGame.gameId, admitLimit), `${admitLimit}명 입장 허용을 요청했습니다.`);
+    const safeAdmitLimit = Math.min(100, Math.max(1, admitLimit || 1));
+    setAdmitLimit(safeAdmitLimit);
+    const result = await run(
+      () => admitQueue(selectedGame.gameId, safeAdmitLimit),
+      `${safeAdmitLimit}명 입장 허용을 요청했습니다.`
+    );
     if (result) {
       setQueueResult(result);
     }
@@ -521,7 +527,15 @@ function App() {
 
   async function handlePayment() {
     if (!orderResult) return;
-    const result = await run(() => requestPayment(orderResult.data.orderId, "CARD"), "결제 요청이 생성되었습니다.");
+    const orderId = orderResult.data.orderId;
+    const storageKey = `${PAYMENT_IDEMPOTENCY_KEY_PREFIX}${orderId}`;
+    const idempotencyKey = sessionStorage.getItem(storageKey) ?? crypto.randomUUID();
+    sessionStorage.setItem(storageKey, idempotencyKey);
+
+    const result = await run(
+      () => requestPayment(orderId, "CARD", idempotencyKey),
+      "결제 요청이 생성되었습니다."
+    );
     if (result) {
       setPaymentResult(result);
       setActiveStep("payment");
@@ -766,7 +780,9 @@ function App() {
                         min="1"
                         max="100"
                         value={admitLimit}
-                        onChange={(event) => setAdmitLimit(Number(event.target.value))}
+                        onChange={(event) => setAdmitLimit(
+                          Math.min(100, Math.max(1, Number(event.target.value) || 1))
+                        )}
                       />
                     </label>
                     <button className="ghost-button" onClick={handleAdmitQueue} disabled={!selectedGame || busy}>
