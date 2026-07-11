@@ -1,9 +1,7 @@
 package com.backtoback.reseat.domain.user.dto.response;
 
 import com.backtoback.reseat.domain.user.entity.User;
-import com.backtoback.reseat.global.common.ApiResponse;
 import lombok.Getter;
-import org.springframework.http.ResponseEntity;
 
 @Getter
 public class UserProfileResponse {
@@ -28,4 +26,3 @@ public class UserProfileResponse {
         return new UserProfileResponse(user);
     }
 }
-

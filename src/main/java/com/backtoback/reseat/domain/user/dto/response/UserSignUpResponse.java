@@ -16,7 +16,7 @@ import lombok.RequiredArgsConstructor;
 public class UserSignUpResponse {
     private final Long userId;
     private final String email;
-    private final String nickname;
+    private final String name;
     private final UserRole role;
     private final UserStatus status;
 
@@ -25,7 +25,7 @@ public class UserSignUpResponse {
         return UserSignUpResponse.builder()
                 .userId(user.getId())
                 .email(user.getEmail())
-                .nickname(user.getNickname())
+                .name(user.getName())
                 .role(user.getRole())
                 .status(user.getStatus())
                 .build();
