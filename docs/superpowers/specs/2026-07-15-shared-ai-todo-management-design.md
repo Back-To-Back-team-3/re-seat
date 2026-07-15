@@ -2,7 +2,7 @@
 
 ## Goal
 
-Use the existing Notion `Todo` database as the single source of truth for follow-up work discovered or managed in Claude and Codex conversations. Both assistants can create and update tasks. Claude additionally performs scheduled daily and weekly reviews.
+Use the existing Notion `Todo` database as the single source of truth for follow-up work discovered or managed in Claude and Codex conversations. Both assistants can create and update tasks in response to an explicit user request. Claude additionally performs read-only scheduled daily and weekly reviews.
 
 ## Existing Todo Database
 
@@ -37,21 +37,21 @@ No `출처` or `마지막 점검일` property is needed. The originating assista
 
 ### Updating tasks
 
-Both assistants may update a task when the conversation provides clear evidence:
+Both assistants may update a task after the user explicitly requests or confirms the change:
 
 - Change `상태` to `진행 중` when work actually begins.
 - Change `상태` to `완료` only after completion is established.
 - Add context, completion criteria, or a related URL.
 - Apply a user-requested property change immediately.
 
-Ask for confirmation before:
+An assistant may suggest a change, but it must not apply the change until the user explicitly requests or confirms it. This applies especially to:
 
 - changing a deadline or priority that the user did not explicitly request;
 - merging duplicate tasks;
 - marking a task complete when completion is uncertain;
 - splitting a large task into multiple tasks.
 
-Never delete tasks automatically. Recommend archival or cleanup during the weekly review and act only after approval.
+Never delete tasks automatically. Recommend archival or cleanup during the weekly review and act only after an explicit user request.
 
 ## Duplicate Detection
 
@@ -61,12 +61,12 @@ When a candidate is found, show the existing task and offer the smallest appropr
 
 - keep the existing task unchanged;
 - append new context or a related link;
-- revise properties with approval; or
+- revise properties after an explicit user request; or
 - create a separate task when the outcomes are genuinely distinct.
 
 ## Claude Scheduled Reviews
 
-Claude has the same conversational Todo capabilities as Codex plus two scheduled reviews. Review output remains in the scheduled Claude conversation and is not copied into Notion.
+Claude has the same conversational Todo capabilities as Codex plus two scheduled reviews. Scheduled reviews are strictly read-only: they inspect and report but never modify Todo. Review output remains in the scheduled Claude conversation and is not copied into Notion.
 
 ### Daily morning review
 
@@ -78,7 +78,7 @@ Inspect incomplete tasks and report:
 - tasks missing useful assignee, priority, or deadline information;
 - up to three recommended priorities for the day.
 
-Claude may make only low-risk corrections automatically, such as fixing an obvious typo or adding a clearly provided related URL. Deadline, priority, assignee, and status changes are proposed in the report and applied after approval.
+Claude does not make corrections during the scheduled run, including seemingly low-risk edits. It may recommend changes in the report. The user can later request any desired change explicitly in a Claude or Codex conversation.
 
 Suggested report format:
 
@@ -98,7 +98,7 @@ Inspect the full Todo database and report:
 - oversized tasks that may need decomposition;
 - tasks that may be complete or suitable for archival.
 
-Claude does not merge, split, complete, archive, or delete these tasks without approval.
+Claude does not merge, split, complete, archive, delete, or otherwise update tasks during the scheduled review. Any later change requires an explicit user request.
 
 ## Failure and Safety Behavior
 
@@ -115,5 +115,7 @@ Claude does not merge, split, complete, archive, or delete these tasks without a
 - Inferred follow-up tasks require confirmation before creation.
 - Both assistants search incomplete tasks before creating a task.
 - The Notion schema gains only `관련 링크`.
-- Claude produces a daily review and a weekly review in its scheduled conversation.
-- No assistant automatically deletes tasks or performs consequential cleanup without approval.
+- Claude produces a daily review and a weekly review in its scheduled conversation without changing Todo.
+- Scheduled reviews are read-only and require no user response.
+- Todo changes occur only after an explicit user request or confirmation in conversation.
+- No assistant automatically deletes tasks or performs consequential cleanup.
