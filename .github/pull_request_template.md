@@ -81,9 +81,6 @@ Issue를 종료하지 않고 연관 관계만 표시하려면 Related to를 사�
 작성 공식:
 Closes #[종료할 Issue 번호]
 Related to #[연결할 Issue 번호]
-
-작성 예시:
-Closes #107
 -->
 
 Closes #이슈번호
