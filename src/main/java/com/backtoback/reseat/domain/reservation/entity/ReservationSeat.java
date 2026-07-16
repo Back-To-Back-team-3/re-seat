@@ -43,6 +43,16 @@ public class ReservationSeat {
             foreignKey = @ForeignKey(name = "fk_reservation_seats_reservation"))
     private Reservation reservation;
 
+    /**
+     * 연관관계 편의 메서드.
+     *
+     * <p>외부에서 직접 호출하면 Reservation 쪽 컬렉션과 정합성이 깨진다.
+     * 반드시 Reservation.addReservationSeat()을 통해 간접 호출할 것.
+     */
+    public void assignReservation(Reservation reservation) {
+        this.reservation = reservation;
+    }
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "game_seat_id", nullable = false,
             foreignKey = @ForeignKey(name = "fk_reservation_seats_game_seat"))
