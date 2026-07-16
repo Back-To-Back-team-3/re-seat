@@ -189,4 +189,3 @@ public class Ticket extends BaseEntity {
         }
     }
 }
-
