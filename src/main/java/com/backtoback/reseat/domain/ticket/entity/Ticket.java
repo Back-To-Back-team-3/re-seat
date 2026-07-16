@@ -25,155 +25,168 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.Objects;
 
-// 결제 성공 후 좌석별로 발급되는 티켓 엔티티
 @Getter
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(
     name = "tickets",
     uniqueConstraints = {
-            @UniqueConstraint(name = "uk_tickets_no", columnNames = "ticket_no"),
-            @UniqueConstraint(name = "uk_tickets_order_item", columnNames = "order_item_id"),
-            @UniqueConstraint(name = "uk_tickets_game_seat", columnNames = "game_seat_id"),
-            @UniqueConstraint(name = "uk_tickets_qr_token", columnNames = "qr_token")
+        @UniqueConstraint(name = "uk_tickets_no", columnNames = "ticket_no"),
+        @UniqueConstraint(name = "uk_tickets_order_item", columnNames = "order_item_id"),
+        @UniqueConstraint(name = "uk_tickets_game_seat", columnNames = "game_seat_id"),
+        @UniqueConstraint(name = "uk_tickets_qr_token", columnNames = "qr_token")
     },
     indexes = {
-            // 내 티켓 조회/상태별 필터에 쓰는 인덱스
-            @Index(name = "idx_tickets_user_status", columnList = "user_id, status"),
-            // 경기별 티켓 조회 인덱스
-            @Index(name = "idx_tickets_game", columnList = "game_id")
+        @Index(name = "idx_tickets_user_status", columnList = "user_id, status"),
+        @Index(name = "idx_tickets_game", columnList = "game_id")
     }
 )
 public class Ticket extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id; // PK, AUTO_INCREMENT
+    private Long id;
 
+    // 외부 노출용 티켓 번호
     @Column(name = "ticket_no", nullable = false, length = 50)
-    private String ticketNo; // 티켓 번호, 사용자에게 보여줄 외부용 ID
+    private String ticketNo;
 
+    // 현재 티켓 소유자
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
-            name = "user_id", // 현재 티켓 소유자
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_tickets_user")
+        name = "user_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_tickets_user")
     )
     private User user;
 
+    // orderItem 1개당 1장의 티켓만 발급
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
-            name = "order_item_id", // 주문 항목, 주문 항목에서 티켓 하나만 발급되도록 보장
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_tickets_order_item")
+        name = "order_item_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_tickets_order_item")
     )
     private OrderItem orderItem;
 
+    // 경기
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
-            name = "game_id", // 경기
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_tickets_game")
+        name = "game_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_tickets_game")
     )
     private Game game;
 
+    // 좌석
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
-            name = "game_seat_id", // 경기 좌석
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_tickets_game_seat")
+        name = "game_seat_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_tickets_game_seat")
     )
     private GameSeat gameSeat;
 
+    // 티켓 상태
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
-    private TicketStatus status; // 티켓 상태
+    private TicketStatus status;
 
-    @Column(name = "qr_token", length = 255)
-    private String qrToken; // QR 토큰, 입장 검증에 사용하는 토큰 값
+    // 티켓 취소 사유, 취소되지 않은 티켓은 null일 수 있음
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cancel_reason", length = 30)
+    private TicketCancelReason cancelReason;
 
-    @Column(name = "issued_at", nullable = false)
-    private LocalDateTime issuedAt; // 발급 시각
+    // 입장 검증용 QR 토큰
+    @Column(name = "qr_token", nullable = false, length = 255)
+    private String qrToken;
 
+    // 티켓 발급 시간
+    @Column(name = "issued_at", nullable = false, updatable = false)
+    private LocalDateTime issuedAt;
+
+    // 티켓 사용 시간
     @Column(name = "used_at")
-    private LocalDateTime usedAt; // 사용 시각(입장 완료)
+    private LocalDateTime usedAt;
 
+    // 티켓 취소 시간
     @Column(name = "canceled_at")
-    private LocalDateTime canceledAt; // 취소 시각
+    private LocalDateTime canceledAt;
 
     public static Ticket issue(
-            String ticketNo, // 외부 노출용 티켓 번호
-            User user, // 현재 소유자
-            OrderItem orderItem, // 티켓을 생성한 주문 항목
-            GameSeat gameSeat, // 어떤 경기 좌석인지
-            String qrToken // QR 토큰 값 (API 쪽에서 생성)
+        String ticketNo,
+        User user,
+        OrderItem orderItem,
+        GameSeat gameSeat,
+        String qrToken
     ) {
-        validateIssueParams(ticketNo, user, orderItem, gameSeat);
+        validateIssueParams(ticketNo, user, orderItem, gameSeat, qrToken);
 
         Ticket ticket = new Ticket();
         ticket.ticketNo = ticketNo;
         ticket.user = user;
         ticket.orderItem = orderItem;
         ticket.gameSeat = gameSeat;
-        ticket.game = gameSeat.getGame(); // 정합성 보장
+        ticket.game = gameSeat.getGame();
         ticket.status = TicketStatus.ISSUED;
         ticket.qrToken = qrToken;
         ticket.issuedAt = LocalDateTime.now();
         return ticket;
     }
 
+    // 티켓 사용 처리, ISSUED 상태의 티켓만 사용 가능
     public void markUsed() {
-        if (this.status == TicketStatus.CANCELED) {
-            throw new IllegalStateException("취소된 티켓은 사용할 수 없습니다.");
-        }
-        if (this.status == TicketStatus.USED) {
-            throw new IllegalStateException("이미 사용된 티켓입니다.");
-        }
-        this.status = TicketStatus.USED; // 입장 완료
-        this.usedAt = LocalDateTime.now(); // 현재 시각 기록
+        validateStatus(TicketStatus.ISSUED);
+        this.status = TicketStatus.USED;
+        this.usedAt = LocalDateTime.now();
     }
 
-    public void cancel() {
-        if (this.status == TicketStatus.USED) {
-            throw new IllegalStateException("이미 사용된 티켓은 취소할 수 없습니다.");
+    // 티켓 취소 처리, ISSUED 상태의 티켓만 취소 가능
+    public void cancel(TicketCancelReason cancelReason) {
+        validateStatus(TicketStatus.ISSUED);
+
+        if (cancelReason == null) {
+            throw new IllegalArgumentException("cancelReason은 필수입니다.");
         }
-        if (this.status == TicketStatus.CANCELED) {
-            throw new IllegalStateException("이미 취소된 티켓입니다.");
-        }
-        this.status = TicketStatus.CANCELED; // 취소
-        this.canceledAt = LocalDateTime.now(); // 현재 시각 기록
+
+        this.status = TicketStatus.CANCELED;
+        this.cancelReason = cancelReason;
+        this.canceledAt = LocalDateTime.now();
     }
 
-    // 재판매 완료 시 소유자 변경
-    // tickets.user_id를 구매자로 변경
-    // ticket_transfer_histories 도메인에서 별도 이력 기록 예정
-    public void changeOwner(User newOwner) {
-        if (newOwner == null) {
-            throw new IllegalArgumentException("newOwner는 필수입니다.");
+    // 현재 티켓 상태가 기대 상태와 같은지 검증
+    private void validateStatus(TicketStatus expected) {
+        if (this.status != expected) {
+            throw new IllegalStateException(
+                "티켓 상태가 올바르지 않습니다. expected=" + expected + ", current=" + this.status
+            );
         }
-        if (this.status != TicketStatus.ISSUED) {
-            throw new IllegalStateException("발급 상태의 티켓만 소유자를 변경할 수 있습니다.");
-        }
-        if (Objects.equals(this.user.getId(), newOwner.getId())) {
-            throw new IllegalArgumentException("현재 소유자와 동일한 사용자로 변경할 수 없습니다.");
-        }
-
-        this.user = newOwner;
     }
 
+    // 티켓 발급 시 필수 파라미터 검증
     private static void validateIssueParams(
-            String ticketNo,
-            User user,
-            OrderItem orderItem,
-            GameSeat gameSeat
+        String ticketNo,
+        User user,
+        OrderItem orderItem,
+        GameSeat gameSeat,
+        String qrToken
     ) {
         if (ticketNo == null || ticketNo.isBlank()) {
             throw new IllegalArgumentException("ticketNo는 필수입니다.");
         }
-        if (user == null || orderItem == null || gameSeat == null) {
-            throw new IllegalArgumentException("user, orderItem, gameSeat는 필수입니다.");
+        if (qrToken == null || qrToken.isBlank()) {
+            throw new IllegalArgumentException("qrToken은 필수입니다.");
+        }
+        if (user == null) {
+            throw new IllegalArgumentException("user는 필수입니다.");
+        }
+        if (orderItem == null) {
+            throw new IllegalArgumentException("orderItem은 필수입니다.");
+        }
+        if (gameSeat == null) {
+            throw new IllegalArgumentException("gameSeat는 필수입니다.");
         }
     }
 }
+
