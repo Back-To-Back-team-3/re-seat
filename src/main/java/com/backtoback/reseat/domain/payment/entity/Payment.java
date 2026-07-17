@@ -110,9 +110,10 @@ public class Payment extends BaseEntity {
     }
 
     // 결제 승인 처리
-    public void approve(String pgPaymentKey, LocalDateTime approvedAt) {
+    public void approve(String pgPaymentKey, String method, LocalDateTime approvedAt) {
         this.status = PaymentStatus.APPROVED;
         this.pgPaymentKey = pgPaymentKey;
+        this.method = method;
         this.approvedAt = approvedAt;
         this.failReason = null;
         this.failedAt = null;

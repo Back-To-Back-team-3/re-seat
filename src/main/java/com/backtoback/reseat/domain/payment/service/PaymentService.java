@@ -266,7 +266,8 @@ public class PaymentService {
         if (tossPayment.getTotalAmount() != null) {
             validatePaymentAmountMatches(payment, tossPayment.getTotalAmount());
         }
-        payment.approve(tossPayment.getPaymentKey(), resolveApprovedAt(tossPayment.getApprovedAt()));
+        payment.approve(
+                tossPayment.getPaymentKey(), tossPayment.getMethod(), resolveApprovedAt(tossPayment.getApprovedAt()));
     }
 
     /** 토스 승인 API가 정상 응답했지만 승인 완료 상태가 아닐 때 로컬 결제를 실패 처리한다. */
@@ -285,7 +286,7 @@ public class PaymentService {
     private PaymentActionResponse approvePaymentAfterTossConfirm(
             Payment payment, Long paymentId, TossPaymentResponse response) {
         try {
-            payment.approve(response.getPaymentKey(), resolveApprovedAt(response.getApprovedAt()));
+            payment.approve(response.getPaymentKey(), response.getMethod(), resolveApprovedAt(response.getApprovedAt()));
         } catch (RuntimeException e) {
             log.error("토스 승인 성공 후 로컬 반영 실패 - 재동기화 필요 (paymentId={}, paymentKey={})",
                     paymentId, response.getPaymentKey(), e);
