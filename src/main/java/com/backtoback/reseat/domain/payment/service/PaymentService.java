@@ -185,40 +185,38 @@ public class PaymentService {
 
         return findApprovedPayment(order.getId())
                 .map(PaymentCreateResponse::from)
-                .orElseGet(() -> resolveReadyPaymentOrCreate(order, request, idempotencyKey));
+                .orElseGet(() -> resolveReadyPaymentOrCreate(order, idempotencyKey));
     }
 
     /** 같은 주문의 최근 READY 결제는 재사용하고, 만료된 READY 결제는 실패로 닫은 뒤 새로 생성한다. */
-    private PaymentCreateResponse resolveReadyPaymentOrCreate(Order order, PaymentRequest request, String idempotencyKey) {
+    private PaymentCreateResponse resolveReadyPaymentOrCreate(Order order, String idempotencyKey) {
         Optional<Payment> readyPayment = findReadyPayment(order.getId());
         if (readyPayment.isPresent()) {
             Payment payment = readyPayment.get();
-            if (isReusableReadyPayment(payment, request)) {
+            if (isReusableReadyPayment(payment)) {
                 return PaymentCreateResponse.from(payment);
             }
             payment.fail("토스 결제 유효 시간이 만료되었습니다.", LocalDateTime.now());
         }
 
-        return PaymentCreateResponse.from(createReadyPayment(order, request, idempotencyKey));
+        return PaymentCreateResponse.from(createReadyPayment(order, idempotencyKey));
     }
 
     /** 토스 결제 유효 시간 안에 생성된 READY 결제인지 확인한다. */
-    private boolean isReusableReadyPayment(Payment payment, PaymentRequest request) {
+    private boolean isReusableReadyPayment(Payment payment) {
         LocalDateTime createdAt = payment.getCreatedAt();
-        return payment.getMethod() == request.getMethod()
-                && createdAt != null
+        return createdAt != null
                 && !createdAt.isBefore(LocalDateTime.now().minus(READY_PAYMENT_REUSE_DURATION));
     }
 
     /** 토스 위젯 인증 전 단계의 로컬 READY 결제를 생성한다. */
-    private Payment createReadyPayment(Order order, PaymentRequest request, String idempotencyKey) {
+    private Payment createReadyPayment(Order order, String idempotencyKey) {
         // 토스 위젯 인증이 끝나야 승인 가능하므로, 여기서는 READY 상태로만 생성하고 승인은 콜백을 통해 completePayment에서 처리한다.
         Payment payment = Payment.builder()
                 .paymentNo(generatePaymentNo())
                 .orderId(order.getId())
                 .user(order.getUser())
                 .amount(order.getTotalAmount())
-                .method(request.getMethod())
                 .idempotencyKey(idempotencyKey)
                 .status(PaymentStatus.READY)
                 .pgProvider(PgProvider.TOSS)
@@ -386,10 +384,9 @@ public class PaymentService {
         }
     }
 
-    /** 기존 멱등키 결제가 현재 요청의 주문/결제수단과 같은지 확인한다. */
+    /** 기존 멱등키 결제가 현재 요청의 주문과 같은지 확인한다. */
     private void validateIdempotencyRequestMatches(Payment payment, PaymentRequest request) {
-        if (!payment.getOrderId().equals(request.getOrderId())
-                || payment.getMethod() != request.getMethod()) {
+        if (!payment.getOrderId().equals(request.getOrderId())) {
             throw new IdempotencyKeyConflictException();
         }
     }
