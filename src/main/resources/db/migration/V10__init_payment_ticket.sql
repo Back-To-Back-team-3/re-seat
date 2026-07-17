@@ -9,7 +9,7 @@ CREATE TABLE payments (
                           order_id              BIGINT       NOT NULL,
                           user_id               BIGINT       NOT NULL,
                           amount                INT          NOT NULL,
-                          method                VARCHAR(20)  NOT NULL DEFAULT 'MOCK',
+                          method                VARCHAR(20)  NULL,
                           status                VARCHAR(20)  NOT NULL DEFAULT 'READY',
                           idempotency_key       VARCHAR(255) NOT NULL,
                           pg_provider           VARCHAR(20)  NOT NULL DEFAULT 'MOCK',
