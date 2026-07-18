@@ -17,5 +17,6 @@ public class PortoneVerificationResponse {
         @JsonProperty("unique_key")
         private String uniqueKey;
         private String name;
+        private String phone;
     }
 }

@@ -17,7 +17,8 @@ import {
   getReservationHoldTime,
   getTickets,
   requestPayment,
-  streamQueue
+  streamQueue,
+  verifyIdentity
 } from "./api/services";
 import { clearTokens, getAccessTokenRole, setQueueToken, setTokens } from "./api/client";
 import type {
@@ -158,6 +159,7 @@ function App() {
   const [activeStep, setActiveStep] = useState<Step>(getInitialStep);
   const [theme, setTheme] = useState(localStorage.getItem("theme") ?? "light");
   const [isAuthed, setIsAuthed] = useState(Boolean(localStorage.getItem("accessToken")));
+  const [isVerified, setIsVerified] = useState(localStorage.getItem("isVerified") === "true");
   const [authedEmail, setAuthedEmail] = useState(localStorage.getItem("userEmail") ?? "");
   const [authedRole, setAuthedRole] = useState(
     localStorage.getItem("userRole") ?? (isAuthed ? getAccessTokenRole() : "")
@@ -207,6 +209,7 @@ function App() {
     const params = new URLSearchParams(window.location.search);
     const accessToken = params.get("accessToken");
     const refreshToken = params.get("refreshToken");
+    const isVerifiedParam = params.get("isVerified") === "true";
 
     if (accessToken && refreshToken) {
       setTokens(accessToken, refreshToken);
@@ -227,9 +230,11 @@ function App() {
       const userRole = getAccessTokenRole();
       localStorage.setItem("userEmail", email);
       localStorage.setItem("userRole", userRole);
+      localStorage.setItem("isVerified", isVerifiedParam ? "true" : "false");
       
       setAuthedEmail(email);
       setAuthedRole(userRole);
+      setIsVerified(isVerifiedParam);
       setIsAuthed(true);
       setToast("카카오 로그인에 성공했습니다.");
 
@@ -621,7 +626,9 @@ function App() {
     clearTokens();
     localStorage.removeItem("userEmail");
     localStorage.removeItem("userRole");
+    localStorage.removeItem("isVerified");
     setIsAuthed(false);
+    setIsVerified(false);
     setAuthedEmail("");
     setAuthedRole("");
     setQueueResult(null);
@@ -662,308 +669,366 @@ function App() {
         </div>
       </header>
 
-      <main className="layout">
-        <aside className="sidebar">
-          <section className="panel auth-panel">
-            <h2>계정</h2>
-            {isAuthed ? (
-              <div className="auth-state">
-                <strong>로그인됨</strong>
-                <span>{authedEmail}</span>
-                <span>{authedRole || "USER"}</span>
-                <button className="ghost-button full" onClick={logout}>로그아웃</button>
-              </div>
-            ) : (
-              <>
-                <p style={{ fontSize: "13px", margin: "10px 0", color: "#666", lineHeight: "1.4" }}>
-                  예매 서비스를 이용하시려면 카카오 로그인이 필요합니다.
-                </p>
+      {isAuthed && !isVerified ? (
+        <main className="layout" style={{ justifyContent: "center", alignItems: "center", minHeight: "calc(100vh - 80px)" }}>
+          <div className="panel" style={{ maxWidth: "480px", width: "100%", padding: "40px", textAlign: "center", margin: "80px auto", boxShadow: "0 8px 30px rgba(0,0,0,0.12)", borderRadius: "16px", border: "1px solid var(--border-color)" }}>
+            <h1 style={{ fontSize: "24px", marginBottom: "16px", fontWeight: "bold" }}>👤 본인 인증 안내</h1>
+            <p style={{ fontSize: "14px", color: "var(--text-color)", opacity: 0.8, lineHeight: "1.6", marginBottom: "30px" }}>
+              Re-Seat의 공정하고 안전한 예매 서비스 이용을 위해 최초 1회 휴대폰 본인인증(명의 확인)이 필수적입니다.
+            </p>
+            <button
+              className="primary-button full"
+              disabled={busy}
+              style={{ padding: "14px", fontSize: "16px", fontWeight: "bold", backgroundColor: "#007bff", color: "#ffffff", border: "none", borderRadius: "8px", cursor: "pointer" }}
+              onClick={() => {
+                const { IMP } = window as any;
+                if (!IMP) {
+                  setError("포트원 SDK 라이브러리를 불러오지 못했습니다.");
+                  return;
+                }
+
+                // 가맹점 식별코드 (사용자 고유 포트원 식별코드 직접 지정)
+                const portoneCode = "imp31640540";
+                IMP.init(portoneCode);
+
+                IMP.certification({
+                  pg: "inicis",
+                  merchant_uid: "verification_" + new Date().getTime(),
+                  popup: true
+                }, async (rsp: any) => {
+                  if (rsp.success) {
+                    const result = await run(
+                      async () => {
+                        await verifyIdentity(rsp.imp_uid);
+                        return true;
+                      },
+                      "본인인증이 완료되었습니다."
+                    );
+                    if (result === true) {
+                      setIsVerified(true);
+                      localStorage.setItem("isVerified", "true");
+                    }
+                  } else {
+                    setError(`본인인증 실패: ${rsp.error_msg}`);
+                  }
+                });
+              }}
+            >
+              {busy ? "인증 요청 처리 중..." : "휴대폰 본인인증 진행하기"}
+            </button>
+            <button 
+              className="ghost-button full" 
+              style={{ marginTop: "12px", border: "1px solid var(--border-color)" }} 
+              onClick={logout}
+            >
+              로그아웃
+            </button>
+          </div>
+        </main>
+      ) : (
+        <main className="layout">
+          <aside className="sidebar">
+            <section className="panel auth-panel">
+              <h2>계정</h2>
+              {isAuthed ? (
+                <div className="auth-state">
+                  <strong>로그인됨</strong>
+                  <span>{authedEmail}</span>
+                  <span>{authedRole || "USER"}</span>
+                  <button className="ghost-button full" onClick={logout}>로그아웃</button>
+                </div>
+              ) : (
+                <>
+                  <p style={{ fontSize: "13px", margin: "10px 0", color: "#666", lineHeight: "1.4" }}>
+                    예매 서비스를 이용하시려면 카카오 로그인이 필요합니다.
+                  </p>
+                  <button
+                    className="primary-button full"
+                    style={{ backgroundColor: "#FEE500", color: "#191919", border: "none", fontWeight: "bold" }}
+                    onClick={() => window.location.href = "http://localhost:8080/oauth2/authorization/kakao"}
+                  >
+                    카카오 로그인
+                  </button>
+                </>
+              )}
+            </section>
+
+            <nav className="step-list">
+              {steps.map((step, index) => (
                 <button
-                  className="primary-button full"
-                  style={{ backgroundColor: "#FEE500", color: "#191919", border: "none", fontWeight: "bold" }}
-                  onClick={() => window.location.href = "http://localhost:8080/oauth2/authorization/kakao"}
+                  key={step.id}
+                  className={activeStep === step.id ? "active" : ""}
+                  onClick={() => setActiveStep(step.id)}
                 >
-                  카카오 로그인
+                  <span>{index + 1}</span>
+                  {step.label}
                 </button>
-              </>
+              ))}
+            </nav>
+          </aside>
+
+          <section className="content">
+            {(error || toast) && (
+              <div className={error ? "alert error" : "alert success"}>
+                {error ?? toast}
+                <button onClick={() => { setError(null); setToast(null); }}>닫기</button>
+              </div>
             )}
-          </section>
 
-          <nav className="step-list">
-            {steps.map((step, index) => (
-              <button
-                key={step.id}
-                className={activeStep === step.id ? "active" : ""}
-                onClick={() => setActiveStep(step.id)}
-              >
-                <span>{index + 1}</span>
-                {step.label}
-              </button>
-            ))}
-          </nav>
-        </aside>
-
-        <section className="content">
-          {(error || toast) && (
-            <div className={error ? "alert error" : "alert success"}>
-              {error ?? toast}
-              <button onClick={() => { setError(null); setToast(null); }}>닫기</button>
-            </div>
-          )}
-
-          {activeStep === "games" && (
-            <section className="workspace">
-              <div className="section-head">
-                <div>
-                  <h1>경기 선택</h1>
-                  <p>예매 가능한 경기를 선택하고 대기열에 진입합니다.</p>
-                </div>
-                <button className="ghost-button" onClick={loadGames} disabled={busy}>새로고침</button>
-              </div>
-              <SourceNotice result={gamesResult} />
-              <div className="game-grid">
-                {(gamesResult?.data ?? []).map((game) => (
-                  <button
-                    key={game.gameId}
-                    className={`game-card ${selectedGame?.gameId === game.gameId ? "selected" : ""}`}
-                    onClick={() => handleSelectGame(game)}
-                  >
-                    <span className={`status-pill ${game.bookingStatus.toLowerCase()}`}>{game.bookingStatus}</span>
-                    <strong>{game.title}</strong>
-                    <small>{game.stadium?.name ?? "구장 정보 없음"}</small>
-                    <span>{game.gameAt}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="action-row">
-                <button className="primary-button" onClick={handleEnterQueue} disabled={!isAuthed || !selectedGame || busy}>
-                  대기열 진입
-                </button>
-              </div>
-            </section>
-          )}
-
-          {activeStep === "queue" && (
-            <section className="workspace two-column">
-              <div>
-                <h1>대기열</h1>
-                <p>입장이 허용되면 좌석 선택으로 이동합니다.</p>
-                <SourceNotice result={queueResult} />
-                <div className="metric-board">
-                  <div><span>순번</span><strong>{queueResult?.data.rank ?? "-"}</strong></div>
-                  <div><span>상태</span><strong>{queueResult?.data.queueStatus ?? "-"}</strong></div>
-                  <div><span>입장</span><strong>{queueResult?.data.admitted ? "허용" : "대기"}</strong></div>
-                </div>
-                <div className="action-row">
-                  <button className="ghost-button" onClick={handleRefreshQueue} disabled={!selectedGame || busy}>상태 조회</button>
-                  <button className="primary-button" onClick={handleLoadSeats} disabled={!queueResult?.data.queueToken || busy}>
-                    좌석 선택으로 이동
-                  </button>
-                </div>
-                {authedRole === "ADMIN" && (
-                  <div className="admin-tools">
-                    <h2>관리자 입장 처리</h2>
-                    <label>
-                      입장 허용 인원
-                      <input
-                        type="number"
-                        min="1"
-                        max="100"
-                        value={admitLimit}
-                        onChange={(event) => setAdmitLimit(
-                          Math.min(100, Math.max(1, Number(event.target.value) || 1))
-                        )}
-                      />
-                    </label>
-                    <button className="ghost-button" onClick={handleAdmitQueue} disabled={!selectedGame || busy}>
-                      선택 인원 입장 허용
-                    </button>
+            {activeStep === "games" && (
+              <section className="workspace">
+                <div className="section-head">
+                  <div>
+                    <h1>경기 선택</h1>
+                    <p>예매 가능한 경기를 선택하고 대기열에 진입합니다.</p>
                   </div>
-                )}
-              </div>
-              <div className="flow-box">
-                <h2>토큰 상태</h2>
-                <p>{queueResult?.data.queueToken ? "입장 토큰 발급 완료" : "입장 토큰 없음"}</p>
-                <small>{queueResult?.data.tokenExpiresAt ?? "입장 허용 후 좌석 API 요청에 사용됩니다."}</small>
-              </div>
-            </section>
-          )}
-
-          {activeStep === "seats" && (
-            <section className="workspace">
-              <div className="section-head">
-                <div>
-                  <h1>좌석 선택</h1>
-                  <p>구역별 좌석을 선택하고 선점 요청을 진행합니다.</p>
+                  <button className="ghost-button" onClick={loadGames} disabled={busy}>새로고침</button>
                 </div>
-                <button className="ghost-button" onClick={handleLoadSeats} disabled={!selectedGame || busy}>좌석 불러오기</button>
-              </div>
-              <SourceNotice result={seatsResult} />
-              <div className="zone-list" aria-label="좌석 구역">
-                {(zonesResult?.data ?? []).map((zone) => (
-                  <button
-                    key={zone.zoneId}
-                    className={selectedZoneId === zone.zoneId ? "active" : ""}
-                    onClick={() => handleSelectZone(zone.zoneId)}
-                    disabled={busy}
-                  >
-                    <strong>{zone.zoneName}</strong>
-                    <span>{zone.availableCount}/{zone.totalCount}석</span>
-                  </button>
-                ))}
-              </div>
-              <div className="seat-area">
-                <div className="seat-map" aria-label="좌석 배치도">
-                  {seatRows.map(([rowName, rowSeats]) => (
-                    <div className="seat-row" key={rowName}>
-                      <strong className="seat-row-label">{rowName}</strong>
-                      <div className="seat-grid">
-                        {rowSeats.map((seat) => (
-                          <button
-                            key={seat.gameSeatId}
-                            className={`seat ${seat.status.toLowerCase()} ${selectedSeatIds.includes(seat.gameSeatId) ? "picked" : ""}`}
-                            onClick={() => toggleSeat(seat)}
-                            disabled={seat.status !== "AVAILABLE"}
-                            title={`${seat.zoneName} ${seat.seatRow}열 ${seat.seatNumber}번 ${formatPrice(seat.price)}`}
-                          >
-                            {seat.seatNumber}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                <SourceNotice result={gamesResult} />
+                <div className="game-grid">
+                  {(gamesResult?.data ?? []).map((game) => (
+                    <button
+                      key={game.gameId}
+                      className={`game-card ${selectedGame?.gameId === game.gameId ? "selected" : ""}`}
+                      onClick={() => handleSelectGame(game)}
+                    >
+                      <span className={`status-pill ${game.bookingStatus.toLowerCase()}`}>{game.bookingStatus}</span>
+                      <strong>{game.title}</strong>
+                      <small>{game.stadium?.name ?? "구장 정보 없음"}</small>
+                      <span>{game.gameAt}</span>
+                    </button>
                   ))}
                 </div>
-                <aside className="selection-panel">
-                  <h2>선택 좌석</h2>
-                  {reservationResult && (
-                    <div className="timer-box">
-                      <span>좌석 선점 남은 시간</span>
-                      <strong><DeadlineCountdown deadlineAt={holdDeadlineAt} /></strong>
-                    </div>
-                  )}
-                  {selectedSeats.length === 0 ? (
-                    <p>선택된 좌석이 없습니다.</p>
-                  ) : (
-                    selectedSeats.map((seat) => (
-                      <div className="selected-seat" key={seat.gameSeatId}>
-                        <span>{seat.zoneName} {seat.seatRow}열 {seat.seatNumber}번</span>
-                        <strong>{formatPrice(seat.price)}</strong>
-                      </div>
-                    ))
-                  )}
-                  <div className="total-line">
-                    <span>합계</span>
-                    <strong>{formatPrice(totalAmount)}</strong>
-                  </div>
-                  <button className="primary-button full" onClick={handleReserveSeats} disabled={selectedSeatIds.length === 0 || busy}>
-                    좌석 선점
-                  </button>
-                  {reservationResult && (
-                    <>
-                      <button className="ghost-button full" onClick={handleCancelReservation} disabled={busy}>선점 해제</button>
-                      <button className="ghost-button full" onClick={() => setActiveStep("order")}>주문으로 이동</button>
-                    </>
-                  )}
-                </aside>
-              </div>
-            </section>
-          )}
-
-          {activeStep === "order" && (
-            <section className="workspace two-column">
-              <div>
-                <h1>주문</h1>
-                <p>선점된 좌석 기준으로 주문을 생성하고 결제 전 취소할 수 있습니다.</p>
-                <SourceNotice result={reservationResult} />
-                <SourceNotice result={orderResult} />
-                <div className="summary-card">
-                  <h2>예약</h2>
-                  <p>{reservationResult?.data.reservationNo ?? "예약 정보 없음"}</p>
-                  <small>{reservationResult?.data.holdExpiresAt ?? "좌석 선점 후 주문을 생성할 수 있습니다."}</small>
-                </div>
                 <div className="action-row">
-                  <button
-                    className="primary-button"
-                    onClick={handleCreateOrder}
-                    disabled={!reservationResult || busy}
-                  >
-                    주문 생성
-                  </button>
-                  <button className="ghost-button" onClick={handleCancelOrder} disabled={!orderResult || orderResult.data.status !== "CREATED" || busy}>
-                    주문 취소
-                  </button>
-                  <button className="primary-button" onClick={handlePayment} disabled={!orderResult || orderResult.data.status !== "CREATED" || busy}>
-                    결제 요청
+                  <button className="primary-button" onClick={handleEnterQueue} disabled={!isAuthed || !selectedGame || busy}>
+                    대기열 진입
                   </button>
                 </div>
-              </div>
-              <OrderPanel
-                order={orderResult?.data ?? null}
-                seats={selectedSeats}
-                paymentDeadlineAt={paymentDeadlineAt}
-              />
-            </section>
-          )}
+              </section>
+            )}
 
-          {activeStep === "payment" && (
-            <section className="workspace two-column">
-              <div>
-                <h1>결제</h1>
-                <p>주문 결제 제한 시간 안에 결제를 진행합니다.</p>
-                <SourceNotice result={paymentResult} />
-                <div className="summary-card">
-                  <h2>결제 요청</h2>
-                  <dl>
-                    <dt>결제 ID</dt><dd>{paymentResult?.data.paymentId ?? "-"}</dd>
-                    <dt>금액</dt><dd>{paymentResult ? formatPrice(paymentResult.data.amount) : "-"}</dd>
-                    <dt>상태</dt><dd>{paymentResult?.data.status ?? "-"}</dd>
-                    <dt>PG 주문 ID</dt><dd>{paymentResult?.data.pgOrderId ?? "-"}</dd>
-                    <dt>남은 시간</dt><dd><DeadlineCountdown deadlineAt={paymentDeadlineAt} /></dd>
-                  </dl>
-                </div>
-              </div>
-              <div className="flow-box">
-                <h2>Toss 연동</h2>
-                <p>결제 요청 응답으로 Toss 결제창을 엽니다.</p>
-                <button
-                  className="primary-button full"
-                  onClick={handleOpenTossPayment}
-                  disabled={!paymentResult || busy}
-                >
-                  Toss 결제창 열기
-                </button>
-                <button className="primary-button full" onClick={handleLoadTickets}>티켓 화면으로 이동</button>
-              </div>
-            </section>
-          )}
-
-          {activeStep === "tickets" && (
-            <section className="workspace">
-              <div className="section-head">
+            {activeStep === "queue" && (
+              <section className="workspace two-column">
                 <div>
-                  <h1>내 티켓</h1>
-                  <p>결제 완료 후 발급된 티켓을 확인하는 화면입니다.</p>
-                </div>
-                <button className="ghost-button" onClick={handleLoadTickets}>티켓 불러오기</button>
-              </div>
-              <SourceNotice result={ticketsResult} />
-              <div className="ticket-list">
-                {(ticketsResult?.data ?? []).map((ticket) => (
-                  <article className="ticket-card" key={ticket.ticketId}>
-                    <div>
-                      <span className="status-pill issued">{ticket.status}</span>
-                      <h2>{ticket.title}</h2>
-                      <p>{ticket.seat}</p>
-                      <small>{ticket.gameAt}</small>
+                  <h1>대기열</h1>
+                  <p>입장이 허용되면 좌석 선택으로 이동합니다.</p>
+                  <SourceNotice result={queueResult} />
+                  <div className="metric-board">
+                    <div><span>순번</span><strong>{queueResult?.data.rank ?? "-"}</strong></div>
+                    <div><span>상태</span><strong>{queueResult?.data.queueStatus ?? "-"}</strong></div>
+                    <div><span>입장</span><strong>{queueResult?.data.admitted ? "허용" : "대기"}</strong></div>
+                  </div>
+                  <div className="action-row">
+                    <button className="ghost-button" onClick={handleRefreshQueue} disabled={!selectedGame || busy}>상태 조회</button>
+                    <button className="primary-button" onClick={handleLoadSeats} disabled={!queueResult?.data.queueToken || busy}>
+                      좌석 선택으로 이동
+                    </button>
+                  </div>
+                  {authedRole === "ADMIN" && (
+                    <div className="admin-tools">
+                      <h2>관리자 입장 처리</h2>
+                      <label>
+                        입장 허용 인원
+                        <input
+                          type="number"
+                          min="1"
+                          max="100"
+                          value={admitLimit}
+                          onChange={(event) => setAdmitLimit(
+                            Math.min(100, Math.max(1, Number(event.target.value) || 1))
+                          )}
+                        />
+                      </label>
+                      <button className="ghost-button" onClick={handleAdmitQueue} disabled={!selectedGame || busy}>
+                        선택 인원 입장 허용
+                      </button>
                     </div>
-                    <div className="qr-box">{ticket.qrToken}</div>
-                  </article>
-                ))}
-              </div>
-            </section>
-          )}
-        </section>
-      </main>
+                  )}
+                </div>
+                <div className="flow-box">
+                  <h2>토큰 상태</h2>
+                  <p>{queueResult?.data.queueToken ? "입장 토큰 발급 완료" : "입장 토큰 없음"}</p>
+                  <small>{queueResult?.data.tokenExpiresAt ?? "입장 허용 후 좌석 API 요청에 사용됩니다."}</small>
+                </div>
+              </section>
+            )}
+
+            {activeStep === "seats" && (
+              <section className="workspace">
+                <div className="section-head">
+                  <div>
+                    <h1>좌석 선택</h1>
+                    <p>구역별 좌석을 선택하고 선점 요청을 진행합니다.</p>
+                  </div>
+                  <button className="ghost-button" onClick={handleLoadSeats} disabled={!selectedGame || busy}>좌석 불러오기</button>
+                </div>
+                <SourceNotice result={seatsResult} />
+                <div className="zone-list" aria-label="좌석 구역">
+                  {(zonesResult?.data ?? []).map((zone) => (
+                    <button
+                      key={zone.zoneId}
+                      className={selectedZoneId === zone.zoneId ? "active" : ""}
+                      onClick={() => handleSelectZone(zone.zoneId)}
+                      disabled={busy}
+                    >
+                      <strong>{zone.zoneName}</strong>
+                      <span>{zone.availableCount}/{zone.totalCount}석</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="seat-area">
+                  <div className="seat-map" aria-label="좌석 배치도">
+                    {seatRows.map(([rowName, rowSeats]) => (
+                      <div className="seat-row" key={rowName}>
+                        <strong className="seat-row-label">{rowName}</strong>
+                        <div className="seat-grid">
+                          {rowSeats.map((seat) => (
+                            <button
+                              key={seat.gameSeatId}
+                              className={`seat ${seat.status.toLowerCase()} ${selectedSeatIds.includes(seat.gameSeatId) ? "picked" : ""}`}
+                              onClick={() => toggleSeat(seat)}
+                              disabled={seat.status !== "AVAILABLE"}
+                              title={`${seat.zoneName} ${seat.seatRow}열 ${seat.seatNumber}번 ${formatPrice(seat.price)}`}
+                            >
+                              {seat.seatNumber}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <aside className="selection-panel">
+                    <h2>선택 좌석</h2>
+                    {reservationResult && (
+                      <div className="timer-box">
+                        <span>좌석 선점 남은 시간</span>
+                        <strong><DeadlineCountdown deadlineAt={holdDeadlineAt} /></strong>
+                      </div>
+                    )}
+                    {selectedSeats.length === 0 ? (
+                      <p>선택된 좌석이 없습니다.</p>
+                    ) : (
+                      selectedSeats.map((seat) => (
+                        <div className="selected-seat" key={seat.gameSeatId}>
+                          <span>{seat.zoneName} {seat.seatRow}열 {seat.seatNumber}번</span>
+                          <strong>{formatPrice(seat.price)}</strong>
+                        </div>
+                      ))
+                    )}
+                    <div className="total-line">
+                      <span>합계</span>
+                      <strong>{formatPrice(totalAmount)}</strong>
+                    </div>
+                    <button className="primary-button full" onClick={handleReserveSeats} disabled={selectedSeatIds.length === 0 || busy}>
+                      좌석 선점
+                    </button>
+                    {reservationResult && (
+                      <>
+                        <button className="ghost-button full" onClick={handleCancelReservation} disabled={busy}>선점 해제</button>
+                        <button className="ghost-button full" onClick={() => setActiveStep("order")}>주문으로 이동</button>
+                      </>
+                    )}
+                  </aside>
+                </div>
+              </section>
+            )}
+
+            {activeStep === "order" && (
+              <section className="workspace two-column">
+                <div>
+                  <h1>주문</h1>
+                  <p>선점된 좌석 기준으로 주문을 생성하고 결제 전 취소할 수 있습니다.</p>
+                  <SourceNotice result={reservationResult} />
+                  <SourceNotice result={orderResult} />
+                  <div className="summary-card">
+                    <h2>예약</h2>
+                    <p>{reservationResult?.data.reservationNo ?? "예약 정보 없음"}</p>
+                    <small>{reservationResult?.data.holdExpiresAt ?? "좌석 선점 후 주문을 생성할 수 있습니다."}</small>
+                  </div>
+                  <div className="action-row">
+                    <button
+                      className="primary-button"
+                      onClick={handleCreateOrder}
+                      disabled={!reservationResult || busy}
+                    >
+                      주문 생성
+                    </button>
+                    <button className="ghost-button" onClick={handleCancelOrder} disabled={!orderResult || orderResult.data.status !== "CREATED" || busy}>
+                      주문 취소
+                    </button>
+                    <button className="primary-button" onClick={handlePayment} disabled={!orderResult || orderResult.data.status !== "CREATED" || busy}>
+                      결제 요청
+                    </button>
+                  </div>
+                </div>
+                <OrderPanel
+                  order={orderResult?.data ?? null}
+                  seats={selectedSeats}
+                  paymentDeadlineAt={paymentDeadlineAt}
+                />
+              </section>
+            )}
+
+            {activeStep === "payment" && (
+              <section className="workspace two-column">
+                <div>
+                  <h1>결제</h1>
+                  <p>주문 결제 제한 시간 안에 결제를 진행합니다.</p>
+                  <SourceNotice result={paymentResult} />
+                  <div className="summary-card">
+                    <h2>결제 요청</h2>
+                    <dl>
+                      <dt>결제 ID</dt><dd>{paymentResult?.data.paymentId ?? "-"}</dd>
+                      <dt>금액</dt><dd>{paymentResult ? formatPrice(paymentResult.data.amount) : "-"}</dd>
+                      <dt>상태</dt><dd>{paymentResult?.data.status ?? "-"}</dd>
+                      <dt>PG 주문 ID</dt><dd>{paymentResult?.data.pgOrderId ?? "-"}</dd>
+                      <dt>남은 시간</dt><dd><DeadlineCountdown deadlineAt={paymentDeadlineAt} /></dd>
+                    </dl>
+                  </div>
+                </div>
+                <div className="flow-box">
+                  <h2>Toss 연동</h2>
+                  <p>결제 요청 응답으로 Toss 결제창을 엽니다.</p>
+                  <button
+                    className="primary-button full"
+                    onClick={handleOpenTossPayment}
+                    disabled={!paymentResult || busy}
+                  >
+                    Toss 결제창 열기
+                  </button>
+                  <button className="primary-button full" onClick={handleLoadTickets}>티켓 화면으로 이동</button>
+                </div>
+              </section>
+            )}
+
+            {activeStep === "tickets" && (
+              <section className="workspace">
+                <div className="section-head">
+                  <div>
+                    <h1>내 티켓</h1>
+                    <p>결제 완료 후 발급된 티켓을 확인하는 화면입니다.</p>
+                  </div>
+                  <button className="ghost-button" onClick={handleLoadTickets}>티켓 불러오기</button>
+                </div>
+                <SourceNotice result={ticketsResult} />
+                <div className="ticket-list">
+                  {(ticketsResult?.data ?? []).map((ticket) => (
+                    <article className="ticket-card" key={ticket.ticketId}>
+                      <div>
+                        <span className="status-pill issued">{ticket.status}</span>
+                        <h2>{ticket.title}</h2>
+                        <p>{ticket.seat}</p>
+                        <small>{ticket.gameAt}</small>
+                      </div>
+                      <div className="qr-box">{ticket.qrToken}</div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            )}
+          </section>
+        </main>
+      )}
     </div>
   );
 }

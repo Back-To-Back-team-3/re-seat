@@ -180,3 +180,11 @@ export async function getTickets() {
     return unwrap(response).tickets;
   }, mockTickets);
 }
+
+export async function verifyIdentity(impUid: string) {
+  const response = await apiRequest<ApiResponse<void>>("/users/verification", {
+    method: "POST",
+    body: JSON.stringify({ impUid })
+  });
+  return unwrap(response);
+}

@@ -59,6 +59,8 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/")
                 .queryParam("accessToken", accessToken)
                 .queryParam("refreshToken", refreshToken)
+                //본인인증 여부에 따라 카카오 로그인 후 포트원 본인인증으로 넘어갈지 말지
+                .queryParam("isVerified", user.isVerified())
                 .build().toUriString();
 
         getRedirectStrategy().sendRedirect(request, response, targetUrl);

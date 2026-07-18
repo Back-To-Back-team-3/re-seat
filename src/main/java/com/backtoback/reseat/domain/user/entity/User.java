@@ -138,4 +138,14 @@ public class User extends BaseEntity {
         this.ci = null;
         this.isVerified = false;
     }
+    public void completeVerification(String ci, String name, String phone){
+        if(this.isVerified){
+            throw new IllegalStateException("이미 본인인증이 완료된 회원입니다.");
+        }
+        this.ci = ci;
+        this.name = name;
+        this.phone = phone;
+        this.isVerified = true;
+
+    }
 }
