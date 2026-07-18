@@ -78,8 +78,9 @@ public class TossPaymentClient {
             TossPaymentResponse response = requeryAfterFailure(paymentKey, cancelException, "취소");
             if (response.isCancelCompleted()) {
                 log.info("토스 결제 취소 API 성공 응답 없이 재조회로 취소 확인 (paymentKey={})", paymentKey);
+                return response;
             }
-            return response;
+            throw cancelException;
         }
     }
 
