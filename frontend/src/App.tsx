@@ -18,7 +18,6 @@ import {
   getTickets,
   requestPayment,
   streamQueue,
-  verifyIdentity
 } from "./api/services";
 import { clearTokens, getAccessTokenRole, setQueueToken, setTokens } from "./api/client";
 import type {
@@ -213,7 +212,7 @@ function App() {
 
     if (accessToken && refreshToken) {
       setTokens(accessToken, refreshToken);
-      
+
       let email = "kakao_user@example.com";
       try {
         const payload = accessToken.split(".")[1];
@@ -231,7 +230,7 @@ function App() {
       localStorage.setItem("userEmail", email);
       localStorage.setItem("userRole", userRole);
       localStorage.setItem("isVerified", isVerifiedParam ? "true" : "false");
-      
+
       setAuthedEmail(email);
       setAuthedRole(userRole);
       setIsVerified(isVerifiedParam);
@@ -626,9 +625,7 @@ function App() {
     clearTokens();
     localStorage.removeItem("userEmail");
     localStorage.removeItem("userRole");
-    localStorage.removeItem("isVerified");
     setIsAuthed(false);
-    setIsVerified(false);
     setAuthedEmail("");
     setAuthedRole("");
     setQueueResult(null);
@@ -716,9 +713,9 @@ function App() {
             >
               {busy ? "인증 요청 처리 중..." : "휴대폰 본인인증 진행하기"}
             </button>
-            <button 
-              className="ghost-button full" 
-              style={{ marginTop: "12px", border: "1px solid var(--border-color)" }} 
+            <button
+              className="ghost-button full"
+              style={{ marginTop: "12px", border: "1px solid var(--border-color)" }}
               onClick={logout}
             >
               로그아웃

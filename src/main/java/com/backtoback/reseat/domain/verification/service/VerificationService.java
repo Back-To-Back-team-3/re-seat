@@ -34,7 +34,7 @@ public class VerificationService {
             certifiedName = portoneData.getResponse().getName();
             certifiedPhone = portoneData.getResponse().getPhone();
         } catch (Exception e) {
-            // API Key가 없거나 포트원 통신이 실패하더라도, 500 에러로 터트리지 않고 
+            // API Key가 없거나 포트원 통신이 실패하더라도, 500 에러로 터트리지 않고
             // 로컬 테스트용 고유 Fallback 정보로 자동 우회 복구하여 통과시켜 줍니다.
             System.err.println("[본인인증 경고] 포트원 실제 정보 조회 실패 (로컬 Fallback 적용): " + e.getMessage());
             certifiedCi = "FALLBACK_TEST_CI_" + userId; // 중복 가입 에러 방지용 고유 ID 매핑
