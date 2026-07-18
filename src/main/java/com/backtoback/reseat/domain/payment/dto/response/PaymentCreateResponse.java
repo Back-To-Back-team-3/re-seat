@@ -1,7 +1,6 @@
 package com.backtoback.reseat.domain.payment.dto.response;
 
 import com.backtoback.reseat.domain.payment.entity.Payment;
-import com.backtoback.reseat.domain.payment.entity.PaymentMethod;
 import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
 import com.backtoback.reseat.domain.payment.entity.PgProvider;
 import lombok.Builder;
@@ -15,7 +14,7 @@ public class PaymentCreateResponse {
     private final String paymentNo;
     private final Long orderId;
     private final Integer amount;
-    private final PaymentMethod method;
+    private final String method;
     private final PaymentStatus status;
     private final PgProvider pgProvider;
     private final String pgOrderId;
