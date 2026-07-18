@@ -4,9 +4,10 @@ import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
 import com.backtoback.reseat.domain.queue.entity.AdmissionToken;
+import com.backtoback.reseat.domain.queue.entity.AdmissionTokenStatus;
 import com.backtoback.reseat.domain.queue.entity.QueueEntryHistory;
-import com.backtoback.reseat.domain.queue.exception.QueueEntryNotFoundException;
-import com.backtoback.reseat.domain.queue.exception.QueueRegistrationFailedException;
+import com.backtoback.reseat.domain.queue.entity.QueueEntryHistoryStatus;
+import com.backtoback.reseat.domain.queue.exception.QueueAdmissionFailedException;
 import com.backtoback.reseat.domain.queue.repository.AdmissionTokenRepository;
 import com.backtoback.reseat.domain.queue.repository.QueueEntryHistoryRepository;
 import com.backtoback.reseat.domain.user.entity.User;
@@ -38,7 +39,6 @@ public class AdmissionTokenService {
 
     private static final long TOKEN_TTL_MINUTES = 5L;
     private static final long ADMIT_LOCK_WAIT_SECONDS = 1L;
-    private static final long ADMIT_LOCK_LEASE_SECONDS = 10L;
     private static final int MAX_ADMIT_LIMIT = 100;
 
     private final RedisTemplate<String, String> redisTemplate;
@@ -64,6 +64,8 @@ public class AdmissionTokenService {
             return 0;
         }
 
+        boolean lockReleaseRegistered = false;
+
         // 경기별 admission 동시 실행을 막아 같은 사용자가 중복 선발되지 않도록 한다.
         RLock lock = redissonClient.getLock(admitLockKey(gameId));
         boolean locked = false;
@@ -71,13 +73,23 @@ public class AdmissionTokenService {
         try {
             locked = lock.tryLock(
                     ADMIT_LOCK_WAIT_SECONDS,
-                    ADMIT_LOCK_LEASE_SECONDS,
                     TimeUnit.SECONDS
             );
 
             if (!locked) {
                 return 0;
             }
+
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    if (lock.isHeldByCurrentThread()) {
+                        lock.unlock();
+                    }
+                }
+            });
+
+            lockReleaseRegistered = true;
 
             ZSetOperations<String, String> queueZSet = getZSetOperations();
 
@@ -101,6 +113,30 @@ public class AdmissionTokenService {
 
             for (String member: members) {
                 Long userId = parseUserId(member);
+                String queueKey = queueKey(gameId, userId);
+
+                QueueEntryHistory queueEntryHistory = queueEntryHistoryRepository
+                        .findByQueueKey(queueKey)
+                        .orElse(null);
+
+                if (queueEntryHistory == null || queueEntryHistory.getStatus() != QueueEntryHistoryStatus.WAITING) {
+                    continue;
+                }
+
+                AdmissionToken activeToken = admissionTokenRepository
+                        .findByGame_IdAndUser_IdAndStatusAndExpiresAtAfter(
+                                gameId,
+                                userId,
+                                AdmissionTokenStatus.ACTIVE,
+                                LocalDateTime.now()
+                        )
+                        .orElse(null);
+
+                if (activeToken != null) {
+                    queueEntryHistory.admit(activeToken.getIssuedAt());
+                    continue;
+                }
+
                 User user = userRepository.findById(userId)
                         .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
 
@@ -108,14 +144,7 @@ public class AdmissionTokenService {
 
                 admissionTokenRepository.save(AdmissionToken.of(game, user, token, issuedAt, expiresAt));
 
-                String queueKey = queueKey(gameId, userId);
-
-                QueueEntryHistory queueEntryHistory =
-                        queueEntryHistoryRepository.findByQueueKey(queueKey)
-                                .orElseThrow(QueueEntryNotFoundException::new);
-
                 queueEntryHistory.admit(issuedAt);
-
                 admittedCount++;
             }
 
@@ -130,9 +159,9 @@ public class AdmissionTokenService {
             return admittedCount;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new QueueRegistrationFailedException("입장 허용 처리 중 문제가 발생했습니다.");
+            throw new QueueAdmissionFailedException("입장 허용 처 중 스레드가 중단되었습니다.");
         } finally {
-            if (locked && lock.isHeldByCurrentThread()) {
+            if (locked && lock.isHeldByCurrentThread() && !lockReleaseRegistered) {
                 lock.unlock();
             }
         }
@@ -161,7 +190,7 @@ public class AdmissionTokenService {
         try {
             return Long.parseLong(member.replace("user:", ""));
         } catch (NumberFormatException e) {
-            throw new QueueRegistrationFailedException("대기열 사용자 정보가 올바르지 않습니다.");
+            throw new QueueAdmissionFailedException("Redis 대기열 사용자 정보가 올바르지 않습니다.");
         }
     }
 

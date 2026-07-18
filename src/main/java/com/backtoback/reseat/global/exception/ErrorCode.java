@@ -43,6 +43,9 @@ public enum ErrorCode {
     QUEUE_ENTRY_NOT_FOUND(HttpStatus.NOT_FOUND, "대기열 진입 이력이 없습니다."),
     QUEUE_INVALID_STATUS(HttpStatus.CONFLICT, "유효하지 않은 상태입니다."),
     QUEUE_REGISTRATION_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "Redis ZSet 대기열 등록에 실패했습니다."),
+    QUEUE_EVENT_PUBLISH_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "Kafka 대기열 진입 이벤트 발행에 실패했습니다."),
+    QUEUE_INVALID_EVENT(HttpStatus.BAD_REQUEST, "대기열 진입 이벤트 값이 올바르지 않습니다."),
+    QUEUE_ADMISSION_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "대기열 자동 입장 처리에 실패했습니다."),
 
     // 좌석 (seats, game_seats)
     SEAT_NOT_FOUND(HttpStatus.NOT_FOUND, "좌석을 찾을 수 없습니다."),

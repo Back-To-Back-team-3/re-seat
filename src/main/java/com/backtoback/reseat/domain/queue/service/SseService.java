@@ -1,6 +1,7 @@
 package com.backtoback.reseat.domain.queue.service;
 
 import com.backtoback.reseat.domain.queue.dto.response.QueueStatusResponse;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryNotFoundException;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ public class SseService {
     // 연결 유지 시간은 60초
     private static final long SSE_TIMEOUT_MILLIS = 60L * 1000L;
     private static final int SSE_SCHEDULER_POOL_SIZE = 8;
+    private static final long SSE_SEND_INTERVAL_SECONDS = 3L;
 
     // 여러 SSE 연결의 순번 전송 작업을 처리하는 스케줄러
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(SSE_SCHEDULER_POOL_SIZE);
@@ -73,10 +75,16 @@ public class SseService {
 
                     sseEmitter.complete();
                 }
+            } catch (QueueEntryNotFoundException exception) {
+                // Kafka Consumer의 대기열 등록이 아직 끝나지 않은 경우
+                // SSE 연결을 종료하지 않고 다음 주기에 다시 조회한다.
             } catch (Exception e) {
                 sseEmitter.completeWithError(e);
             }
-        }, 0L, 3L, TimeUnit.SECONDS);
+        }, SSE_SEND_INTERVAL_SECONDS,
+                SSE_SEND_INTERVAL_SECONDS,
+                TimeUnit.SECONDS
+        );
 
         futureRef.set(future);
 
