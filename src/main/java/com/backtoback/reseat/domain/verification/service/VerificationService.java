@@ -3,6 +3,9 @@ package com.backtoback.reseat.domain.verification.service;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
 import com.backtoback.reseat.domain.verification.dto.response.PortoneVerificationResponse;
+import com.backtoback.reseat.domain.verification.exception.VerificationException;
+import com.backtoback.reseat.global.exception.BusinessException;
+import com.backtoback.reseat.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,7 +21,7 @@ public class VerificationService {
     public void verifyAndUpdateUser(Long userId, String impUid) {
         // 1. 현재 세션 유저 조회
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         String certifiedCi;
         String certifiedName;
@@ -28,11 +31,14 @@ public class VerificationService {
             // 포트원 외부 API를 통해 실제 신원 정보 조회 시도
             PortoneVerificationResponse portoneData = portoneClient.fetchVerificationInfo(impUid);
             if (portoneData == null || portoneData.getCode() != 0 || portoneData.getResponse() == null) {
-                throw new IllegalArgumentException("외부 본인인증 정보 조회에 실패했습니다.");
+                throw new VerificationException(ErrorCode.VERIFICATION_FAILED);
             }
             certifiedCi = portoneData.getResponse().getUniqueKey();
             certifiedName = portoneData.getResponse().getName();
             certifiedPhone = portoneData.getResponse().getPhone();
+        } catch (VerificationException e) {
+            // 외부 조회 실패 시 본인인증 전용 예외(VerificationException)는 그대로 던져서 에러 처리합니다.
+            throw e;
         } catch (Exception e) {
             // API Key가 없거나 포트원 통신이 실패하더라도, 500 에러로 터트리지 않고
             // 로컬 테스트용 고유 Fallback 정보로 자동 우회 복구하여 통과시켜 줍니다.
@@ -45,7 +51,7 @@ public class VerificationService {
         // 중복 가입 명의 예외 처리 (내 아이디 본인 정보인 경우는 패스)
         userRepository.findByCi(certifiedCi).ifPresent(existingUser -> {
             if (!existingUser.getId().equals(userId)) {
-                throw new IllegalStateException("이미 동일한 명의로 가입된 다른 계정이 존재합니다.");
+                throw new VerificationException(ErrorCode.VERIFICATION_DUPLICATE_CI);
             }
         });
 
