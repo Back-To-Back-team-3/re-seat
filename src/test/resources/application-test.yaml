@@ -5,6 +5,12 @@ spring:
     username: sa
     password:
 
+  flyway:
+    enabled: true
+    ignore-migration-patterns:
+      - "*:14"
+      - "*:15"
+
   jpa:
     hibernate:
       ddl-auto: create-drop

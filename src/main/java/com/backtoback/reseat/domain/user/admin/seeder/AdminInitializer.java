@@ -22,14 +22,14 @@ public class AdminInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        String adminEmail = "admin@test.com";
+        String adminEmail = "admin@reseat.com";
 
         if (!userRepository.existsByEmail(adminEmail)) {
             User admin = User.builder()
                     .email(adminEmail)
-                    .password(passwordEncoder.encode("password123!"))
-                    .name("관리자")
-                    .phone("010-1234-5678")
+                    .password(passwordEncoder.encode("admin1234!"))
+                    .name("Re-Seat 관리자")
+                    .phone("010-0000-0000")
                     .role(UserRole.ADMIN)
                     .status(UserStatus.ACTIVE)
                     .isVerified(true)

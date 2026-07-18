@@ -117,6 +117,11 @@ public class User extends BaseEntity {
         this.status = status;
     }
 
+    public void updateSocialInfo(String provider, String providerId) {
+        this.provider = provider;
+        this.providerId = providerId;
+    }
+
     public void withdraw(){
         //회원상태 DELETE로 변경
         this.status = UserStatus.DELETED;

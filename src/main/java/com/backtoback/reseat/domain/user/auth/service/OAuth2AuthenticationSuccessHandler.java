@@ -37,18 +37,23 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
         LocalDateTime expiredAt = LocalDateTime.now().plusDays(14);
 
-        // Refresh Token DB 저장/갱신
-        refreshTokenRepository.findByUser(user)
-                .ifPresentOrElse(
-                        token -> token.updateTokenValue(refreshToken, expiredAt),
-                        () -> refreshTokenRepository.save(
-                                RefreshToken.builder()
-                                        .user(user)
-                                        .tokenValue(refreshToken)
-                                        .expiredAt(expiredAt)
-                                        .build()
-                        )
-                );
+        // Refresh Token DB 저장/갱신 (동시성 충돌 방지 대응)
+        try {
+            refreshTokenRepository.findByUser(user)
+                    .ifPresentOrElse(
+                            token -> token.updateTokenValue(refreshToken, expiredAt),
+                            () -> refreshTokenRepository.save(
+                                    RefreshToken.builder()
+                                            .user(user)
+                                            .tokenValue(refreshToken)
+                                            .expiredAt(expiredAt)
+                                            .build()
+                            )
+                    );
+        } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+            refreshTokenRepository.findByUser(user)
+                    .ifPresent(token -> token.updateTokenValue(refreshToken, expiredAt));
+        }
 
         // 프론트엔드 리다이렉트 URL 생성 (토큰 전달)
         String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/")

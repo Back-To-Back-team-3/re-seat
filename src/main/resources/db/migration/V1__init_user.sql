@@ -4,16 +4,14 @@
 CREATE TABLE users (
                        id              BIGINT AUTO_INCREMENT PRIMARY KEY,
                        email           VARCHAR(255) NOT NULL,
-                       password        VARCHAR(255) NULL,
+                       password        VARCHAR(255) NOT NULL,
                        name            VARCHAR(50)  NOT NULL,
                        nickname        VARCHAR(50)  NULL,
-                       phone           VARCHAR(20)  NULL,
+                       phone           VARCHAR(20)  NOT NULL,
                        role            VARCHAR(20)  NOT NULL DEFAULT 'USER',
                        status          VARCHAR(20)  NOT NULL DEFAULT 'ACTIVE',
                        ci              VARCHAR(255) NULL,
                        is_verified     BOOLEAN      NOT NULL DEFAULT FALSE,
-                       provider        VARCHAR(50)  NULL,
-                       provider_id     VARCHAR(255) NULL,
                        created_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
                        updated_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 

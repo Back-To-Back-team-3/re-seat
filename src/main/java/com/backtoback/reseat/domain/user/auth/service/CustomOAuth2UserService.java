@@ -44,20 +44,41 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         String name = oAuth2UserInfo.getName();
 
         User user = userRepository.findByProviderAndProviderId(provider, providerId)
+                .map(existingUser -> {
+                    if (existingUser.getStatus() == UserStatus.DELETED) {
+                        throw new OAuth2AuthenticationException("탈퇴한 사용자입니다.");
+                    }
+                    return existingUser;
+                })
                 .orElseGet(() -> {
-                    // 가입되지 않은 경우 신규 가입
-                    User newUser = User.builder()
-                            .email(email != null ? email : providerId + "@kakao.com") // 이메일이 없는 경우 가상 이메일 생성
-                            .name(name != null ? name : "카카오 사용자")
-                            .provider(provider)
-                            .providerId(providerId)
-                            .role(UserRole.USER)
-                            .status(UserStatus.ACTIVE)
-                            .isVerified(false)
-                            .build();
-                    return userRepository.save(newUser);
+                    if (email != null) {
+                        return userRepository.findByEmail(email)
+                                .map(existingUser -> {
+                                    if (existingUser.getStatus() == UserStatus.DELETED) {
+                                        throw new OAuth2AuthenticationException("탈퇴한 사용자입니다.");
+                                    }
+                                    existingUser.updateSocialInfo(provider, providerId);
+                                    return userRepository.save(existingUser);
+                                })
+                                .orElseGet(() -> createNewOAuthUser(email, name, provider, providerId));
+                    }
+                    return createNewOAuthUser(null, name, provider, providerId);
                 });
 
         return new CustomOAuth2User(user, attributes);
+    }
+
+    private User createNewOAuthUser(String email, String name, String provider, String providerId) {
+        UserRole role = "admin@reseat.com".equals(email) ? UserRole.ADMIN : UserRole.USER;
+        User newUser = User.builder()
+                .email(email != null ? email : providerId + "@kakao.com")
+                .name(name != null ? name : "카카오 사용자")
+                .provider(provider)
+                .providerId(providerId)
+                .role(role)
+                .status(UserStatus.ACTIVE)
+                .isVerified(false)
+                .build();
+        return userRepository.save(newUser);
     }
 }
