@@ -23,6 +23,9 @@ public enum ErrorCode {
     DUPLICATE_LOGIN_ID(HttpStatus.CONFLICT, "이미 사용 중인 아이디/이메일/닉네임/전화번호입니다."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."),
     USER_INACTIVE(HttpStatus.FORBIDDEN, "비활성 또는 정지된 계정입니다."),
+    //본인인증
+    VERIFICATION_FAILED(HttpStatus.BAD_REQUEST, "본인인증 처리에 실패했습니다."),
+    VERIFICATION_DUPLICATE_CI(HttpStatus.CONFLICT, "이미 동일한 명의로 가입된 다른 계정이 존재합니다."),
 
     // 기준 데이터 (teams, stadiums, seat_zones)
     TEAM_NOT_FOUND(HttpStatus.NOT_FOUND, "구단을 찾을 수 없습니다."),
