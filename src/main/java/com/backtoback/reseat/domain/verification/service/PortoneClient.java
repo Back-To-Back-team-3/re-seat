@@ -1,6 +1,6 @@
-package com.backtoback.reseat.domain.user.verification.service;
+package com.backtoback.reseat.domain.verification.service;
 
-import com.backtoback.reseat.domain.user.verification.dto.response.PortoneVerificationResponse;
+import com.backtoback.reseat.domain.verification.dto.response.PortoneVerificationResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;

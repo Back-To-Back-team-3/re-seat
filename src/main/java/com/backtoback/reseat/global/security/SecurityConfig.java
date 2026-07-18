@@ -1,6 +1,9 @@
 //securityConfig
 package com.backtoback.reseat.global.security;
 
+import com.backtoback.reseat.domain.user.auth.service.CustomOAuth2UserService;
+import com.backtoback.reseat.domain.user.auth.service.OAuth2AuthenticationFailureHandler;
+import com.backtoback.reseat.domain.user.auth.service.OAuth2AuthenticationSuccessHandler;
 import org.springframework.http.HttpMethod;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
@@ -29,27 +32,26 @@ public class SecurityConfig {
     private final JwtTokenProvider jwtTokenProvider;
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
     private final CustomAccessDeniedHandler accessDeniedHandler;
-
+    private final CustomOAuth2UserService   customOAuth2UserService;
+    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
+    private final OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler;
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                //CORS  기본 설정 적용
-                .cors(Customizer.withDefaults())
-
+            //CORS  기본 설정 적용
+            .cors(Customizer.withDefaults())
             //CRSF 및 기본 로그인 폼 비활성화
             .csrf(AbstractHttpConfigurer::disable)
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)
-
             //세션 정책 무상태 설정
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
-
             //엔드 포인트별 인가 허용 정책 설정
             .authorizeHttpRequests(auth -> auth
+
                 //인증이 불필요한 경로 허용
-                .requestMatchers("/api/v1/auth/**").permitAll()
+                .requestMatchers("/api/v1/auth/reissue", "/oauth2/**", "/login/**").permitAll()
                 .requestMatchers(PathRequest.toH2Console()).permitAll()
                 .requestMatchers("/swagger-ui/**","/v3/api-docs/**").permitAll()
 
@@ -59,6 +61,14 @@ public class SecurityConfig {
                     //관리자 전용 API 인가 적용
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
+            )
+            // OAuth2 로그인 설정 추가
+            .oauth2Login(oauth2 -> oauth2
+                .userInfoEndpoint(userInfo -> userInfo
+                    .userService(customOAuth2UserService)
+                )
+                .successHandler(oAuth2AuthenticationSuccessHandler)
+                .failureHandler(oAuth2AuthenticationFailureHandler)
             )
             //Spring Security 필터 단의 예외(401, 403)
             .exceptionHandling(exception -> exception

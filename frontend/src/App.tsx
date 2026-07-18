@@ -16,12 +16,10 @@ import {
   getQueueStatus,
   getReservationHoldTime,
   getTickets,
-  login,
   requestPayment,
-  signUp,
   streamQueue
 } from "./api/services";
-import { clearTokens, getAccessTokenRole, setQueueToken } from "./api/client";
+import { clearTokens, getAccessTokenRole, setQueueToken, setTokens } from "./api/client";
 import type {
   ApiResult,
   GameSeat,
@@ -164,12 +162,7 @@ function App() {
   const [authedRole, setAuthedRole] = useState(
     localStorage.getItem("userRole") ?? (isAuthed ? getAccessTokenRole() : "")
   );
-  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
-  const [email, setEmail] = useState("user@example.com");
-  const [password, setPassword] = useState("password1234");
-  const [name, setName] = useState("User");
-  const [nickname, setNickname] = useState("user");
-  const [phone, setPhone] = useState("010-1234-5678");
+
   const [admitLimit, setAdmitLimit] = useState(20);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -208,6 +201,40 @@ function App() {
 
   useEffect(() => {
     loadGames();
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const accessToken = params.get("accessToken");
+    const refreshToken = params.get("refreshToken");
+
+    if (accessToken && refreshToken) {
+      setTokens(accessToken, refreshToken);
+      
+      let email = "kakao_user@example.com";
+      try {
+        const payload = accessToken.split(".")[1];
+        const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+        const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+        const claims = JSON.parse(atob(padded)) as { sub?: string };
+        if (claims.sub) {
+          email = claims.sub;
+        }
+      } catch (e) {
+        console.error("Failed to parse token claims", e);
+      }
+
+      const userRole = getAccessTokenRole();
+      localStorage.setItem("userEmail", email);
+      localStorage.setItem("userRole", userRole);
+      
+      setAuthedEmail(email);
+      setAuthedRole(userRole);
+      setIsAuthed(true);
+      setToast("카카오 로그인에 성공했습니다.");
+
+      window.history.replaceState({}, "", window.location.origin + window.location.pathname);
+    }
   }, []);
 
   useEffect(() => {
@@ -350,23 +377,7 @@ function App() {
     }
   }
 
-  async function handleAuth() {
-    await run(async () => {
-      if (authMode === "signup") {
-        await signUp({ email, password, name, nickname, phone });
-        setAuthMode("login");
-        setToast("회원가입이 완료되었습니다. 가입한 계정으로 로그인해주세요.");
-        return;
-      }
-      const response = await login(email, password);
-      const userRole = getAccessTokenRole();
-      localStorage.setItem("userEmail", email);
-      localStorage.setItem("userRole", userRole);
-      setAuthedEmail(email);
-      setAuthedRole(userRole);
-      setIsAuthed(true);
-    }, authMode === "signup" ? undefined : "로그인했습니다.");
-  }
+
 
   async function handleEnterQueue() {
     if (!selectedGame) return;
@@ -664,36 +675,15 @@ function App() {
               </div>
             ) : (
               <>
-                <div className="segmented">
-                  <button className={authMode === "login" ? "active" : ""} onClick={() => setAuthMode("login")}>로그인</button>
-                  <button className={authMode === "signup" ? "active" : ""} onClick={() => setAuthMode("signup")}>회원가입</button>
-                </div>
-                <label>
-                  이메일
-                  <input value={email} onChange={(event) => setEmail(event.target.value)} />
-                </label>
-                <label>
-                  비밀번호
-                  <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
-                </label>
-                {authMode === "signup" && (
-                  <>
-                    <label>
-                      이름
-                      <input value={name} onChange={(event) => setName(event.target.value)} />
-                    </label>
-                    <label>
-                      닉네임
-                      <input value={nickname} onChange={(event) => setNickname(event.target.value)} />
-                    </label>
-                    <label>
-                      전화번호
-                      <input value={phone} onChange={(event) => setPhone(event.target.value)} />
-                    </label>
-                  </>
-                )}
-                <button className="primary-button full" onClick={handleAuth} disabled={busy}>
-                  {authMode === "signup" ? "회원가입" : "로그인"}
+                <p style={{ fontSize: "13px", margin: "10px 0", color: "#666", lineHeight: "1.4" }}>
+                  예매 서비스를 이용하시려면 카카오 로그인이 필요합니다.
+                </p>
+                <button
+                  className="primary-button full"
+                  style={{ backgroundColor: "#FEE500", color: "#191919", border: "none", fontWeight: "bold" }}
+                  onClick={() => window.location.href = "http://localhost:8080/oauth2/authorization/kakao"}
+                >
+                  카카오 로그인
                 </button>
               </>
             )}

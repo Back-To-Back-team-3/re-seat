@@ -6,6 +6,7 @@ import com.backtoback.reseat.domain.user.admin.dto.request.UserSearchCondition;
 import com.backtoback.reseat.domain.user.admin.dto.response.AdminUserResponse;
 import com.backtoback.reseat.domain.user.admin.service.AdminUserService;
 import com.backtoback.reseat.global.common.ApiResponse;
+import com.backtoback.reseat.global.common.PageResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -24,43 +25,46 @@ public class AdminUserController {
     private final AdminUserService adminUserService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<AdminUserResponse>>> searchUsers(
-            UserSearchCondition condition,
-            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+    //반환 타입을 PageResponse<AdminUserResponse> 로 격리 수용 변경
+    public ResponseEntity<ApiResponse<PageResponse<AdminUserResponse>>> searchUsers(
+        UserSearchCondition condition,
+        @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        Page<AdminUserResponse> response = adminUserService.searchUsers(condition, pageable);
+        Page<AdminUserResponse> pageResult = adminUserService.searchUsers(condition, pageable);
+
+
         return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(ApiResponse.success("회원 목록 조회 완료", response));
+            .status(HttpStatus.OK)
+            .body(ApiResponse.success("회원 목록 조회 완료", PageResponse.of(pageResult)));
     }
 
     @GetMapping("/{userId}")
     public ResponseEntity<ApiResponse<AdminUserResponse>> getUserDetail(@PathVariable Long userId) {
         AdminUserResponse response = adminUserService.getUserDetail(userId);
         return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(ApiResponse.success("회원 상세 조회 완료", response));
+            .status(HttpStatus.OK)
+            .body(ApiResponse.success("회원 상세 조회 완료", response));
     }
 
     @PatchMapping("/{userId}/role")
     public ResponseEntity<ApiResponse<Void>> updateUserRole(
-            @PathVariable Long userId,
-            @Valid @RequestBody AdminUserRoleUpdateRequest request) {
+        @PathVariable Long userId,
+        @Valid @RequestBody AdminUserRoleUpdateRequest request) {
 
         adminUserService.updateUserRole(userId, request.getRole());
         return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(ApiResponse.success("회원 권한 변경 완료", null));
+            .status(HttpStatus.OK)
+            .body(ApiResponse.success("회원 권한 변경 완료", null));
     }
 
     @PatchMapping("/{userId}/status")
     public ResponseEntity<ApiResponse<Void>> updateUserStatus(
-            @PathVariable Long userId,
-            @Valid @RequestBody AdminUserStatusUpdateRequest request) {
+        @PathVariable Long userId,
+        @Valid @RequestBody AdminUserStatusUpdateRequest request) {
 
         adminUserService.updateUserStatus(userId, request.getStatus());
         return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(ApiResponse.success("회원 상태 변경 완료", null));
+            .status(HttpStatus.OK)
+            .body(ApiResponse.success("회원 상태 변경 완료", null));
     }
 }

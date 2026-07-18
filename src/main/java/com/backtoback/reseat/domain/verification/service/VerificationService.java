@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.user.verification.service;
+package com.backtoback.reseat.domain.verification.service;
 
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
