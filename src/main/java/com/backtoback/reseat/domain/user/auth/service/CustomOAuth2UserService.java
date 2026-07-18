@@ -44,41 +44,27 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         String name = oAuth2UserInfo.getName();
 
         User user = userRepository.findByProviderAndProviderId(provider, providerId)
-                .map(existingUser -> {
-                    if (existingUser.getStatus() == UserStatus.DELETED) {
-                        throw new OAuth2AuthenticationException("탈퇴한 사용자입니다.");
-                    }
-                    return existingUser;
-                })
-                .orElseGet(() -> {
-                    if (email != null) {
-                        return userRepository.findByEmail(email)
-                                .map(existingUser -> {
-                                    if (existingUser.getStatus() == UserStatus.DELETED) {
-                                        throw new OAuth2AuthenticationException("탈퇴한 사용자입니다.");
-                                    }
-                                    existingUser.updateSocialInfo(provider, providerId);
-                                    return userRepository.save(existingUser);
-                                })
-                                .orElseGet(() -> createNewOAuthUser(email, name, provider, providerId));
-                    }
-                    return createNewOAuthUser(null, name, provider, providerId);
-                });
+            .map(existingUser -> {
+                if (existingUser.getStatus() == UserStatus.DELETED) {
+                    throw new OAuth2AuthenticationException("탈퇴한 사용자입니다.");
+                }
+                return existingUser;
+            })
+            .orElseGet(() -> createNewOAuthUser(name, provider, providerId));
 
         return new CustomOAuth2User(user, attributes);
     }
 
-    private User createNewOAuthUser(String email, String name, String provider, String providerId) {
-        UserRole role = "admin@reseat.com".equals(email) ? UserRole.ADMIN : UserRole.USER;
+    private User createNewOAuthUser(String name, String provider, String providerId) {
         User newUser = User.builder()
-                .email(email != null ? email : providerId + "@kakao.com")
-                .name(name != null ? name : "카카오 사용자")
-                .provider(provider)
-                .providerId(providerId)
-                .role(role)
-                .status(UserStatus.ACTIVE)
-                .isVerified(false)
-                .build();
+            .email(providerId + "@kakao.com") // 이메일 충돌 방지 및 보안 연동 방지를 위해 가상 이메일 사용
+            .name(name != null ? name : "카카오 사용자")
+            .provider(provider)
+            .providerId(providerId)
+            .role(UserRole.USER) // 관리자 자동 승격 불가능 (보안 강화)
+            .status(UserStatus.ACTIVE)
+            .isVerified(false)
+            .build();
         return userRepository.save(newUser);
     }
 }

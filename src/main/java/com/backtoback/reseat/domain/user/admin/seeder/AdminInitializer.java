@@ -26,25 +26,17 @@ public class AdminInitializer implements CommandLineRunner {
 
         if (!userRepository.existsByEmail(adminEmail)) {
             User admin = User.builder()
-                    .email(adminEmail)
-                    .password(passwordEncoder.encode("admin1234!"))
-                    .name("Re-Seat 관리자")
-                    .phone("010-0000-0000")
-                    .role(UserRole.ADMIN)
-                    .status(UserStatus.ACTIVE)
-                    .isVerified(true)
-                    .build();
+                .email(adminEmail)
+                .password(passwordEncoder.encode("admin1234!"))
+                .name("Re-Seat 관리자")
+                .phone("010-0000-0000")
+                .role(UserRole.ADMIN)
+                .status(UserStatus.ACTIVE)
+                .isVerified(true)
+                .build();
 
             userRepository.save(admin);
             log.info("Successfully seeded default admin user: {}", adminEmail);
-        } else {
-            userRepository.findByEmail(adminEmail).ifPresent(user -> {
-                if (user.getRole() != UserRole.ADMIN) {
-                    user.updateRole(UserRole.ADMIN);
-                    userRepository.save(user);
-                    log.info("Updated existing user {} to role ADMIN", adminEmail);
-                }
-            });
         }
     }
 }

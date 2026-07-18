@@ -8,8 +8,10 @@ spring:
   flyway:
     enabled: true
     ignore-migration-patterns:
+      - "*:13"
       - "*:14"
       - "*:15"
+
 
   jpa:
     hibernate:
