@@ -88,7 +88,7 @@ public class GameSeatController {
     ) {
         // TODO: queueToken 검증 (B-3 완료 후)
         List<SeatStatusResponse> seats = seatQueryService.getSeats(gameId, zoneId, grade, status);
-        return ApiResponse.success(seats);
+        return ApiResponse.success("좌석 현황 조회 성공", seats);
     }
 
     /**
@@ -125,6 +125,6 @@ public class GameSeatController {
         @PathVariable Long gameId
     ) {
         List<ZoneSummaryResponse> zones = seatQueryService.getZoneSummaries(gameId);
-        return ApiResponse.success(zones);
+        return ApiResponse.success("구역 요약 조회 성공", zones);
     }
 }
