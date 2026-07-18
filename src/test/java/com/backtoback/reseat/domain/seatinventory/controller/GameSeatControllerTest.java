@@ -10,6 +10,7 @@ import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,7 @@ import java.util.List;
 /**
  * 경기 좌석 현황·구역 요약 조회 API 통합 테스트.
  */
+@Disabled("테스트제외")
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional

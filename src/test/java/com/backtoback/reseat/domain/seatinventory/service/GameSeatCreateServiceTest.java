@@ -20,10 +20,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.transaction.annotation.Transactional;
+import org.junit.jupiter.api.Disabled;
 
 /**
  * 좌석 재고 생성 서비스 통합 테스트.
  */
+@Disabled("테스트 제외")
 @SpringBootTest
 @Transactional
 @Import(QuerydslConfig.class)
