@@ -40,7 +40,7 @@ public class User extends BaseEntity {
     @Column(nullable = false, length = 255)
     private String email;
 
-    @Column(nullable = false, length = 255)
+    @Column(nullable = true, length = 255)
     private String password;
 
     @Column(nullable = false, length = 50)
@@ -49,7 +49,7 @@ public class User extends BaseEntity {
     @Column(nullable = true)
     private String nickname;
 
-    @Column(nullable = false, length = 20)
+    @Column(nullable = true, length = 20)
     private String phone;
 
     @Enumerated(EnumType.STRING)
@@ -66,11 +66,16 @@ public class User extends BaseEntity {
     @Column(name="is_verified", nullable = false)
     private boolean isVerified = false;
 
+    @Column(name = "provider", nullable = true, length = 50)
+    private String provider;
 
+    @Column(name = "provider_id", nullable = true, length = 255)
+    private String providerId;
 
     @Builder
     public User(Long id, String email, String password, String name, String phone,
-                String ci, boolean isVerified, UserRole role, UserStatus status) {
+                String ci, boolean isVerified, UserRole role, UserStatus status,
+                String provider, String providerId) {
         this.id = id;
         this.email = email;
         this.password = password;
@@ -81,6 +86,8 @@ public class User extends BaseEntity {
         this.isVerified = isVerified;
         this.role = role != null ? role : UserRole.USER;
         this.status = status != null ? status : UserStatus.ACTIVE;
+        this.provider = provider;
+        this.providerId = providerId;
     }
 
     public void completeVerification(String ci, String realName) {

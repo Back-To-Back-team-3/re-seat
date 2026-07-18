@@ -1,7 +1,7 @@
-package com.backtoback.reseat.domain.user.verification.controller;
+package com.backtoback.reseat.domain.verification.controller;
 
-import com.backtoback.reseat.domain.user.verification.dto.request.VerificationRequest;
-import com.backtoback.reseat.domain.user.verification.service.VerificationService;
+import com.backtoback.reseat.domain.verification.dto.request.VerificationRequest;
+import com.backtoback.reseat.domain.verification.service.VerificationService;
 import com.backtoback.reseat.global.common.ApiResponse;
 import com.backtoback.reseat.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
