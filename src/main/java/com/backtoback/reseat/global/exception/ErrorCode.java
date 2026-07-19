@@ -78,6 +78,7 @@ public enum ErrorCode {
     AMOUNT_MISMATCH(HttpStatus.BAD_REQUEST, "요청 금액이 주문 금액과 일치하지 않습니다."),
     IDEMPOTENCY_KEY_REQUIRED(HttpStatus.BAD_REQUEST, "Idempotency-Key 헤더는 필수입니다."),
     IDEMPOTENCY_KEY_CONFLICT(HttpStatus.CONFLICT, "동일한 Idempotency-Key로 다른 결제 요청을 처리할 수 없습니다."),
+    IDEMPOTENCY_KEY_UNAVAILABLE(HttpStatus.CONFLICT, "만료되었거나 사용할 수 없는 Idempotency-Key입니다."),
     DUPLICATE_PAYMENT(HttpStatus.CONFLICT, "중복된 결제 요청입니다."),
     PAYMENT_ALREADY_FINALIZED(HttpStatus.CONFLICT, "이미 처리 완료된 결제입니다."),
     PAYMENT_CALLBACK_MISMATCH(HttpStatus.BAD_REQUEST, "결제 콜백 정보가 결제 내역과 일치하지 않습니다."),
