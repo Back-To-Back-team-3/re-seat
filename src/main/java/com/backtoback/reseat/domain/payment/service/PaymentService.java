@@ -71,13 +71,21 @@ public class PaymentService {
      *
      * @param userId 현재 사용자 ID
      * @param paymentId 결제 ID
+     * @param idempotencyKey 현재 결제 시도의 활성 멱등키
      * @param request 토스가 클라이언트에 돌려준 paymentKey/orderId/amount
      * @return 확정된 결제 결과
      */
     @Transactional
-    public PaymentActionResponse completePayment(Long userId, Long paymentId, PaymentCompleteRequest request) {
-        // 로컬 결제를 잠그고 승인 가능한 상태와 콜백 주문·금액을 검증한다.
+    public PaymentActionResponse completePayment(
+            Long userId, Long paymentId, String idempotencyKey, PaymentCompleteRequest request) {
+        // 로컬 결제를 잠그고 현재 결제 시도의 콜백인지 확인한다.
         Payment payment = getOwnedPaymentWithPessimisticWriteLock(userId, paymentId);
+        paymentValidator.validateActiveIdempotencyKey(payment, idempotencyKey);
+        if (payment.getStatus() != PaymentStatus.READY) {
+            return PaymentActionResponse.from(payment);
+        }
+
+        // READY 결제만 Toss 승인 요청 전에 콜백 주문·금액을 검증한다.
         paymentValidator.validateConfirmable(payment, request.getOrderId(), request.getAmount());
 
         // Toss에 최종 승인을 요청하고, 응답을 받지 못하면 클라이언트 내부에서 단건 재조회로 상태를 확인한다.
@@ -106,12 +114,18 @@ public class PaymentService {
      *
      * @param userId 현재 사용자 ID
      * @param paymentId 결제 ID
+     * @param idempotencyKey 현재 결제 시도의 활성 멱등키
      * @param request 토스가 클라이언트에 돌려준 실패 code/message/orderId
      * @return 실패 처리된 결제 결과
      */
     @Transactional
-    public PaymentActionResponse failPayment(Long userId, Long paymentId, PaymentFailRequest request) {
+    public PaymentActionResponse failPayment(
+            Long userId, Long paymentId, String idempotencyKey, PaymentFailRequest request) {
         Payment payment = getOwnedPaymentWithPessimisticWriteLock(userId, paymentId);
+        paymentValidator.validateActiveIdempotencyKey(payment, idempotencyKey);
+        if (payment.getStatus() != PaymentStatus.READY) {
+            return PaymentActionResponse.from(payment);
+        }
 
         paymentValidator.validateFailable(payment);
         paymentValidator.validatePgOrderId(payment, request.getOrderId());
@@ -207,6 +221,7 @@ public class PaymentService {
                     && !createdAt.isBefore(LocalDateTime.now().minus(READY_PAYMENT_REUSE_DURATION));
 
             if (reusable) {
+                payment.changeIdempotencyKey(idempotencyKey);
                 return PaymentCreateResponse.from(payment);
             }
 
