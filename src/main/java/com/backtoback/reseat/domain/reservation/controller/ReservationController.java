@@ -80,7 +80,7 @@ public class ReservationController {
         ReservationResponse response = reservationService.holdSeats(userId, request);
         return ResponseEntity
             .status(HttpStatus.CREATED)
-            .body(ApiResponse.success(response));
+            .body(ApiResponse.success("좌석 선점 성공", response));
     }
 
     /** GET /api/v1/reservations/{reservationId}/hold-time */
@@ -105,7 +105,7 @@ public class ReservationController {
         @PathVariable Long reservationId
     ) {
         HoldTimeResponse response = reservationService.getHoldTime(reservationId);
-        return ApiResponse.success(response);
+        return ApiResponse.success("선점 잔여 시간 조회 성공", response);
     }
 
     /** DELETE /api/v1/reservations/{reservationId} */
@@ -135,7 +135,7 @@ public class ReservationController {
     ) {
         Long userId = userDetails.getId();
         ReservationCancelResponse response = reservationService.releaseHold(reservationId, userId);
-        return ApiResponse.success(response);
+        return ApiResponse.success("좌석 선점 해제 성공", response);
     }
 
 }

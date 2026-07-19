@@ -8,6 +8,7 @@ import com.backtoback.reseat.domain.game.service.GameSearchCondition;
 import com.backtoback.reseat.global.common.ApiResponse;
 import java.time.LocalDate;
 
+import com.backtoback.reseat.global.common.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -84,32 +85,21 @@ public class GameController {
                                     {
                                         "gameId": 1,
                                         "title": "LG vs 한화",
-                                        "homeTeam": {
-                                            "teamId": 1,
-                                            "name": "LG"
-                                        },
-                                        "awayTeam": {
-                                            "teamId": 2,
-                                            "name": "한화"
-                                        },
-                                        "stadium": {
-                                            "stadiumId": 1,
-                                            "name": "잠실야구장"
-                                        },
+                                        "homeTeam": { "teamId": 1, "name": "LG" },
+                                        "awayTeam": { "teamId": 2, "name": "한화" },
+                                        "stadium": { "stadiumId": 1, "name": "잠실야구장" },
                                         "gameAt": "2026-07-11 18:30:00",
                                         "bookingOpenAt": "2026-07-04 14:00:00",
                                         "bookingCloseAt": "2026-07-11 18:30:00",
                                         "bookingStatus": "OPEN"
                                     }
                                 ],
-                                "pageable": {
-                                    "pageNumber": 0,
-                                    "pageSize": 20
-                                },
+                                "pageNumber": 0,
+                                "pageSize": 20,
                                 "totalElements": 1,
                                 "totalPages": 1,
-                                "first": true,
-                                "last": true
+                                "isFirst": true,
+                                "isLast": true
                             },
                             "message": "경기 목록 조회 성공"
                         }
@@ -135,7 +125,7 @@ public class GameController {
         )
     })
     @GetMapping
-    public ApiResponse<Page<GameListResponse>> getGames(
+    public ApiResponse<PageResponse<GameListResponse>> getGames(
         @Parameter(description = "홈팀 ID", example = "1")
         @RequestParam(required = false) Long homeTeamId,
 
@@ -168,8 +158,7 @@ public class GameController {
         );
 
         Page<GameListResponse> response = gameQueryService.getGames(condition, pageable);
-
-        return ApiResponse.success("경기 목록 조회 성공", response);
+        return ApiResponse.success("경기 목록 조회 성공", PageResponse.of(response));
     }
 
     /**
