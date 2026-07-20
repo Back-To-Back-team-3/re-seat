@@ -29,11 +29,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 좌석 선점(HOLD)·남은시간 조회·해제 API 컨트롤러.
- *
+ * <p>
  * C-2-4 이번 사이클: 의도적 락 미적용 상태. 동시 요청 시 over-booking 발생 가능.
  * C-4에서 Redisson 분산락 도입 후 방어 예정.
- *
- * <p>인증: JWT (Bearer) 필수. Queue-Token 검증은 계약 확정 후 추가.
+ * <p>
+ * 인증: JWT (Bearer) 필수. Queue-Token 검증은 계약 확정 후 추가.
  * 컨트롤러는 얇게 유지 — 검증(@Valid) + 서비스 위임 + 응답 변환만.
  */
 @Tag(name = "Reservation", description = "좌석 선점·남은시간 조회·해제 API")
@@ -99,13 +99,16 @@ public class ReservationController {
             responseCode = "404", description = "RESERVATION_NOT_FOUND",
             content = @Content)
     })
+    // getHoldTime: 200 응답 래핑
     @GetMapping("/{reservationId}/hold-time")
-    public ApiResponse<HoldTimeResponse> getHoldTime(
+    public ResponseEntity<ApiResponse<HoldTimeResponse>> getHoldTime(
         @Parameter(description = "예약 ID", example = "1001")
         @PathVariable Long reservationId
     ) {
         HoldTimeResponse response = reservationService.getHoldTime(reservationId);
-        return ApiResponse.success("선점 잔여 시간 조회 성공", response);
+        return ResponseEntity
+            .status(HttpStatus.OK)
+            .body(ApiResponse.success("선점 잔여 시간 조회 성공", response));
     }
 
     /** DELETE /api/v1/reservations/{reservationId} */
@@ -127,15 +130,18 @@ public class ReservationController {
             responseCode = "404", description = "RESERVATION_NOT_FOUND",
             content = @Content)
     })
+    // releaseHold: 200 응답 래핑
     @DeleteMapping("/{reservationId}")
-    public ApiResponse<ReservationCancelResponse> releaseHold(
+    public ResponseEntity<ApiResponse<ReservationCancelResponse>> releaseHold(
         @Parameter(description = "예약 ID", example = "1001")
         @PathVariable Long reservationId,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         Long userId = userDetails.getId();
         ReservationCancelResponse response = reservationService.releaseHold(reservationId, userId);
-        return ApiResponse.success("좌석 선점 해제 성공", response);
+        return ResponseEntity
+            .status(HttpStatus.OK)
+            .body(ApiResponse.success("좌석 선점 해제 성공", response));
     }
 
 }
