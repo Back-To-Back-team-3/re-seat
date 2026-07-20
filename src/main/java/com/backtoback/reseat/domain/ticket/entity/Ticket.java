@@ -99,7 +99,7 @@ public class Ticket extends BaseEntity {
     private TicketCancelReason cancelReason;
 
     // 입장 검증용 QR 토큰
-    @Column(name = "qr_token", nullable = false, length = 255)
+    @Column(name = "qr_token", length = 255)
     private String qrToken;
 
     // 티켓 발급 시간
