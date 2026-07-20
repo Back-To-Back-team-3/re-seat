@@ -126,6 +126,11 @@ public class Payment extends BaseEntity {
         this.failedAt = failedAt;
     }
 
+    // 동일 주문의 READY 결제를 재사용할 때 현재 결제 시도의 멱등키를 교체한다.
+    public void changeIdempotencyKey(String idempotencyKey) {
+        this.idempotencyKey = idempotencyKey;
+    }
+
     // 결제 취소 처리
     public void cancel() {
         this.status = PaymentStatus.CANCELED;

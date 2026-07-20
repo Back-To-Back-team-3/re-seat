@@ -4,6 +4,7 @@ import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
 import com.backtoback.reseat.domain.payment.exception.IdempotencyKeyConflictException;
 import com.backtoback.reseat.domain.payment.exception.IdempotencyKeyRequiredException;
+import com.backtoback.reseat.domain.payment.exception.IdempotencyKeyUnavailableException;
 import com.backtoback.reseat.domain.payment.exception.PaymentAccessDeniedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCallbackMismatchException;
@@ -24,6 +25,14 @@ public class PaymentServiceValidator {
     public void validateIdempotencyRequest(Payment payment, Long orderId) {
         if (!payment.getOrderId().equals(orderId)) {
             throw new IdempotencyKeyConflictException();
+        }
+    }
+
+    /** 요청 멱등키가 현재 결제 시도의 활성 키인지 검증한다. */
+    public void validateActiveIdempotencyKey(Payment payment, String idempotencyKey) {
+        validateIdempotencyKey(idempotencyKey);
+        if (!payment.getIdempotencyKey().equals(idempotencyKey)) {
+            throw new IdempotencyKeyUnavailableException();
         }
     }
 
