@@ -72,3 +72,7 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+
+### Postman ###
+re-seat-full-flow.postman_collection.json
+*.postman_collection.json

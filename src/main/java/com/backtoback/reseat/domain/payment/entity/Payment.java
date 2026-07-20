@@ -51,9 +51,8 @@ public class Payment extends BaseEntity {
     private Integer amount;
 
     // 결제 수단
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private PaymentMethod method;
+    @Column(length = 20)
+    private String method;
 
     // 결제 상태
     @Enumerated(EnumType.STRING)
@@ -92,14 +91,14 @@ public class Payment extends BaseEntity {
     // 빌더 생성자
     @Builder
     public Payment(String paymentNo, Long orderId, User user, Integer amount,
-                   PaymentMethod method, PaymentStatus status, String idempotencyKey,
+                   String method, PaymentStatus status, String idempotencyKey,
                    PgProvider pgProvider, String pgOrderId, String pgPaymentKey,
                    String failReason, LocalDateTime approvedAt, LocalDateTime failedAt) {
         this.paymentNo = paymentNo;
         this.orderId = orderId;
         this.user = user;
         this.amount = amount;
-        this.method = method != null ? method : PaymentMethod.MOCK;
+        this.method = method;
         this.status = status != null ? status : PaymentStatus.READY;
         this.idempotencyKey = idempotencyKey;
         this.pgProvider = pgProvider != null ? pgProvider : PgProvider.MOCK;
@@ -111,9 +110,10 @@ public class Payment extends BaseEntity {
     }
 
     // 결제 승인 처리
-    public void approve(String pgPaymentKey, LocalDateTime approvedAt) {
+    public void approve(String pgPaymentKey, String method, LocalDateTime approvedAt) {
         this.status = PaymentStatus.APPROVED;
         this.pgPaymentKey = pgPaymentKey;
+        this.method = method;
         this.approvedAt = approvedAt;
         this.failReason = null;
         this.failedAt = null;
@@ -124,6 +124,11 @@ public class Payment extends BaseEntity {
         this.status = PaymentStatus.FAILED;
         this.failReason = failReason;
         this.failedAt = failedAt;
+    }
+
+    // 동일 주문의 READY 결제를 재사용할 때 현재 결제 시도의 멱등키를 교체한다.
+    public void changeIdempotencyKey(String idempotencyKey) {
+        this.idempotencyKey = idempotencyKey;
     }
 
     // 결제 취소 처리

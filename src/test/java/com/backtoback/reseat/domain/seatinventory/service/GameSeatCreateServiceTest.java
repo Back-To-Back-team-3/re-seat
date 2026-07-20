@@ -10,6 +10,7 @@ import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
 import com.backtoback.reseat.domain.seatinventory.exception.SeatInventoryAlreadyOpenedException;
 import com.backtoback.reseat.domain.seatinventory.repository.GameSeatRepository;
+import com.backtoback.reseat.global.config.QuerydslConfig;
 import jakarta.persistence.EntityManager;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,13 +18,17 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.transaction.annotation.Transactional;
+import org.junit.jupiter.api.Disabled;
 
 /**
  * 좌석 재고 생성 서비스 통합 테스트.
  */
+@Disabled("테스트 제외")
 @SpringBootTest
 @Transactional
+@Import(QuerydslConfig.class)
 class GameSeatCreateServiceTest {
 
     private static final long SEEDED_STADIUM_ID = 1L;

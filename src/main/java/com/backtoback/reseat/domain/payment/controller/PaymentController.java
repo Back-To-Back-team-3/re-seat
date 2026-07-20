@@ -48,11 +48,13 @@ public class PaymentController {
     public ResponseEntity<ApiResponse<PaymentActionResponse>> completePayment(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long paymentId,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody PaymentCompleteRequest request
     ) {
         PaymentActionResponse response = paymentService.completePayment(
                 userDetails.getId(),
                 paymentId,
+                idempotencyKey,
                 request
         );
 
@@ -63,11 +65,13 @@ public class PaymentController {
     public ResponseEntity<ApiResponse<PaymentActionResponse>> failPayment(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long paymentId,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody PaymentFailRequest request
     ) {
         PaymentActionResponse response = paymentService.failPayment(
                 userDetails.getId(),
                 paymentId,
+                idempotencyKey,
                 request
         );
 

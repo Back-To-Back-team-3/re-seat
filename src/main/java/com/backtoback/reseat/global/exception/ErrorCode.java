@@ -23,6 +23,9 @@ public enum ErrorCode {
     DUPLICATE_LOGIN_ID(HttpStatus.CONFLICT, "이미 사용 중인 아이디/이메일/닉네임/전화번호입니다."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."),
     USER_INACTIVE(HttpStatus.FORBIDDEN, "비활성 또는 정지된 계정입니다."),
+    //본인인증
+    VERIFICATION_FAILED(HttpStatus.BAD_REQUEST, "본인인증 처리에 실패했습니다."),
+    VERIFICATION_DUPLICATE_CI(HttpStatus.CONFLICT, "이미 동일한 명의로 가입된 다른 계정이 존재합니다."),
 
     // 기준 데이터 (teams, stadiums, seat_zones)
     TEAM_NOT_FOUND(HttpStatus.NOT_FOUND, "구단을 찾을 수 없습니다."),
@@ -78,6 +81,7 @@ public enum ErrorCode {
     AMOUNT_MISMATCH(HttpStatus.BAD_REQUEST, "요청 금액이 주문 금액과 일치하지 않습니다."),
     IDEMPOTENCY_KEY_REQUIRED(HttpStatus.BAD_REQUEST, "Idempotency-Key 헤더는 필수입니다."),
     IDEMPOTENCY_KEY_CONFLICT(HttpStatus.CONFLICT, "동일한 Idempotency-Key로 다른 결제 요청을 처리할 수 없습니다."),
+    IDEMPOTENCY_KEY_UNAVAILABLE(HttpStatus.CONFLICT, "만료되었거나 사용할 수 없는 Idempotency-Key입니다."),
     DUPLICATE_PAYMENT(HttpStatus.CONFLICT, "중복된 결제 요청입니다."),
     PAYMENT_ALREADY_FINALIZED(HttpStatus.CONFLICT, "이미 처리 완료된 결제입니다."),
     PAYMENT_CALLBACK_MISMATCH(HttpStatus.BAD_REQUEST, "결제 콜백 정보가 결제 내역과 일치하지 않습니다."),

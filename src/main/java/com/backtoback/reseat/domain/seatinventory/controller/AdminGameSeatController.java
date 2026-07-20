@@ -5,8 +5,6 @@ import com.backtoback.reseat.domain.seatinventory.service.GameSeatCreateService;
 import com.backtoback.reseat.global.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -77,7 +75,6 @@ public class AdminGameSeatController {
         GameSeatOpenResponse response = gameSeatCreateService.openInventory(gameId);
 
         // 리소스가 새로 생성됐으므로 201.
-        // 조회 API와 달리 상태 코드 제어가 필요해 ResponseEntity를 쓴다.
         return ResponseEntity
             .status(HttpStatus.CREATED)
             .body(ApiResponse.success("좌석 재고 오픈 성공", response));

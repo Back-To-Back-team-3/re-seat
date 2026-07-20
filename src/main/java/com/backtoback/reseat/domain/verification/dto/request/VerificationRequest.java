@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.user.verification.dto.request;
+package com.backtoback.reseat.domain.verification.dto.request;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;

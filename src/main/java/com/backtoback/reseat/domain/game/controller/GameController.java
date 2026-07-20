@@ -8,6 +8,7 @@ import com.backtoback.reseat.domain.game.service.GameSearchCondition;
 import com.backtoback.reseat.global.common.ApiResponse;
 import java.time.LocalDate;
 
+import com.backtoback.reseat.global.common.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -21,6 +22,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -84,32 +87,21 @@ public class GameController {
                                     {
                                         "gameId": 1,
                                         "title": "LG vs 한화",
-                                        "homeTeam": {
-                                            "teamId": 1,
-                                            "name": "LG"
-                                        },
-                                        "awayTeam": {
-                                            "teamId": 2,
-                                            "name": "한화"
-                                        },
-                                        "stadium": {
-                                            "stadiumId": 1,
-                                            "name": "잠실야구장"
-                                        },
+                                        "homeTeam": { "teamId": 1, "name": "LG" },
+                                        "awayTeam": { "teamId": 2, "name": "한화" },
+                                        "stadium": { "stadiumId": 1, "name": "잠실야구장" },
                                         "gameAt": "2026-07-11 18:30:00",
                                         "bookingOpenAt": "2026-07-04 14:00:00",
                                         "bookingCloseAt": "2026-07-11 18:30:00",
                                         "bookingStatus": "OPEN"
                                     }
                                 ],
-                                "pageable": {
-                                    "pageNumber": 0,
-                                    "pageSize": 20
-                                },
+                                "pageNumber": 0,
+                                "pageSize": 20,
                                 "totalElements": 1,
                                 "totalPages": 1,
-                                "first": true,
-                                "last": true
+                                "isFirst": true,
+                                "isLast": true
                             },
                             "message": "경기 목록 조회 성공"
                         }
@@ -135,7 +127,7 @@ public class GameController {
         )
     })
     @GetMapping
-    public ApiResponse<Page<GameListResponse>> getGames(
+    public ResponseEntity<ApiResponse<PageResponse<GameListResponse>>> getGames(
         @Parameter(description = "홈팀 ID", example = "1")
         @RequestParam(required = false) Long homeTeamId,
 
@@ -166,10 +158,10 @@ public class GameController {
             to,
             bookingStatus
         );
-
         Page<GameListResponse> response = gameQueryService.getGames(condition, pageable);
-
-        return ApiResponse.success("경기 목록 조회 성공", response);
+        return ResponseEntity
+            .status(HttpStatus.OK)
+            .body(ApiResponse.success("경기 목록 조회 성공", PageResponse.of(response)));
     }
 
     /**
@@ -182,12 +174,13 @@ public class GameController {
      * @return 경기 상세 응답
      */
     @GetMapping("/{gameId}")
-    public ApiResponse<GameDetailResponse> getGame(
+    public ResponseEntity<ApiResponse<GameDetailResponse>> getGame(
         @Parameter(description = "경기 ID", example = "1", required = true)
         @PathVariable Long gameId
     ) {
         GameDetailResponse response = gameQueryService.getGame(gameId);
-
-        return ApiResponse.success("경기 상세 조회 성공", response);
+        return ResponseEntity
+            .status(HttpStatus.OK)
+            .body(ApiResponse.success("경기 상세 조회 성공", response));
     }
 }
