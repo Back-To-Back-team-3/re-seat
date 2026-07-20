@@ -24,7 +24,7 @@ import java.util.concurrent.CompletionStage;
 /**
  * 대기열 API Controller
  *
- * <p>대기열 진입, 상태 조회, SSE 순번 스트림, 취소, MVP용 입장 허용 처리를 제공한다.</p>
+ * <p>대기열 진입, 상태 조회, SSE 순번 스트림, 취소 API를 제공한다.</p>
  */
 @RestController
 @RequestMapping("/api/v1/queues")
@@ -49,6 +49,8 @@ public class QueueController {
 
         Long userId = userDetails.getId();
 
+        // Kafka 진입 이벤트 발행이 성공하면 요청 접수 의미로 202 Accepted를 반환한다.
+        // Consumer가 비동기로 처리하므로 이 시점에서 DB 이력과 Redis 대기열 등록이 완료되지 않을 수 있다.
         return queueService
                 .requestQueueEntry(gameId, userId)
                 .thenApply(ignored -> ResponseEntity

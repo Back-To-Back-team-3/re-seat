@@ -129,8 +129,6 @@ public class QueueService {
     /**
      * 사용자의 경기별 대기열 진입을 취소한다.
      *
-     * <p>DB 이력이 취소 가능한 상태인지 확인 후 Redis 대기열에서 제거한다.</p>
-     *
      * @param gameId 경기 ID
      * @param userId 사용자 ID
      * @return 대기열 취소 응답
@@ -144,13 +142,16 @@ public class QueueService {
         String redisMember = redisMember(userId);
         String queueKey = queueKey(gameId, userId);
 
-        // DB 상태를 CANCELED로 전이한 뒤 Redis 대기열에서 제거한다.
+        // 취소할 경기와 사용자의 DB 대기 이력을 조회한다.
         QueueEntryHistory queueEntryHistory =
                 queueEntryHistoryRepository.findByQueueKey(queueKey)
                 .orElseThrow(QueueEntryNotFoundException::new);
 
+        // WAITING 상태의 DB 대기 이력을 먼저 CANCELED 상태로 변경한다.
         queueEntryHistory.cancel(LocalDateTime.now());
 
+        // DB 트랜잭션이 롤백되면 Redis 대기열을 그대로 유지해야 한다.
+        // DB 커밋이 완료된 경우에만 Redis에서 사용자를 제거하여 두 저장소의 상태 불일치를 방지한다.
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
@@ -164,9 +165,17 @@ public class QueueService {
                 .build();
     }
 
+    /**
+     * 경기와 사용자의 존재 여부를 확인하고 Kafka로 대기열 진입 이벤트를 발행한다.
+     *
+     * @param gameId 대기열에 진입할 경기 ID
+     * @param userId 대기열 진입을 요청한 사용자 ID
+     * @return Kafka 이벤트 발행 결과를 나타내는 비동기 작업
+     */
     @Transactional(readOnly = true)
     public CompletableFuture<Void> requestQueueEntry(Long gameId, Long userId) {
 
+        // 처리할 수 없는 이벤트가 Kafka에 발행되지 않도록 경기와 사용자의 존재 여부를 먼저 확인한다.
         if (!gameRepository.existsById(gameId)) {
             throw new GameNotFoundException(gameId);
         }
@@ -175,6 +184,7 @@ public class QueueService {
             throw new UserNotFoundException("사용자를 찾을 수 없습니다.");
         }
 
+        // eventId는 이벤트 로그 추적에 사용하고, requestAt은 Redis ZSet의 대기 순서를 결정하는 기준으로 사용한다.
         QueueEntryRequestedEvent event = new QueueEntryRequestedEvent(
                 UUID.randomUUID(),
                 gameId,
@@ -182,6 +192,7 @@ public class QueueService {
                 Instant.now()
         );
 
+        // Kafka 발행 실패는 대기열 진입 요청 실패로 변환하여 비동기 작업을 예외 상태로 완료한다.
         return queueEntryEventPublisher
                 .publish(event)
                 .thenAccept(result -> {})
@@ -191,13 +202,14 @@ public class QueueService {
     }
 
     /**
-     * kafka 대기열 진입 이벤트를 사용하여 Redis 대기열과 DB 이력을 등록한다.
+     * kafka 대기열 진입 이벤트를 바탕으로 DB 대기 이력과 Redis 대기열을 등록한다.
      *
      * @param event 대기열 진입 요청 이벤트
      */
     @Transactional
     public void registerQueueEntry(QueueEntryRequestedEvent event) {
 
+        // 잘못된 이벤트는 재시도해도 처리할 수 없으므로 DB와 Redis에 접근하기 전에 검증한다.
         validateQueueEntryEvent(event);
 
         Game game = gameRepository.findById(event.gameId())
@@ -230,8 +242,9 @@ public class QueueService {
                 .findByQueueKey(queueKey)
                 .orElse(null);
 
+        // 동일 경기와 사용자의 DB 이력이 있으면 새로운 이력을 중복 생성하지 않는다.
+        // 기존 상태가 WAITING이면 Consumer 재처리 과정에서 누락됐을 수 있는 Redis 대기열 정보만 복구한다.
         if (Objects.nonNull(existingHistory)) {
-            // Kafka 재전달 시 기존 대기 상태의 Redis 정보만 복구한다.
             if (existingHistory.getStatus() == QueueEntryHistoryStatus.WAITING) {
                 addRedisQueueEntryIfAbsent(queueZSet, redisKey, redisMember, score);
             }
@@ -239,6 +252,7 @@ public class QueueService {
             return;
         }
 
+        // Redis에 등록하기 전에 DB 이력을 즉시 반영하여 queueKey 중복 여부를 먼저 확인한다.
         queueEntryHistoryRepository.saveAndFlush(
                 QueueEntryHistory.of(
                         game, user, queueKey, LocalDateTime.now()
@@ -297,8 +311,10 @@ public class QueueService {
             long score
     ) {
 
+        // 이미 등록된 사용자는 기존 점수를 유지하고 등록되지 않은 사용자만 전달받은 요청 시간으로 추가한다.
         Boolean registered = queueZSet.addIfAbsent(redisKey, redisMember, score);
 
+        // 결과 자체가 반환되지 않은 경우에만 등록 실패로 처리한다.
         if (Objects.isNull(registered)) {
             throw new QueueRegistrationFailedException();
         }
