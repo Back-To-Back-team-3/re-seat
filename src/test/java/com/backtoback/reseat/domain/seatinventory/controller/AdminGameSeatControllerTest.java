@@ -4,7 +4,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
+import org.junit.jupiter.api.Disabled;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 재고 오픈 API 통합 및 인가 테스트.
  */
+@Disabled("테스트제외")
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional

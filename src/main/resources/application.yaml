@@ -6,8 +6,39 @@ spring:
     active: local
     default: local
 
+
+  data:
+    web:
+      pageable:
+        page-serialization-mode: via_dto
+    redis:
+      host: localhost
+      port: 6379
+      password: ${REDIS_PASSWORD:myredispassword} # 로컬 Redis 비밀번호 (환경 변수 또는 기본값)
+
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            client-id: ${KAKAO_CLIENT_ID}
+            client-secret: ${KAKAO_CLIENT_SECRET}
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/kakao"
+            scope:
+              - profile_nickname
+              - account_email
+            client-name: Kakao
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+
   datasource:
-    url: jdbc:h2:mem:reseatdb;MODE=MySQL;DB_CLOSE_DELAY=-1
+    url: jdbc:h2:mem:reseatdb;MODE=MySQL;NON_KEYWORDS=USER;DB_CLOSE_DELAY=-1
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -20,11 +51,6 @@ spring:
     properties:
       hibernate:
         format_sql: true
-  data:
-    redis:
-      host: localhost
-      port: 6379
-      password: ${REDIS_PASSWORD:myredispassword} # 로컬 Redis 비밀번호 (환경 변수 또는 기본값)
 
   flyway:
     enabled: true
@@ -87,3 +113,21 @@ spring:
 
 jwt:
   secret: ${JWT_SECRET:?JWT_SECRET environment variable must be set!}
+
+---
+# ===================================================================
+# 3. Gradle test 및 CI 환경을 위한 테스트(test) 전용 우회 블록
+# ===================================================================
+spring:
+  config:
+    activate:
+      on-profile: test
+
+  # MySQL DDL 스크립트 억까를 방지하기 위해 Flyway를 정지시킵니다.
+  flyway:
+    enabled: false
+
+  # Flyway가 멈춘 자리에 하이버네이트가 H2 규격에 맞춰 직접 테이블을 빌드하고 휘발시키도록 명령합니다.
+  jpa:
+    hibernate:
+      ddl-auto: create-drop

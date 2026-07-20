@@ -1,13 +1,11 @@
 package com.backtoback.reseat.domain.user.auth.service;
 
 import com.backtoback.reseat.domain.user.auth.dto.request.ReissueRequest;
-import com.backtoback.reseat.domain.user.auth.dto.request.UserLoginRequest;
 import com.backtoback.reseat.domain.user.auth.dto.response.TokenResponse;
 import com.backtoback.reseat.domain.user.entity.RefreshToken;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
 import com.backtoback.reseat.domain.user.exception.DeleteUserException;
-import com.backtoback.reseat.domain.user.exception.InvalidPasswordException;
 import com.backtoback.reseat.domain.user.exception.InvalidTokenException;
 import com.backtoback.reseat.domain.user.exception.SuspendedUserException;
 import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
@@ -31,49 +29,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenRepository refreshTokenRepository;
 
-    @Transactional
-    public TokenResponse login(UserLoginRequest request) {
-        // 1. 이메일 존재 여부 확인
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new UserNotFoundException("존재하지 않는 이메일입니다."));
 
-        //로그인 요청을 보낸 사용자의 상태 체크
-        if(user.getStatus() == UserStatus.SUSPENDED){
-            throw new SuspendedUserException("이용이 정지된 계정입니다");
-        }
-        if(user.getStatus() == UserStatus.DELETED){
-            throw new DeleteUserException("탈퇴 처리된 계정입니다");
-        }
-
-        // 2. 비밀번호 일치 여부 확인 (BCrypt 매칭 필수)
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new InvalidPasswordException("비밀번호가 일치하지 않습니다.");
-        }
-
-        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail(), user.getRole().name());
-        String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
-
-        // [CodeRabbit 피드백 반영] 절대 만료 시각 계산 (14일 뒤)
-        LocalDateTime expiredAt = LocalDateTime.now().plusDays(14);
-
-        // [실제 엔티티 매핑 반영] findByUser 구조로 매핑하여 기존 토큰 갱신 또는 신규 저장
-        refreshTokenRepository.findByUser(user)
-                .ifPresentOrElse(
-                        token -> token.updateTokenValue(refreshToken, expiredAt), // 기존 토큰이 있다면 값/시간 갱신
-                        () -> refreshTokenRepository.save(
-                                RefreshToken.builder()
-                                        .user(user)
-                                        .tokenValue(refreshToken)
-                                        .expiredAt(expiredAt)
-                                        .build()
-                        )
-                );
-
-        return TokenResponse.builder()
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .build();
-    }
 
     @Transactional
     public TokenResponse reissue(ReissueRequest request) {

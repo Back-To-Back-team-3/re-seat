@@ -54,6 +54,11 @@ jobs:
             exit 0
           fi
 
+          body="$(
+            printf "%s" "$body" \
+              | python3 -c 'import sys, re; print(re.sub(r"<!--.*?-->", "", sys.stdin.read(), flags=re.DOTALL))'
+          )"
+
           changed_lines=$((additions + deletions))
 
           if [ "$changed_lines" -ge 401 ]; then

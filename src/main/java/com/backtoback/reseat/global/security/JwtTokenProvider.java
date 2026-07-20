@@ -1,6 +1,6 @@
 package com.backtoback.reseat.global.security;
 
-import com.backtoback.reseat.domain.user.verification.service.CustomUserDetailsService;
+import com.backtoback.reseat.domain.verification.service.CustomUserDetailsService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;

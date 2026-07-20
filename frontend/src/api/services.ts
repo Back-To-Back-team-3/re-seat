@@ -20,28 +20,6 @@ import {
   mockTickets
 } from "../mocks/mockData";
 
-export async function signUp(payload: {
-  email: string;
-  password: string;
-  name: string;
-  nickname: string;
-  phone: string;
-}) {
-  return apiRequest<ApiResponse<{ userId: number; email: string; role: "USER" | "ADMIN" }>>("/auth/signup", {
-    method: "POST",
-    body: JSON.stringify(payload)
-  });
-}
-
-export async function login(email: string, password: string) {
-  const response = await apiRequest<TokenResponse>("/auth/login", {
-    method: "POST",
-    body: JSON.stringify({ email, password })
-  });
-  setTokens(response.accessToken, response.refreshToken);
-  return response;
-}
-
 export async function getGames() {
   const response = await apiRequest<ApiResponse<PageResponse<GameSummary>>>("/games?size=20");
   return { data: unwrap(response).content, source: "api" } satisfies ApiResult<GameSummary[]>;
@@ -201,4 +179,12 @@ export async function getTickets() {
     const response = await apiRequest<ApiResponse<{ tickets: TicketSummary[] }>>("/tickets");
     return unwrap(response).tickets;
   }, mockTickets);
+}
+
+export async function verifyIdentity(impUid: string) {
+  const response = await apiRequest<ApiResponse<void>>("/users/verification", {
+    method: "POST",
+    body: JSON.stringify({ impUid })
+  });
+  return unwrap(response);
 }

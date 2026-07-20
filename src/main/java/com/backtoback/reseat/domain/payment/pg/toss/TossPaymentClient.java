@@ -7,6 +7,7 @@ import java.util.Base64;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.request.TossCancelRequest;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.request.TossConfirmRequest;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
@@ -16,6 +17,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import reactor.core.publisher.Mono;
 
+@Slf4j
 @Component
 public class TossPaymentClient {
 
@@ -32,7 +34,24 @@ public class TossPaymentClient {
 
     private final WebClient webClient = WebClient.builder().build();
 
+    /** 승인 응답을 받지 못하면 결제를 재조회해 Toss의 확정 상태를 반환한다. */
     public TossPaymentResponse confirm(String paymentKey, String orderId, Integer amount) {
+        try {
+            return requestConfirm(paymentKey, orderId, amount);
+        } catch (RuntimeException confirmException) {
+            TossPaymentResponse response = requeryAfterFailure(paymentKey, confirmException, "승인");
+            if (response.isApproved() || response.isConfirmFailureStatus()) {
+                log.info("토스 결제 승인 API 성공 응답 없이 재조회로 상태 확인 (paymentKey={}, tossStatus={})",
+                        paymentKey, response.getStatus());
+                return response;
+            }
+
+            throw confirmException;
+        }
+    }
+
+    /** Toss 결제 승인 API를 한 번 호출한다. */
+    private TossPaymentResponse requestConfirm(String paymentKey, String orderId, Integer amount) {
         return webClient.post()
                 .uri(baseUrl + CONFIRM_PATH)
                 .header(HttpHeaders.AUTHORIZATION, authorizationHeader())
@@ -50,20 +69,36 @@ public class TossPaymentClient {
                 .block(Duration.ofSeconds(5));
     }
 
+
+    /** 취소 응답을 받지 못하면 결제를 재조회해 Toss의 취소 완료 상태를 반환한다. */
     public TossPaymentResponse cancel(String paymentKey, String cancelReason) {
+        try {
+            return requestCancel(paymentKey, cancelReason);
+        } catch (RuntimeException cancelException) {
+            TossPaymentResponse response = requeryAfterFailure(paymentKey, cancelException, "취소");
+            if (response.isCancelCompleted()) {
+                log.info("토스 결제 취소 API 성공 응답 없이 재조회로 취소 확인 (paymentKey={})", paymentKey);
+                return response;
+            }
+            throw cancelException;
+        }
+    }
+
+    /** Toss 결제 취소 API를 한 번 호출한다. */
+    private TossPaymentResponse requestCancel(String paymentKey, String cancelReason) {
         return webClient.post()
-                .uri(baseUrl + CANCEL_PATH, paymentKey)
-                .header(HttpHeaders.AUTHORIZATION, authorizationHeader())
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(new TossCancelRequest(cancelReason))
-                .retrieve()
-                .onStatus(HttpStatusCode::isError, response ->
-                        response.bodyToMono(String.class)
-                                .defaultIfEmpty("응답 본문 없음")
-                                .flatMap(body -> Mono.error(new IllegalStateException(
-                                        "토스페이먼츠 결제 취소 API 호출 실패: " + body))))
-                .bodyToMono(TossPaymentResponse.class)
-                .block(Duration.ofSeconds(5));
+                   .uri(baseUrl + CANCEL_PATH, paymentKey)
+                   .header(HttpHeaders.AUTHORIZATION, authorizationHeader())
+                   .contentType(MediaType.APPLICATION_JSON)
+                   .bodyValue(new TossCancelRequest(cancelReason))
+                   .retrieve()
+                   .onStatus(HttpStatusCode::isError, response ->
+                                                          response.bodyToMono(String.class)
+                                                              .defaultIfEmpty("응답 본문 없음")
+                                                              .flatMap(body -> Mono.error(new IllegalStateException(
+                                                                  "토스페이먼츠 결제 취소 API 호출 실패: " + body))))
+                   .bodyToMono(TossPaymentResponse.class)
+                   .block(Duration.ofSeconds(5));
     }
 
     public TossPaymentResponse getPayment(String paymentKey) {
@@ -78,6 +113,19 @@ public class TossPaymentClient {
                                         "토스페이먼츠 결제 조회 API 호출 실패: " + body))))
                 .bodyToMono(TossPaymentResponse.class)
                 .block(Duration.ofSeconds(5));
+    }
+
+    /** API 호출 실패 후 결제 단건을 재조회하고, 재조회도 실패하면 최초 예외를 다시 던진다. */
+    private TossPaymentResponse requeryAfterFailure(
+            String paymentKey, RuntimeException originalException, String operation) {
+        try {
+            return getPayment(paymentKey);
+        } catch (RuntimeException requeryException) {
+            originalException.addSuppressed(requeryException);
+            log.warn("토스 결제 {} API 호출 실패 후 재조회로 상태 확인 불가 (paymentKey={})",
+                    operation, paymentKey, originalException);
+            throw originalException;
+        }
     }
 
     private String authorizationHeader() {
