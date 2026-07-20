@@ -58,4 +58,3 @@ public record GameSeatOpenResponse(
     ) {
     }
 }
-
