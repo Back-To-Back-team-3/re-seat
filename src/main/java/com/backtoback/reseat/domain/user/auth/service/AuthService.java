@@ -29,8 +29,6 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenRepository refreshTokenRepository;
 
-
-
     @Transactional
     public TokenResponse reissue(ReissueRequest request) {
         String refreshToken = request.getRefreshToken();
