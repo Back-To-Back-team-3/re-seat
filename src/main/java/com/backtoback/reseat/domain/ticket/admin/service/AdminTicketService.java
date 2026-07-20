@@ -12,12 +12,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class AdminTicketService {
 
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
 
+    @Transactional(readOnly = true)
     public Page<AdminUserTicketResponse> getUserTickets(Long userId, TicketStatus status, Pageable pageable) {
         // 회원 존재 검증
         if (!userRepository.existsById(userId)) {

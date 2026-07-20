@@ -4,48 +4,45 @@ import com.backtoback.reseat.domain.ticket.entity.Ticket;
 import com.backtoback.reseat.domain.ticket.entity.TicketStatus;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Builder;
-import lombok.Getter;
 
 import java.time.LocalDateTime;
 
-@Getter
 @Builder
-public class AdminUserTicketResponse {
+public record AdminUserTicketResponse(
+        Long ticketId,
+        String ticketNo,
+        TicketStatus status,     // ISSUED, USED, CANCELED
+        String qrToken,          // QR 토큰
 
-    private Long ticketId;
-    private String ticketNo;
-    private TicketStatus status;     // ISSUED, USED, CANCELED
-    private String qrToken;
+        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+        LocalDateTime issuedAt,
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime issuedAt;
+        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+        LocalDateTime usedAt,
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime usedAt;
+        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+        LocalDateTime canceledAt,
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime canceledAt;
+        // 경기 정보
+        Long gameId,
+        String gameTitle,
+        String stadiumName,
+        String homeTeamName,
+        String awayTeamName,
 
-    // 경기 정보
-    private Long gameId;
-    private String gameTitle;
-    private String stadiumName;
-    private String homeTeamName;
-    private String awayTeamName;
+        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+        LocalDateTime gameAt,
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime gameAt;
+        // 좌석 정보 (명세서 통합 표기 format: "1루 블루석 A-3-12")
+        String seat,
 
-    // 좌석 정보
-    private String seat;
-
-    // 좌석 세부 정보
-    private Long gameSeatId;
-    private String zoneName;
-    private String seatBlock;
-    private String seatRow;
-    private String seatNumber;
-
+        // 좌석 세부 정보
+        Long gameSeatId,
+        String zoneName,
+        String seatBlock,
+        String seatRow,
+        String seatNumber
+) {
     public static AdminUserTicketResponse from(Ticket ticket) {
         var game = ticket.getGame();
         var gameSeat = ticket.getGameSeat();
