@@ -5,6 +5,8 @@ import com.backtoback.reseat.domain.order.entity.OrderItem;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.global.common.BaseEntity;
+import com.backtoback.reseat.global.exception.BusinessException;
+import com.backtoback.reseat.global.exception.ErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -179,9 +181,7 @@ public class Ticket extends BaseEntity {
         if (newOwner == null) {
             throw new IllegalArgumentException("newOwner는 필수입니다.");
         }
-        if (this.status != TicketStatus.ISSUED) {
-            throw new IllegalStateException("발급 상태의 티켓만 소유자를 변경할 수 있습니다.");
-        }
+        validateStatus(TicketStatus.ISSUED);
         if (java.util.Objects.equals(this.user.getId(), newOwner.getId())) {
             throw new IllegalArgumentException("현재 소유자와 동일한 사용자로 변경할 수 없습니다.");
         }
@@ -191,8 +191,15 @@ public class Ticket extends BaseEntity {
 
     // 현재 티켓 상태가 기대 상태와 같은지 검증
     private void validateStatus(TicketStatus expected) {
+        if (this.status == TicketStatus.CANCELED) {
+            throw new BusinessException(ErrorCode.TICKET_ALREADY_CANCELED);
+        }
+        if (this.status == TicketStatus.USED) {
+            throw new BusinessException(ErrorCode.TICKET_ALREADY_USED);
+        }
         if (this.status != expected) {
-            throw new IllegalStateException(
+            throw new BusinessException(
+                ErrorCode.INVALID_REQUEST,
                 "티켓 상태가 올바르지 않습니다. expected=" + expected + ", current=" + this.status
             );
         }

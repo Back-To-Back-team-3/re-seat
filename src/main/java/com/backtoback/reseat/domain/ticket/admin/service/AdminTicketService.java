@@ -55,8 +55,8 @@ public class AdminTicketService {
         }
 
         //연관된 결제 내역이 존재하는 경우 결제 상태 Canceled 전환
-        if(ticket.getOrderItem() != null && ticket.getOrderItem().getId() != null){
-            Long orderId = ticket.getOrderItem().getId();
+        if(ticket.getOrderItem() != null && ticket.getOrderItem().getOrder().getId() != null){
+            Long orderId = ticket.getOrderItem().getOrder().getId();
             paymentRepository.findFirstByOrderIdAndStatusOrderByCreatedAtDesc(orderId, PaymentStatus.APPROVED)
                 .ifPresent(Payment::cancel);
         }
