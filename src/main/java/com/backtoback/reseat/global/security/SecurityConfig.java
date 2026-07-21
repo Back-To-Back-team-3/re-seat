@@ -51,7 +51,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
 
                 //인증이 불필요한 경로 허용
-                .requestMatchers("/api/v1/auth/reissue", "/oauth2/**", "/login/**").permitAll()
+                .requestMatchers("/api/v1/auth/**", "/oauth2/**", "/login/**").permitAll()
                 .requestMatchers(PathRequest.toH2Console()).permitAll()
                 .requestMatchers("/swagger-ui/**","/v3/api-docs/**").permitAll()
 

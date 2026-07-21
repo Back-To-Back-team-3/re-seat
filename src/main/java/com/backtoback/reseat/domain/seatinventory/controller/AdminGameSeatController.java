@@ -75,7 +75,6 @@ public class AdminGameSeatController {
         GameSeatOpenResponse response = gameSeatCreateService.openInventory(gameId);
 
         // 리소스가 새로 생성됐으므로 201.
-        // 조회 API와 달리 상태 코드 제어가 필요해 ResponseEntity를 쓴다.
         return ResponseEntity
             .status(HttpStatus.CREATED)
             .body(ApiResponse.success("좌석 재고 오픈 성공", response));
