@@ -1,10 +1,13 @@
 package com.backtoback.reseat.domain.ticket.admin.controller;
 
+import com.backtoback.reseat.domain.ticket.admin.dto.request.AdminTicketCancelRequest;
+import com.backtoback.reseat.domain.ticket.admin.dto.response.AdminTicketCancelResponse;
 import com.backtoback.reseat.domain.ticket.admin.dto.response.AdminUserTicketResponse;
 import com.backtoback.reseat.domain.ticket.admin.service.AdminTicketService;
 import com.backtoback.reseat.domain.ticket.entity.TicketStatus;
 import com.backtoback.reseat.global.common.ApiResponse;
 import com.backtoback.reseat.global.common.PageResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -32,5 +35,17 @@ public class AdminTicketController {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success("사용자 티켓 소유 목록 조회 완료", PageResponse.of(pageResult)));
+    }
+    //관리자 전용: 특정 티켓 강제 취소
+    @PostMapping("/{ticketId}/cancel")
+    public ResponseEntity<ApiResponse<AdminTicketCancelResponse>> cancelTicketByAdmin(
+        @PathVariable Long ticketId,
+        @Valid @RequestBody AdminTicketCancelRequest request){
+
+        AdminTicketCancelResponse response = adminTicketService.cancelTicketByAdmin(ticketId, request);
+
+        return ResponseEntity
+            .status(HttpStatus.OK)
+            .body(ApiResponse.success("관리자 직권 티켓 강제 취소 및 자원 반환 완료", response));
     }
 }
