@@ -23,7 +23,7 @@ public class PaymentCreateResponse {
         return PaymentCreateResponse.builder()
                 .paymentId(payment.getId())
                 .paymentNo(payment.getPaymentNo())
-                .orderId(payment.getOrderId())
+                .orderId(payment.getOrder().getId())
                 .amount(payment.getAmount())
                 .method(payment.getMethod())
                 .status(payment.getStatus())

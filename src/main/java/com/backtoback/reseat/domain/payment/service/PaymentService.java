@@ -1,6 +1,5 @@
 package com.backtoback.reseat.domain.payment.service;
 
-import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.exception.OrderExpiredException;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentCancelRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
@@ -69,8 +68,7 @@ public class PaymentService {
 
         // READY 결제만 Toss 승인 요청 전에 콜백 주문·금액을 검증한다.
         paymentValidator.validateConfirmable(payment, request.getOrderId(), request.getAmount());
-        Order order = paymentOrderPolicy.getOwnedOrder(userId, payment.getOrderId());
-        paymentOrderPolicy.ensurePayable(payment, order);
+        paymentOrderPolicy.ensurePayable(payment, payment.getOrder());
 
         // Toss에 최종 승인을 요청하고, 응답을 받지 못하면 클라이언트 내부에서 단건 재조회로 상태를 확인한다.
         TossPaymentResponse response = tossPaymentClient.confirm(

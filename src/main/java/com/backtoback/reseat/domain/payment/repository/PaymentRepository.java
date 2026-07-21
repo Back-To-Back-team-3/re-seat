@@ -16,7 +16,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     Optional<Payment> findByPgPaymentKey(String pgPaymentKey);
 
-    Optional<Payment> findByOrderId(Long orderId);
+    Optional<Payment> findByOrder_Id(Long orderId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from Payment p where p.id = :paymentId")

@@ -43,8 +43,7 @@ public class PaymentCreationService {
         paymentValidator.validateIdempotencyRequest(payment, request.getOrderId());
 
         if (payment.getStatus() == PaymentStatus.READY) {
-            Order order = paymentOrderPolicy.getOwnedOrder(userId, payment.getOrderId());
-            paymentOrderPolicy.ensurePayable(payment, order);
+            paymentOrderPolicy.ensurePayable(payment, payment.getOrder());
         }
 
         return PaymentCreateResponse.from(payment);
@@ -54,7 +53,7 @@ public class PaymentCreationService {
     private PaymentCreateResponse requestWithNewIdempotencyKey(
             Long userId, String idempotencyKey, PaymentRequest request) {
         Order order = paymentOrderPolicy.getOwnedOrder(userId, request.getOrderId());
-        Optional<Payment> existingPayment = paymentRepository.findByOrderId(order.getId());
+        Optional<Payment> existingPayment = paymentRepository.findByOrder_Id(order.getId());
 
         if (existingPayment.isPresent()) {
             Payment payment = existingPayment.get();
@@ -87,7 +86,7 @@ public class PaymentCreationService {
 
         Payment payment = Payment.builder()
                               .paymentNo(paymentNo)
-                              .orderId(order.getId())
+                              .order(order)
                               .user(order.getUser())
                               .amount(order.getTotalAmount())
                               .idempotencyKey(idempotencyKey)
