@@ -4,6 +4,7 @@ package com.backtoback.reseat.global.security;
 import com.backtoback.reseat.domain.user.auth.service.CustomOAuth2UserService;
 import com.backtoback.reseat.domain.user.auth.service.OAuth2AuthenticationFailureHandler;
 import com.backtoback.reseat.domain.user.auth.service.OAuth2AuthenticationSuccessHandler;
+import jakarta.servlet.DispatcherType;
 import org.springframework.http.HttpMethod;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
@@ -49,6 +50,9 @@ public class SecurityConfig {
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             //엔드 포인트별 인가 허용 정책 설정
             .authorizeHttpRequests(auth -> auth
+
+                // 비동기 요청 처리 후 발생하는 ASYNC 디스패치를 허용한다.
+                .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
 
                 //인증이 불필요한 경로 허용
                 .requestMatchers("/api/v1/auth/**", "/oauth2/**", "/login/**").permitAll()

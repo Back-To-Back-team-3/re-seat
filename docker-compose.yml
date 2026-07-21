@@ -47,13 +47,53 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
+      # Web App 컨테이너가 Docker 내부 리스너를 통해 Kafka에 연결한다.
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
     depends_on:
       mysql-db:
         condition: service_healthy
       redis:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
     networks:
       - reseat-network
+
+  # 로컬 개발용 단일 Kafka 브로커다.
+  # ZooKeeper 없이 KRaft를 사용하고, 하나의 노드가 Broker와 Controller 역할을 한 번에 수행한다.
+  kafka:
+    image: apache/kafka:3.9.2
+    container_name: reseat-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      # 단일 노드 KRaft Combined Mode 설정
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      # 9093은 Controller, 19092는 Docker 내부, 9092는 호스트 접근에 사용한다.
+      KAFKA_LISTENERS: CONTROLLER://:9093,PLAINTEXT://:19092,PLAINTEXT_HOST://:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:19092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      # 오타로 잘못된 토픽이 자동생성 되지 않도록 비활성화한다.
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      # 로컬 브로커가 한 대이므로 Kafka 내부 토픽의 복제수를 1개로 설정한다.
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      - reseat-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "/opt/kafka/bin/kafka-topics.sh", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
 networks:
   reseat-network:
@@ -62,3 +102,5 @@ networks:
 volumes:
   mysql-data:
   redis-data:
+  kafka-data:
+
