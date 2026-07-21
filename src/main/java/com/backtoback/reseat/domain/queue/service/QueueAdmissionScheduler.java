@@ -78,6 +78,10 @@ public class QueueAdmissionScheduler {
         }
         // 잘못된 Redis Key 또는 입장 처리 중 발생한 예외를 기록하고 다음 경기 대기열 처리를 계속한다.
         catch (RuntimeException e) {
+            // 인터럽트가 발생한 경우 현재 스케줄 실행을 즉시 종료하도록 예외를 다시 전파한다.
+            if (Thread.currentThread().isInterrupted()) {
+                throw e;
+            }
             log.error(
                     "대기열 자동 입장 처리 실패. redisKey={}",
                     redisKey, e

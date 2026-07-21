@@ -175,11 +175,11 @@ public class AdmissionTokenService {
 
             return admittedCount;
         } catch (InterruptedException e) {
-            // InterruptedException을 처리하면서 제거된 interrup 상태를 복원해 상윈 실행 흐름에서도 중단 사실을 확인할 수 있게 한다.
+            // InterruptedException을 처리하면서 제거된 interrupt 상태를 복원해 상위 실행 흐름에서도 중단 사실을 확인할 수 있게 한다.
             Thread.currentThread().interrupt();
-            throw new QueueAdmissionFailedException("입장 허용 처 중 스레드가 중단되었습니다.");
+            throw new QueueAdmissionFailedException("입장 허용 처리 중 스레드가 중단되었습니다.");
         } finally {
-            // 트랜잭션 동기화 등록 전에 예외가 발생한 경우 afterCompletion이 실행되지 않으므로 여기서 직접 lock을 해제 한다.
+            // 트랜잭션 동기화 등록 전에 예외가 발생한 경우 afterCompletion이 실행되지 않으므로 여기서 직접 lock을 해제한다.
             if (locked && lock.isHeldByCurrentThread() && !lockReleaseRegistered) {
                 lock.unlock();
             }

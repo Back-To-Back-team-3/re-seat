@@ -197,7 +197,7 @@ public class QueueService {
                 .publish(event)
                 .thenAccept(result -> {})
                 .exceptionally(exception -> {
-                    throw new QueueEventPublishFailedException();
+                    throw new QueueEventPublishFailedException(exception);
                 });
     }
 
