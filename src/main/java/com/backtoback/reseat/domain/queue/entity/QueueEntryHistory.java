@@ -24,19 +24,20 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * 경기별 사용자 대기열 진입 이력 Entity
- *
- * <p>실시간 순번은 Redis ZSet에서 관리하고, 이 Entity는 진입/입장 허용/취소 상태 이력을 저장한다.</p>
+ * 경기별 사용자 대기열의 처리 상태와 상태 전환 시간을 저장하는 Entity
  */
 @Entity
 @Table(
         name = "queue_entry_histories",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_queue_entry_histories_queue_key", columnNames = "queue_key") // Redis 대기열 키 중복 방지
+                // 동일 경기와 사용자의 DB 대기 이력 중복 생성 방지
+                @UniqueConstraint(name = "uk_queue_entry_histories_queue_key", columnNames = "queue_key")
         },
         indexes = {
-                @Index(name = "idx_queue_entry_histories_game_user", columnList = "game_id, user_id"),  // 사용자 대기열 상태 조회
-                @Index(name = "idx_queue_entry_histories_game_status", columnList = "game_id, status")  // 경기별 대기열 상태 조회
+                // 경기와 사용자 기준 이력 조회
+                @Index(name = "idx_queue_entry_histories_game_user", columnList = "game_id, user_id"),
+                // 경기별 상태 기준 이력 조회
+                @Index(name = "idx_queue_entry_histories_game_status", columnList = "game_id, status")
         }
 )
 @Getter
@@ -79,6 +80,15 @@ public class QueueEntryHistory {
     @Column(name = "canceled_at")
     private LocalDateTime canceledAt;
 
+    /**
+     * 경기와 사용자의 최초 대기열 진입 이력을 생성한다.
+     *
+     * @param game 대기열 진입 대상 경기
+     * @param user 대기열에 진입한 사용자
+     * @param queueKey 경기와 사용자를 조합한 고유 대기열 식별값
+     * @param enteredAt DB 대기열 진입 이력 생성 시간
+     * @return WAITING 상태로 생성된 대기열 진입 이력
+     */
     public static QueueEntryHistory of(Game game, User user, String queueKey, LocalDateTime enteredAt) {
         QueueEntryHistory queueEntryHistory = new QueueEntryHistory();
         queueEntryHistory.game = game;
@@ -89,7 +99,11 @@ public class QueueEntryHistory {
         return queueEntryHistory;
     }
 
-    // WAITING 상태에서만 CANCELED로 전이할 수 있다.
+    /**
+     * 대기 중인 사용자의 상태를 취소로 변경한다.
+     *
+     * @param canceledAt 대기열 취소 시간
+     */
     public void cancel(LocalDateTime canceledAt) {
         if (this.status != QueueEntryHistoryStatus.WAITING) {
             throw new QueueInvalidStatusException("대기 중인 상태만 취소할 수 있습니다.");
@@ -99,7 +113,11 @@ public class QueueEntryHistory {
         this.canceledAt = canceledAt;
     }
 
-    // WAITING 상태에서만 ADMITTED로 전이할 수 있다.
+    /**
+     * 대기 중인 사용자의 상태를 입장 허용으로 변경한다.
+     *
+     * @param admittedAt 입장 허용 시간
+     */
     public void admit(LocalDateTime admittedAt) {
         if (this.status != QueueEntryHistoryStatus.WAITING) {
             throw new QueueInvalidStatusException("대기 중인 상태만 입장 허용할 수 있습니다.");
