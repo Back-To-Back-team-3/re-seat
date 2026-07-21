@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
     name = "payments",
     uniqueConstraints = {
         @UniqueConstraint(name = "uk_payments_no", columnNames = "payment_no"),
+        @UniqueConstraint(name = "uk_payments_order", columnNames = "order_id"),
         @UniqueConstraint(name = "uk_payments_idempotency_key", columnNames = "idempotency_key"),
         @UniqueConstraint(name = "uk_payments_pg_payment_key", columnNames = "pg_payment_key")
     },
