@@ -1,7 +1,6 @@
 package com.backtoback.reseat.domain.payment.repository;
 
 import com.backtoback.reseat.domain.payment.entity.Payment;
-import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
 import jakarta.persistence.LockModeType;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -17,7 +16,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     Optional<Payment> findByPgPaymentKey(String pgPaymentKey);
 
-    Optional<Payment> findFirstByOrderIdAndStatusOrderByCreatedAtDesc(Long orderId, PaymentStatus status);
+    Optional<Payment> findByOrderId(Long orderId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from Payment p where p.id = :paymentId")

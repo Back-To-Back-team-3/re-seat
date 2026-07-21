@@ -204,30 +204,33 @@ public class PaymentService {
         return PaymentCreateResponse.from(payment);
     }
 
-    /** 처음 사용된 멱등키로 승인 결제나 재사용 가능한 READY 결제를 확인하고, 없으면 새 결제를 생성한다. */
+    /** 처음 사용된 멱등키로 주문의 기존 결제를 확인하고, 없으면 새 결제를 생성한다. */
     private PaymentCreateResponse requestWithNewIdempotencyKey(
             Long userId, String idempotencyKey, PaymentRequest request) {
         // 주문 소유자를 확인한 뒤 주문 기준으로 기존 결제를 조회한다.
         Order order = getOwnedOrder(userId, request.getOrderId());
+        Optional<Payment> existingPayment = paymentRepository.findByOrderId(order.getId());
 
-        // 같은 주문에 승인된 결제가 있으면 새 PG 요청 없이 기존 결제 결과를 반환한다.
-        Optional<Payment> approvedPayment = paymentRepository.findFirstByOrderIdAndStatusOrderByCreatedAtDesc(
-                order.getId(), PaymentStatus.APPROVED);
-        if (approvedPayment.isPresent()) {
-            return PaymentCreateResponse.from(approvedPayment.get());
-        }
+        if (existingPayment.isPresent()) {
+            Payment payment = existingPayment.get();
 
-        Optional<Payment> readyPayment = paymentRepository.findFirstByOrderIdAndStatusOrderByCreatedAtDesc(
-                order.getId(), PaymentStatus.READY);
-        ensureOrderPayable(readyPayment.orElse(null), order);
+            // 같은 주문에 승인된 결제가 있으면 새 PG 요청 없이 기존 결제 결과를 반환한다.
+            if (payment.getStatus() == PaymentStatus.APPROVED) {
+                return PaymentCreateResponse.from(payment);
+            }
 
-        // 아직 유효한 READY 결제가 있으면 새 결제를 만들지 않고 기존 요청을 재사용한다.
-        if (readyPayment.isPresent()) {
-            Payment payment = readyPayment.get();
+            // 실패 또는 취소로 종결된 결제가 있으면 같은 주문으로 새 결제를 만들 수 없다.
+            if (payment.getStatus() != PaymentStatus.READY) {
+                throw new PaymentOrderNotPayableException();
+            }
+
+            // 아직 유효한 READY 결제가 있으면 새 결제를 만들지 않고 기존 요청을 재사용한다.
+            ensureOrderPayable(payment, order);
             payment.changeIdempotencyKey(idempotencyKey);
             return PaymentCreateResponse.from(payment);
         }
 
+        ensureOrderPayable(null, order);
         return PaymentCreateResponse.from(createReadyPayment(order, idempotencyKey));
     }
 
