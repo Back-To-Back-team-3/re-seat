@@ -1,7 +1,7 @@
 package com.backtoback.reseat.domain.seatinventory.entity;
 
 import com.backtoback.reseat.domain.game.entity.Game;
-import com.backtoback.reseat.domain.reservation.exception.InvalidReservationStatusException;
+import com.backtoback.reseat.domain.reservation.exception.InvalidStateTransitionException;
 import com.backtoback.reseat.domain.stadium.entity.Seat;
 import com.backtoback.reseat.global.common.BaseEntity;
 import jakarta.persistence.Column;
@@ -112,15 +112,16 @@ public class GameSeat extends BaseEntity {
      * 선점 만료 시각(hold_expires_at)을 상태 전이와 원자적으로 함께 세팅한다.
      * 한쪽만 바뀌면 정합이 깨지므로 반드시 같은 메서드에서 처리한다.
      *
-     * @throws InvalidReservationStatusException AVAILABLE이 아닌 상태에서 호출 시
+     * @throws InvalidStateTransitionException AVAILABLE이 아닌 상태에서 호출 시
      */
     public void hold(LocalDateTime holdExpiresAt) {
         if (this.status != GameSeatStatus.AVAILABLE) {
-            throw new InvalidReservationStatusException();
+            throw new InvalidStateTransitionException();
         }
         this.status = GameSeatStatus.HELD;
         this.holdExpiresAt = holdExpiresAt;
     }
+
 
     /**
      * HELD → AVAILABLE (선점 해제 / TTL 만료).
@@ -128,11 +129,11 @@ public class GameSeat extends BaseEntity {
      * 기존 available()과 달리 출발 상태(HELD)를 검증한다.
      * 만료 시각을 함께 초기화해 정합을 유지한다.
      *
-     * @throws InvalidReservationStatusException HELD가 아닌 상태에서 호출 시
+     * @throws InvalidStateTransitionException HELD가 아닌 상태에서 호출 시
      */
     public void release() {
         if (this.status != GameSeatStatus.HELD) {
-            throw new InvalidReservationStatusException();
+            throw new InvalidStateTransitionException();
         }
         this.status = GameSeatStatus.AVAILABLE;
         this.holdExpiresAt = null;
@@ -144,11 +145,11 @@ public class GameSeat extends BaseEntity {
      * 판매 확정 시 만료 시각은 더 이상 의미가 없으므로 null로 초기화한다.
      * sold_at은 현재 시각으로 기록한다.
      *
-     * @throws InvalidReservationStatusException HELD가 아닌 상태에서 호출 시
+     * @throws InvalidStateTransitionException HELD가 아닌 상태에서 호출 시
      */
     public void sell() {
         if (this.status != GameSeatStatus.HELD) {
-            throw new InvalidReservationStatusException();
+            throw new InvalidStateTransitionException();
         }
         this.status = GameSeatStatus.SOLD;
         this.holdExpiresAt = null;

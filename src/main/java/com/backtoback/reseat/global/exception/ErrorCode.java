@@ -58,6 +58,7 @@ public enum ErrorCode {
     SEAT_INVENTORY_ALREADY_OPENED(HttpStatus.CONFLICT, "이미 좌석 재고가 오픈된 경기입니다."),
     MAX_SEAT_COUNT_EXCEEDED(HttpStatus.BAD_REQUEST, "1인당 최대 예매 좌석 수를 초과했습니다."),
     LOCK_FAILED(HttpStatus.CONFLICT, "잠시 후 다시 시도해 주세요."),
+    INVALID_STATE_TRANSITION(HttpStatus.CONFLICT, "허용되지 않은 상태 전이입니다."),
 
     // 예약/선점 (reservations)
     RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "예약을 찾을 수 없습니다."),
