@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.reservation.exception;
+package com.backtoback.reseat.domain.seatinventory.exception;
 
 import com.backtoback.reseat.global.exception.BusinessException;
 import com.backtoback.reseat.global.exception.ErrorCode;

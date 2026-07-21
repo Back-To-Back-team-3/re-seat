@@ -1,7 +1,7 @@
 package com.backtoback.reseat.domain.seatinventory.entity;
 
 import com.backtoback.reseat.domain.game.entity.Game;
-import com.backtoback.reseat.domain.reservation.exception.InvalidStateTransitionException;
+import com.backtoback.reseat.domain.seatinventory.exception.InvalidStateTransitionException;
 import com.backtoback.reseat.domain.stadium.entity.Seat;
 import com.backtoback.reseat.global.common.BaseEntity;
 import jakarta.persistence.Column;
