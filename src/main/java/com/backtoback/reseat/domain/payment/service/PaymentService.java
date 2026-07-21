@@ -2,6 +2,7 @@ package com.backtoback.reseat.domain.payment.service;
 
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.entity.OrderStatus;
+import com.backtoback.reseat.domain.order.exception.OrderExpiredException;
 import com.backtoback.reseat.domain.order.repository.OrderRepository;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentCancelRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
@@ -21,7 +22,6 @@ import com.backtoback.reseat.domain.payment.exception.PaymentOrderNotPayableExce
 import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -38,11 +38,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class PaymentService {
 
-    private static final Duration READY_PAYMENT_REUSE_DURATION = Duration.ofMinutes(30);
     private static final DateTimeFormatter PAYMENT_NO_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     private final PaymentRepository paymentRepository;
-    // TODO: 주문 도메인 결제 조회/검증 API가 생기면 OrderRepository 직접 의존을 제거할 예정.
     private final OrderRepository orderRepository;
     private final TossPaymentClient tossPaymentClient;
     private final PaymentServiceValidator paymentValidator;
@@ -57,7 +55,7 @@ public class PaymentService {
      * @param request 결제 요청 정보
      * @return 결제 처리 결과
      */
-    @Transactional
+    @Transactional(noRollbackFor = OrderExpiredException.class)
     public PaymentCreateResponse requestPayment(Long userId, String idempotencyKey, PaymentRequest request) {
         paymentValidator.validateIdempotencyKey(idempotencyKey);
 
@@ -75,7 +73,7 @@ public class PaymentService {
      * @param request 토스가 클라이언트에 돌려준 paymentKey/orderId/amount
      * @return 확정된 결제 결과
      */
-    @Transactional
+    @Transactional(noRollbackFor = OrderExpiredException.class)
     public PaymentActionResponse completePayment(
             Long userId, Long paymentId, String idempotencyKey, PaymentCompleteRequest request) {
         // 로컬 결제를 잠그고 현재 결제 시도의 콜백인지 확인한다.
@@ -87,6 +85,8 @@ public class PaymentService {
 
         // READY 결제만 Toss 승인 요청 전에 콜백 주문·금액을 검증한다.
         paymentValidator.validateConfirmable(payment, request.getOrderId(), request.getAmount());
+        Order order = getOwnedOrder(userId, payment.getOrderId());
+        ensureOrderPayable(payment, order);
 
         // Toss에 최종 승인을 요청하고, 응답을 받지 못하면 클라이언트 내부에서 단건 재조회로 상태를 확인한다.
         TossPaymentResponse response = tossPaymentClient.confirm(
@@ -195,14 +195,20 @@ public class PaymentService {
     private PaymentCreateResponse resolveExistingPayment(Long userId, PaymentRequest request, Payment payment) {
         paymentValidator.validateOwner(payment, userId);
         paymentValidator.validateIdempotencyRequest(payment, request.getOrderId());
+
+        if (payment.getStatus() == PaymentStatus.READY) {
+            Order order = getOwnedOrder(userId, payment.getOrderId());
+            ensureOrderPayable(payment, order);
+        }
+
         return PaymentCreateResponse.from(payment);
     }
 
     /** 처음 사용된 멱등키로 승인 결제나 재사용 가능한 READY 결제를 확인하고, 없으면 새 결제를 생성한다. */
     private PaymentCreateResponse requestWithNewIdempotencyKey(
             Long userId, String idempotencyKey, PaymentRequest request) {
-        // 주문 소유자와 결제 가능 상태를 확인한 뒤 주문 기준으로 기존 결제를 조회한다.
-        Order order = getPayableOrder(userId, request.getOrderId());
+        // 주문 소유자를 확인한 뒤 주문 기준으로 기존 결제를 조회한다.
+        Order order = getOwnedOrder(userId, request.getOrderId());
 
         // 같은 주문에 승인된 결제가 있으면 새 PG 요청 없이 기존 결제 결과를 반환한다.
         Optional<Payment> approvedPayment = paymentRepository.findFirstByOrderIdAndStatusOrderByCreatedAtDesc(
@@ -211,22 +217,15 @@ public class PaymentService {
             return PaymentCreateResponse.from(approvedPayment.get());
         }
 
-        // 아직 유효한 READY 결제가 있으면 새 결제를 만들지 않고 기존 요청을 재사용한다.
         Optional<Payment> readyPayment = paymentRepository.findFirstByOrderIdAndStatusOrderByCreatedAtDesc(
                 order.getId(), PaymentStatus.READY);
+        ensureOrderPayable(readyPayment.orElse(null), order);
+
+        // 아직 유효한 READY 결제가 있으면 새 결제를 만들지 않고 기존 요청을 재사용한다.
         if (readyPayment.isPresent()) {
             Payment payment = readyPayment.get();
-            LocalDateTime createdAt = payment.getCreatedAt();
-            boolean reusable = createdAt != null
-                    && !createdAt.isBefore(LocalDateTime.now().minus(READY_PAYMENT_REUSE_DURATION));
-
-            if (reusable) {
-                payment.changeIdempotencyKey(idempotencyKey);
-                return PaymentCreateResponse.from(payment);
-            }
-
-            // 재사용 기한이 지난 READY 결제는 실패로 닫고 아래에서 새 결제를 생성한다.
-            payment.fail("토스 결제 유효 시간이 만료되었습니다.", LocalDateTime.now());
+            payment.changeIdempotencyKey(idempotencyKey);
+            return PaymentCreateResponse.from(payment);
         }
 
         return PaymentCreateResponse.from(createReadyPayment(order, idempotencyKey));
@@ -267,8 +266,8 @@ public class PaymentService {
         return payment;
     }
 
-    /** 결제 요청 가능한 주문을 조회하고 소유자와 주문 상태를 검증한다. */
-    private Order getPayableOrder(Long userId, Long orderId) {
+    /** 주문을 조회하고 결제 요청 사용자에게 소유권이 있는지 검증한다. */
+    private Order getOwnedOrder(Long userId, Long orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(PaymentOrderNotFoundException::new);
 
@@ -276,11 +275,23 @@ public class PaymentService {
             throw new PaymentAccessDeniedException();
         }
 
+        return order;
+    }
+
+    /** 주문 결제 기한과 상태를 검증하고, 기한이 지났다면 READY 결제를 실패 처리한다. */
+    private void ensureOrderPayable(Payment payment, Order order) {
+        LocalDateTime now = LocalDateTime.now();
+        if (!order.getPaymentDeadline().isAfter(now)) {
+            if (payment != null) {
+                payment.fail("주문 결제 기한이 만료되었습니다.", now);
+            }
+            // TODO: 주문 도메인의 결제 만료 상태 전이 메서드가 추가되면 후속 처리를 호출한다.
+            throw new OrderExpiredException();
+        }
+
         if (order.getStatus() != OrderStatus.CREATED) {
             throw new PaymentOrderNotPayableException();
         }
-
-        return order;
     }
 
     // ===== conversion helpers =====
