@@ -5,6 +5,8 @@ import com.backtoback.reseat.domain.order.entity.OrderItem;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.global.common.BaseEntity;
+import com.backtoback.reseat.global.exception.BusinessException;
+import com.backtoback.reseat.global.exception.ErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -93,10 +95,15 @@ public class Ticket extends BaseEntity {
     @Column(name = "status", nullable = false, length = 20)
     private TicketStatus status;
 
-    // 티켓 취소 사유, 취소되지 않은 티켓은 null일 수 있음
+    // 티켓 취소 사유 유형 (USER_REFUND, ADMIN_FORCE_CANCEL, PAYMENT_CANCELED)
     @Enumerated(EnumType.STRING)
     @Column(name = "cancel_reason", length = 30)
     private TicketCancelReason cancelReason;
+
+    // 티켓 상세 취소 사유 (관리자 입력 상세 사유 등)
+    @Column(name = "cancel_detail", length = 255)
+    private String cancelDetail;
+
 
     // 입장 검증용 QR 토큰
     @Column(name = "qr_token", length = 255)
@@ -113,6 +120,8 @@ public class Ticket extends BaseEntity {
     // 티켓 취소 시간
     @Column(name = "canceled_at")
     private LocalDateTime canceledAt;
+
+
 
     public static Ticket issue(
         String ticketNo,
@@ -155,10 +164,42 @@ public class Ticket extends BaseEntity {
         this.canceledAt = LocalDateTime.now();
     }
 
+
+      //관리자 전용 직권 취소 처리
+      //@param detail 관리자가 입력한 취소 상세 사유 (예: "매크로 부정 예매 탐지")
+
+    public void cancelByAdmin(String detail) {
+        validateStatus(TicketStatus.ISSUED);
+        this.status = TicketStatus.CANCELED;
+        this.cancelReason = TicketCancelReason.ADMIN_FORCE_CANCEL;
+        this.cancelDetail = (detail != null && !detail.isBlank()) ? detail : "관리자 직권 취소";
+        this.canceledAt = LocalDateTime.now();
+    }
+
+    // 재판매 완료 시 소유자 변경
+    public void changeOwner(User newOwner) {
+        if (newOwner == null) {
+            throw new IllegalArgumentException("newOwner는 필수입니다.");
+        }
+        validateStatus(TicketStatus.ISSUED);
+        if (java.util.Objects.equals(this.user.getId(), newOwner.getId())) {
+            throw new IllegalArgumentException("현재 소유자와 동일한 사용자로 변경할 수 없습니다.");
+        }
+
+        this.user = newOwner;
+    }
+
     // 현재 티켓 상태가 기대 상태와 같은지 검증
     private void validateStatus(TicketStatus expected) {
+        if (this.status == TicketStatus.CANCELED) {
+            throw new BusinessException(ErrorCode.TICKET_ALREADY_CANCELED);
+        }
+        if (this.status == TicketStatus.USED) {
+            throw new BusinessException(ErrorCode.TICKET_ALREADY_USED);
+        }
         if (this.status != expected) {
-            throw new IllegalStateException(
+            throw new BusinessException(
+                ErrorCode.INVALID_REQUEST,
                 "티켓 상태가 올바르지 않습니다. expected=" + expected + ", current=" + this.status
             );
         }

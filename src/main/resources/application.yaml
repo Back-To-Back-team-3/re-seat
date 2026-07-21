@@ -64,6 +64,41 @@ spring:
       settings:
         web-allow-others: true
 
+    # IDE 실행 시 localhost를 사용하고, Docker에서는 환경 변수로 내부 Kafka 주소를 주입한다.
+    kafka:
+      # Kafka 브로커 주소 (로컬 실행)
+      bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+      # Producer (발행자) 설정
+      # 경기 ID는 문자열 Key로, 대기열 진입 이벤트는 JSON Value로 전송한다.
+      producer:
+        key-serializer: org.apache.kafka.common.serialization.StringSerializer
+        value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+      # Consumer (구독자) 설정
+      # Queue 진입 이벤트를 소비하여 Redis 대기열 등록을 담당한다.
+      consumer:
+        key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+        value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+        # 저장된 Offset이 없는 Consumer는 보관 중인 가장 오래된 이벤트 부터 읽는다.
+        auto-offset-reset: earliest
+        enable-auto-commit: false
+        properties:
+          spring:
+            deserializer:
+              value:
+                delegate:
+                  class: org.springframework.kafka.support.serializer.JsonDeserializer
+            json:
+              trusted:
+                packages: com.backtoback.reseat.domain.queue.dto.event
+
+      # 이벤트 처리가 끝난 뒤 직접 Offset을 커밋한다.
+      listener:
+        ack-mode: manual_immediate
+
+
+
 jwt:
   # 로컬용 더미 시크릿 키 유지
   secret: c3ByaW5nYm9vdC1zZWN1cml0eS1qd3QtdG9rZW4tc2VjcmV0LWtleS1kZW1vLWJmYWtiZmtiYWZiYWY=
@@ -79,6 +114,12 @@ toss:
   secret-key: ${TOSS_SECRET_KEY:test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R}
   base-url: ${TOSS_BASE_URL:https://api.tosspayments.com}
 
+logging:
+  level:
+    org:
+      apache.kafka: INFO
+      springframework:
+        kafka: INFO
 ---
 # ===================================================================
 # 2. 도커 컴포즈 가동을 위한 운영(prod) 환경 설정 블록
