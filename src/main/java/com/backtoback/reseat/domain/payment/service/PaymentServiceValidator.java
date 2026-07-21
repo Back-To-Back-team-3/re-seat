@@ -23,7 +23,7 @@ public class PaymentServiceValidator {
 
     /** 기존 멱등키 결제가 현재 요청의 주문과 같은지 검증한다. */
     public void validateIdempotencyRequest(Payment payment, Long orderId) {
-        if (!payment.getOrderId().equals(orderId)) {
+        if (!payment.getOrder().getId().equals(orderId)) {
             throw new IdempotencyKeyConflictException();
         }
     }
