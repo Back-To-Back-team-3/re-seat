@@ -6,6 +6,11 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * 사용자의 현재 대기 순번과 입장 허용 여부를 전달하는 응답 DTO
+ *
+ * <p>대기열 상태 조회 API와 SSE rank 이벤트에서 사용한다.</p>
+ */
 @Getter
 @Builder
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)

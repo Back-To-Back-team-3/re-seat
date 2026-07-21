@@ -23,9 +23,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * 대기열 통과 후 예매 화면 입장을 허용하는 토큰 Entity
- *
- * <p>ACTIVE 토큰은 expiresAt 전까지 유효하며, 예매 진입 검증에 사용된다.</p>
+ * 대기열을 통과한 사용자에게 발급한 입장 토큰과 유효 기간을 저장하는 Entity
  */
 @Entity
 @Table(
@@ -78,6 +76,16 @@ public class AdmissionToken {
     @Column(name = "used_at")
     private LocalDateTime usedAt;
 
+    /**
+     * 대기열을 통과한 사용자에게 발급할 활성 입장 토큰을 생성한다.
+     *
+     * @param game 입장 대상 경기
+     * @param user 입장 토큰을 발급받을 사용자
+     * @param token 고유 Queue-Token 값
+     * @param issuedAt 토큰 발급 시간
+     * @param expiresAt 토큰 만료 시간
+     * @return ACTIVE 상태로 생성된 입장 토큰
+     */
     public static AdmissionToken of(Game game, User user, String token, LocalDateTime issuedAt, LocalDateTime expiresAt) {
         AdmissionToken admissionToken = new AdmissionToken();
         admissionToken.game = game;
