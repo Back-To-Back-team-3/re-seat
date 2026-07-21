@@ -30,8 +30,6 @@ public class PaymentCreationService {
     /** 멱등키와 주문의 기존 결제를 확인하고 결제 생성 또는 재사용 결과를 반환한다. */
     @Transactional(noRollbackFor = OrderExpiredException.class)
     public PaymentCreateResponse requestPayment(Long userId, String idempotencyKey, PaymentRequest request) {
-        paymentValidator.validateIdempotencyKey(idempotencyKey);
-
         return paymentRepository.findByIdempotencyKey(idempotencyKey)
                 .map(payment -> resolveExistingPayment(userId, request, payment))
                 .orElseGet(() -> requestWithNewIdempotencyKey(userId, idempotencyKey, request));

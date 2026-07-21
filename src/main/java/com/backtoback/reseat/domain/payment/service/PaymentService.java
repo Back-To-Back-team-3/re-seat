@@ -11,14 +11,19 @@ import com.backtoback.reseat.domain.payment.dto.response.PaymentResponse;
 import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelFailedException;
+import com.backtoback.reseat.domain.payment.exception.PaymentLockFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
 import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,11 +32,14 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class PaymentService {
 
+    private static final long PAYMENT_LOCK_WAIT_SECONDS = 3L;
+
     private final PaymentRepository paymentRepository;
     private final PaymentCreationService paymentCreationService;
     private final PaymentOrderPolicy paymentOrderPolicy;
     private final TossPaymentClient tossPaymentClient;
     private final PaymentServiceValidator paymentValidator;
+    private final RedissonClient redissonClient;
 
     /**
      * 주문 기준 결제를 요청한다.
@@ -44,7 +52,29 @@ public class PaymentService {
      * @return 결제 처리 결과
      */
     public PaymentCreateResponse requestPayment(Long userId, String idempotencyKey, PaymentRequest request) {
-        return paymentCreationService.requestPayment(userId, idempotencyKey, request);
+        paymentValidator.validateIdempotencyKey(idempotencyKey);
+
+        RLock lock = redissonClient.getLock(paymentCreationLockKey(request.getOrderId()));
+        boolean locked = false;
+
+        try {
+            locked = lock.tryLock(PAYMENT_LOCK_WAIT_SECONDS, TimeUnit.SECONDS);
+            if (!locked) {
+                throw new PaymentLockFailedException();
+            }
+
+            return paymentCreationService.requestPayment(userId, idempotencyKey, request);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("결제 생성 DB 충돌 후 기존 결제 재조회 (orderId={})", request.getOrderId());
+            return paymentCreationService.requestPayment(userId, idempotencyKey, request);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new PaymentLockFailedException();
+        } finally {
+            if (locked && lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+        }
     }
 
     /**
@@ -188,6 +218,11 @@ public class PaymentService {
         return approvedAt != null
                 ? OffsetDateTime.parse(approvedAt).toLocalDateTime()
                 : LocalDateTime.now();
+    }
+
+    /** 주문별 결제 생성 락 키를 반환한다. */
+    private String paymentCreationLockKey(Long orderId) {
+        return "payment:create:order:" + orderId;
     }
 
 }
