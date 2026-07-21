@@ -85,23 +85,46 @@ public class Reservation extends BaseEntity {
         this.holdExpiresAt = holdExpiresAt;
     }
 
+
     /**
-     * 예약을 취소 상태로 변경한다.
+     * HOLDING → CONFIRMED (결제 성공).
      *
-     * <p>HOLDING 상태의 예약만 취소할 수 있으며, 이미 취소된 예약은 그대로 둔다.</p>
+     * @throws InvalidReservationStatusException HOLDING이 아닌 상태에서 호출 시
+     */
+    public void confirm() {
+        requireHolding();
+        this.status = ReservationStatus.CONFIRMED;
+    }
+
+    /**
+     * HOLDING → CANCELED (선점 해제 / 주문·결제 취소).
+     *
+     * @throws InvalidReservationStatusException HOLDING이 아닌 상태에서 호출 시
      */
     public void cancel() {
+        requireHolding();
+        this.status = ReservationStatus.CANCELED;
+    }
 
-        if (this.status == ReservationStatus.CANCELED) {
-            return;
-        }
+    /**
+     * HOLDING → EXPIRED (TTL 만료).
+     * 만료 스케줄러(HoldExpiryScheduler)가 호출한다.
+     *
+     * @throws InvalidReservationStatusException HOLDING이 아닌 상태에서 호출 시
+     */
+    public void expire() {
+        requireHolding();
+        this.status = ReservationStatus.EXPIRED;
+    }
 
+    /**
+     * 세 전이의 공통 가드.
+     * 현재 상태가 HOLDING이 아니면 전이를 차단한다.
+     */
+    private void requireHolding() {
         if (this.status != ReservationStatus.HOLDING) {
             throw new InvalidReservationStatusException();
         }
-
-        this.status = ReservationStatus.CANCELED;
-
     }
 
     /** 예약 상태 전이. 상태 전이 검증은 C-3에서 추가. */
