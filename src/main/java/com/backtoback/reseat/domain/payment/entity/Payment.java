@@ -2,6 +2,7 @@
 
 package com.backtoback.reseat.domain.payment.entity;
 
+import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.global.common.BaseEntity;
 import jakarta.persistence.*;
@@ -18,6 +19,7 @@ import java.time.LocalDateTime;
     name = "payments",
     uniqueConstraints = {
         @UniqueConstraint(name = "uk_payments_no", columnNames = "payment_no"),
+        @UniqueConstraint(name = "uk_payments_order", columnNames = "order_id"),
         @UniqueConstraint(name = "uk_payments_idempotency_key", columnNames = "idempotency_key"),
         @UniqueConstraint(name = "uk_payments_pg_payment_key", columnNames = "pg_payment_key")
     },
@@ -38,8 +40,13 @@ public class Payment extends BaseEntity {
     @Column(name = "payment_no", nullable = false, length = 50)
     private String paymentNo;
 
-    @Column(name = "order_id", nullable = false)
-    private Long orderId;
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(
+            name = "order_id",
+            nullable = false,
+            foreignKey = @ForeignKey(name = "fk_payments_order")
+    )
+    private Order order;
 
     // 결제 사용자
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -90,12 +97,12 @@ public class Payment extends BaseEntity {
 
     // 빌더 생성자
     @Builder
-    public Payment(String paymentNo, Long orderId, User user, Integer amount,
+    public Payment(String paymentNo, Order order, User user, Integer amount,
                    String method, PaymentStatus status, String idempotencyKey,
                    PgProvider pgProvider, String pgOrderId, String pgPaymentKey,
                    String failReason, LocalDateTime approvedAt, LocalDateTime failedAt) {
         this.paymentNo = paymentNo;
-        this.orderId = orderId;
+        this.order = order;
         this.user = user;
         this.amount = amount;
         this.method = method;
