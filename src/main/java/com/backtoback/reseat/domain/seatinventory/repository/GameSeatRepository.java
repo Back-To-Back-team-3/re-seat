@@ -5,9 +5,11 @@ import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
 import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
@@ -104,6 +106,33 @@ public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
 
     // 이후에 추가 예정:
     //   findByIdWithPessimisticLock(Long id)  — @Lock(PESSIMISTIC_WRITE)
-    //   findExpiredHeld(LocalDateTime now)
     //   countByGameIdAndStatus(Long gameId, GameSeatStatus status)
+
+    /**
+     * HELD 상태이면서 선점 만료 시각이 지난 좌석을 AVAILABLE로 벌크 회수한다.
+     * <p>
+     * SELECT → 판정 → UPDATE 방식은 주문 생성의 선점 연장 트랜잭션과 lost update 경합이 발생한다.
+     * WHERE 절에 만료 조건을 직접 실어 DB 원자성으로 경합을 흡수한다. (API 명세서 5.1 선점 만료 경합 주의, 관련 버그 B5)
+     * <p>
+     * 벌크 UPDATE는 JPA 1차 캐시를 우회하므로 clearAutomatically = true로
+     * 같은 트랜잭션 내 후속 조회의 stale 상태를 방지한다.
+     * <p>
+     * 인덱스: idx_game_seats_hold_expires(status, hold_expires_at)
+     *
+     * @param now 만료 판정 기준 시각 (HoldExpiryService가 주입)
+     * @return    회수된 좌석 행 수
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("""
+            update GameSeat gs
+               set gs.status = :available,
+                   gs.holdExpiresAt = null
+             where gs.status = :held
+               and gs.holdExpiresAt < :now
+            """)
+    int releaseExpiredSeats(
+        @Param("now") LocalDateTime now,
+        @Param("held") GameSeatStatus held,
+        @Param("available") GameSeatStatus available
+    );
 }
