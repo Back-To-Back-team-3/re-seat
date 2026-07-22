@@ -2,7 +2,11 @@ package com.backtoback.reseat.domain.queue.repository;
 
 import com.backtoback.reseat.domain.queue.entity.AdmissionToken;
 import com.backtoback.reseat.domain.queue.entity.AdmissionTokenStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -18,5 +22,15 @@ public interface AdmissionTokenRepository extends JpaRepository<AdmissionToken, 
             Long userId,
             AdmissionTokenStatus status,
             LocalDateTime now
+    );
+
+    // 토큰 값으로 상태와 만료 여부에 관계없이 입장 토큰을 조회한다.
+    Optional<AdmissionToken> findByToken(String token);
+
+    // 토큰 값으로 입장 토큰을 조회하고 소비 처리가 끝날 때까지 비관적 쓰기 잠금을 유지한다.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select a from AdmissionToken a where a.token = :token")
+    Optional<AdmissionToken> findByTokenWithPessimisticWriteLock(
+            @Param("token") String token
     );
 }
