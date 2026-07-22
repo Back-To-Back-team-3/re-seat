@@ -32,7 +32,7 @@ public class SchedulingConfig {
         scheduler.setPoolSize(3);
         scheduler.setThreadNamePrefix("reseat-scheduler-");
         scheduler.setWaitForTasksToCompleteOnShutdown(true);
-        scheduler.initialize();
+        scheduler.setAwaitTerminationSeconds(30);
         return scheduler;
     }
 }
