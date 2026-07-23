@@ -17,7 +17,6 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -69,21 +68,54 @@ public class PaymentRecoveryTask extends BaseEntity {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
-    @Builder
-    public PaymentRecoveryTask(
-            Payment payment,
-            PaymentRecoveryStatus status,
-            int attemptCount,
-            LocalDateTime nextRetryAt,
-            LocalDateTime processingStartedAt,
-            String lastError,
-            LocalDateTime completedAt) {
+    public PaymentRecoveryTask(Payment payment) {
         this.payment = payment;
-        this.status = status != null ? status : PaymentRecoveryStatus.PENDING;
-        this.attemptCount = attemptCount;
-        this.nextRetryAt = nextRetryAt;
+        this.status = PaymentRecoveryStatus.PENDING;
+        this.attemptCount = 0;
+    }
+
+    /** 대기 또는 재시도 중인 복구 작업을 처리 중 상태로 전환한다. */
+    public void startProcessing(LocalDateTime processingStartedAt) {
+        if (status != PaymentRecoveryStatus.PENDING && status != PaymentRecoveryStatus.RETRY) {
+            throw new IllegalStateException("대기 또는 재시도 중인 결제 복구 작업만 처리할 수 있습니다.");
+        }
+        this.status = PaymentRecoveryStatus.PROCESSING;
+        this.nextRetryAt = null;
         this.processingStartedAt = processingStartedAt;
+    }
+
+    /** 복구 실패를 기록하고 다음 자동 재시도를 예약한다. */
+    public void scheduleRetry(String lastError, LocalDateTime nextRetryAt) {
+        validateProcessing();
+        this.attemptCount++;
+        this.status = PaymentRecoveryStatus.RETRY;
+        this.nextRetryAt = nextRetryAt;
         this.lastError = lastError;
+        this.processingStartedAt = null;
+    }
+
+    /** 복구 작업을 완료하고 처리 중·재시도 정보를 정리한다. */
+    public void complete(LocalDateTime completedAt) {
+        validateProcessing();
+        this.status = PaymentRecoveryStatus.COMPLETED;
+        this.nextRetryAt = null;
+        this.processingStartedAt = null;
+        this.lastError = null;
         this.completedAt = completedAt;
+    }
+
+    /** 자동 복구할 수 없는 작업을 최종 실패 처리한다. */
+    public void fail(String lastError) {
+        validateProcessing();
+        this.status = PaymentRecoveryStatus.FAILED;
+        this.nextRetryAt = null;
+        this.processingStartedAt = null;
+        this.lastError = lastError;
+    }
+
+    private void validateProcessing() {
+        if (status != PaymentRecoveryStatus.PROCESSING) {
+            throw new IllegalStateException("처리 중인 결제 복구 작업만 상태를 변경할 수 있습니다.");
+        }
     }
 }
