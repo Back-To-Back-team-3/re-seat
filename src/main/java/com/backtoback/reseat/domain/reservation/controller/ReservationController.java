@@ -30,10 +30,10 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 좌석 선점(HOLD)·남은시간 조회·해제 API 컨트롤러.
  * <p>
- * C-2-4 이번 사이클: 의도적 락 미적용 상태. 동시 요청 시 over-booking 발생 가능.
- * C-4에서 Redisson 분산락 도입 후 방어 예정.
+ * NOTE: 의도적 락 미적용 상태. 동시 요청 시 over-booking 발생 가능.
+ * C-5에서 Redisson 분산락 도입 후 방어 예정.
  * <p>
- * 인증: JWT (Bearer) 필수. Queue-Token 검증은 계약 확정 후 추가.
+ * 인증: JWT (Bearer) 필수. Queue-Token 검증은 B↔C 계약 확정 후 추가.
  * 컨트롤러는 얇게 유지 — 검증(@Valid) + 서비스 위임 + 응답 변환만.
  */
 @Tag(name = "Reservation", description = "좌석 선점·남은시간 조회·해제 API")
@@ -50,8 +50,8 @@ public class ReservationController {
         description = """
                     대기열을 통과한 사용자가 최대 4석을 임시 선점합니다. 선점 유효 시간은 5분입니다.
 
-                    ⚠️ C-2-4: 의도적 락 미적용. 동시성 제어 없음 → C-4에서 도입.
-                    Queue-Token 검증: B-3 대기열 토큰 계약 확정 후 적용 예정.
+                    ⚠️ NOTE: 의도적 락 미적용. 동시성 제어 없음 → C-4에서 도입.
+                    Queue-Token 검증: B↔C 대기열 토큰 계약 확정 후 적용 예정.
                     """,
         security = @SecurityRequirement(name = "bearerAuth")
     )
@@ -72,7 +72,7 @@ public class ReservationController {
     public ResponseEntity<ApiResponse<ReservationResponse>> holdSeats(
         @Parameter(description = "대기열 입장 토큰", example = "eyJ...")
         @RequestHeader(value = "Queue-Token", required = false) String queueToken,
-        // TODO: B-3 대기열 토큰 검증 통합 — queueTokenValidator.validate(queueToken) 로 교체
+        // TODO: B↔C 대기열 토큰 계약 확정 후 queueTokenValidator.validate(queueToken) 로 교체
         @AuthenticationPrincipal CustomUserDetails userDetails,
         @Valid @RequestBody SeatHoldRequest request
     ) {
@@ -86,26 +86,27 @@ public class ReservationController {
     /** GET /api/v1/reservations/{reservationId}/hold-time */
     @Operation(
         summary = "선점 남은 시간 조회",
-        description = """
-                    선점 만료까지 남은 시간(초)을 반환합니다. 이미 만료된 경우 remainingSeconds = 0.
-                    410 Gone 처리는 C-3에서 추가 예정.
-                    """,
+        description = "선점 만료까지 남은 시간(초)을 반환합니다. 이미 만료된 경우 remainingSeconds = 0.",
         security = @SecurityRequirement(name = "bearerAuth")
     )
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200", description = "조회 성공"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "403", description = "RESERVATION_ACCESS_DENIED — 타인 예약",
+            content = @Content),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "404", description = "RESERVATION_NOT_FOUND",
             content = @Content)
     })
-    // getHoldTime: 200 응답 래핑
     @GetMapping("/{reservationId}/hold-time")
     public ResponseEntity<ApiResponse<HoldTimeResponse>> getHoldTime(
         @Parameter(description = "예약 ID", example = "1001")
-        @PathVariable Long reservationId
+        @PathVariable Long reservationId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        HoldTimeResponse response = reservationService.getHoldTime(reservationId);
+        Long requesterId = userDetails.getId();
+        HoldTimeResponse response = reservationService.getHoldTime(reservationId, requesterId);
         return ResponseEntity
             .status(HttpStatus.OK)
             .body(ApiResponse.success("선점 잔여 시간 조회 성공", response));
@@ -114,31 +115,27 @@ public class ReservationController {
     /** DELETE /api/v1/reservations/{reservationId} */
     @Operation(
         summary = "선점 해제",
-        description = """
-                    선점된 좌석을 해제합니다. 좌석은 즉시 AVAILABLE 상태로 복귀합니다.
-                    소유자 검증 강화(403) 및 상태 전이 예외(410)는 C-3 예정.
-                    """,
+        description = "\"선점된 좌석을 해제합니다. 좌석은 즉시 AVAILABLE 상태로 복귀합니다.",
         security = @SecurityRequirement(name = "bearerAuth")
     )
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200", description = "해제 성공"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "403", description = "FORBIDDEN — 타인 예약",
+            responseCode = "403", description = "RESERVATION_ACCESS_DENIED — 타인 예약",
             content = @Content),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "404", description = "RESERVATION_NOT_FOUND",
             content = @Content)
     })
-    // releaseHold: 200 응답 래핑
     @DeleteMapping("/{reservationId}")
     public ResponseEntity<ApiResponse<ReservationCancelResponse>> releaseHold(
         @Parameter(description = "예약 ID", example = "1001")
         @PathVariable Long reservationId,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        Long userId = userDetails.getId();
-        ReservationCancelResponse response = reservationService.releaseHold(reservationId, userId);
+        Long requesterId = userDetails.getId();
+        ReservationCancelResponse response = reservationService.releaseHold(reservationId, requesterId);
         return ResponseEntity
             .status(HttpStatus.OK)
             .body(ApiResponse.success("좌석 선점 해제 성공", response));
