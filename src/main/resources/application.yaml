@@ -131,7 +131,8 @@ spring:
       on-profile: prod
 
   datasource:
-    url: jdbc:mysql://mysql-db:3306/reseat?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+
+    url: ${SPRING_DATASOURCE_URL}
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
