@@ -10,6 +10,7 @@ import com.backtoback.reseat.domain.reservation.dto.SeatHoldRequest;
 import com.backtoback.reseat.domain.reservation.entity.Reservation;
 import com.backtoback.reseat.domain.reservation.entity.ReservationSeat;
 import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
+import com.backtoback.reseat.domain.reservation.exception.ReservationAccessDeniedException;
 import com.backtoback.reseat.domain.reservation.exception.ReservationNotFoundException;
 import com.backtoback.reseat.domain.reservation.exception.SeatAlreadyHeldException;
 import com.backtoback.reseat.domain.reservation.repository.ReservationRepository;
@@ -29,16 +30,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 예약(선점) 도메인 서비스.
- *
+ * <p>
  * NOTE: 이 서비스는 의도적으로 락(Lock) 미적용 상태입니다.
  * 동시 요청 시 over-booking이 발생할 수 있습니다.
  * → C-5에서 over-booking 재현 → Redisson 분산락 도입 → 방어 성공 서사로 연결합니다.
- *
- * <p>C-4-1 변경 사항:
+ * <p>
+ * C-4-1 변경 사항:
  *   - HOLD_TTL 5분 → HoldPolicy.HOLD_TTL(10분) 정합.
  *   - holdSeats(): gs.updateStatus/updateHoldExpiresAt → gs.hold(expiresAt) 도메인 메서드로 교체.
  *   - releaseHold(): updateStatus/updateHoldExpiresAt → rs.getGameSeat().release() 로 교체.
  *   - releaseHold(): reservation.updateStatus(CANCELED) → reservation.cancel() 로 교체.
+ *
  */
 @Slf4j
 @Service
@@ -53,8 +55,8 @@ public class ReservationService {
 
     /**
      * 좌석을 선점합니다 (HOLD).
-     *
-     * <p>락 미적용: 4번 단계에서 AVAILABLE 확인 후 HELD 전환 사이에
+     * <p>
+     * 락 미적용: 4번 단계에서 AVAILABLE 확인 후 HELD 전환 사이에
      * 다른 트랜잭션이 끼어들면 동일 좌석이 중복 선점됩니다. → C-5 서사 준비.
      *
      * @param userId  인증 사용자 ID
@@ -82,7 +84,6 @@ public class ReservationService {
         validateSeatsForGame(gameSeats, game);
 
         // 5. 만료 시각은 한 번만 계산해 Reservation·GameSeat이 동일 값이 되도록 보장
-        // oldPolicy.holdExpiresAt() = now + 10분 (명세서 5.1)
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime expiresAt = HoldPolicy.holdExpiresAt(now);
 
@@ -118,11 +119,18 @@ public class ReservationService {
 
     /**
      * 선점 남은 시간을 조회한다.
+     *
+     * @param reservationId 예약 ID
+     * @param requesterId   인증 사용자 ID
+     * @return 남은 시간 응답 DTO
      */
     @Transactional(readOnly = true)
-    public HoldTimeResponse getHoldTime(Long reservationId) {
+    public HoldTimeResponse getHoldTime(Long reservationId, Long requesterId) {
         Reservation reservation = reservationRepository.findById(reservationId)
             .orElseThrow(() -> new ReservationNotFoundException(reservationId));
+
+        // 소유권 가드: 조회 직후·반환 전 위치 — 권한 없는 요청자에게 상태 정보를 흘리지 않음
+        verifyOwner(reservation, requesterId);
 
         return HoldTimeResponse.from(reservation);
     }
@@ -130,21 +138,17 @@ public class ReservationService {
     /**
      * 선점을 해제한다.
      *
-     * <p>소유자 검증 강화(403 세부 처리)·상태 전이 검증은 C-4-3에서 처리.
-     *
      * @param reservationId 예약 ID
-     * @param userId        인증 사용자 ID
+     * @param requesterId   인증 사용자 ID
      * @return 해제 결과 응답 DTO
      */
     @Transactional
-    public ReservationCancelResponse releaseHold(Long reservationId, Long userId) {
+    public ReservationCancelResponse releaseHold(Long reservationId, Long requesterId) {
         Reservation reservation = reservationRepository.findWithSeatsById(reservationId)
             .orElseThrow(() -> new ReservationNotFoundException(reservationId));
 
-        // 기본 소유자 확인 — 상세 예외 처리는 C-4-3
-        if (!reservation.getUser().getId().equals(userId)) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
+        // 소유권 가드: 조회 직후·상태 전이 전 위치 — 권한 없는 요청자에게 상태 정보를 흘리지 않음
+        verifyOwner(reservation, requesterId);
 
         // GameSeat 상태 HELD → AVAILABLE 복귀 (도메인 메서드: 전이 가드 + holdExpiresAt null)
         reservation.getReservationSeats().forEach(rs -> rs.getGameSeat().release());
@@ -153,9 +157,27 @@ public class ReservationService {
         reservation.cancel();
 
         log.info("[ReservationService] 선점 해제 완료. reservationId={}, userId={}",
-            reservationId, userId);
+            reservationId, requesterId);
 
         return ReservationCancelResponse.from(reservation);
+    }
+
+    /**
+     * 예약 소유자를 검증한다.
+     * <p>
+     * 요청자(requesterId)가 예약 소유자(reservation.user.id)와 다르면
+     * {@link ReservationAccessDeniedException}을 던진다.
+     * <p>
+     * 호출 위치: findById 직후, 상태 전이 전.
+     * 권한 없는 요청자에게 예약 상태 정보를 흘리지 않기 위해 이 순서를 유지한다.
+     *
+     * @param reservation 조회된 예약 엔티티
+     * @param requesterId 인증 사용자 ID
+     */
+    private void verifyOwner(Reservation reservation, Long requesterId) {
+        if (!reservation.getUser().getId().equals(requesterId)) {
+            throw new ReservationAccessDeniedException();
+        }
     }
 
     private void validateSeatsForGame(List<GameSeat> gameSeats, Game game) {
