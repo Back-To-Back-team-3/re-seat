@@ -9,14 +9,17 @@ permissions:
   issues: write
   pull-requests: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+  queue: max
+
 jobs:
   sync-pr:
     runs-on: ubuntu-latest
 
     env:
       GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
-      PROJECT_OWNER: Back-To-Back-team-3
-      PROJECT_NUMBER: "1"
       PROJECT_ID: PVT_kwDOEcbHvs4BcFPz
 
       STATUS_FIELD_ID: PVTSSF_lADOEcbHvs4BcFPzzhWwoEk
@@ -34,7 +37,6 @@ jobs:
 
           repo="${{ github.repository }}"
           pr_number="${{ github.event.pull_request.number }}"
-          pr_url="${{ github.event.pull_request.html_url }}"
           pr_node_id="${{ github.event.pull_request.node_id }}"
           actor="${{ github.event.pull_request.user.login }}"
           action="${{ github.event.action }}"
@@ -42,34 +44,40 @@ jobs:
           additions="$(jq -r '.pull_request.additions // 0' "$GITHUB_EVENT_PATH")"
           deletions="$(jq -r '.pull_request.deletions // 0' "$GITHUB_EVENT_PATH")"
           draft="$(jq -r '.pull_request.draft // false' "$GITHUB_EVENT_PATH")"
+          merged="$(jq -r '.pull_request.merged // false' "$GITHUB_EVENT_PATH")"
           changed_lines=$((additions + deletions))
+          title_changed="$(jq -r '.changes.title != null' "$GITHUB_EVENT_PATH")"
 
-          gh pr edit "$pr_number" --repo "$repo" --add-assignee "$actor"
+          if [ "$action" = "opened" ]; then
+            gh pr edit "$pr_number" --repo "$repo" --add-assignee "$actor"
+          fi
 
-          for label in "💫 feat" "🐛 bug" "⚙️ chore" "📝 docs" "♻️ refactor" "✅ test" "❓ question"; do
-            gh issue edit "$pr_number" --repo "$repo" --remove-label "$label" >/dev/null 2>&1 || true
-          done
+          if [ "$action" = "opened" ] || { [ "$action" = "edited" ] && [ "$title_changed" = "true" ]; }; then
+            for label in "💫 feat" "🐛 bug" "⚙️ chore" "📝 docs" "♻️ refactor" "✅ test" "❓ question"; do
+              gh issue edit "$pr_number" --repo "$repo" --remove-label "$label" >/dev/null 2>&1 || true
+            done
 
-          case "$title" in
-            feat\(*|feat:*)
-              gh issue edit "$pr_number" --repo "$repo" --add-label "💫 feat"
-              ;;
-            fix\(*|fix:*)
-              gh issue edit "$pr_number" --repo "$repo" --add-label "🐛 bug"
-              ;;
-            chore\(*|chore:*)
-              gh issue edit "$pr_number" --repo "$repo" --add-label "⚙️ chore"
-              ;;
-            docs\(*|docs:*)
-              gh issue edit "$pr_number" --repo "$repo" --add-label "📝 docs"
-              ;;
-            refactor\(*|refactor:*)
-              gh issue edit "$pr_number" --repo "$repo" --add-label "♻️ refactor"
-              ;;
-            test\(*|test:*)
-              gh issue edit "$pr_number" --repo "$repo" --add-label "✅ test"
-              ;;
-          esac
+            case "$title" in
+              feat\(*|feat:*)
+                gh issue edit "$pr_number" --repo "$repo" --add-label "💫 feat"
+                ;;
+              fix\(*|fix:*)
+                gh issue edit "$pr_number" --repo "$repo" --add-label "🐛 bug"
+                ;;
+              chore\(*|chore:*)
+                gh issue edit "$pr_number" --repo "$repo" --add-label "⚙️ chore"
+                ;;
+              docs\(*|docs:*)
+                gh issue edit "$pr_number" --repo "$repo" --add-label "📝 docs"
+                ;;
+              refactor\(*|refactor:*)
+                gh issue edit "$pr_number" --repo "$repo" --add-label "♻️ refactor"
+                ;;
+              test\(*|test:*)
+                gh issue edit "$pr_number" --repo "$repo" --add-label "✅ test"
+                ;;
+            esac
+          fi
 
           if { [ "$action" = "opened" ] || [ "$action" = "reopened" ] || [ "$action" = "ready_for_review" ]; } && [ "$draft" != "true" ]; then
             reviewers=()
@@ -85,12 +93,38 @@ jobs:
             fi
           fi
 
+          sync_project_fields=false
+
+          if [ "$action" = "opened" ] || [ "$action" = "synchronize" ]; then
+            sync_project_fields=true
+          elif [ "$action" = "closed" ] && [ "$merged" = "true" ]; then
+            sync_project_fields=true
+          fi
+
+          if [ "$sync_project_fields" != "true" ]; then
+            exit 0
+          fi
+
           item_id="$(
-            gh project item-list "$PROJECT_NUMBER" \
-              --owner "$PROJECT_OWNER" \
-              --format json \
-              --limit 1000 \
-              --jq ".items[] | select(.content.url == \"$pr_url\") | .id" \
+            gh api graphql \
+              -f contentId=$pr_node_id \
+              -f query='
+                query($contentId: ID!) {
+                  node(id: $contentId) {
+                    ... on PullRequest {
+                      projectItems(first: 20, includeArchived: false) {
+                        nodes {
+                          id
+                          project {
+                            id
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ' \
+              --jq ".data.node.projectItems.nodes[] | select(.project.id == \"$PROJECT_ID\") | .id" \
               | head -n 1
           )"
 
@@ -164,18 +198,18 @@ jobs:
               ' >/dev/null
           }
 
-          if [ "$changed_lines" -ge 401 ]; then
-            update_code_size "cd453446"
-          elif [ "$changed_lines" -ge 101 ]; then
-            update_code_size "fdae15f1"
-          elif [ "$changed_lines" -ge 21 ]; then
-            update_code_size "8ac9d3ac"
-          else
-            update_code_size "0c7df237"
+          if [ "$action" = "opened" ] || [ "$action" = "synchronize" ]; then
+            if [ "$changed_lines" -ge 401 ]; then
+              update_code_size "cd453446"
+            elif [ "$changed_lines" -ge 101 ]; then
+              update_code_size "fdae15f1"
+            elif [ "$changed_lines" -ge 21 ]; then
+              update_code_size "8ac9d3ac"
+            else
+              update_code_size "0c7df237"
+            fi
           fi
-          
-          merged="$(jq -r '.pull_request.merged // false' "$GITHUB_EVENT_PATH")"
-          
+
           if [ "$action" = "closed" ] && [ "$merged" = "true" ]; then
             update_status "$STATUS_DONE_OPTION_ID"
           fi
