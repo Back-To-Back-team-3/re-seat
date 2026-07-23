@@ -7,6 +7,7 @@ import java.util.Base64;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.request.TossCancelRequest;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.request.TossConfirmRequest;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
+import com.backtoback.reseat.domain.payment.pg.toss.exception.TossApiException;
 import com.backtoback.reseat.domain.payment.pg.toss.exception.TossPaymentStatusUnknownException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -56,8 +57,8 @@ public class TossPaymentClient {
                 .onStatus(HttpStatusCode::isError, response ->
                         response.bodyToMono(String.class)
                                 .defaultIfEmpty("응답 본문 없음")
-                                .flatMap(body -> Mono.error(new IllegalStateException(
-                                        "토스페이먼츠 결제 승인 API 호출 실패: " + body))))
+                                .flatMap(body -> Mono.error(new TossApiException(
+                                        "승인", response.statusCode().value(), body))))
                 .bodyToMono(TossPaymentResponse.class)
                 // 외부 API 응답 지연으로 요청 스레드가 오래 묶이지 않게 최대 5초만 기다린다.
                 .block(Duration.ofSeconds(5));
@@ -84,8 +85,8 @@ public class TossPaymentClient {
                    .onStatus(HttpStatusCode::isError, response ->
                                                           response.bodyToMono(String.class)
                                                               .defaultIfEmpty("응답 본문 없음")
-                                                              .flatMap(body -> Mono.error(new IllegalStateException(
-                                                                  "토스페이먼츠 결제 취소 API 호출 실패: " + body))))
+                                                              .flatMap(body -> Mono.error(new TossApiException(
+                                                                  "취소", response.statusCode().value(), body))))
                    .bodyToMono(TossPaymentResponse.class)
                    .block(Duration.ofSeconds(5));
     }
@@ -98,8 +99,8 @@ public class TossPaymentClient {
                 .onStatus(HttpStatusCode::isError, response ->
                         response.bodyToMono(String.class)
                                 .defaultIfEmpty("응답 본문 없음")
-                                .flatMap(body -> Mono.error(new IllegalStateException(
-                                        "토스페이먼츠 결제 조회 API 호출 실패: " + body))))
+                                .flatMap(body -> Mono.error(new TossApiException(
+                                        "조회", response.statusCode().value(), body))))
                 .bodyToMono(TossPaymentResponse.class)
                 .block(Duration.ofSeconds(5));
     }
