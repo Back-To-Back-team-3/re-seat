@@ -7,6 +7,7 @@ import java.util.Base64;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.request.TossCancelRequest;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.request.TossConfirmRequest;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
+import com.backtoback.reseat.domain.payment.pg.toss.exception.TossPaymentStatusUnknownException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -39,14 +40,7 @@ public class TossPaymentClient {
         try {
             return requestConfirm(paymentKey, orderId, amount);
         } catch (RuntimeException confirmException) {
-            TossPaymentResponse response = requeryAfterFailure(paymentKey, confirmException, "승인");
-            if (response.isApproved() || response.isConfirmFailureStatus()) {
-                log.info("토스 결제 승인 API 성공 응답 없이 재조회로 상태 확인 (paymentKey={}, tossStatus={})",
-                        paymentKey, response.getStatus());
-                return response;
-            }
-
-            throw confirmException;
+            return requeryAfterConfirmFailure(paymentKey, confirmException);
         }
     }
 
@@ -75,12 +69,7 @@ public class TossPaymentClient {
         try {
             return requestCancel(paymentKey, cancelReason);
         } catch (RuntimeException cancelException) {
-            TossPaymentResponse response = requeryAfterFailure(paymentKey, cancelException, "취소");
-            if (response.isCancelCompleted()) {
-                log.info("토스 결제 취소 API 성공 응답 없이 재조회로 취소 확인 (paymentKey={})", paymentKey);
-                return response;
-            }
-            throw cancelException;
+            return requeryAfterFailure(paymentKey, cancelException, "취소");
         }
     }
 
@@ -115,7 +104,23 @@ public class TossPaymentClient {
                 .block(Duration.ofSeconds(5));
     }
 
-    /** API 호출 실패 후 결제 단건을 재조회하고, 재조회도 실패하면 최초 예외를 다시 던진다. */
+    /** 승인 실패 후 결제를 재조회하고 최종 상태를 확인할 수 없으면 복구 대상 예외를 던진다. */
+    private TossPaymentResponse requeryAfterConfirmFailure(
+            String paymentKey, RuntimeException confirmException) {
+        TossPaymentResponse response = requeryAfterFailure(paymentKey, confirmException, "승인");
+
+        if (response.isApproved() || response.isConfirmFailureStatus()) {
+            log.info("토스 결제 승인 API 성공 응답 없이 재조회로 상태 확인 (paymentKey={}, tossStatus={})",
+                    paymentKey, response.getStatus());
+            return response;
+        }
+
+        log.warn("토스 결제 승인 실패 후 재조회했지만 최종 상태 확인 불가 (paymentKey={}, tossStatus={})",
+                paymentKey, response.getStatus());
+        throw new TossPaymentStatusUnknownException("승인", confirmException);
+    }
+
+    /** API 호출 실패 후 결제 단건을 재조회하고, 재조회도 실패하면 상태 불명확 예외를 던진다. */
     private TossPaymentResponse requeryAfterFailure(
             String paymentKey, RuntimeException originalException, String operation) {
         try {
@@ -124,7 +129,7 @@ public class TossPaymentClient {
             originalException.addSuppressed(requeryException);
             log.warn("토스 결제 {} API 호출 실패 후 재조회로 상태 확인 불가 (paymentKey={})",
                     operation, paymentKey, originalException);
-            throw originalException;
+            throw new TossPaymentStatusUnknownException(operation, originalException);
         }
     }
 
