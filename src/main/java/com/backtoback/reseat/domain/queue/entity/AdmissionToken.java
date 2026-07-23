@@ -1,6 +1,9 @@
 package com.backtoback.reseat.domain.queue.entity;
 
 import com.backtoback.reseat.domain.game.entity.Game;
+import com.backtoback.reseat.domain.queue.exception.QueueInvalidStatusException;
+import com.backtoback.reseat.domain.queue.exception.QueueTokenAlreadyUsedException;
+import com.backtoback.reseat.domain.queue.exception.QueueTokenExpiredException;
 import com.backtoback.reseat.domain.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -95,5 +98,78 @@ public class AdmissionToken {
         admissionToken.issuedAt = issuedAt;
         admissionToken.expiresAt = expiresAt;
         return admissionToken;
+    }
+
+    /**
+     * 유효한 활성 입장 토큰을 사용 완료 상태로 전환한다.
+     *
+     * @param currentTime 토큰을 사용한 시간
+     */
+    public void use(LocalDateTime currentTime) {
+
+        validateUsableAt(currentTime);
+
+        this.status = AdmissionTokenStatus.USED;
+        this.usedAt = currentTime;
+    }
+
+    /**
+     * 만료 시간에 도달한 활성 입장 토큰을 만료 상태로 전환한다.
+     *
+     * @param currentTime 만료 여부를 판단할 시간
+     */
+    public void expire(LocalDateTime currentTime) {
+
+        validateActiveStatus();
+
+        if (!isExpiredAt(currentTime)) {
+            throw new QueueInvalidStatusException("아직 만료되지 않은 입장 토큰 입니다.");
+        }
+
+        this.status = AdmissionTokenStatus.EXPIRED;
+    }
+
+    /**
+     * 기준 시간에 토큰이 만료되었는지 확인한다.
+     * 만료 시간과 기준 시간이 같거나, 만료 시간이 더 이전이면 만료로 판단한다.
+     *
+     * @param currentTime 만료 여부를 판단할 시간
+     * @return 토큰이 만료되었으면 true, 아직 유효하면 false
+     */
+    public boolean isExpiredAt(LocalDateTime currentTime) {
+
+        return !this.expiresAt.isAfter(currentTime);
+    }
+
+    /**
+     * 토큰이 사용 가능한 ACTIVE 상태인지 확인한다.
+     */
+    private void validateActiveStatus() {
+
+        if (this.status == AdmissionTokenStatus.USED) {
+            throw new QueueTokenAlreadyUsedException();
+        }
+
+        if (this.status == AdmissionTokenStatus.EXPIRED) {
+            throw new QueueTokenExpiredException();
+        }
+
+        if (this.status != AdmissionTokenStatus.ACTIVE) {
+            throw new QueueInvalidStatusException();
+        }
+    }
+
+    /**
+     * 토큰 상태와 만료 시간을 기준으로 해당 시간에 사용할 수 있는지 검증한다.
+     *
+     * @param currentTime 토큰 사용 가능 여부를 판단할 시간
+     */
+    public void validateUsableAt(LocalDateTime currentTime) {
+
+       validateActiveStatus();
+
+        if (isExpiredAt(currentTime)) {
+            throw new QueueTokenExpiredException();
+        }
     }
 }

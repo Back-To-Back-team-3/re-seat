@@ -8,6 +8,9 @@ import com.backtoback.reseat.domain.queue.entity.AdmissionTokenStatus;
 import com.backtoback.reseat.domain.queue.entity.QueueEntryHistory;
 import com.backtoback.reseat.domain.queue.entity.QueueEntryHistoryStatus;
 import com.backtoback.reseat.domain.queue.exception.QueueAdmissionFailedException;
+import com.backtoback.reseat.domain.queue.exception.QueueTokenExpiredException;
+import com.backtoback.reseat.domain.queue.exception.QueueTokenInvalidException;
+import com.backtoback.reseat.domain.queue.exception.QueueTokenRequiredException;
 import com.backtoback.reseat.domain.queue.repository.AdmissionTokenRepository;
 import com.backtoback.reseat.domain.queue.repository.QueueEntryHistoryRepository;
 import com.backtoback.reseat.domain.user.entity.User;
@@ -186,6 +189,54 @@ public class AdmissionTokenService {
         }
     }
 
+    /**
+     * Queue-Token이 요청한 사용자와 경기에 속하며 현재 사용할 수 있는지 검증한다.
+     *
+     * @param userId 요청한 사용자 ID
+     * @param gameId 입장하려는 경기 ID
+     * @param token 검증할 Queue-Token 값
+     */
+    @Transactional(noRollbackFor = QueueTokenExpiredException.class)
+    public void validateToken(Long userId, Long gameId, String token) {
+
+        LocalDateTime now = LocalDateTime.now();
+
+        validateRequiredToken(token);
+
+        AdmissionToken admissionToken = admissionTokenRepository.findByToken(token)
+                .orElseThrow(QueueTokenInvalidException::new);
+
+        validateTokenContext(admissionToken, userId, gameId);
+
+        expireIfNeeded(admissionToken, now);
+
+        admissionToken.validateUsableAt(now);
+    }
+
+    /**
+     * Queue-Token을 비관적 쓰기 잠금으로 조회하고 사용 완료 상태로 전환한다.
+     *
+     * @param userId 요청한 사용자 ID
+     * @param gameId 입장하려는 경기 ID
+     * @param token 소비할 Queue-Token 값
+     */
+    @Transactional(noRollbackFor = QueueTokenExpiredException.class)
+    public void consumeToken(Long userId, Long gameId, String token) {
+
+        LocalDateTime now = LocalDateTime.now();
+
+        validateRequiredToken(token);
+
+        AdmissionToken admissionToken = admissionTokenRepository.findByTokenWithPessimisticWriteLock(token)
+                .orElseThrow(QueueTokenInvalidException::new);
+
+        validateTokenContext(admissionToken, userId, gameId);
+
+        expireIfNeeded(admissionToken, now);
+
+        admissionToken.use(now);
+    }
+
     private ZSetOperations<String, String> getZSetOperations() {
         return redisTemplate.opsForZSet();
     }
@@ -222,5 +273,28 @@ public class AdmissionTokenService {
     // 경기별 입장 처리 분산 락 Key를 생성한다.
     private String admitLockKey(Long gameId) {
         return "lock:queue:admit:" + gameId;
+    }
+
+    // Queue-Token 값이 누락되거나 공백인지 검증한다.
+    private void validateRequiredToken(String token) {
+        if (token == null || token.isBlank()) {
+            throw new QueueTokenRequiredException();
+        }
+    }
+
+    // 입장 토큰의 사용자와 경기가 요청 정보와 일치하는지 검증한다.
+    private void validateTokenContext(AdmissionToken admissionToken, Long userId, Long gameId) {
+        if (!admissionToken.getUser().getId().equals(userId)
+                || !admissionToken.getGame().getId().equals(gameId)) {
+            throw new QueueTokenInvalidException();
+        }
+    }
+
+    // 만료 시간이 지난 ACTIVE 토큰을 EXPIRED 상태로 전환하고 만료 예외를 발생시킨다.
+    private void expireIfNeeded(AdmissionToken admissionToken, LocalDateTime now) {
+        if (admissionToken.getStatus() == AdmissionTokenStatus.ACTIVE && admissionToken.isExpiredAt(now)) {
+            admissionToken.expire(now);
+            throw new QueueTokenExpiredException();
+        }
     }
 }
