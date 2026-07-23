@@ -52,7 +52,7 @@ jobs:
             gh pr edit "$pr_number" --repo "$repo" --add-assignee "$actor"
           fi
 
-          if [ "$action" = "opened" ] || { [ "$action" = "edited" ] && [ "$title_changed" = "true" ] }; then
+          if [ "$action" = "opened" ] || { [ "$action" = "edited" ] && [ "$title_changed" = "true" ]; }; then
             for label in "💫 feat" "🐛 bug" "⚙️ chore" "📝 docs" "♻️ refactor" "✅ test" "❓ question"; do
               gh issue edit "$pr_number" --repo "$repo" --remove-label "$label" >/dev/null 2>&1 || true
             done
