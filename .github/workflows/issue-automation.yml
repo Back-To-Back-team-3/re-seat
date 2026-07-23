@@ -8,14 +8,16 @@ permissions:
   contents: read
   issues: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
 jobs:
   sync-issue-to-project:
     runs-on: ubuntu-latest
 
     env:
       GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
-      PROJECT_OWNER: Back-To-Back-team-3
-      PROJECT_NUMBER: "1"
       PROJECT_ID: PVT_kwDOEcbHvs4BcFPz
 
       PRIORITY_FIELD_ID: PVTSSF_lADOEcbHvs4BcFPzzhW8rB4
@@ -31,27 +33,124 @@ jobs:
 
           repo="${{ github.repository }}"
           issue_number="${{ github.event.issue.number }}"
-          issue_url="${{ github.event.issue.html_url }}"
           issue_node_id="${{ github.event.issue.node_id }}"
           actor="${{ github.event.issue.user.login }}"
-          action="${{ github.event.action }}"
           created_at="${{ github.event.issue.created_at }}"
           start_date="${created_at:0:10}"
 
           body="$(jq -r '.issue.body // ""' "$GITHUB_EVENT_PATH")"
+          actor_assigned="$(jq -r --arg actor "$actor" 'any(.issue.assignees[]?; .login == $actor)' "$GITHUB_EVENT_PATH")"
 
-          if [ "$action" = "opened" ]; then
+          if [ "$actor_assigned" != "true" ]; then
             gh issue edit "$issue_number" --repo "$repo" --add-assignee "$actor"
           fi
 
-          item_id="$(
-            gh project item-list "$PROJECT_NUMBER" \
-              --owner "$PROJECT_OWNER" \
-              --format json \
-              --limit 1000 \
-              --jq ".items[] | select(.content.url == \"$issue_url\") | .id" \
+          get_priority_option_id() {
+            local content="$1"
+
+            if printf "%s\n" "$content" | grep -Eq '^- \[[xX]\] 🌋 Urgent'; then
+              printf "%s" "14b57b35"
+            elif printf "%s\n" "$content" | grep -Eq '^- \[[xX]\] 🏔 High'; then
+              printf "%s" "3802d0d2"
+            elif printf "%s\n" "$content" | grep -Eq '^- \[[xX]\] 🏕 Medium'; then
+              printf "%s" "7677d42e"
+            elif printf "%s\n" "$content" | grep -Eq '^- \[[xX]\] 🏝 Low'; then
+              printf "%s" "f0f913a0"
+            fi
+          }
+          
+          priority_option_id="$(get_priority_option_id "$body")"
+
+          get_size_option_id() {
+            local content="$1"
+
+            if printf "%s\n" "$content" | grep -Eq '^- \[[xX]\] 🦑 Large'; then
+              printf "%s" "32d6720c"
+            elif printf "%s\n" "$content" | grep -Eq '^- \[[xX]\] 🐂 Medium'; then
+              printf "%s" "cd4f84f5"
+            elif printf "%s\n" "$content" | grep -Eq '^- \[[xX]\] 🐇 Small'; then
+              printf "%s" "5d674ca8"
+            elif printf "%s\n" "$content" | grep -Eq '^- \[[xX]\] 🦔 Tiny'; then
+              printf "%s" "8d825388"
+            fi
+          }
+
+          size_option_id="$(get_size_option_id "$body")"
+
+          get_due_date() {
+            local content="$1"
+
+            printf "%s\n" "$content" \
+              | grep -Eo '[0-9]{4}-[0-9]{2}-[0-9]{2}' \
+              | tail -n 1 || true
+          }
+
+          due_date="$(get_due_date "$body")"
+
+          item_data="$(
+            gh api graphql \
+              -f contentId="$issue_node_id" \
+              -f query='
+                query($contentId: ID!) {
+                  node(id: $contentId) {
+                    ... on Issue {
+                      projectItems(first: 20, includeArchived: false) {
+                        nodes {
+                          id
+                          project {
+                            id
+                          }
+                          fieldValues(first: 50) {
+                            nodes {
+                              ... on ProjectV2ItemFieldSingleSelectValue {
+                                optionId
+                                field {
+                                  ... on ProjectV2FieldCommon {
+                                    id
+                                  }
+                                }
+                              }
+                              ... on ProjectV2ItemFieldDateValue {
+                                date
+                                field {
+                                  ... on ProjectV2FieldCommon {
+                                    id
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ' \
+              --jq ".data.node.projectItems.nodes[] | select(.project.id == \"$PROJECT_ID\")" \
               | head -n 1
           )"
+
+          item_id="$(printf "%s\n" "$item_data" | jq -r '.id // empty')"
+
+          get_current_field_value() {
+            local field_id="$1"
+            local value_name="$2"
+
+            if [ -z "$item_data" ]; then
+              return
+            fi
+
+            printf "%s\n" "$item_data" \
+              | jq -r \
+                --arg fieldId "$field_id" \
+                --arg valueName "$value_name" \
+                '[.fieldValues.nodes[] | select(.field.id == $fieldId) | .[$valueName]][0] // empty'
+          }
+
+          current_priority_option_id="$(get_current_field_value "$PRIORITY_FIELD_ID" "optionId")"
+          current_size_option_id="$(get_current_field_value "$SIZE_FIELD_ID" "optionId")"
+          current_start_date="$(get_current_field_value "$START_DATE_FIELD_ID" "date")"
+          current_due_date="$(get_current_field_value "$DUE_DATE_FIELD_ID" "date")"
 
           if [ -z "$item_id" ]; then
             item_id="$(
@@ -125,36 +224,63 @@ jobs:
               ' >/dev/null
           }
 
-          if printf "%s\n" "$body" | grep -Eq '^- \[[xX]\] 🌋 Urgent'; then
-            update_single_select "$PRIORITY_FIELD_ID" "14b57b35"
-          elif printf "%s\n" "$body" | grep -Eq '^- \[[xX]\] 🏔 High'; then
-            update_single_select "$PRIORITY_FIELD_ID" "3802d0d2"
-          elif printf "%s\n" "$body" | grep -Eq '^- \[[xX]\] 🏕 Medium'; then
-            update_single_select "$PRIORITY_FIELD_ID" "7677d42e"
-          elif printf "%s\n" "$body" | grep -Eq '^- \[[xX]\] 🏝 Low'; then
-            update_single_select "$PRIORITY_FIELD_ID" "f0f913a0"
-          fi
+          clear_field() {
+            local field_id="$1"
 
-          if printf "%s\n" "$body" | grep -Eq '^- \[[xX]\] 🦑 Large'; then
-            update_single_select "$SIZE_FIELD_ID" "32d6720c"
-          elif printf "%s\n" "$body" | grep -Eq '^- \[[xX]\] 🐂 Medium'; then
-            update_single_select "$SIZE_FIELD_ID" "cd4f84f5"
-          elif printf "%s\n" "$body" | grep -Eq '^- \[[xX]\] 🐇 Small'; then
-            update_single_select "$SIZE_FIELD_ID" "5d674ca8"
-          elif printf "%s\n" "$body" | grep -Eq '^- \[[xX]\] 🦔 Tiny'; then
-            update_single_select "$SIZE_FIELD_ID" "8d825388"
-          fi
+            gh api graphql \
+              -f projectId="$PROJECT_ID" \
+              -f itemId="$item_id" \
+              -f fieldId="$field_id" \
+              -f query='
+                mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!) {
+                  clearProjectV2ItemFieldValue(
+                    input: {
+                      projectId: $projectId
+                      itemId: $itemId
+                      fieldId: $fieldId
+                    }
+                  ) {
+                    projectV2Item {
+                      id
+                    }
+                  }
+                }
+              ' >/dev/null
+          }
 
-          if [ "$action" = "opened" ]; then
-            update_date "$START_DATE_FIELD_ID" "$start_date"
-          fi
+          sync_single_select() {
+            local field_id="$1"
+            local desired_option_id="$2"
+            local current_option_id="$3"
 
-          due_date="$(
-            printf "%s\n" "$body" \
-              | grep -Eo '[0-9]{4}-[0-9]{2}-[0-9]{2}' \
-              | tail -n 1 || true
-          )"
+            if [ "$desired_option_id" = "$current_option_id" ]; then
+              return
+            fi
 
-          if [ -n "$due_date" ]; then
-            update_date "$DUE_DATE_FIELD_ID" "$due_date"
-          fi
+            if [ -n "$desired_option_id" ]; then
+              update_single_select "$field_id" "$desired_option_id"
+            elif [ -n "$current_option_id" ]; then
+              clear_field "$field_id"
+            fi
+          }
+
+          sync_date() {
+            local field_id="$1"
+            local desired_date="$2"
+            local current_date="$3"
+
+            if [ "$desired_date" = "$current_date" ]; then
+              return
+            fi
+
+            if [ -n "$desired_date" ]; then
+              update_date "$field_id" "$desired_date"
+            elif [ -n "$current_date" ]; then
+              clear_field "$field_id"
+            fi
+          }
+
+          sync_single_select "$PRIORITY_FIELD_ID" "$priority_option_id" "$current_priority_option_id"
+          sync_single_select "$SIZE_FIELD_ID" "$size_option_id" "$current_size_option_id"
+          sync_date "$START_DATE_FIELD_ID" "$start_date" "$current_start_date"
+          sync_date "$DUE_DATE_FIELD_ID" "$due_date" "$current_due_date"
