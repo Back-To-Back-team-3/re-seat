@@ -21,3 +21,30 @@ spring:
 
   flyway:
     enabled: false
+
+---
+# 동시성 테스트 전용 — MySQL
+spring:
+  config:
+    activate:
+      on-profile: test-concurrency
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/reseat?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
+    hibernate:
+      ddl-auto: create-drop
+
+  flyway:
+    enabled: false
+
+  kafka:
+    admin:
+      auto-create: false
+    listener:
+      auto-startup: false
