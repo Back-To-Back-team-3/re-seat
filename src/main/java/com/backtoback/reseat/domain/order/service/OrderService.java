@@ -10,6 +10,7 @@ import com.backtoback.reseat.domain.order.exception.OrderAccessDeniedException;
 import com.backtoback.reseat.domain.order.exception.OrderNotFoundException;
 import com.backtoback.reseat.domain.order.repository.OrderItemRepository;
 import com.backtoback.reseat.domain.order.repository.OrderRepository;
+import com.backtoback.reseat.domain.order.repository.OrderReservationRepository;
 import com.backtoback.reseat.domain.reservation.entity.Reservation;
 import com.backtoback.reseat.domain.reservation.entity.ReservationSeat;
 import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
@@ -19,7 +20,6 @@ import com.backtoback.reseat.domain.reservation.exception.ReservationAccessDenie
 import com.backtoback.reseat.domain.reservation.exception.ReservationAlreadyOrderedException;
 import com.backtoback.reseat.domain.reservation.exception.ReservationNotFoundException;
 import com.backtoback.reseat.domain.reservation.exception.ReservationSeatNotFoundException;
-import com.backtoback.reseat.domain.reservation.repository.ReservationRepository;
 import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.user.entity.User;
@@ -45,15 +45,22 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
-    private final ReservationRepository reservationRepository;
+    private final OrderReservationRepository orderReservationRepository;
     private final ReservationSeatRepository reservationSeatRepository;
     private final UserRepository userRepository;
 
     private static final DateTimeFormatter ORDER_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final long PAYMENT_DEADLINE_MINUTES = 8;
+    private static final long MAX_HOLD_DURATION_MINUTES = 18;
 
     /**
      * 예약 선점 정보를 기반으로 주문을 생성한다.
+     *
+     * <p>주문 생성 대상 Reservation을 비관적 락으로 조회한다.
+     * 잠금 회득 후 주문 생성 기능 여부를 다시 검증한다.</p>
+     *
+     * <p>주문 생성 후 Reservation과 주문에 포함된
+     * 모든 GameSeat의 선점 만료 시간을 결제 기한에 맞춰 동일하게 연장한다.</p>
      *
      * @param userId 현재 사용자 ID
      * @param reservationId 주문으로 전활할 예약 ID
@@ -65,7 +72,8 @@ public class OrderService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
 
-        Reservation reservation = reservationRepository.findById(reservationId)
+        // 만료 스케줄러와의 경합을 막기 위해 주문 생성 대상으로 한 예약 행을 비관적 락으로 조회한다.
+        Reservation reservation = orderReservationRepository.findByIdWithPessimisticWriteLock(reservationId)
                 .orElseThrow(ReservationNotFoundException::new);
 
         LocalDateTime now = LocalDateTime.now();
@@ -88,6 +96,9 @@ public class OrderService {
 
         LocalDateTime paymentDeadline = now.plusMinutes(PAYMENT_DEADLINE_MINUTES);
 
+        // 기존 만료 시간과 결제 기한 중 늦는 값을 사용하되 최초 선점 시간부터 18분을 넘지 않도록 한다.
+        LocalDateTime extendedHoldExpiresAt = calculateExtendedHoldExpiresAt(reservation, paymentDeadline);
+
         Order order = Order.of(orderNo, user, reservation, totalAmount, paymentDeadline);
         Order saveOrder = orderRepository.save(order);
 
@@ -99,9 +110,13 @@ public class OrderService {
 
         List<OrderItem> saveOrderItems = orderItemRepository.saveAll(orderItems);
 
+        // Reservation과 모든 GameSeat에 동일한 만료 시간을 반영해 선점 상태 정합성을 유지한다.
+        extendHoldExpiresAt(reservationId, reservationSeats, extendedHoldExpiresAt);
+
         return OrderResponse.from(
                 saveOrder,
-                saveOrderItems
+                saveOrderItems,
+                extendedHoldExpiresAt
         );
     }
 
@@ -117,6 +132,7 @@ public class OrderService {
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(OrderNotFoundException::new);
+        Reservation reservation = order.getReservation();
 
         if (!order.getUser().getId().equals(userId)) {
             throw new OrderAccessDeniedException();
@@ -124,7 +140,7 @@ public class OrderService {
 
         List<OrderItem> orderItems = orderItemRepository.findByOrder_Id(orderId);
 
-        return OrderResponse.from(order, orderItems);
+        return OrderResponse.from(order, orderItems, reservation.getHoldExpiresAt());
     }
 
     /**
@@ -213,5 +229,57 @@ public class OrderService {
                 .toUpperCase();
 
         return "ORD-" + date + "-" + random;
+    }
+
+    /**
+     * 주문 생성 시 적용할 선점 만료 시간을 계산한다.
+     *
+     * <p>기존 선점 만료 시간과 결제 기한 중 늦은 시간을 선택하고,
+     * 최초 선점 시간부터 최대 18분을 넘기지 않도록 제한한다.</p>
+     *
+     * @param reservation 주문 생성 대상 예약
+     * @param paymentDeadline 주문 결제 기한
+     * @return 최종 선점 만료 시간
+     */
+    private LocalDateTime calculateExtendedHoldExpiresAt(Reservation reservation, LocalDateTime paymentDeadline) {
+
+        // 기존 만료 시간과 결제 기한 중 늦은 값을 연장 후보로 선택한다.
+        LocalDateTime laterHoldExpiresAt = reservation.getHoldExpiresAt().isAfter(paymentDeadline)
+                ? reservation.getHoldExpiresAt()
+                : paymentDeadline;
+
+        // 최초 선점 시간부터 18분을 최대 만료 시간으로 계산한다.
+        LocalDateTime maxHoldExpiresAt = reservation.getCreatedAt().plusMinutes(MAX_HOLD_DURATION_MINUTES);
+
+        // 연장 후보가 최대 만료 시간을 넘으면 18분 상한으로 제한한다.
+        return laterHoldExpiresAt.isBefore(maxHoldExpiresAt)
+                ? laterHoldExpiresAt
+                : maxHoldExpiresAt;
+    }
+
+    /**
+     * Reservation과 주문에 포함된 모든 GameSeat의 선점 만료 시간을 연장한다.
+     *
+     * <p>Reservation과 GameSeat에 동일한 만료 시간을 적용하여 정합성을 보장한다.</p>
+     *
+     * @param reservationId 연장할 예약 ID
+     * @param reservationSeats 예약에 포함된 좌석 목록
+     * @param extendedHoldExpiresAt 최종 선점 만료 시간
+     */
+    private void extendHoldExpiresAt(
+            Long reservationId,
+            List<ReservationSeat> reservationSeats,
+            LocalDateTime extendedHoldExpiresAt
+    ) {
+
+        // 잠금 조회한 Reservation의 선점 만료 시간을 계산 결과로 갱신한다.
+        orderReservationRepository.updateHoldExpiresAtById(reservationId, extendedHoldExpiresAt);
+
+        // 예약에 포함된 모든 GameSeat에도 동일한 만료 시간을 적용한다.
+        reservationSeats
+                .forEach(reservationSeat -> {
+                    GameSeat gameSeat = reservationSeat.getGameSeat();
+                    gameSeat.updateHoldExpiresAt(extendedHoldExpiresAt);
+                });
     }
 }
