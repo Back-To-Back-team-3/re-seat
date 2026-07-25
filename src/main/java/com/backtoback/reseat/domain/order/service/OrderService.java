@@ -75,9 +75,13 @@ public class OrderService {
                 .orElseThrow(ReservationNotFoundException::new);
 
         LocalDateTime now = LocalDateTime.now();
+        LocalDateTime paymentDeadline = now.plusMinutes(PAYMENT_DEADLINE_MINUTES);
 
         // 주문 생성 가능 여부를 예약 정보 기준으로 검증한다.
         validateReservationInfo(reservation, userId, reservationId, now);
+
+        // 기존 만료 시간과 결제 기한 중 늦는 값을 사용하되 최초 선점 시간부터 18분을 넘지 않도록 한다.
+        LocalDateTime extendedHoldExpiresAt = calculateExtendedHoldExpiresAt(reservation, paymentDeadline);
 
         List<ReservationSeat> reservationSeats = reservationSeatRepository.findByReservation_Id(reservationId);
 
@@ -91,11 +95,6 @@ public class OrderService {
         int totalAmount = reservationSeats.stream()
                 .mapToInt(ReservationSeat::getPrice)
                 .sum();
-
-        LocalDateTime paymentDeadline = now.plusMinutes(PAYMENT_DEADLINE_MINUTES);
-
-        // 기존 만료 시간과 결제 기한 중 늦는 값을 사용하되 최초 선점 시간부터 18분을 넘지 않도록 한다.
-        LocalDateTime extendedHoldExpiresAt = calculateExtendedHoldExpiresAt(reservation, paymentDeadline);
 
         Order order = Order.of(orderNo, user, reservation, totalAmount, paymentDeadline);
         Order saveOrder = orderRepository.save(order);
@@ -296,6 +295,11 @@ public class OrderService {
 
         // 최초 선점 시간부터 18분을 최대 만료 시간으로 계산한다.
         LocalDateTime maxHoldExpiresAt = reservation.getCreatedAt().plusMinutes(MAX_HOLD_DURATION_MINUTES);
+
+        // 결제 기한까지 선점을 유지할 수 없으면 주문 생성을 막는다.
+        if (paymentDeadline.isAfter(maxHoldExpiresAt)) {
+            throw new PreReservationExpiredException();
+        }
 
         // 연장 후보가 최대 만료 시간을 넘으면 18분 상한으로 제한한다.
         return laterHoldExpiresAt.isBefore(maxHoldExpiresAt)

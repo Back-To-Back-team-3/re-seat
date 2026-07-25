@@ -2,10 +2,12 @@ package com.backtoback.reseat.domain.order.repository;
 
 import com.backtoback.reseat.domain.reservation.entity.Reservation;
 import jakarta.persistence.LockModeType;
+import jakarta.persistence.QueryHint;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
@@ -21,6 +23,8 @@ public interface OrderReservationRepository extends JpaRepository<Reservation, L
      *
      * <p>잠금은 주문 생성 트랜잭션이 끝날 때까지 유지된다.</p>
      *
+     * <p>락 획득 대기 시간은 2초로 제한한다.</p>
+     *
      * @param reservationId 조회할 예약 ID
      * @return 조회된 예약
      */
@@ -29,8 +33,10 @@ public interface OrderReservationRepository extends JpaRepository<Reservation, L
             SELECT r
             FROM Reservation r
             WHERE r.id = :reservationId
-            """
-    )
+            """)
+    @QueryHints(value = {
+            @QueryHint(name = "jakarta.persistence.lock.timeout", value = "2000")
+    })
     Optional<Reservation> findByIdWithPessimisticWriteLock(@Param("reservationId") Long reservationId);
 
     /**

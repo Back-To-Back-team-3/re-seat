@@ -261,8 +261,8 @@ public class OrderServiceTest {
     void createOrder_limitsHoldExpiresAt() {
 
         // given
-        LocalDateTime createdAt = LocalDateTime.now().minusMinutes(10);
-        LocalDateTime holdExpiresAt = createdAt.plusMinutes(17);
+        LocalDateTime createdAt = LocalDateTime.now();
+        LocalDateTime holdExpiresAt = createdAt.plusMinutes(19);
         LocalDateTime expectedExpiresAt = createdAt.plusMinutes(18);
 
         givenValidCreateOrder(createdAt, holdExpiresAt);
@@ -319,5 +319,26 @@ public class OrderServiceTest {
                         assertThat(gameSeat.getHoldExpiresAt())
                                 .isEqualTo(response.getHoldExpiresAt())
                 );
+    }
+
+    @Test
+    @DisplayName("결제 기한이 18분 상한을 넘으면 주문 생성에 실패한다.")
+    void createOrder_throwsExceptionWhenHoldLimitExceeded() {
+
+        // given
+        LocalDateTime createdAt = LocalDateTime.now().minusMinutes(11);
+        LocalDateTime holdExpiresAt = LocalDateTime.now().plusMinutes(1);
+
+        givenLockedReservation(createdAt, holdExpiresAt);
+
+        // when & then
+        assertThatThrownBy(() -> orderService.createOrder(USER_ID, RESERVATION_ID))
+                .isInstanceOf(PreReservationExpiredException.class);
+
+        // then
+        verify(reservationSeatRepository, never()).findByReservation_Id(RESERVATION_ID);
+        verify(orderRepository, never()).save(any(Order.class));
+        verify(orderItemRepository, never()).saveAll(any());
+        verify(orderReservationRepository, never()).updateHoldExpiresAtById(RESERVATION_ID, holdExpiresAt);
     }
 }
