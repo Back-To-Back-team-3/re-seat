@@ -51,7 +51,15 @@ public class SeatHoldFacade {
         );
 
         // 3단계: 선점 성공 후 토큰 소비 — 동일 토큰으로 재진입 방지
-        admissionTokenService.consumeToken(userId, request.gameId(), token);
+        try {
+            admissionTokenService.consumeToken(userId, request.gameId(), token);
+        } catch (Exception e) {
+            // consumeToken 실패 시 선점은 롤백하지 않는다.
+            // Queue-Token TTL(5분) 내 재진입 가능하나, validateToken에서 ACTIVE 상태·만료 여부를 재검증해 차단된다.
+            // 운영 모니터링 대상으로 ERROR 로그를 남긴다.
+            log.error("[SeatHoldFacade] 토큰 소비 실패 — 선점은 유지됩니다. userId={}, gameId={}",
+                userId, request.gameId(), e);
+        }
 
         log.info("[SeatHoldFacade] 좌석 선점 완료. userId={}, gameId={}, seats={}",
             userId, request.gameId(), request.gameSeatIds());
