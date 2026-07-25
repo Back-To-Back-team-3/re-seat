@@ -3,7 +3,7 @@ package com.backtoback.reseat.domain.reservation.service;
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
-import com.backtoback.reseat.domain.reservation.dto.SeatHoldRequest;
+import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
 import com.backtoback.reseat.domain.reservation.repository.ReservationRepository;
 import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
