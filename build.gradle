@@ -75,6 +75,14 @@ dependencies {
     // Kafka
     implementation 'org.springframework.kafka:spring-kafka'
 
+    // Spring Boot Actuator (애플리케이션 상태 및 메트릭 수집)
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    //Prometheus 매트릭 포맷 변환용 라이브러리
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+
+
+
 
 
 }
