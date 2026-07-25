@@ -27,9 +27,6 @@ public class RedissonSeatLockStrategy implements SeatLockStrategy {
     // 락 획득 대기 시간: 빠른 실패로 경합 요청을 즉시 거부한다
     private static final long WAIT_SECONDS = 3L;
 
-    // 락 임대 시간: 트랜잭션 최대 소요 시간보다 길게 설정해 커밋 전 조기 해제를 방지한다
-    private static final long LEASE_SECONDS = 10L;
-
     private static final String LOCK_KEY_PREFIX = "lock:game-seat:";
 
     private final RedissonClient redissonClient;
@@ -52,7 +49,8 @@ public class RedissonSeatLockStrategy implements SeatLockStrategy {
             for (Long gameSeatId : sortedIds) {
                 RLock lock = redissonClient.getLock(LOCK_KEY_PREFIX + gameSeatId);
 
-                boolean acquired = lock.tryLock(WAIT_SECONDS, LEASE_SECONDS, TimeUnit.SECONDS);
+                // leaseTime을 명시하지 않아 Redisson watchdog가 락을 자동 갱신한다.
+                boolean acquired = lock.tryLock(WAIT_SECONDS, TimeUnit.SECONDS);
 
                 if (!acquired) {
                     log.warn("좌석 락 획득 실패 - gameSeatId: {}", gameSeatId);
