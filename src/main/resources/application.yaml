@@ -1,5 +1,5 @@
 # ===================================================================
-# 1. 공통 및 로컬(기본) 개발 환경 설정 블록
+# 1. 공통 및 로컬(기본) 개발 환경 설정 블록 (active: local)
 # ===================================================================
 spring:
   profiles:
@@ -86,13 +86,16 @@ spring:
             user-name-attribute: id
 
 # -----------------------------------------------------------------
-# Actuator / Prometheus 메트릭 수집 엔드포인트 설정 (최상위 루트 레벨)
+# Actuator / Prometheus 메트릭 수집 엔드포인트 설정
 # -----------------------------------------------------------------
 management:
   endpoints:
     web:
       exposure:
         include: prometheus, health, info, metrics
+  endpoint:
+    health:
+      show-details: always
   metrics:
     tags:
       application: re-seat
@@ -143,7 +146,7 @@ spring:
       password: ${REDIS_PASSWORD:?REDIS_PASSWORD environment variable must be set!}
 
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:19092}
 
   flyway:
     enabled: true
@@ -152,6 +155,16 @@ spring:
 
 jwt:
   secret: ${JWT_SECRET:?JWT_SECRET environment variable must be set!}
+
+# prod 프로필에서도 Actuator 엔드포인트가 유지되도록 재선언
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus, health, info, metrics
+  endpoint:
+    health:
+      show-details: always
 
 ---
 # ===================================================================

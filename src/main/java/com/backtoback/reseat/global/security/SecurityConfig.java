@@ -52,7 +52,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
 
                 // 헬스체크 및 모니터링 경로 허용
-                .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers("/actuator","/actuator/**").permitAll()
 
 
 
