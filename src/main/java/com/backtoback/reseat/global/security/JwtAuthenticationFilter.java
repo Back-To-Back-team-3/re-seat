@@ -1,6 +1,7 @@
 package com.backtoback.reseat.global.security;
 
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -15,8 +16,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenProvider jwtTokenProvider;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) // 🎯 닫는 소괄호 ) 확인!
-            throws jakarta.servlet.ServletException, java.io.IOException { // 🎯 ServletException 철자 정확히 수정!
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String path = request.getRequestURI();
+        return path.startsWith("/actuator") ||
+            path.startsWith("/h2-console") ||
+            path.startsWith("/swagger-ui") ||
+            path.startsWith("/v3/api-docs");
+    }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) 
+            throws jakarta.servlet.ServletException, java.io.IOException { 
 
         String token = resolveToken(request);
 
