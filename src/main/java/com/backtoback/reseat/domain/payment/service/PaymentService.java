@@ -1,6 +1,7 @@
 package com.backtoback.reseat.domain.payment.service;
 
 import com.backtoback.reseat.domain.order.exception.OrderExpiredException;
+import com.backtoback.reseat.domain.order.service.OrderService;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentCancelRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentFailRequest;
@@ -44,6 +45,7 @@ public class PaymentService {
     private final TossPaymentClient tossPaymentClient;
     private final PaymentServiceValidator paymentValidator;
     private final RedissonClient redissonClient;
+    private final OrderService orderService;
 
     /**
      * 주문 기준 결제를 요청한다.
@@ -115,6 +117,7 @@ public class PaymentService {
                     paymentId, request.getPaymentKey(), e);
             payment.fail("토스 결제 승인 상태를 확인할 수 없습니다.", LocalDateTime.now());
             paymentRecoveryTaskRepository.save(new PaymentRecoveryTask(payment));
+            orderService.failOrder(payment.getOrder().getId());
             return PaymentActionResponse.from(payment);
         }
 
@@ -126,12 +129,14 @@ public class PaymentService {
                     ? "토스 결제 승인 상태가 비어 있습니다."
                     : "토스 결제 승인 상태가 완료가 아닙니다. status=" + status;
             payment.fail(failReason, LocalDateTime.now());
+            orderService.failOrder(payment.getOrder().getId());
             return PaymentActionResponse.from(payment);
         }
 
         // Toss 승인이 확인됐으므로 로컬 결제에 PG 키·수단·승인 시각을 반영한다.
         payment.assignPgPaymentKey(response.getPaymentKey());
         payment.approve(response.getMethod(), resolveApprovedAt(response.getApprovedAt()));
+        orderService.completeOrder(payment.getOrder().getId());
 
         return PaymentActionResponse.from(payment);
     }
@@ -158,6 +163,7 @@ public class PaymentService {
         paymentValidator.validatePgOrderId(payment, request.getOrderId());
 
         payment.fail("[" + request.getCode() + "] " + request.getMessage(), LocalDateTime.now());
+        orderService.failOrder(payment.getOrder().getId());
 
         return PaymentActionResponse.from(payment);
     }
