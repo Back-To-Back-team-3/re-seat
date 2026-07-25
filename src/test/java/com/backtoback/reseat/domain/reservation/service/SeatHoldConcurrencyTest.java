@@ -55,7 +55,7 @@ import static org.assertj.core.api.Assertions.assertThat;
     matches = "true"
 )
 @Tag("concurrency")
-@ActiveProfiles("test")
+@ActiveProfiles("test-concurrency")
 @SpringBootTest
 class SeatHoldConcurrencyTest {
 
