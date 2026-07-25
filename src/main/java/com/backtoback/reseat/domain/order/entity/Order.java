@@ -102,14 +102,45 @@ public class Order extends BaseEntity {
     /**
      * 주문을 취소 상태로 변경한다.
      *
-     * <p>결제 전 CREATED 상태의 주문만 취소할 수 있다.</p>
+     * <p>CREATED 상태의 주문만 CANCELED 상태로 변경할 수 있다.</p>
      */
     public void cancel() {
 
+        validateCreatedStatus();
+        this.status = OrderStatus.CANCELED;
+    }
+
+    /**
+     * 주문을 결제 완료 상태로 변경한다.
+     *
+     * <p>CREATED 상태의 주문만 PAID 상태로 변경할 수 있다.</p>
+     */
+    public void paid() {
+
+        validateCreatedStatus();
+        this.status = OrderStatus.PAID;
+    }
+
+    /**
+     * 주문을 결제 기한 만료 상태로 변경한다.
+     *
+     * <p>CREATED 상태의 주문만 EXPIRED 상태로 변경할 수 있다.</p>
+     */
+    public void expired() {
+
+        validateCreatedStatus();
+        this.status = OrderStatus.EXPIRED;
+    }
+
+    /**
+     * 주문이 상태 전이 가능한 상태인지 검증한다.
+     *
+     * <p>CREATED 상태가 아닌 경우 예외가 발생한다.</p>
+     */
+    private void validateCreatedStatus() {
         if (this.status != OrderStatus.CREATED) {
             throw new InvalidOrderStatusException();
         }
-
-        this.status = OrderStatus.CANCELED;
     }
+
 }

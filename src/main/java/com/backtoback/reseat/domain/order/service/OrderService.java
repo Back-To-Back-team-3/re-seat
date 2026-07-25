@@ -4,8 +4,6 @@ import com.backtoback.reseat.domain.order.dto.response.OrderCancelResponse;
 import com.backtoback.reseat.domain.order.dto.response.OrderResponse;
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.entity.OrderItem;
-import com.backtoback.reseat.domain.order.entity.OrderStatus;
-import com.backtoback.reseat.domain.order.exception.InvalidOrderStatusException;
 import com.backtoback.reseat.domain.order.exception.OrderAccessDeniedException;
 import com.backtoback.reseat.domain.order.exception.OrderNotFoundException;
 import com.backtoback.reseat.domain.order.repository.OrderItemRepository;
@@ -115,8 +113,7 @@ public class OrderService {
     @Transactional(readOnly = true)
     public OrderResponse getOrder(Long userId, Long orderId) {
 
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(OrderNotFoundException::new);
+        Order order = findOrderById(orderId);
 
         if (!order.getUser().getId().equals(userId)) {
             throw new OrderAccessDeniedException();
@@ -139,15 +136,10 @@ public class OrderService {
     @Transactional
     public OrderCancelResponse cancelOrder(Long userId, Long orderId) {
 
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(OrderNotFoundException::new);
+        Order order = findOrderById(orderId);
 
         if (!order.getUser().getId().equals(userId)) {
             throw new OrderAccessDeniedException();
-        }
-
-        if (order.getStatus() != OrderStatus.CREATED) {
-            throw new InvalidOrderStatusException();
         }
 
         Reservation reservation = order.getReservation();
@@ -165,6 +157,49 @@ public class OrderService {
         });
 
         return OrderCancelResponse.from(order);
+    }
+
+    /**
+     * 결제 승인 성공 주문을 결제완료 상태로 변경한다.
+     *
+     * <p>CREATED 상태의 주문을 PAID 상태로 변경한다.</p>
+     *
+     * @param orderId 결제 완료 처리할 주문 ID
+     */
+    @Transactional
+    public void completeOrder(Long orderId) {
+
+        Order order = findOrderById(orderId);
+        order.paid();
+    }
+
+    /**
+     * 결제 기한이 만료된 주문을 만료 상태로 변경한다.
+     *
+     * <p>CREATED 상태의 주문을 EXPIRED 상태로 변경한다.</p>
+     *
+     * @param orderId 만료 처리할 주문 ID
+     */
+    @Transactional
+    public void expireOrder(Long orderId) {
+
+        Order order = findOrderById(orderId);
+        order.expired();
+    }
+
+
+    /**
+     * 종결 결제 실패 주문을 취소 상태로 변경한다.
+     *
+     * <p>재시도 가능한 결제 실패에는 호출하지 않고, CREATED 상태의 주문을 CANCELED 상태로 변경한다.</p>
+     *
+     * @param orderId 취소 처리할 주문 ID
+     */
+    @Transactional
+    public void failOrder(Long orderId) {
+
+        Order order = findOrderById(orderId);
+        order.cancel();
     }
 
     /**
@@ -213,5 +248,16 @@ public class OrderService {
                 .toUpperCase();
 
         return "ORD-" + date + "-" + random;
+    }
+
+    /**
+     * 주문 ID로 주문을 조회한다.
+     *
+     * @param orderId 조회할 주문 ID
+     * @return 조회된 주문
+     */
+    private Order findOrderById(Long orderId) {
+        return orderRepository.findById(orderId)
+                .orElseThrow(OrderNotFoundException::new);
     }
 }

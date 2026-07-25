@@ -3,6 +3,8 @@
 package com.backtoback.reseat.domain.payment.entity;
 
 import com.backtoback.reseat.domain.order.entity.Order;
+import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
+import com.backtoback.reseat.domain.payment.exception.PaymentCallbackMismatchException;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.global.common.BaseEntity;
 import jakarta.persistence.*;
@@ -116,10 +118,17 @@ public class Payment extends BaseEntity {
         this.failedAt = failedAt;
     }
 
-    // 결제 승인 처리
-    public void approve(String pgPaymentKey, String method, LocalDateTime approvedAt) {
-        this.status = PaymentStatus.APPROVED;
+    /** Toss 승인 요청에 사용할 PG 결제 키를 연결한다. */
+    public void assignPgPaymentKey(String pgPaymentKey) {
+        if (this.pgPaymentKey != null && !this.pgPaymentKey.equals(pgPaymentKey)) {
+            throw new PaymentCallbackMismatchException();
+        }
         this.pgPaymentKey = pgPaymentKey;
+    }
+
+    // 결제 승인 처리
+    public void approve(String method, LocalDateTime approvedAt) {
+        this.status = PaymentStatus.APPROVED;
         this.method = method;
         this.approvedAt = approvedAt;
         this.failReason = null;
@@ -135,6 +144,9 @@ public class Payment extends BaseEntity {
 
     // 동일 주문의 READY 결제를 재사용할 때 현재 결제 시도의 멱등키를 교체한다.
     public void changeIdempotencyKey(String idempotencyKey) {
+        if (status != PaymentStatus.READY) {
+            throw new PaymentAlreadyFinalizedException();
+        }
         this.idempotencyKey = idempotencyKey;
     }
 
