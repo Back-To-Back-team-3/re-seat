@@ -1,20 +1,21 @@
+# ===================================================================
+# [test] Gradle test 및 CI 환경 — H2 인메모리
+# ===================================================================
 spring:
+  config:
+    activate:
+      on-profile: test
+
   datasource:
     url: jdbc:h2:mem:reseat-test;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
     password:
 
-  kafka:
-    admin:
-      auto-create: false
-    listener:
-      auto-startup: false
-
   jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: create-drop
-    database-platform: org.hibernate.dialect.H2Dialect
     properties:
       hibernate:
         generate_statistics: true
@@ -22,8 +23,16 @@ spring:
   flyway:
     enabled: false
 
+  kafka:
+    admin:
+      auto-create: false
+    listener:
+      auto-startup: false
+
 ---
-# 동시성 테스트 전용 — MySQL
+# ===================================================================
+# [test-concurrency] 동시성 테스트 전용 — 로컬 MySQL
+# ===================================================================
 spring:
   config:
     activate:
@@ -34,14 +43,27 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+    hikari:
+      transaction-isolation: TRANSACTION_READ_COMMITTED
 
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: none
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
 
   flyway:
     enabled: false
+
+  # 로컬 Redis
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: ${REDIS_PASSWORD}
 
   kafka:
     admin:

@@ -83,6 +83,13 @@ public class ReservationService {
         //    ** 아직 락 없음: 이 체크와 상태 변경 사이에 over-booking 발생 가능 → C-5
         validateSeatsForGame(gameSeats, game);
 
+        // [이슈 #172 재현용] 의도적 지연 — 이슈 #173 머지 후 제거
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
         // 5. 만료 시각은 한 번만 계산해 Reservation·GameSeat이 동일 값이 되도록 보장
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime expiresAt = HoldPolicy.holdExpiresAt(now);

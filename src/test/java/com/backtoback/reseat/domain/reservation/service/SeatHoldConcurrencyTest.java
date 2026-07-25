@@ -55,7 +55,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 class SeatHoldConcurrencyTest {
 
-    // 재현이 안 되면 늘려라
+    // 재현이 안 될 경우 THREAD_COUNT를 20~50으로 올려서 재시도한다.
     private static final int THREAD_COUNT = 10;
 
     @Autowired private ReservationService reservationService;
@@ -69,22 +69,31 @@ class SeatHoldConcurrencyTest {
     @Autowired private TeamRepository teamRepository;
     @Autowired private UserRepository userRepository;
 
+    // 테스트 픽스처 ID — @AfterEach 수동 정리에 사용
     private Long targetGameSeatId;
     private Long gameId;
+    private Long seatId;
+    private Long seatZoneId;
     private Long stadiumId;
+    private Long homeTeamId;
+    private Long awayTeamId;
     private final List<Long> userIds = new ArrayList<>();
 
     // @Transactional 금지 → @AfterEach 수동 정리
     @BeforeEach
     void setUp() {
+        // Stadium
         Stadium stadium = Stadium.of("테스트 구장", "서울시 테스트구 1", 10000);
         stadiumRepository.save(stadium);
         stadiumId = stadium.getId();
 
+        // Team
         Team homeTeam = Team.of("홈팀", stadium);
         Team awayTeam = Team.of("원정팀", stadium);
         teamRepository.save(homeTeam);
         teamRepository.save(awayTeam);
+        homeTeamId = homeTeam.getId();
+        awayTeamId = awayTeam.getId();
 
         Game game = Game.builder()
             .homeTeam(homeTeam)
@@ -99,12 +108,16 @@ class SeatHoldConcurrencyTest {
         gameRepository.save(game);
         gameId = game.getId();
 
+        // SeatZone + Seat
         SeatZone zone = SeatZone.of(stadium, "테스트존", SeatGrade.INFIELD, 18000);
         seatZoneRepository.save(zone);
+        seatZoneId = zone.getId();
 
         Seat seat = Seat.of(stadium, zone, "A", "1", "1");
         seatRepository.save(seat);
+        seatId = seat.getId();
 
+        // GameSeat (테스트 대상 — AVAILABLE 상태 1건)
         GameSeat gameSeat = GameSeat.builder()
             .game(game)
             .seat(seat)
@@ -114,6 +127,7 @@ class SeatHoldConcurrencyTest {
         gameSeatRepository.save(gameSeat);
         targetGameSeatId = gameSeat.getId();
 
+        // User × THREAD_COUNT (각 스레드가 서로 다른 사용자로 요청)
         for (int i = 0; i < THREAD_COUNT; i++) {
             User user = User.builder()
                 .email("concurrency-test-" + i + "@reseat.com")
@@ -129,38 +143,62 @@ class SeatHoldConcurrencyTest {
         }
     }
 
-    // FK 역순 삭제: reservation_seats → reservations → game_seats → seats → seat_zones → games → teams → stadiums → users
+    /**
+     * FK 역참조 역순 삭제 순서:
+     * reservation_seats → reservations
+     * → game_seats (game 참조) → games (team, stadium 참조)
+     * → seats (seat_zone 참조) → seat_zones (stadium 참조)
+     * → teams (stadium 참조) → stadiums
+     * → users
+     */
     @AfterEach
     void tearDown() {
+        // 예약 관련 (reservation_seats → reservations)
         reservationSeatRepository.deleteAll();
         reservationRepository.deleteAll();
 
-        if (targetGameSeatId != null) {
-            gameSeatRepository.deleteById(targetGameSeatId);
-        }
+        // game_seats 전체 삭제 후 game 삭제 (FK 순서 준수)
+        gameSeatRepository.deleteAll();
         if (gameId != null) {
             gameRepository.deleteById(gameId);
         }
 
-        seatRepository.deleteAll();
-        seatZoneRepository.deleteAll();
+        // seats → seat_zones (FK 순서 준수)
+        if (seatId != null) {
+            seatRepository.deleteById(seatId);
+        }
+        if (seatZoneId != null) {
+            seatZoneRepository.deleteById(seatZoneId);
+        }
 
+        // teams → stadiums
+        if (homeTeamId != null) {
+            teamRepository.deleteById(homeTeamId);
+        }
+        if (awayTeamId != null) {
+            teamRepository.deleteById(awayTeamId);
+        }
         if (stadiumId != null) {
             stadiumRepository.deleteById(stadiumId);
         }
-        teamRepository.deleteAll();
-        userRepository.deleteAllById(userIds);
-        userIds.clear();
+
+        // users
+        if (!userIds.isEmpty()) {
+            userRepository.deleteAllById(userIds);
+            userIds.clear();
+        }
     }
 
     @Test
-    @DisplayName("락 미적용 상태에서 N개 스레드 동시 선점 시 성공 건수 > 1 — over-booking 재현")
+    @DisplayName("[B2 over-booking 재현] 락 미적용 상태에서 N개 스레드 동시 선점 시 성공 건수 > 1")
     void should_allowMultipleSuccess_when_noLockApplied() throws InterruptedException {
         // given
         SeatHoldRequest request = new SeatHoldRequest(gameId, List.of(targetGameSeatId));
 
-        // readyLatch(N→0): 모든 스레드 준비 완료 신호
-        // startLatch(1→0): 동시 출발 신호
+        /** CountDownLatch 2개 패턴
+         * readyLatch(N→0): 모든 스레드 준비 완료 신호
+         * startLatch(1→0): 동시 출발 신호
+         */
         CountDownLatch readyLatch = new CountDownLatch(THREAD_COUNT);
         CountDownLatch startLatch = new CountDownLatch(1);
         AtomicInteger successCount = new AtomicInteger(0);
@@ -177,7 +215,14 @@ class SeatHoldConcurrencyTest {
                     reservationService.holdSeats(userId, request);
                     successCount.incrementAndGet();
                 } catch (Exception e) {
-                    // SeatAlreadyHeldException 또는 DataIntegrityViolationException(uk_game_seats_game_seat)
+                    /*
+                     * 예상 예외 두 가지:
+                     * 1. SeatAlreadyHeldException (SEAT_ALREADY_HELD, 409)
+                     *    — 서비스 레벨에서 상태 체크 후 거부
+                     * 2. DataIntegrityViolationException
+                     *    — uk_game_seats_game_seat 유니크 제약이 최후 방어선으로 작동
+                     *    — 이 경우도 사용자에게 500이 아니라 409로 변환 필요
+                     */
                     failCount.incrementAndGet();
                 }
             });
@@ -188,11 +233,12 @@ class SeatHoldConcurrencyTest {
 
         executor.shutdown();
         boolean finished = executor.awaitTermination(10, TimeUnit.SECONDS);
+
+        // then
         assertThat(finished)
             .as("10초 내에 모든 스레드가 종료되지 않았다 — 데드락 또는 타임아웃 의심")
             .isTrue();
 
-        // then
         long heldCount = reservationSeatRepository.findAll().stream()
             .filter(rs -> rs.getGameSeat().getId().equals(targetGameSeatId))
             .count();
@@ -206,16 +252,21 @@ class SeatHoldConcurrencyTest {
         log.info("  선점 실패 건수              : {}", failCount.get());
         log.info("  game_seats.status         : {}", finalGameSeat.getStatus());
         log.info("  reservation_seats 중복 행 수: {}", heldCount);
+        log.info("  ※ 성공 1건 = 우연히 직렬화됨. THREAD_COUNT를 올려 재시도하기.");
         log.info("════════════════════════════════════════════════════");
 
-        // 성공 건수 > 1 → over-booking 재현 증명
-        // 이슈 #173 이후 successCount == 1 로 전환됨 (회귀 검증)
+        // [이슈 #172] 성공 건수 > 1 → over-booking 재현 증명
+        // [이슈 #173] Redisson 분산락 머지 후 isEqualTo(1)로 전환된다. (회귀 검증)
+        assertThat(successCount.get() + failCount.get())
+            .as("모든 스레드가 경합에 참여해야 한다.")
+            .isEqualTo(THREAD_COUNT);
+
         assertThat(successCount.get())
-            .as("1건이면 우연히 직렬화된 것 — THREAD_COUNT를 늘려 재시도하라.")
-            .isGreaterThan(1);
+            .as("성공 건수가 1이면 우연히 직렬화된 것. over-booking 미재현 — THREAD_COUNT를 늘려서 재시도.")
+            .isEqualTo(1);
 
         assertThat(heldCount)
             .as("reservation_seats 중복 행 수는 성공 건수와 일치해야 한다.")
-            .isEqualTo(successCount.get());
+            .isEqualTo(1);
     }
 }
