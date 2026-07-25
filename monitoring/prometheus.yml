@@ -8,6 +8,6 @@ scrape_configs:
     scrape_interval: 5s
     static_configs:
       # EC2에서 web-app 컨테이너를 함께 구동할 때
-      - targets: [ 'web-app:8080' ]
+     # - targets: [ 'web-app:8080' ]
       # 만약 EC2 호스트 OS에서 직접 jar로 Spring Boot를 실행 중이라면
-      # - targets: ['172.17.0.1:8080']
+       - targets: ['172.17.0.1:8080']
