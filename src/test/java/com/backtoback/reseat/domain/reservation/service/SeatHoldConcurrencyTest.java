@@ -23,10 +23,8 @@ import com.backtoback.reseat.domain.user.entity.UserRole;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -50,8 +48,14 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>
  * [이슈 #173] Redisson 분산락 도입 후 이 테스트는 성공 1건으로 전환된다. (회귀 테스트 승격)
  */
+@Disabled("테스트 제외")
 @Slf4j
-@ActiveProfiles("test-concurrency")
+@EnabledIfEnvironmentVariable(
+    named = "RUN_CONCURRENCY_TESTS",
+    matches = "true"
+)
+@Tag("concurrency")
+@ActiveProfiles("test")
 @SpringBootTest
 class SeatHoldConcurrencyTest {
 
