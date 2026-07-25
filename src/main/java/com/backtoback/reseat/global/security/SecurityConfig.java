@@ -51,6 +51,11 @@ public class SecurityConfig {
             //엔드 포인트별 인가 허용 정책 설정
             .authorizeHttpRequests(auth -> auth
 
+                // 헬스체크 및 모니터링 경로 허용
+                .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers("/api/v1/auth/**").permitAll()
+                .anyRequest().authenticated()
+
                 // 비동기 요청 처리 후 발생하는 ASYNC 디스패치를 허용한다.
                 .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
 
