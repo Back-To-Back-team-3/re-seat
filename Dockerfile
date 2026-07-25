@@ -8,7 +8,7 @@ WORKDIR /app
 RUN groupadd --system spring && useradd --system --gid spring --home-dir /app --shell /usr/sbin/nologin spring
 
 # 3. jar 복사 시 소유권을 spring 사용자로 명시하여 보안 강화
-COPY --chown=spring:spring build/libs/app.jar app.jar
+COPY --chown=spring:spring build/libs/*.jar app.jar
 
 # 4. root가 아닌 spring 사용자로 전환
 USER spring
