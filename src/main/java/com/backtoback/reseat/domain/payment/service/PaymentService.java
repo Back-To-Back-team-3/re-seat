@@ -9,10 +9,13 @@ import com.backtoback.reseat.domain.payment.dto.response.PaymentActionResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCreateResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentResponse;
 import com.backtoback.reseat.domain.payment.entity.Payment;
+import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
 import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentLockFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
+import com.backtoback.reseat.domain.payment.pg.toss.exception.TossPaymentStatusUnknownException;
+import com.backtoback.reseat.domain.payment.repository.PaymentRecoveryTaskRepository;
 import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
@@ -35,6 +38,7 @@ public class PaymentService {
     private static final long PAYMENT_LOCK_WAIT_SECONDS = 3L;
 
     private final PaymentRepository paymentRepository;
+    private final PaymentRecoveryTaskRepository paymentRecoveryTaskRepository;
     private final PaymentCreationService paymentCreationService;
     private final PaymentOrderPolicy paymentOrderPolicy;
     private final TossPaymentClient tossPaymentClient;
@@ -99,10 +103,20 @@ public class PaymentService {
         // READY 결제만 Toss 승인 요청 전에 콜백 주문·금액을 검증한다.
         paymentValidator.validateConfirmable(payment, request.getOrderId(), request.getAmount());
         paymentOrderPolicy.ensurePayable(payment, payment.getOrder());
+        payment.assignPgPaymentKey(request.getPaymentKey());
 
         // Toss에 최종 승인을 요청하고, 응답을 받지 못하면 클라이언트 내부에서 단건 재조회로 상태를 확인한다.
-        TossPaymentResponse response = tossPaymentClient.confirm(
-                request.getPaymentKey(), request.getOrderId(), request.getAmount());
+        TossPaymentResponse response;
+        try {
+            response = tossPaymentClient.confirm(
+                    request.getPaymentKey(), request.getOrderId(), request.getAmount());
+        } catch (TossPaymentStatusUnknownException e) {
+            log.warn("토스 결제 승인 상태 확인 불가 - 복구 작업 등록 (paymentId={}, paymentKey={})",
+                    paymentId, request.getPaymentKey(), e);
+            payment.fail("토스 결제 승인 상태를 확인할 수 없습니다.", LocalDateTime.now());
+            paymentRecoveryTaskRepository.save(new PaymentRecoveryTask(payment));
+            return PaymentActionResponse.from(payment);
+        }
 
         // 승인 API 응답은 받았지만 승인 완료 상태가 아니라면 로컬 결제를 실패로 닫는다.
         if (!response.isApproved()) {
@@ -116,7 +130,8 @@ public class PaymentService {
         }
 
         // Toss 승인이 확인됐으므로 로컬 결제에 PG 키·수단·승인 시각을 반영한다.
-        payment.approve(response.getPaymentKey(), response.getMethod(), resolveApprovedAt(response.getApprovedAt()));
+        payment.assignPgPaymentKey(response.getPaymentKey());
+        payment.approve(response.getMethod(), resolveApprovedAt(response.getApprovedAt()));
 
         return PaymentActionResponse.from(payment);
     }
@@ -167,8 +182,15 @@ public class PaymentService {
         paymentValidator.validateCancelable(payment);
 
         // Toss에 전액 취소를 요청하고, 응답을 받지 못하면 클라이언트 내부에서 단건 재조회로 상태를 확인한다.
-        TossPaymentResponse response = tossPaymentClient.cancel(
-                payment.getPgPaymentKey(), request.getCancelReason());
+        TossPaymentResponse response;
+        try {
+            response = tossPaymentClient.cancel(
+                    payment.getPgPaymentKey(), request.getCancelReason());
+        } catch (TossPaymentStatusUnknownException e) {
+            log.warn("토스 결제 취소 상태 확인 불가 (paymentId={}, paymentKey={})",
+                    paymentId, payment.getPgPaymentKey(), e);
+            throw new PaymentCancelFailedException("토스 결제 취소 상태를 확인할 수 없습니다.");
+        }
 
         // Toss 응답에서도 취소 완료가 확인돼야 로컬 상태를 변경할 수 있다.
         if (!response.isCancelCompleted()) {
