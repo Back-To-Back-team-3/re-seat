@@ -13,6 +13,21 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
+      mysql:
+        image: mysql:8.0
+        ports:
+          - 3306:3306
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: reseat_concurrency_test
+          MYSQL_USER: reseat_test
+          MYSQL_PASSWORD: reseat_test
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost -u root -proot"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
       redis:
         image: redis:7.2-alpine
         ports:
