@@ -339,6 +339,6 @@ public class OrderServiceTest {
         verify(reservationSeatRepository, never()).findByReservation_Id(RESERVATION_ID);
         verify(orderRepository, never()).save(any(Order.class));
         verify(orderItemRepository, never()).saveAll(any());
-        verify(orderReservationRepository, never()).updateHoldExpiresAtById(RESERVATION_ID, holdExpiresAt);
+        verify(orderReservationRepository, never()).updateHoldExpiresAtById(any(), any(LocalDateTime.class));
     }
 }
