@@ -4,6 +4,7 @@ import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.entity.OrderStatus;
 import com.backtoback.reseat.domain.order.exception.OrderExpiredException;
 import com.backtoback.reseat.domain.order.repository.OrderRepository;
+import com.backtoback.reseat.domain.order.service.OrderService;
 import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.exception.PaymentAccessDeniedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentOrderNotFoundException;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Component;
 public class PaymentOrderPolicy {
 
     private final OrderRepository orderRepository;
+    private final OrderService orderService;
 
     /** 주문을 조회하고 결제 요청 사용자에게 소유권이 있는지 검증한다. */
     public Order getOwnedOrder(Long userId, Long orderId) {
@@ -37,7 +39,7 @@ public class PaymentOrderPolicy {
             if (payment != null) {
                 payment.fail("주문 결제 기한이 만료되었습니다.", now);
             }
-            // TODO: 주문 도메인의 결제 만료 상태 전이 메서드가 추가되면 후속 처리를 호출한다.
+            orderService.expireOrder(order.getId());
             throw new OrderExpiredException();
         }
 
