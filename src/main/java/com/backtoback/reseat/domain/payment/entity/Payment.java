@@ -5,6 +5,7 @@ package com.backtoback.reseat.domain.payment.entity;
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCallbackMismatchException;
+import com.backtoback.reseat.domain.payment.exception.PaymentCancelNotAllowedException;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.global.common.BaseEntity;
 import jakarta.persistence.*;
@@ -152,6 +153,9 @@ public class Payment extends BaseEntity {
 
     // 결제 취소 처리
     public void cancel() {
+        if (status != PaymentStatus.APPROVED) {
+            throw new PaymentCancelNotAllowedException();
+        }
         this.status = PaymentStatus.CANCELED;
         this.failReason = null;
         this.failedAt = null;
