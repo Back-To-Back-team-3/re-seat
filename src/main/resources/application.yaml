@@ -1,11 +1,59 @@
 # ===================================================================
-# 1. 공통 및 로컬(기본) 개발 환경 설정 블록
+# 1. 공통 및 로컬(기본) 개발 환경 설정 블록 (active: local)
 # ===================================================================
 spring:
   profiles:
     active: local
     default: local
 
+  datasource:
+    url: jdbc:h2:mem:reseatdb;MODE=MySQL;NON_KEYWORDS=USER;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: true
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      properties:
+        spring:
+          deserializer:
+            value:
+              delegate:
+                class: org.springframework.kafka.support.serializer.JsonDeserializer
+          json:
+            trusted:
+              packages: com.backtoback.reseat.domain.queue.dto.event
+    listener:
+      ack-mode: manual_immediate
 
   data:
     web:
@@ -14,15 +62,15 @@ spring:
     redis:
       host: localhost
       port: 6379
-      password: ${REDIS_PASSWORD:myredispassword} # 로컬 Redis 비밀번호 (환경 변수 또는 기본값)
+      password: ${REDIS_PASSWORD:myredispassword}
 
   security:
     oauth2:
       client:
         registration:
           kakao:
-            client-id: ${KAKAO_CLIENT_ID}
-            client-secret: ${KAKAO_CLIENT_SECRET}
+            client-id: ${KAKAO_CLIENT_ID:dummy-kakao-client-id}
+            client-secret: ${KAKAO_CLIENT_SECRET:dummy-kakao-client-secret}
             client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
             redirect-uri: "{baseUrl}/login/oauth2/code/kakao"
@@ -37,79 +85,28 @@ spring:
             user-info-uri: https://kapi.kakao.com/v2/user/me
             user-name-attribute: id
 
-  datasource:
-    url: jdbc:h2:mem:reseatdb;MODE=MySQL;NON_KEYWORDS=USER;DB_CLOSE_DELAY=-1
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-
-  jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
-    hibernate:
-      ddl-auto: validate
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-
-  flyway:
-    enabled: true
-    baseline-on-migrate: true # 이미 데이터가 있는 환경에서도 안전하게 히스토리 시작하는 옵션
-    locations: classpath:db/migration
-
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-      settings:
-        web-allow-others: true
-
-    # IDE 실행 시 localhost를 사용하고, Docker에서는 환경 변수로 내부 Kafka 주소를 주입한다.
-    kafka:
-      # Kafka 브로커 주소 (로컬 실행)
-      bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-
-      # Producer (발행자) 설정
-      # 경기 ID는 문자열 Key로, 대기열 진입 이벤트는 JSON Value로 전송한다.
-      producer:
-        key-serializer: org.apache.kafka.common.serialization.StringSerializer
-        value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-
-      # Consumer (구독자) 설정
-      # Queue 진입 이벤트를 소비하여 Redis 대기열 등록을 담당한다.
-      consumer:
-        key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-        value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
-        # 저장된 Offset이 없는 Consumer는 보관 중인 가장 오래된 이벤트 부터 읽는다.
-        auto-offset-reset: earliest
-        enable-auto-commit: false
-        properties:
-          spring:
-            deserializer:
-              value:
-                delegate:
-                  class: org.springframework.kafka.support.serializer.JsonDeserializer
-            json:
-              trusted:
-                packages: com.backtoback.reseat.domain.queue.dto.event
-
-      # 이벤트 처리가 끝난 뒤 직접 Offset을 커밋한다.
-      listener:
-        ack-mode: manual_immediate
-
-
+# -----------------------------------------------------------------
+# Actuator / Prometheus 메트릭 수집 엔드포인트 설정
+# -----------------------------------------------------------------
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus, health, info, metrics
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: re-seat
 
 jwt:
-  # 로컬용 더미 시크릿 키 유지
   secret: c3ByaW5nYm9vdC1zZWN1cml0eS1qd3QtdG9rZW4tc2VjcmV0LWtleS1kZW1vLWJmYWtiZmtiYWZiYWY=
 
-#로컬/테스트 환경에서도 읽을 수 있도록 공통 구역으로 이동.
 portone:
   api-secret: "MOCK_PORTONE_SECRET_TOKEN"
 
-# 토스페이먼츠 문서용 테스트 키(회원가입 없이 공개적으로 쓸 수 있는 공용 테스트 키, 실제 결제는 발생하지 않음).
 toss:
-  # 프론트엔드에서 Toss 결제 위젯을 초기화할 때 사용하는 공개 클라이언트 키.
   client-key: ${TOSS_CLIENT_KEY:test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq}
   secret-key: ${TOSS_SECRET_KEY:test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R}
   base-url: ${TOSS_BASE_URL:https://api.tosspayments.com}
@@ -120,9 +117,10 @@ logging:
       apache.kafka: INFO
       springframework:
         kafka: INFO
+
 ---
 # ===================================================================
-# 2. 도커 컴포즈 가동을 위한 운영(prod) 환경 설정 블록
+# 2. 운영(prod) 환경 설정 블록 (AWS RDS & Docker/EC2 배포용)
 # ===================================================================
 spring:
   config:
@@ -130,7 +128,7 @@ spring:
       on-profile: prod
 
   datasource:
-    url: jdbc:mysql://mysql-db:3306/reseat?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    url: ${SPRING_DATASOURCE_URL}
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
@@ -143,17 +141,30 @@ spring:
 
   data:
     redis:
-      host: redis
+      host: ${REDIS_HOST:redis}
       port: 6379
-      password: ${REDIS_PASSWORD:?REDIS_PASSWORD environment variable must be set!} #환경 변수로부터 주입
+      password: ${REDIS_PASSWORD:?REDIS_PASSWORD environment variable must be set!}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:19092}
 
   flyway:
     enabled: true
-    baseline-on-migrate: true # 이미 데이터가 있는 환경에서도 안전하게 히스토리 시작하는 옵션
+    baseline-on-migrate: true
     locations: classpath:db/migration
 
 jwt:
   secret: ${JWT_SECRET:?JWT_SECRET environment variable must be set!}
+
+# prod 프로필에서도 Actuator 엔드포인트가 유지되도록 재선언
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus, health, info, metrics
+  endpoint:
+    health:
+      show-details: always
 
 ---
 # ===================================================================
@@ -164,11 +175,10 @@ spring:
     activate:
       on-profile: test
 
-  # MySQL DDL 스크립트 억까를 방지하기 위해 Flyway를 정지시킵니다.
   flyway:
     enabled: false
 
-  # Flyway가 멈춘 자리에 하이버네이트가 H2 규격에 맞춰 직접 테이블을 빌드하고 휘발시키도록 명령합니다.
   jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: create-drop
