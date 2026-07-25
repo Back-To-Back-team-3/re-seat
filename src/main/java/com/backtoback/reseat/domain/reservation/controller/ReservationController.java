@@ -74,7 +74,7 @@ public class ReservationController {
     @PostMapping
     public ResponseEntity<ApiResponse<ReservationResponse>> holdSeats(
         @Parameter(description = "대기열 입장 토큰")
-        @RequestHeader("Queue-Token") String queueToken,
+        @RequestHeader(value = "Queue-Token", required = false) String queueToken,
         @AuthenticationPrincipal CustomUserDetails userDetails,
         @Valid @RequestBody SeatHoldRequest request
     ) {
