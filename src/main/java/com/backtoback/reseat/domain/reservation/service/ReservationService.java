@@ -3,10 +3,10 @@ package com.backtoback.reseat.domain.reservation.service;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
-import com.backtoback.reseat.domain.reservation.dto.HoldTimeResponse;
-import com.backtoback.reseat.domain.reservation.dto.ReservationCancelResponse;
-import com.backtoback.reseat.domain.reservation.dto.ReservationResponse;
-import com.backtoback.reseat.domain.reservation.dto.SeatHoldRequest;
+import com.backtoback.reseat.domain.reservation.dto.response.HoldTimeResponse;
+import com.backtoback.reseat.domain.reservation.dto.response.ReservationCancelResponse;
+import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse;
+import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
 import com.backtoback.reseat.domain.reservation.entity.Reservation;
 import com.backtoback.reseat.domain.reservation.entity.ReservationSeat;
 import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
@@ -31,16 +31,16 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 예약(선점) 도메인 서비스.
  * <p>
- * NOTE: 이 서비스는 의도적으로 락(Lock) 미적용 상태입니다.
- * 동시 요청 시 over-booking이 발생할 수 있습니다.
- * → C-5에서 over-booking 재현 → Redisson 분산락 도입 → 방어 성공 서사로 연결합니다.
+ * NOTE: 이 서비스는 SeatHoldFacade의 분산 락 안에서 호출된다.
+ * holdSeats()}는 락 획득 이후 실행되므로, 좌석 상태 재검증이 over-booking 방어의 최종 게이트 역할을 한다.
  * <p>
  * C-4-1 변경 사항:
  *   - HOLD_TTL 5분 → HoldPolicy.HOLD_TTL(10분) 정합.
  *   - holdSeats(): gs.updateStatus/updateHoldExpiresAt → gs.hold(expiresAt) 도메인 메서드로 교체.
  *   - releaseHold(): updateStatus/updateHoldExpiresAt → rs.getGameSeat().release() 로 교체.
  *   - releaseHold(): reservation.updateStatus(CANCELED) → reservation.cancel() 로 교체.
- *
+ * C-5-2 변경 사항:
+ *   - holdSeats() 락 획득 후 재검증 주석 명확화
  */
 @Slf4j
 @Service
@@ -80,7 +80,8 @@ public class ReservationService {
         }
 
         // 4. 경기 소속 + AVAILABLE 확인
-        //    ** 아직 락 없음: 이 체크와 상태 변경 사이에 over-booking 발생 가능 → C-5
+        // 락 획득 후 재조회·재검증 — Facade의 분산 락 안에서 실행되므로 이 시점의 상태가 실제 최신 상태다.
+        // over-booking 방어의 핵심 지점.
         validateSeatsForGame(gameSeats, game);
 
         // 5. 만료 시각은 한 번만 계산해 Reservation·GameSeat이 동일 값이 되도록 보장
