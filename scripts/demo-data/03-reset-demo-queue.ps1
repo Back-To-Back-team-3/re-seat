@@ -1,4 +1,4 @@
-# 3번 선택 정리: 2번에서 만든 지정 경기의 대기열·입장 토큰만 제거하고 6경기 데모 데이터는 유지합니다.
+﻿# 3번 선택 정리: 2번에서 만든 지정 경기의 대기열·입장 토큰만 제거하고 6경기 데모 데이터는 유지합니다.
 # Windows: powershell.exe -ExecutionPolicy Bypass -File "./scripts/demo-data/03-reset-demo-queue.ps1" -GameId 117
 # macOS: pwsh -NoProfile -File "./scripts/demo-data/03-reset-demo-queue.ps1" -GameId 117
 # 전체 작업을 마칠 때는 04-restore-demo-data.ps1을 실행합니다.

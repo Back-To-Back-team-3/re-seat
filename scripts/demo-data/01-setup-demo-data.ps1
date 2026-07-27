@@ -1,4 +1,4 @@
-# 1번 필수 준비: 기존 데이터를 백업하고 상태별 테스트가 가능한 6경기·좌석·주문·티켓 데이터를 만듭니다.
+﻿# 1번 필수 준비: 기존 데이터를 백업하고 상태별 테스트가 가능한 6경기·좌석·주문·티켓 데이터를 만듭니다.
 # Windows: powershell.exe -ExecutionPolicy Bypass -File "./scripts/demo-data/01-setup-demo-data.ps1"
 # macOS: pwsh -NoProfile -File "./scripts/demo-data/01-setup-demo-data.ps1"
 # 날짜 배치: 6경기를 모두 스크립트 실행일인 오늘로 설정합니다.
@@ -28,7 +28,7 @@ WHERE table_schema = 'reseat_demo_backup'
 if ($backupExists -eq 0) {
     Write-Host "[1/5] 기존 경기 6개와 연관 데이터를 백업합니다."
     Invoke-DemoMySql -Sql @"
-CREATE DATABASE reseat_demo_backup CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS reseat_demo_backup CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE reseat_demo_backup.metadata (
     id INT PRIMARY KEY,
@@ -214,6 +214,7 @@ Write-Host "[4/5] 동적 일정, 좌석 재고와 연관 상태를 준비합니�
 Invoke-DemoMySql -Sql @"
 START TRANSACTION;
 SET time_zone = '+00:00';
+SET @kst_today_utc = DATE_SUB(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)), INTERVAL 9 HOUR);
 
 SET @demo_user_id = (
     SELECT id
@@ -235,39 +236,42 @@ WHERE @demo_user_id IS NULL;
 SET @demo_user_id = COALESCE(@demo_user_id, LAST_INSERT_ID());
 
 UPDATE games
-SET game_at = DATE_ADD(CURDATE(), INTERVAL 8 HOUR),
-    booking_open_at = DATE_ADD(NOW(), INTERVAL 2 HOUR),
-    booking_close_at = DATE_ADD(CURDATE(), INTERVAL 7 HOUR),
+SET game_at = DATE_ADD(@kst_today_utc, INTERVAL 17 HOUR),
+    booking_open_at = LEAST(
+        DATE_ADD(UTC_TIMESTAMP(), INTERVAL 2 HOUR),
+        DATE_ADD(@kst_today_utc, INTERVAL 15 HOUR)
+    ),
+    booking_close_at = DATE_ADD(@kst_today_utc, INTERVAL 16 HOUR),
     booking_status = 'SCHEDULED',
     title = CONCAT('[예매 예정] ', (SELECT title FROM reseat_demo_backup.games WHERE id = 106))
 WHERE id = 106;
 
 UPDATE games
-SET game_at = DATE_ADD(CURDATE(), INTERVAL 9 HOUR) + INTERVAL 30 MINUTE,
+SET game_at = DATE_ADD(@kst_today_utc, INTERVAL 18 HOUR) + INTERVAL 30 MINUTE,
     booking_open_at = DATE_SUB(NOW(), INTERVAL 1 DAY),
-    booking_close_at = DATE_ADD(CURDATE(), INTERVAL 9 HOUR),
+    booking_close_at = DATE_ADD(@kst_today_utc, INTERVAL 18 HOUR),
     booking_status = 'OPEN',
     title = CONCAT('[일반 예매] ', (SELECT title FROM reseat_demo_backup.games WHERE id = 111))
 WHERE id = 111;
 
 UPDATE games
-SET game_at = DATE_ADD(CURDATE(), INTERVAL 9 HOUR) + INTERVAL 30 MINUTE,
+SET game_at = DATE_ADD(@kst_today_utc, INTERVAL 18 HOUR) + INTERVAL 30 MINUTE,
     booking_open_at = DATE_SUB(NOW(), INTERVAL 1 DAY),
-    booking_close_at = DATE_ADD(CURDATE(), INTERVAL 9 HOUR),
+    booking_close_at = DATE_ADD(@kst_today_utc, INTERVAL 18 HOUR),
     booking_status = 'OPEN',
     title = CONCAT('[대기열 체험] ', (SELECT title FROM reseat_demo_backup.games WHERE id = 117))
 WHERE id = 117;
 
 UPDATE games
-SET game_at = DATE_ADD(CURDATE(), INTERVAL 9 HOUR) + INTERVAL 30 MINUTE,
+SET game_at = DATE_ADD(@kst_today_utc, INTERVAL 18 HOUR) + INTERVAL 30 MINUTE,
     booking_open_at = DATE_SUB(NOW(), INTERVAL 1 DAY),
-    booking_close_at = DATE_ADD(CURDATE(), INTERVAL 9 HOUR),
+    booking_close_at = DATE_ADD(@kst_today_utc, INTERVAL 18 HOUR),
     booking_status = 'OPEN',
     title = CONCAT('[좌석 상태 혼합] ', (SELECT title FROM reseat_demo_backup.games WHERE id = 121))
 WHERE id = 121;
 
 UPDATE games
-SET game_at = DATE_ADD(CURDATE(), INTERVAL 9 HOUR) + INTERVAL 30 MINUTE,
+SET game_at = DATE_ADD(@kst_today_utc, INTERVAL 18 HOUR) + INTERVAL 30 MINUTE,
     booking_open_at = DATE_SUB(NOW(), INTERVAL 1 DAY),
     booking_close_at = DATE_SUB(NOW(), INTERVAL 1 HOUR),
     booking_status = 'CLOSED',
@@ -275,9 +279,9 @@ SET game_at = DATE_ADD(CURDATE(), INTERVAL 9 HOUR) + INTERVAL 30 MINUTE,
 WHERE id = 126;
 
 UPDATE games
-SET game_at = DATE_ADD(CURDATE(), INTERVAL 9 HOUR) + INTERVAL 30 MINUTE,
+SET game_at = DATE_ADD(@kst_today_utc, INTERVAL 18 HOUR) + INTERVAL 30 MINUTE,
     booking_open_at = DATE_SUB(NOW(), INTERVAL 1 DAY),
-    booking_close_at = DATE_ADD(CURDATE(), INTERVAL 9 HOUR),
+    booking_close_at = DATE_ADD(@kst_today_utc, INTERVAL 18 HOUR),
     booking_status = 'CANCELLED',
     title = CONCAT('[경기 취소] ', (SELECT title FROM reseat_demo_backup.games WHERE id = 131))
 WHERE id = 131;

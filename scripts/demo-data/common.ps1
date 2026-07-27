@@ -1,4 +1,4 @@
-# 공통 도구: 다른 데모 스크립트가 불러오는 Docker Compose·MySQL·Redis 함수이며 직접 실행하지 않습니다.
+﻿# 공통 도구: 다른 데모 스크립트가 불러오는 Docker Compose·MySQL·Redis 함수이며 직접 실행하지 않습니다.
 
 $ErrorActionPreference = "Stop"
 

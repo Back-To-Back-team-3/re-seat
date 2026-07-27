@@ -1,4 +1,4 @@
-# 2번 선택 실행: 1번 준비 후 대기열 진행을 확인할 가상 사용자와 WAITING 데이터를 만듭니다.
+﻿# 2번 선택 실행: 1번 준비 후 대기열 진행을 확인할 가상 사용자와 WAITING 데이터를 만듭니다.
 # Windows: powershell.exe -ExecutionPolicy Bypass -File "./scripts/demo-data/02-seed-demo-queue.ps1" -GameId 117 -UserCount 100
 # macOS: pwsh -NoProfile -File "./scripts/demo-data/02-seed-demo-queue.ps1" -GameId 117 -UserCount 100
 # 다음 순서: 확인이 끝나면 03-reset-demo-queue.ps1로 대기열만 비웁니다.
@@ -65,14 +65,14 @@ ORDER BY provider_id
 LIMIT $UserCount;
 "@ | Out-Null
 
-$userIds = Invoke-DemoMySql -NoHeaders -Sql @"
+$userIds = @(Invoke-DemoMySql -NoHeaders -Sql @"
 SELECT id
 FROM users
 WHERE provider = '$script:DemoProvider'
   AND provider_id LIKE 'queue-demo-%'
 ORDER BY provider_id
 LIMIT $UserCount;
-"@
+"@)
 
 if (@($userIds).Count -ne $UserCount) {
     throw "데모 사용자 ID 조회 수가 요청 수와 다릅니다."
