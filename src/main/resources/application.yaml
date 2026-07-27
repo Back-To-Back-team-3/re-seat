@@ -7,10 +7,13 @@ spring:
     default: local
 
   datasource:
-    url: jdbc:h2:mem:reseatdb;MODE=MySQL;NON_KEYWORDS=USER;DB_CLOSE_DELAY=-1
+    url: jdbc:mysql://mysql-db:3306/reseat?useSSL=false&serverTimezone=Asia/Seoul&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8
     driver-class-name: org.h2.Driver
     username: sa
     password:
+  jackson:
+    time-zone: Asia/Seoul
+    date-format: yyyy-MM-dd HH:mm:ss
 
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect

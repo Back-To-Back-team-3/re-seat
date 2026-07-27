@@ -32,7 +32,6 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      #latest 및 고유한 github.sha 태그를 동시에 생성하여 Push
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -42,25 +41,31 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/re-seat:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/re-seat:${{ github.sha }}
 
-      # 2. EC2 배포
-      - name: Deploy to EC2
+      - name: Deploy to EC2 via Docker Compose
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            #EC2 내 배포 작업 디렉터리로 이동 (없을 경우 생성)
+            mkdir -p ~/re-seat && cd ~/re-seat
+
+            # docker-compose 전용 .env 파일 동적 생성
+            cat <<EOF > .env
+            DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+            IMAGE_TAG=${{ github.sha }}
+            DB_USERNAME=${{ secrets.DB_USERNAME }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+            EOF
+
+            # 최신 백엔드 이미지 Pull
             sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/re-seat:${{ github.sha }}
 
-            sudo docker stop re-seat || true
-            sudo docker rm re-seat || true
+            # Docker Compose 전체 스택 재구동 (변경 사항 있는 컨테이너만 교체 실행)
+            sudo docker-compose up -d
 
-            sudo docker run -d -p 8080:8080 \
-              --name re-seat \
-              -e SPRING_PROFILES_ACTIVE=prod \
-              -e SPRING_DATASOURCE_URL="${{ secrets.SPRING_DATASOURCE_URL }}" \
-              -e DB_USERNAME="${{ secrets.DB_USERNAME }}" \
-              -e DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \
-              -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
-              -e REDIS_PASSWORD="${{ secrets.REDIS_PASSWORD }}" \
-              ${{ secrets.DOCKERHUB_USERNAME }}/re-seat:${{ github.sha }}
+            # 미사용 구형 이미지 정리
+            sudo docker image prune -f

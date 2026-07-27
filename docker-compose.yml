@@ -2,13 +2,16 @@ version: '3.8'
 
 services:
   web-app:
-    build: .
+    # EC2 배포 시 Docker Hub 이미지를 사용하도록 변경
+    image: ${DOCKERHUB_USERNAME}/re-seat:${IMAGE_TAG:-latest}
     container_name: reseat-app
     ports:
       - "8080:8080"
     environment:
+      - TZ=Asia/Seoul
+      - JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Seoul -Dfile.encoding=UTF-8
       - SPRING_PROFILES_ACTIVE=prod
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/reseat?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/reseat?serverTimezone=Asia/Seoul&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
@@ -31,8 +34,14 @@ services:
     ports:
       - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-      MYSQL_DATABASE: reseat
+      - TZ=Asia/Seoul
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+      - MYSQL_DATABASE=reseat
+    command:
+      - --default-time-zone=+09:00
+      - --log-timestamps=SYSTEM
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -81,9 +90,6 @@ services:
     networks:
       - reseat-network
 
-  # -----------------------------------------------------------------
-  # Prometheus 설정 (Spring Boot Actuator 메트릭 수집)
-  # -----------------------------------------------------------------
   prometheus:
     image: prom/prometheus:latest
     container_name: reseat-prometheus
@@ -94,9 +100,6 @@ services:
     networks:
       - reseat-network
 
-  # -----------------------------------------------------------------
-  # Grafana 설정 (메트릭 시각화 대시보드)
-  # -----------------------------------------------------------------
   grafana:
     image: grafana/grafana:latest
     container_name: reseat-grafana
