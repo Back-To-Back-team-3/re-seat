@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * 주문 응답 DTO
  *
- * <p>주문 기본 정보, 결제 제한 시간, 주문 좌석 항목을 반환한다.</p>
+ * <p>주문 기본 정보, 결제 제한 시간, 선점 만료 시간, 주문 좌석 항목을 반환한다.</p>
  */
 @Getter
 @Builder
@@ -30,6 +30,9 @@ public class OrderResponse {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private final LocalDateTime paymentDeadline;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private final LocalDateTime holdExpiresAt;
+
     private final List<OrderItemResponse> orderItems;
 
     /**
@@ -37,11 +40,13 @@ public class OrderResponse {
      *
      * @param order 주문 Entity
      * @param orderItems 저장된 주문 항목 목록
+     * @param holdExpiresAt 선점 만료 시간
      * @return 주문 응답 DTO
      */
     public static OrderResponse from(
             Order order,
-            List<OrderItem> orderItems
+            List<OrderItem> orderItems,
+            LocalDateTime holdExpiresAt
     ) {
         return OrderResponse.builder()
                 .orderId(order.getId())
@@ -49,6 +54,7 @@ public class OrderResponse {
                 .totalAmount(order.getTotalAmount())
                 .status(order.getStatus())
                 .paymentDeadline(order.getPaymentDeadline())
+                .holdExpiresAt(holdExpiresAt)
                 .orderItems(orderItems.stream()
                         .map(OrderItemResponse::from)
                         .toList())

@@ -14,6 +14,11 @@ spring:
   jackson:
     time-zone: Asia/Seoul
     date-format: yyyy-MM-dd HH:mm:ss
+    # RDS 엔드포인트 주소 및 DB 이름(reseat) 지정
+    url: jdbc:mysql://reseat-db.cd6yc0s4ew3t.ap-northeast-2.rds.amazonaws.com:3306/reseat?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: admin                 # RDS 마스터 계정명
+    password: Password1234!         # RDS 비밀번호
+    driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
