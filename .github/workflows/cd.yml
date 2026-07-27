@@ -58,6 +58,8 @@ jobs:
             DB_USERNAME=${{ secrets.DB_USERNAME }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             JWT_SECRET=${{ secrets.JWT_SECRET }}
+            KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID}}
+            KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET}}
             REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
             EOF
 
