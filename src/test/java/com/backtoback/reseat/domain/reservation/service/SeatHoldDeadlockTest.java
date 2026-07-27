@@ -80,6 +80,8 @@ class SeatHoldDeadlockTest {
     private Long gameId;
     private Long seat1Id;
     private Long seat2Id;
+    private Long physicalSeat1Id;
+    private Long physicalSeat2Id;
     private Long seatZoneId;
     private Long stadiumId;
     private Long homeTeamId;
@@ -125,6 +127,8 @@ class SeatHoldDeadlockTest {
         Seat seat2 = Seat.of(stadium, zone, "A", "1", "2");
         seatRepository.save(seat1);
         seatRepository.save(seat2);
+        physicalSeat1Id = seat1.getId();
+        physicalSeat2Id = seat2.getId();
 
         GameSeat gameSeat1 = GameSeat.builder()
             .game(game).seat(seat1).price(18000).status(GameSeatStatus.AVAILABLE).build();
@@ -170,10 +174,16 @@ class SeatHoldDeadlockTest {
 
         reservationSeatRepository.deleteAll();
         reservationRepository.deleteAll();
-        gameSeatRepository.deleteAll();
+
+        // gameSeat → seat 순서로 ID 기준 삭제
+        if (seat1Id != null) gameSeatRepository.deleteById(seat1Id);
+        if (seat2Id != null) gameSeatRepository.deleteById(seat2Id);
 
         if (gameId != null) gameRepository.deleteById(gameId);
-        seatRepository.deleteAll();
+
+        if (physicalSeat1Id != null) seatRepository.deleteById(physicalSeat1Id);
+        if (physicalSeat2Id != null) seatRepository.deleteById(physicalSeat2Id);
+
         if (seatZoneId != null) seatZoneRepository.deleteById(seatZoneId);
         if (homeTeamId != null) teamRepository.deleteById(homeTeamId);
         if (awayTeamId != null) teamRepository.deleteById(awayTeamId);
