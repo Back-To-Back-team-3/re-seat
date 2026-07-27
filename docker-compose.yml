@@ -1,9 +1,9 @@
-version: '3.8'
+
 
 services:
   web-app:
     # EC2 배포 시 Docker Hub 이미지를 사용하도록 변경
-    image: ${DOCKERHUB_USERNAME}/re-seat:${IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USERNAME:-local-reseat}/re-seat:${IMAGE_TAG:-latest}
     container_name: reseat-app
     ports:
       - "8080:8080"
