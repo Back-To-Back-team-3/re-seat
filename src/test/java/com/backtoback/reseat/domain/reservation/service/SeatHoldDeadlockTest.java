@@ -80,6 +80,7 @@ class SeatHoldDeadlockTest {
     private Long gameId;
     private Long seat1Id;
     private Long seat2Id;
+
     private Long physicalSeat1Id;
     private Long physicalSeat2Id;
     private Long seatZoneId;
@@ -196,9 +197,9 @@ class SeatHoldDeadlockTest {
     @DisplayName("[B3 데드락 방지] 교차 순서 다좌석 요청에서 상호 대기 없이 15초 내 처리 완료")
     void should_completeWithoutDeadlock_when_crossOrderRequestsCompete() throws InterruptedException {
         // given
-        // 스레드1: [seat1, seat2] — 오름차순
-        // 스레드2: [seat2, seat1] — 역순 (정렬 없으면 데드락 조건)
-        // 정렬 적용 후 두 스레드 모두 seat1 → seat2 순으로 획득 → 순환 대기 불성립
+        // 스레드1: [seat1, seat2], 스레드2: [seat2, seat1] 교차 순서로 요청
+        // gameSeatId 오름차순 정렬이 적용되므로 두 스레드 모두 seat1 → seat2 순으로 획득
+        // 순환 대기 조건이 성립하지 않아 15초 내 처리 완료됨을 검증
         SeatHoldRequest request1 = new SeatHoldRequest(gameId, List.of(seat1Id, seat2Id));
         SeatHoldRequest request2 = new SeatHoldRequest(gameId, List.of(seat2Id, seat1Id));
 
