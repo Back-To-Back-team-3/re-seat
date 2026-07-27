@@ -8,12 +8,39 @@ import java.time.LocalDateTime;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 @DisplayName("PaymentRecoveryTask 상태 전이")
 class PaymentRecoveryTaskTest {
 
+    private static final LocalDateTime BASE_TIME = LocalDateTime.of(2026, 7, 25, 12, 0);
+
     private PaymentRecoveryTask pendingTask() {
         return new PaymentRecoveryTask(mock(Payment.class));
+    }
+
+    private PaymentRecoveryTask taskInStatus(PaymentRecoveryStatus status) {
+        PaymentRecoveryTask task = pendingTask();
+        switch (status) {
+            case PENDING -> {
+                return task;
+            }
+            case PROCESSING -> task.startProcessing(BASE_TIME);
+            case RETRY -> {
+                task.startProcessing(BASE_TIME);
+                task.scheduleRetry("토스 결제 조회 실패", BASE_TIME.plusMinutes(1));
+            }
+            case COMPLETED -> {
+                task.startProcessing(BASE_TIME);
+                task.complete(BASE_TIME.plusMinutes(1));
+            }
+            case FAILED -> {
+                task.startProcessing(BASE_TIME);
+                task.fail("최대 재시도 횟수 초과");
+            }
+        }
+        return task;
     }
 
     @Nested
@@ -65,16 +92,19 @@ class PaymentRecoveryTaskTest {
             assertThat(task.getNextRetryAt()).isNull();
         }
 
-        @Test
-        @DisplayName("완료된 작업을 다시 시작하면 예외가 발생한다.")
-        void rejectsCompletedTask() {
-            PaymentRecoveryTask task = pendingTask();
-            task.startProcessing(LocalDateTime.of(2026, 7, 25, 12, 0));
-            task.complete(LocalDateTime.of(2026, 7, 25, 12, 1));
+        @ParameterizedTest(name = "{0} 상태의 작업은 처리를 시작할 수 없다")
+        @EnumSource(
+                value = PaymentRecoveryStatus.class,
+                mode = EnumSource.Mode.EXCLUDE,
+                names = {"PENDING", "RETRY"}
+        )
+        @DisplayName("대기 또는 재시도 상태가 아닌 작업을 시작하면 예외가 발생한다.")
+        void rejectsUnavailableStatus(PaymentRecoveryStatus status) {
+            PaymentRecoveryTask task = taskInStatus(status);
 
             assertThatThrownBy(() -> task.startProcessing(LocalDateTime.of(2026, 7, 25, 12, 2)))
                     .isInstanceOf(IllegalStateException.class);
-            assertThat(task.getStatus()).isEqualTo(PaymentRecoveryStatus.COMPLETED);
+            assertThat(task.getStatus()).isEqualTo(status);
         }
     }
 
@@ -98,16 +128,21 @@ class PaymentRecoveryTaskTest {
             assertThat(task.getProcessingStartedAt()).isNull();
         }
 
-        @Test
-        @DisplayName("처리 중이 아닌 작업은 예외가 발생한다.")
-        void requiresProcessing() {
-            PaymentRecoveryTask task = pendingTask();
+        @ParameterizedTest(name = "{0} 상태의 작업은 재시도를 예약할 수 없다")
+        @EnumSource(
+                value = PaymentRecoveryStatus.class,
+                mode = EnumSource.Mode.EXCLUDE,
+                names = "PROCESSING"
+        )
+        @DisplayName("처리 중이 아닌 모든 작업은 예외가 발생한다.")
+        void requiresProcessing(PaymentRecoveryStatus status) {
+            PaymentRecoveryTask task = taskInStatus(status);
 
             assertThatThrownBy(() -> task.scheduleRetry(
                             "토스 결제 조회 실패",
                             LocalDateTime.of(2026, 7, 25, 12, 1)))
                     .isInstanceOf(IllegalStateException.class);
-            assertThat(task.getStatus()).isEqualTo(PaymentRecoveryStatus.PENDING);
+            assertThat(task.getStatus()).isEqualTo(status);
         }
     }
 
@@ -130,6 +165,21 @@ class PaymentRecoveryTaskTest {
             assertThat(task.getNextRetryAt()).isNull();
             assertThat(task.getLastError()).isNull();
         }
+
+        @ParameterizedTest(name = "{0} 상태의 작업은 완료할 수 없다")
+        @EnumSource(
+                value = PaymentRecoveryStatus.class,
+                mode = EnumSource.Mode.EXCLUDE,
+                names = "PROCESSING"
+        )
+        @DisplayName("처리 중이 아닌 모든 작업은 예외가 발생한다.")
+        void requiresProcessing(PaymentRecoveryStatus status) {
+            PaymentRecoveryTask task = taskInStatus(status);
+
+            assertThatThrownBy(() -> task.complete(BASE_TIME.plusMinutes(2)))
+                    .isInstanceOf(IllegalStateException.class);
+            assertThat(task.getStatus()).isEqualTo(status);
+        }
     }
 
     @Nested
@@ -148,6 +198,21 @@ class PaymentRecoveryTaskTest {
             assertThat(task.getLastError()).isEqualTo("최대 재시도 횟수 초과");
             assertThat(task.getProcessingStartedAt()).isNull();
             assertThat(task.getNextRetryAt()).isNull();
+        }
+
+        @ParameterizedTest(name = "{0} 상태의 작업은 최종 실패 처리할 수 없다")
+        @EnumSource(
+                value = PaymentRecoveryStatus.class,
+                mode = EnumSource.Mode.EXCLUDE,
+                names = "PROCESSING"
+        )
+        @DisplayName("처리 중이 아닌 모든 작업은 예외가 발생한다.")
+        void requiresProcessing(PaymentRecoveryStatus status) {
+            PaymentRecoveryTask task = taskInStatus(status);
+
+            assertThatThrownBy(() -> task.fail("최대 재시도 횟수 초과"))
+                    .isInstanceOf(IllegalStateException.class);
+            assertThat(task.getStatus()).isEqualTo(status);
         }
     }
 }

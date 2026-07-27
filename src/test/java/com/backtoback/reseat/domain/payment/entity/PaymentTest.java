@@ -13,6 +13,8 @@ import java.time.LocalDateTime;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 @DisplayName("Payment 상태 전이")
 class PaymentTest {
@@ -22,17 +24,21 @@ class PaymentTest {
     private static final String PG_ORDER_ID = "ORD-20260725-000001";
     private static final int AMOUNT = 10000;
 
-    private Payment readyPayment() {
+    private Payment payment(PaymentStatus status) {
         return Payment.builder()
                 .paymentNo(PAYMENT_NO)
                 .order(mock(Order.class))
                 .user(mock(User.class))
                 .amount(AMOUNT)
                 .idempotencyKey(IDEMPOTENCY_KEY)
-                .status(PaymentStatus.READY)
+                .status(status)
                 .pgProvider(PgProvider.TOSS)
                 .pgOrderId(PG_ORDER_ID)
                 .build();
+    }
+
+    private Payment readyPayment() {
+        return payment(PaymentStatus.READY);
     }
 
     @Nested
@@ -139,14 +145,19 @@ class PaymentTest {
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.CANCELED);
         }
 
-        @Test
-        @DisplayName("승인되지 않은 결제를 취소하면 취소 불가 예외가 발생한다.")
-        void rejectsUnapprovedPayment() {
-            Payment payment = readyPayment();
+        @ParameterizedTest(name = "{0} 상태의 결제는 취소할 수 없다")
+        @EnumSource(
+                value = PaymentStatus.class,
+                mode = EnumSource.Mode.EXCLUDE,
+                names = "APPROVED"
+        )
+        @DisplayName("APPROVED가 아닌 모든 결제는 취소 불가 예외가 발생한다.")
+        void rejectsUnapprovedPayment(PaymentStatus status) {
+            Payment payment = payment(status);
 
             assertThatThrownBy(payment::cancel)
                     .isInstanceOf(PaymentCancelNotAllowedException.class);
-            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.READY);
+            assertThat(payment.getStatus()).isEqualTo(status);
         }
     }
 
@@ -164,11 +175,15 @@ class PaymentTest {
             assertThat(payment.getIdempotencyKey()).isEqualTo("new-idempotency-key");
         }
 
-        @Test
-        @DisplayName("READY가 아닌 결제는 이미 처리된 결제 예외가 발생한다.")
-        void rejectsFinalizedPayment() {
-            Payment payment = readyPayment();
-            payment.approve("CARD", LocalDateTime.of(2026, 7, 25, 12, 0));
+        @ParameterizedTest(name = "{0} 상태의 결제는 멱등키를 교체할 수 없다")
+        @EnumSource(
+                value = PaymentStatus.class,
+                mode = EnumSource.Mode.EXCLUDE,
+                names = "READY"
+        )
+        @DisplayName("READY가 아닌 모든 결제는 이미 처리된 결제 예외가 발생한다.")
+        void rejectsFinalizedPayment(PaymentStatus status) {
+            Payment payment = payment(status);
 
             assertThatThrownBy(() -> payment.changeIdempotencyKey("new-idempotency-key"))
                     .isInstanceOf(PaymentAlreadyFinalizedException.class);
