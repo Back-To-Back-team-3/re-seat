@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   cancelOrder,
   cancelQueue,
@@ -65,7 +65,7 @@ const PAYMENT_CALLBACK_KEY_PREFIX = "tossPaymentCallback:";
 const PAYMENT_IDEMPOTENCY_KEY_PREFIX = "paymentIdempotencyKey:";
 const COMPLETED_GAME_IDS_KEY = "completedGameIds";
 const KST_TIME_ZONE = "Asia/Seoul";
-const STADIUM_IMAGE_URL = "https://commons.wikimedia.org/wiki/Special:Redirect/file/Doosan%20Bears%20vs%20LG%20Twins%20(1).jpg?width=1600";
+const STADIUM_IMAGE_URL = "/jamsil-stadium.jpg";
 
 type PendingPayment = {
   orderId: number;
@@ -290,13 +290,13 @@ function App() {
     const verifiedFromCallback = params.get("isVerified") === "true";
 
     if (accessToken && refreshToken) {
+      window.history.replaceState({}, "", window.location.origin + window.location.pathname);
       setTokens(accessToken, refreshToken);
       localStorage.setItem("isVerified", String(verifiedFromCallback));
       setIsAuthed(true);
       setIsVerified(verifiedFromCallback);
       setAuthedRole(getAccessTokenRole());
       setToast("카카오 로그인에 성공했습니다.");
-      window.history.replaceState({}, "", window.location.origin + window.location.pathname);
       void syncProfile();
       return;
     }
@@ -373,7 +373,7 @@ function App() {
     if (!paymentId || (!paymentKey && !code)) return;
 
     const callbackKey = `${PAYMENT_CALLBACK_KEY_PREFIX}${paymentId}:${paymentKey ?? code}`;
-    if (sessionStorage.getItem(callbackKey) === "completed") {
+    if (sessionStorage.getItem(callbackKey)) {
       window.history.replaceState({}, "", window.location.pathname);
       return;
     }
@@ -694,7 +694,10 @@ function App() {
     }
     const orderId = orderResult.data.orderId;
     const storageKey = `${PAYMENT_IDEMPOTENCY_KEY_PREFIX}${orderId}`;
-    const idempotencyKey = sessionStorage.getItem(storageKey) ?? crypto.randomUUID();
+    const idempotencyKey = sessionStorage.getItem(storageKey)
+      ?? (typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${orderId}-${Date.now()}-${Math.random().toString(36).slice(2)}`);
     sessionStorage.setItem(storageKey, idempotencyKey);
 
     const result = await run(
@@ -1046,6 +1049,24 @@ function ConfirmDialog({ title, description, confirmLabel, cancelLabel = "계속
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const confirmButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (cancelLabel) {
+      cancelButtonRef.current?.focus();
+    } else {
+      confirmButtonRef.current?.focus();
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onCancel();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [cancelLabel, onCancel]);
+
   return (
     <div className="dialog-backdrop" role="presentation" onMouseDown={onCancel}>
       <section className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="exit-dialog-title" onMouseDown={(event) => event.stopPropagation()}>
@@ -1053,8 +1074,8 @@ function ConfirmDialog({ title, description, confirmLabel, cancelLabel = "계속
         <h2 id="exit-dialog-title">{title}</h2>
         <p>{description}</p>
         <div className={cancelLabel ? "dialog-actions" : "dialog-actions single"}>
-          {cancelLabel && <button className="outline-button" onClick={onCancel}>{cancelLabel}</button>}
-          <button className="primary-button" onClick={onConfirm}>{confirmLabel}</button>
+          {cancelLabel && <button ref={cancelButtonRef} className="outline-button" onClick={onCancel}>{cancelLabel}</button>}
+          <button ref={confirmButtonRef} className="primary-button" onClick={onConfirm}>{confirmLabel}</button>
         </div>
       </section>
     </div>
@@ -1158,7 +1179,7 @@ function HomeScreen({
           {selectedGame && (
             <div className="hero-selected-game">
               <div><span>SELECTED GAME · {selectedMeta?.label}</span><strong>{selectedGame.title}</strong><small>{formatGameDate(selectedGame.gameAt)} · {selectedGame.stadium.name}</small></div>
-              <button className="primary-button" onClick={isAuthed ? onEnterQueue : onLogin} disabled={busy || selectedGame.bookingStatus !== "OPEN"}>
+              <button className="primary-button" onClick={isAuthed ? onEnterQueue : onLogin} disabled={busy || selectedGame.bookingStatus !== "OPEN" || (isAuthed && selectedCompleted)}>
                 {selectedCompleted ? "예매 완료" : isAuthed ? selectedMeta?.action : "로그인 후 예매"}<span>→</span>
               </button>
             </div>
@@ -1387,6 +1408,8 @@ function SeatScreen({
                         className={`seat ${seat.status.toLowerCase()} ${selectedSeatIds.includes(seat.gameSeatId) ? "picked" : ""}`}
                         onClick={() => onToggleSeat(seat)}
                         disabled={seat.status !== "AVAILABLE" || selectionLocked}
+                        aria-label={`${seat.zoneName} ${seat.seatRow}열 ${seat.seatNumber}번 ${formatPrice(seat.price)}`}
+                        aria-pressed={selectedSeatIds.includes(seat.gameSeatId)}
                         title={`${seat.zoneName} ${seat.seatRow}열 ${seat.seatNumber}번 · ${formatPrice(seat.price)}`}
                       >{seat.seatNumber}</button>
                     ))}
