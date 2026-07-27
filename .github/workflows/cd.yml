@@ -41,6 +41,15 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/re-seat:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/re-seat:${{ github.sha }}
 
+      - name: Copy Compose configuration to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "docker-compose.yml,prometheus.yml"
+          target: "~/re-seat"
+
       - name: Deploy to EC2 via Docker Compose
         uses: appleboy/ssh-action@v1.0.0
         with:
