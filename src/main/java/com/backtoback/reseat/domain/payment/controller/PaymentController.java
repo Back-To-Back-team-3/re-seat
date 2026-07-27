@@ -25,10 +25,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/payments")
 @RequiredArgsConstructor
-public class PaymentController {
+public class PaymentController implements PaymentControllerDocs {
 
     private final PaymentService paymentService;
 
+    @Override
     @PostMapping
     public ResponseEntity<ApiResponse<PaymentCreateResponse>> requestPayment(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -44,6 +45,7 @@ public class PaymentController {
         return ResponseEntity.ok(ApiResponse.success("결제 요청 처리 완료", response));
     }
 
+    @Override
     @PostMapping("/{paymentId}/complete")
     public ResponseEntity<ApiResponse<PaymentActionResponse>> completePayment(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -61,6 +63,7 @@ public class PaymentController {
         return ResponseEntity.ok(ApiResponse.success("결제 승인 처리 완료", response));
     }
 
+    @Override
     @PostMapping("/{paymentId}/fail")
     public ResponseEntity<ApiResponse<PaymentActionResponse>> failPayment(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -78,6 +81,7 @@ public class PaymentController {
         return ResponseEntity.ok(ApiResponse.success("결제 실패 처리 완료", response));
     }
 
+    @Override
     @PostMapping("/{paymentId}/cancel")
     public ResponseEntity<ApiResponse<PaymentActionResponse>> cancelPayment(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -93,6 +97,7 @@ public class PaymentController {
         return ResponseEntity.ok(ApiResponse.success("결제 취소 처리 완료", response));
     }
 
+    @Override
     @GetMapping("/{paymentId}")
     public ResponseEntity<ApiResponse<PaymentResponse>> getPayment(
             @AuthenticationPrincipal CustomUserDetails userDetails,

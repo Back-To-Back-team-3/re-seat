@@ -1,28 +1,64 @@
-import { apiRequest, setQueueToken, setTokens, streamSse, unwrap, withMockFallback } from "./client";
-import {
+import { apiRequest, setQueueToken, streamSse, unwrap, withMockFallback } from "./client";
+import type {
   ApiResult,
   ApiResponse,
   GameSeat,
-  GameZone,
   GameSummary,
+  GameZone,
+  HoldTimeResponse,
   OrderResponse,
   PageResponse,
+  PaymentActionResponse,
   PaymentCreateResponse,
-  QueueEnterResponse,
+  PaymentResponse,
   QueueAdmitEvent,
+  QueueCancelResponse,
   QueueStatusResponse,
-  HoldTimeResponse,
   ReservationResponse,
   TicketSummary,
-  TokenResponse
+  UserProfile
 } from "../types";
-import {
-  mockTickets
-} from "../mocks/mockData";
+import { mockTickets } from "../mocks/mockData";
+
+type UserProfilePayload = Omit<UserProfile, "isVerified"> & {
+  isVerified?: boolean;
+  verified?: boolean;
+};
+
+const gameStatuses: GameSummary["bookingStatus"][] = [
+  "SCHEDULED",
+  "OPEN",
+  "CLOSED",
+  "CANCELLED"
+];
+
+async function getGamePage(bookingStatus: GameSummary["bookingStatus"], page: number) {
+  const response = await apiRequest<ApiResponse<PageResponse<GameSummary>>>(
+    `/games?bookingStatus=${bookingStatus}&page=${page}&size=100&sort=gameAt,asc`
+  );
+  return unwrap(response);
+}
 
 export async function getGames() {
-  const response = await apiRequest<ApiResponse<PageResponse<GameSummary>>>("/games?size=20");
-  return { data: unwrap(response).content, source: "api" } satisfies ApiResult<GameSummary[]>;
+  const firstPages = await Promise.all(
+    gameStatuses.map((bookingStatus) => getGamePage(bookingStatus, 0))
+  );
+  const remainingPages = await Promise.all(
+    firstPages.flatMap((firstPage, statusIndex) =>
+      Array.from(
+        { length: Math.max(0, firstPage.totalPages - 1) },
+        (_, pageIndex) => getGamePage(gameStatuses[statusIndex], pageIndex + 1)
+      )
+    )
+  );
+  const games = [...firstPages, ...remainingPages].flatMap((page) => page.content);
+  const uniqueGames = Array.from(
+    new Map(games.map((game) => [game.gameId, game])).values()
+  ).sort((left, right) =>
+    left.gameAt.localeCompare(right.gameAt) || left.gameId - right.gameId
+  );
+
+  return { data: uniqueGames, source: "api" } satisfies ApiResult<GameSummary[]>;
 }
 
 export async function getGame(gameId: number) {
@@ -30,24 +66,32 @@ export async function getGame(gameId: number) {
   return { data: unwrap(response), source: "api" } satisfies ApiResult<GameSummary>;
 }
 
+export async function getMyProfile() {
+  const response = await apiRequest<ApiResponse<UserProfilePayload>>("/users/me");
+  const { isVerified, verified, ...profile } = unwrap(response);
+  return {
+    ...profile,
+    isVerified: isVerified ?? verified ?? false
+  } satisfies UserProfile;
+}
+
 export async function enterQueue(gameId: number) {
-  const response = await apiRequest<ApiResponse<QueueEnterResponse>>(`/queues/${gameId}/enter`, {
+  const response = await apiRequest<ApiResponse<void>>(`/queues/${gameId}/enter`, {
     method: "POST"
   });
-  const result = { data: unwrap(response), source: "api" } satisfies ApiResult<QueueEnterResponse>;
-
-  if (result.data.queueToken) {
-    setQueueToken(result.data.queueToken);
-  }
-  return result;
+  return response.message;
 }
 
 export async function getQueueStatus(gameId: number) {
   const response = await apiRequest<ApiResponse<QueueStatusResponse>>(`/queues/${gameId}/me`);
-  return {
-    data: { ...unwrap(response), gameId, queueToken: null, tokenExpiresAt: null },
-    source: "api"
-  } satisfies ApiResult<QueueEnterResponse>;
+  return unwrap(response);
+}
+
+export async function cancelQueue(gameId: number) {
+  const response = await apiRequest<ApiResponse<QueueCancelResponse>>(`/queues/${gameId}/me`, {
+    method: "DELETE"
+  });
+  return unwrap(response);
 }
 
 export function streamQueue(
@@ -66,19 +110,6 @@ export function streamQueue(
       handlers.onAdmit(admitEvent);
     }
   }, signal);
-}
-
-export async function admitQueue(gameId: number, limit = 20) {
-  await apiRequest<ApiResponse<number>>(`/queues/${gameId}/admit?limit=${limit}`, {
-    method: "POST"
-  });
-
-  const response = await apiRequest<ApiResponse<QueueStatusResponse>>(`/queues/${gameId}/me`);
-
-  return {
-    data: { ...unwrap(response), gameId, queueToken: null, tokenExpiresAt: null },
-    source: "api"
-  } satisfies ApiResult<QueueEnterResponse>;
 }
 
 export async function getGameSeats(gameId: number, zoneId?: number) {
@@ -137,54 +168,59 @@ export async function cancelOrder(orderId: number) {
     `/orders/${orderId}/cancel`,
     { method: "POST" }
   );
-  return { data: unwrap(response), source: "api" } satisfies ApiResult<{
-    orderId: number;
-    status: OrderResponse["status"];
-  }>;
+  return unwrap(response);
 }
 
-export async function requestPayment(
-  orderId: number,
-  method: PaymentCreateResponse["method"],
-  idempotencyKey: string
-) {
+export async function requestPayment(orderId: number, idempotencyKey: string) {
   const response = await apiRequest<ApiResponse<PaymentCreateResponse>>("/payments", {
     method: "POST",
-    headers: {
-      "Idempotency-Key": idempotencyKey
-    },
-    body: JSON.stringify({ orderId, method })
+    headers: { "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify({ orderId })
   });
   return { data: unwrap(response), source: "api" } satisfies ApiResult<PaymentCreateResponse>;
 }
 
-export async function completePayment(paymentId: number, payload: { paymentKey: string; orderId: string; amount: number }) {
-  const response = await apiRequest<ApiResponse<{ paymentId: number; status: string }>>(`/payments/${paymentId}/complete`, {
+export async function completePayment(
+  paymentId: number,
+  idempotencyKey: string,
+  payload: { paymentKey: string; orderId: string; amount: number }
+) {
+  const response = await apiRequest<ApiResponse<PaymentActionResponse>>(`/payments/${paymentId}/complete`, {
     method: "POST",
+    headers: { "Idempotency-Key": idempotencyKey },
     body: JSON.stringify(payload)
   });
   return unwrap(response);
 }
 
-export async function failPayment(paymentId: number, payload: { code: string; message: string; orderId: string }) {
-  const response = await apiRequest<ApiResponse<{ paymentId: number; status: string }>>(`/payments/${paymentId}/fail`, {
+export async function failPayment(
+  paymentId: number,
+  idempotencyKey: string,
+  payload: { code: string; message: string; orderId: string }
+) {
+  const response = await apiRequest<ApiResponse<PaymentActionResponse>>(`/payments/${paymentId}/fail`, {
     method: "POST",
+    headers: { "Idempotency-Key": idempotencyKey },
     body: JSON.stringify(payload)
   });
+  return unwrap(response);
+}
+
+export async function getPayment(paymentId: number) {
+  const response = await apiRequest<ApiResponse<PaymentResponse>>(`/payments/${paymentId}`);
   return unwrap(response);
 }
 
 export async function getTickets() {
   return withMockFallback(async () => {
-    const response = await apiRequest<ApiResponse<{ tickets: TicketSummary[] }>>("/tickets");
-    return unwrap(response).tickets;
+    const response = await apiRequest<ApiResponse<PageResponse<TicketSummary>>>("/tickets");
+    return unwrap(response).content;
   }, mockTickets);
 }
 
 export async function verifyIdentity(impUid: string) {
-  const response = await apiRequest<ApiResponse<void>>("/users/verification", {
+  await apiRequest<ApiResponse<void>>("/users/verification", {
     method: "POST",
     body: JSON.stringify({ impUid })
   });
-  return unwrap(response);
 }
