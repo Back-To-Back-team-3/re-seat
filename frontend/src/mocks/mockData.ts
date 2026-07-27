@@ -9,6 +9,6 @@ export const mockTickets: TicketSummary[] = [
     seat: "101구역 A열 1번",
     status: "ISSUED",
     qrToken: "qr_mock_9050",
-    gameAt: "2026-07-11 18:30:00"
+    gameAt: "2026-07-11T18:30:00+09:00"
   }
 ];
