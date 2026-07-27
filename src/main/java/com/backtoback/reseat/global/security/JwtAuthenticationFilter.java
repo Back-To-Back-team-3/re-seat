@@ -25,8 +25,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) // 🎯 닫는 소괄호 ) 확인!
-            throws jakarta.servlet.ServletException, java.io.IOException { // 🎯 ServletException 철자 정확히 수정!
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) 
+            throws jakarta.servlet.ServletException, java.io.IOException { 
 
         String token = resolveToken(request);
 

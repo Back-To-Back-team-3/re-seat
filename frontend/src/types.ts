@@ -1,58 +1,72 @@
 export type ApiResponse<T> = {
   success: boolean;
-  errorCode?: string | null;
+  errorCode: string | null;
   message: string;
-  data: T;
+  data: T | null;
 };
 
 export type TokenResponse = {
-  grantType?: string;
+  grantType: string;
   accessToken: string;
   refreshToken: string;
 };
 
 export type UserRole = "USER" | "ADMIN";
 
+export type UserProfile = {
+  id: number;
+  email: string;
+  name: string | null;
+  nickname: string | null;
+  phone: string | null;
+  isVerified: boolean;
+};
+
 export type GameSummary = {
   gameId: number;
   title: string;
-  homeTeam?: { teamId: number; name: string };
-  awayTeam?: { teamId: number; name: string };
-  stadium?: { stadiumId: number; name: string };
+  homeTeam: { teamId: number; name: string };
+  awayTeam: { teamId: number; name: string };
+  stadium: { stadiumId: number; name: string };
   gameAt: string;
-  bookingOpenAt?: string;
-  bookingCloseAt?: string;
+  bookingOpenAt: string;
+  bookingCloseAt: string;
   bookingStatus: "SCHEDULED" | "OPEN" | "CLOSED" | "CANCELLED";
 };
 
 export type PageResponse<T> = {
   content: T[];
-  totalElements?: number;
-  totalPages?: number;
-  number?: number;
-  page?: number;
-  size?: number;
+  pageNumber: number;
+  pageSize: number;
+  totalElements: number;
+  totalPages: number;
+  isFirst: boolean;
+  isLast: boolean;
 };
 
-export type QueueEnterResponse = {
-  gameId: number;
+export type QueueStatusResponse = {
   rank: number;
   estimatedWaitSeconds: number | null;
   queueStatus: "WAITING" | "ADMITTED" | "CANCELED";
   admitted: boolean;
+};
+
+export type QueueViewState = QueueStatusResponse & {
+  gameId: number;
+  registrationPending: boolean;
   queueToken: string | null;
   tokenExpiresAt: string | null;
 };
-
-export type QueueStatusResponse = Pick<
-  QueueEnterResponse,
-  "rank" | "estimatedWaitSeconds" | "queueStatus" | "admitted"
->;
 
 export type QueueAdmitEvent = {
   admitted: true;
   queueToken: string;
   tokenExpiresAt: string;
+};
+
+export type QueueCancelResponse = {
+  gameId: number;
+  queueStatus: "CANCELED";
 };
 
 export type GameSeatStatus = "AVAILABLE" | "HELD" | "SOLD" | "BLOCKED";
@@ -78,32 +92,37 @@ export type GameZone = {
   availableCount: number;
 };
 
+export type ReservationStatus = "HOLDING" | "CONFIRMED" | "CANCELED" | "EXPIRED";
+
 export type ReservationResponse = {
   reservationId: number;
   reservationNo: string;
-  status: "HOLDING" | "CONFIRMED" | "CANCELED" | "EXPIRED";
+  status: ReservationStatus;
   gameSeats: Array<{
     gameSeatId: number;
     status: GameSeatStatus;
     price: number;
   }>;
   holdExpiresAt: string;
-  gameAt?: string;
+  gameAt: string;
 };
 
 export type HoldTimeResponse = {
   reservationId: number;
   remainingSeconds: number;
-  status: ReservationResponse["status"];
+  status: ReservationStatus;
   expiresAt: string;
 };
+
+export type OrderStatus = "CREATED" | "PAID" | "CANCELED" | "EXPIRED";
 
 export type OrderResponse = {
   orderId: number;
   orderNo: string;
   totalAmount: number;
-  status: "CREATED" | "PAID" | "CANCELED" | "EXPIRED";
+  status: OrderStatus;
   paymentDeadline: string;
+  holdExpiresAt: string;
   orderItems: Array<{
     orderItemId: number;
     gameSeatId: number;
@@ -111,15 +130,28 @@ export type OrderResponse = {
   }>;
 };
 
+export type PaymentStatus = "READY" | "APPROVED" | "FAILED" | "CANCELED";
+
 export type PaymentCreateResponse = {
   paymentId: number;
-  paymentNo?: string;
+  paymentNo: string;
   orderId: number;
   amount: number;
-  method: "MOCK" | "CARD" | "KAKAO_PAY" | "NAVER_PAY" | "TOSS_PAY";
-  status: "READY" | "APPROVED" | "FAILED" | "CANCELED";
-  pgProvider: "MOCK" | "TOSS";
+  method: string | null;
+  status: PaymentStatus;
+  pgProvider: "MOCK" | "TOSS" | "KAKAO" | "NAVER";
   pgOrderId: string;
+};
+
+export type PaymentActionResponse = {
+  paymentId: number;
+  status: PaymentStatus;
+};
+
+export type PaymentResponse = Omit<PaymentCreateResponse, "pgOrderId"> & {
+  failReason: string | null;
+  approvedAt: string | null;
+  failedAt: string | null;
 };
 
 export type TicketSummary = {
