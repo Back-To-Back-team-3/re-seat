@@ -20,16 +20,19 @@ import com.backtoback.reseat.domain.payment.dto.request.PaymentFailRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentRequest;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentActionResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCreateResponse;
+import com.backtoback.reseat.domain.payment.dto.response.PaymentResponse;
 import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
 import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
 import com.backtoback.reseat.domain.payment.entity.PgProvider;
 import com.backtoback.reseat.domain.payment.exception.IdempotencyKeyRequiredException;
+import com.backtoback.reseat.domain.payment.exception.PaymentAccessDeniedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCallbackMismatchException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelNotAllowedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentLockFailedException;
+import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
 import com.backtoback.reseat.domain.payment.pg.toss.exception.TossPaymentStatusUnknownException;
@@ -584,6 +587,56 @@ class PaymentServiceTest {
                     .isInstanceOf(PaymentCancelFailedException.class);
 
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED);
+        }
+    }
+
+    @Nested
+    @DisplayName("결제 상세 정보를 조회한다")
+    class GetPayment {
+
+        @Test
+        @DisplayName("소유한 결제를 조회하고 상세 정보를 반환한다.")
+        void returnsOwnedPaymentWithoutLock() {
+            Payment payment = payment(PaymentStatus.APPROVED);
+            when(payment.getOrder().getId()).thenReturn(ORDER_ID);
+            when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(payment));
+
+            PaymentResponse response = paymentService.getPayment(USER_ID, PAYMENT_ID);
+
+            assertThat(response.getPaymentNo()).isEqualTo(payment.getPaymentNo());
+            assertThat(response.getOrderId()).isEqualTo(ORDER_ID);
+            assertThat(response.getAmount()).isEqualTo(AMOUNT);
+            assertThat(response.getStatus()).isEqualTo(PaymentStatus.APPROVED);
+            assertThat(response.getPgProvider()).isEqualTo(PgProvider.TOSS);
+            verify(paymentValidator).validateOwner(payment, USER_ID);
+            verify(paymentRepository, never()).findByIdWithPessimisticWriteLock(any());
+        }
+
+        @Test
+        @DisplayName("결제가 존재하지 않으면 조회 실패 예외가 발생한다.")
+        void rejectsMissingPayment() {
+            when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> paymentService.getPayment(USER_ID, PAYMENT_ID))
+                    .isInstanceOf(PaymentNotFoundException.class);
+
+            verifyNoInteractions(paymentValidator);
+            verify(paymentRepository, never()).findByIdWithPessimisticWriteLock(any());
+        }
+
+        @Test
+        @DisplayName("타인의 결제는 상세 정보를 반환하지 않는다.")
+        void rejectsPaymentOwnedByAnotherUser() {
+            Payment payment = payment(PaymentStatus.APPROVED);
+            when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(payment));
+            doThrow(new PaymentAccessDeniedException())
+                    .when(paymentValidator)
+                    .validateOwner(payment, USER_ID);
+
+            assertThatThrownBy(() -> paymentService.getPayment(USER_ID, PAYMENT_ID))
+                    .isInstanceOf(PaymentAccessDeniedException.class);
+
+            verify(paymentRepository, never()).findByIdWithPessimisticWriteLock(any());
         }
     }
 }
