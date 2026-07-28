@@ -15,6 +15,7 @@ import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.exception.OrderExpiredException;
 import com.backtoback.reseat.domain.order.service.OrderService;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
+import com.backtoback.reseat.domain.payment.dto.request.PaymentFailRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentRequest;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentActionResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCreateResponse;
@@ -395,6 +396,86 @@ class PaymentServiceTest {
 
             verifyNoInteractions(tossPaymentClient, orderService, paymentRecoveryTaskRepository);
             assertThat(payment.getPgPaymentKey()).isNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("결제 실패 콜백을 처리한다")
+    class FailPayment {
+
+        @Test
+        @DisplayName("READY 결제를 실패 처리하고 주문에 실패 상태를 전파한다.")
+        void failsReadyPaymentAndOrder() {
+            Payment payment = payment(PaymentStatus.READY);
+            PaymentFailRequest request = mock(PaymentFailRequest.class);
+            when(payment.getOrder().getId()).thenReturn(ORDER_ID);
+            when(request.getOrderId()).thenReturn(PG_ORDER_ID);
+            when(request.getCode()).thenReturn("PAY_PROCESS_CANCELED");
+            when(request.getMessage()).thenReturn("사용자가 결제를 취소했습니다.");
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID))
+                    .thenReturn(Optional.of(payment));
+
+            PaymentActionResponse response = paymentService.failPayment(
+                    USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
+
+            assertThat(response.getStatus()).isEqualTo(PaymentStatus.FAILED);
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.FAILED);
+            assertThat(payment.getFailReason())
+                    .isEqualTo("[PAY_PROCESS_CANCELED] 사용자가 결제를 취소했습니다.");
+            assertThat(payment.getFailedAt()).isNotNull();
+            verify(paymentValidator).validateOwner(payment, USER_ID);
+            verify(paymentValidator).validateActiveIdempotencyKey(payment, IDEMPOTENCY_KEY);
+            verify(paymentValidator).validateFailable(payment);
+            verify(paymentValidator).validatePgOrderId(payment, PG_ORDER_ID);
+            verify(orderService).failOrder(ORDER_ID);
+        }
+
+        @ParameterizedTest(name = "{0} 결제의 기존 결과를 반환한다")
+        @EnumSource(
+                value = PaymentStatus.class,
+                mode = EnumSource.Mode.EXCLUDE,
+                names = "READY"
+        )
+        @DisplayName("이미 종결된 결제는 상태를 변경하지 않고 기존 결과를 반환한다.")
+        void returnsFinalizedPaymentWithoutFailingOrder(PaymentStatus status) {
+            Payment payment = payment(status);
+            PaymentFailRequest request = mock(PaymentFailRequest.class);
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID))
+                    .thenReturn(Optional.of(payment));
+
+            PaymentActionResponse response = paymentService.failPayment(
+                    USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
+
+            assertThat(response.getStatus()).isEqualTo(status);
+            assertThat(payment.getStatus()).isEqualTo(status);
+            verify(paymentValidator).validateOwner(payment, USER_ID);
+            verify(paymentValidator).validateActiveIdempotencyKey(payment, IDEMPOTENCY_KEY);
+            verify(paymentValidator, never()).validateFailable(any());
+            verify(paymentValidator, never()).validatePgOrderId(any(), any());
+            verifyNoInteractions(orderService);
+        }
+
+        @Test
+        @DisplayName("콜백 주문번호가 다르면 결제와 주문을 실패 처리하지 않는다.")
+        void rejectsMismatchedOrderIdBeforeFailingPayment() {
+            Payment payment = payment(PaymentStatus.READY);
+            PaymentFailRequest request = mock(PaymentFailRequest.class);
+            when(request.getOrderId()).thenReturn("different-order-id");
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID))
+                    .thenReturn(Optional.of(payment));
+            doThrow(new PaymentCallbackMismatchException())
+                    .when(paymentValidator)
+                    .validatePgOrderId(payment, "different-order-id");
+
+            assertThatThrownBy(() ->
+                    paymentService.failPayment(
+                            USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
+                    .isInstanceOf(PaymentCallbackMismatchException.class);
+
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.READY);
+            assertThat(payment.getFailReason()).isNull();
+            verify(paymentValidator).validateFailable(payment);
+            verifyNoInteractions(orderService);
         }
     }
 }
