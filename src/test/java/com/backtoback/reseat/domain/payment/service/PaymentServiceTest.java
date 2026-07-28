@@ -2,6 +2,7 @@ package com.backtoback.reseat.domain.payment.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -10,19 +11,37 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.backtoback.reseat.domain.order.entity.Order;
+import com.backtoback.reseat.domain.order.exception.OrderExpiredException;
 import com.backtoback.reseat.domain.order.service.OrderService;
+import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentRequest;
+import com.backtoback.reseat.domain.payment.dto.response.PaymentActionResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCreateResponse;
+import com.backtoback.reseat.domain.payment.entity.Payment;
+import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
+import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
+import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
+import com.backtoback.reseat.domain.payment.entity.PgProvider;
 import com.backtoback.reseat.domain.payment.exception.IdempotencyKeyRequiredException;
+import com.backtoback.reseat.domain.payment.exception.PaymentCallbackMismatchException;
 import com.backtoback.reseat.domain.payment.exception.PaymentLockFailedException;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
+import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
+import com.backtoback.reseat.domain.payment.pg.toss.exception.TossPaymentStatusUnknownException;
 import com.backtoback.reseat.domain.payment.repository.PaymentRecoveryTaskRepository;
 import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
+import com.backtoback.reseat.domain.user.entity.User;
+import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -36,7 +55,11 @@ class PaymentServiceTest {
 
     private static final Long USER_ID = 1L;
     private static final Long ORDER_ID = 10L;
+    private static final Long PAYMENT_ID = 100L;
     private static final String IDEMPOTENCY_KEY = "idempotency-key";
+    private static final String PAYMENT_KEY = "payment-key";
+    private static final String PG_ORDER_ID = "ORD-20260728-000001";
+    private static final int AMOUNT = 10000;
     private static final String PAYMENT_LOCK_KEY = "payment:create:order:" + ORDER_ID;
 
     @Mock
@@ -76,6 +99,29 @@ class PaymentServiceTest {
         RLock lock = mock(RLock.class);
         when(redissonClient.getLock(PAYMENT_LOCK_KEY)).thenReturn(lock);
         return lock;
+    }
+
+    private Payment payment(PaymentStatus status) {
+        Order order = mock(Order.class);
+
+        return Payment.builder()
+                .paymentNo("PAY-20260728010000-000001")
+                .order(order)
+                .user(mock(User.class))
+                .amount(AMOUNT)
+                .idempotencyKey(IDEMPOTENCY_KEY)
+                .status(status)
+                .pgProvider(PgProvider.TOSS)
+                .pgOrderId(PG_ORDER_ID)
+                .build();
+    }
+
+    private PaymentCompleteRequest completeRequest() {
+        PaymentCompleteRequest request = mock(PaymentCompleteRequest.class);
+        when(request.getPaymentKey()).thenReturn(PAYMENT_KEY);
+        when(request.getOrderId()).thenReturn(PG_ORDER_ID);
+        when(request.getAmount()).thenReturn(AMOUNT);
+        return request;
     }
 
     @Nested
@@ -191,6 +237,164 @@ class PaymentServiceTest {
                     .isInstanceOf(IdempotencyKeyRequiredException.class);
 
             verifyNoInteractions(redissonClient, paymentCreationService);
+        }
+    }
+
+    @Nested
+    @DisplayName("토스 결제를 승인한다")
+    class CompletePayment {
+
+        @Test
+        @DisplayName("Toss 승인이 완료되면 결제와 주문을 완료 처리한다.")
+        void approvesPaymentAndCompletesOrder() {
+            Payment payment = payment(PaymentStatus.READY);
+            PaymentCompleteRequest request = completeRequest();
+            TossPaymentResponse tossResponse = mock(TossPaymentResponse.class);
+            when(payment.getOrder().getId()).thenReturn(ORDER_ID);
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID))
+                    .thenReturn(Optional.of(payment));
+            when(tossResponse.isApproved()).thenReturn(true);
+            when(tossResponse.getPaymentKey()).thenReturn(PAYMENT_KEY);
+            when(tossResponse.getMethod()).thenReturn("CARD");
+            when(tossResponse.getApprovedAt()).thenReturn("2026-07-28T12:00:00+09:00");
+            when(tossPaymentClient.confirm(PAYMENT_KEY, PG_ORDER_ID, AMOUNT))
+                    .thenReturn(tossResponse);
+
+            PaymentActionResponse response = paymentService.completePayment(
+                    USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
+
+            assertThat(response.getStatus()).isEqualTo(PaymentStatus.APPROVED);
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED);
+            assertThat(payment.getPgPaymentKey()).isEqualTo(PAYMENT_KEY);
+            assertThat(payment.getMethod()).isEqualTo("CARD");
+            assertThat(payment.getApprovedAt())
+                    .isEqualTo(LocalDateTime.of(2026, 7, 28, 12, 0));
+            verify(paymentValidator).validateOwner(payment, USER_ID);
+            verify(paymentValidator).validateActiveIdempotencyKey(payment, IDEMPOTENCY_KEY);
+            verify(paymentValidator).validateConfirmable(payment, PG_ORDER_ID, AMOUNT);
+            verify(paymentOrderPolicy).ensurePayable(payment, payment.getOrder());
+            verify(tossPaymentClient).confirm(PAYMENT_KEY, PG_ORDER_ID, AMOUNT);
+            verify(orderService).completeOrder(ORDER_ID);
+            verify(paymentRecoveryTaskRepository, never()).save(any());
+        }
+
+        @ParameterizedTest(name = "{0} 결제의 기존 결과를 반환한다")
+        @EnumSource(
+                value = PaymentStatus.class,
+                mode = EnumSource.Mode.EXCLUDE,
+                names = "READY"
+        )
+        @DisplayName("이미 종결된 결제는 Toss를 호출하지 않고 기존 결과를 반환한다.")
+        void returnsFinalizedPaymentWithoutConfirm(PaymentStatus status) {
+            Payment payment = payment(status);
+            PaymentCompleteRequest request = mock(PaymentCompleteRequest.class);
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID))
+                    .thenReturn(Optional.of(payment));
+
+            PaymentActionResponse response = paymentService.completePayment(
+                    USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
+
+            assertThat(response.getStatus()).isEqualTo(status);
+            verify(paymentValidator).validateOwner(payment, USER_ID);
+            verify(paymentValidator).validateActiveIdempotencyKey(payment, IDEMPOTENCY_KEY);
+            verifyNoInteractions(paymentOrderPolicy, tossPaymentClient, orderService, paymentRecoveryTaskRepository);
+        }
+
+        @Test
+        @DisplayName("Toss가 명시적인 승인 실패 상태를 반환하면 결제와 주문을 실패 처리한다.")
+        void failsPaymentAndOrderForRejectedConfirm() {
+            Payment payment = payment(PaymentStatus.READY);
+            PaymentCompleteRequest request = completeRequest();
+            TossPaymentResponse tossResponse = mock(TossPaymentResponse.class);
+            when(payment.getOrder().getId()).thenReturn(ORDER_ID);
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID))
+                    .thenReturn(Optional.of(payment));
+            when(tossResponse.isApproved()).thenReturn(false);
+            when(tossResponse.getStatus()).thenReturn("ABORTED");
+            when(tossPaymentClient.confirm(PAYMENT_KEY, PG_ORDER_ID, AMOUNT))
+                    .thenReturn(tossResponse);
+
+            PaymentActionResponse response = paymentService.completePayment(
+                    USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
+
+            assertThat(response.getStatus()).isEqualTo(PaymentStatus.FAILED);
+            assertThat(payment.getFailReason())
+                    .isEqualTo("토스 결제 승인 상태가 완료가 아닙니다. status=ABORTED");
+            verify(orderService).failOrder(ORDER_ID);
+            verify(orderService, never()).completeOrder(any());
+            verify(paymentRecoveryTaskRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Toss 승인 상태를 확인할 수 없으면 결제와 주문을 실패 처리하고 복구 작업을 등록한다.")
+        void registersRecoveryTaskForUnknownConfirmStatus() {
+            Payment payment = payment(PaymentStatus.READY);
+            PaymentCompleteRequest request = completeRequest();
+            when(payment.getOrder().getId()).thenReturn(ORDER_ID);
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID))
+                    .thenReturn(Optional.of(payment));
+            when(tossPaymentClient.confirm(PAYMENT_KEY, PG_ORDER_ID, AMOUNT))
+                    .thenThrow(new TossPaymentStatusUnknownException(
+                            "승인", new RuntimeException("Toss 응답 없음")));
+
+            PaymentActionResponse response = paymentService.completePayment(
+                    USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
+
+            assertThat(response.getStatus()).isEqualTo(PaymentStatus.FAILED);
+            assertThat(payment.getPgPaymentKey()).isEqualTo(PAYMENT_KEY);
+            assertThat(payment.getFailReason()).isEqualTo("토스 결제 승인 상태를 확인할 수 없습니다.");
+            ArgumentCaptor<PaymentRecoveryTask> taskCaptor =
+                    ArgumentCaptor.forClass(PaymentRecoveryTask.class);
+            verify(paymentRecoveryTaskRepository).save(taskCaptor.capture());
+            assertThat(taskCaptor.getValue().getPayment()).isSameAs(payment);
+            assertThat(taskCaptor.getValue().getStatus())
+                    .isEqualTo(PaymentRecoveryStatus.PENDING);
+            verify(orderService).failOrder(ORDER_ID);
+            verify(orderService, never()).completeOrder(any());
+        }
+
+        @Test
+        @DisplayName("콜백 정보 검증에 실패하면 주문 정책과 Toss 승인을 호출하지 않는다.")
+        void rejectsInvalidCallbackBeforeConfirm() {
+            Payment payment = payment(PaymentStatus.READY);
+            PaymentCompleteRequest request = mock(PaymentCompleteRequest.class);
+            when(request.getOrderId()).thenReturn(PG_ORDER_ID);
+            when(request.getAmount()).thenReturn(AMOUNT);
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID))
+                    .thenReturn(Optional.of(payment));
+            doThrow(new PaymentCallbackMismatchException())
+                    .when(paymentValidator)
+                    .validateConfirmable(payment, PG_ORDER_ID, AMOUNT);
+
+            assertThatThrownBy(() ->
+                    paymentService.completePayment(
+                            USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
+                    .isInstanceOf(PaymentCallbackMismatchException.class);
+
+            verifyNoInteractions(paymentOrderPolicy, tossPaymentClient, orderService, paymentRecoveryTaskRepository);
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.READY);
+        }
+
+        @Test
+        @DisplayName("주문 결제 기한이 만료되면 Toss 승인을 호출하지 않는다.")
+        void rejectsExpiredOrderBeforeConfirm() {
+            Payment payment = payment(PaymentStatus.READY);
+            PaymentCompleteRequest request = mock(PaymentCompleteRequest.class);
+            when(request.getOrderId()).thenReturn(PG_ORDER_ID);
+            when(request.getAmount()).thenReturn(AMOUNT);
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID))
+                    .thenReturn(Optional.of(payment));
+            doThrow(new OrderExpiredException())
+                    .when(paymentOrderPolicy)
+                    .ensurePayable(payment, payment.getOrder());
+
+            assertThatThrownBy(() ->
+                    paymentService.completePayment(
+                            USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
+                    .isInstanceOf(OrderExpiredException.class);
+
+            verifyNoInteractions(tossPaymentClient, orderService, paymentRecoveryTaskRepository);
+            assertThat(payment.getPgPaymentKey()).isNull();
         }
     }
 }
