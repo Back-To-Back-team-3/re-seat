@@ -258,7 +258,20 @@ class SeatHoldRepeatValidationTest {
             executor.shutdown();
             boolean finished = executor.awaitTermination(AWAIT_SECONDS, TimeUnit.SECONDS);
 
+            if (!finished) {
+                executor.shutdownNow();
+            }
+
+            assertThat(finished)
+                .as(
+                    "[회차 %d] %d초 내 모든 스레드가 종료되지 않았다 — 데드락 또는 타임아웃 의심",
+                    currentRound,
+                    AWAIT_SECONDS
+                )
+                .isTrue();
+
             // 회차별 수치 로그
+            // 모든 스레드가 정상 종료된 경우에만 DB 상태 검증
             GameSeat finalGameSeat = gameSeatRepository.findById(targetGameSeatId).orElseThrow();
             long reservationSeatRows = reservationSeatRepository.findAll().stream()
                 .filter(rs -> rs.getGameSeat().getId().equals(targetGameSeatId))
@@ -278,9 +291,6 @@ class SeatHoldRepeatValidationTest {
             log.info("===============================================================");
 
             // 회차별 어시션
-            assertThat(finished)
-                .as("[회차 %d] %d초 내 모든 스레드가 종료되지 않았다 — 데드락 또는 타임아웃 의심", currentRound, AWAIT_SECONDS)
-                .isTrue();
             assertThat(successCount.get())
                 .as("[회차 %d] 선점 성공은 정확히 1건이어야 한다 — over-booking 발생 시 > 1", currentRound)
                 .isEqualTo(1);
