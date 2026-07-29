@@ -59,7 +59,8 @@ public class AdmissionTokenService {
     /**
      * Redis 대기열 앞쪽 사용자들을 입장 허용 처리하고 입장 토큰을 발급한다.
      *
-     * <p>동시에 같은 경기 admission이 실행되지 않도록 경기별 Redisson 락을 사용한다.</p>
+     * <p>경기별 Redisson 분산 락으로 입장 처리를 순서대로 실행하고,
+     * 대기 이력은 비관적 락으로 조회하여 취소와의 상태 변경 충돌을 막는다.</p>
      *
      * @param gameId 경기 ID
      * @param limit 입장 허용 처리할 최대 사용자 수
@@ -129,8 +130,9 @@ public class AdmissionTokenService {
                 Long userId = parseUserId(member);
                 String queueKey = queueKey(gameId, userId);
 
+                // 대기 취소와 입장 허용이 동시에 변경하지 않도록 대기 이력을 비관적 락으로 조회한다.
                 QueueEntryHistory queueEntryHistory = queueEntryHistoryRepository
-                        .findByQueueKey(queueKey)
+                        .findByQueueKeyWithPessimisticWriteLock(queueKey)
                         .orElse(null);
 
                 // Redis에는 존재하지만 DB 이력이 없거나 이미 대기 상태가 끝난 사용자는 새 토큰을 발행하지 않는다.
@@ -235,6 +237,32 @@ public class AdmissionTokenService {
         expireIfNeeded(admissionToken, now);
 
         admissionToken.use(now);
+    }
+
+    /**
+     * 사용 완료된 Queue-Token을 비관적 락으로 조회하고 활성 상태로 되돌린다.
+     *
+     * <p>사용자와 경기 정보를 검증하고,
+     * 기존 발급 시간과 만료 시간을 유지한채 동일한 토큰을 재활성화 한다.</p>
+     *
+     * @param userId 요청한 사용자 ID
+     * @param gameId 입장하려는 경기 ID
+     * @param token 재활성화할 Queue-Token 값
+     */
+    @Transactional
+    public void reactivateToken(Long userId, Long gameId, String token) {
+
+        LocalDateTime now = LocalDateTime.now();
+
+        validateRequiredToken(token);
+
+        AdmissionToken admissionToken = admissionTokenRepository.findByTokenWithPessimisticWriteLock(token)
+                .orElseThrow(QueueTokenInvalidException::new);
+
+        validateTokenContext(admissionToken, userId, gameId);
+
+
+        admissionToken.reactivate(now);
     }
 
     private ZSetOperations<String, String> getZSetOperations() {

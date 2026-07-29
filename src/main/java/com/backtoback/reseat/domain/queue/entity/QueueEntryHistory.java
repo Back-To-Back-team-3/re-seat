@@ -71,7 +71,7 @@ public class QueueEntryHistory {
     @Column(name = "status", nullable = false, length = 20)
     private QueueEntryHistoryStatus status;
 
-    @Column(name = "entered_at", updatable = false, nullable = false)
+    @Column(name = "entered_at", nullable = false)
     private LocalDateTime enteredAt;
 
     @Column(name = "admitted_at")
@@ -125,5 +125,24 @@ public class QueueEntryHistory {
 
         this.status = QueueEntryHistoryStatus.ADMITTED;
         this.admittedAt = admittedAt;
+    }
+
+    /**
+     * 취소된 사용자의 상태를 대기 중으로 변경한다.
+     *
+     * <p>CANCELED 상태만 재진입할 수 있으며, 재진입 시간을 갱신하고
+     * 기존 입장 허용시간과 취소 시간을 초기화한다.</p>
+     *
+     * @param enteredAt 대기열 재진입 시간
+     */
+    public void reenter(LocalDateTime enteredAt) {
+        if (this.status != QueueEntryHistoryStatus.CANCELED) {
+            throw new QueueInvalidStatusException("취소된 상태만 대기열에 재진입할 수 있습니다.");
+        }
+
+        this.status = QueueEntryHistoryStatus.WAITING;
+        this.enteredAt = enteredAt;
+        this.admittedAt = null;
+        this.canceledAt = null;
     }
 }

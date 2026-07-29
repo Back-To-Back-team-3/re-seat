@@ -4,6 +4,7 @@ import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.queue.exception.QueueInvalidStatusException;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenAlreadyUsedException;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenExpiredException;
+import com.backtoback.reseat.domain.queue.exception.QueueTokenRevokedException;
 import com.backtoback.reseat.domain.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -130,6 +131,34 @@ public class AdmissionToken {
     }
 
     /**
+     * 활성 입장 토큰을 취소 상태로 전환한다.
+     *
+     * <p>명시적 대기 취소 또는 연결 종료 유예시간 만료로
+     * 토큰을 더 이상 사용할 수 없도록 변경한다.</p>
+     */
+    public void revoke() {
+
+        validateActiveStatus();
+
+        this.status = AdmissionTokenStatus.REVOKED;
+    }
+
+    /**
+     * 사용 완료된 입장 토큰을 활성 상태로 되돌린다.
+     *
+     * <p>기존 발급 시간과 만료 시간을 유지하고 사용 시간만 초기화한다.</p>
+     *
+     * @param currentTime 만료 여부를 판단할 시간
+     */
+    public void reactivate(LocalDateTime currentTime) {
+
+        validateReactivatableAt(currentTime);
+
+        this.status = AdmissionTokenStatus.ACTIVE;
+        this.usedAt = null;
+    }
+
+    /**
      * 기준 시간에 토큰이 만료되었는지 확인한다.
      * 만료 시간과 기준 시간이 같거나, 만료 시간이 더 이전이면 만료로 판단한다.
      *
@@ -146,6 +175,10 @@ public class AdmissionToken {
      */
     private void validateActiveStatus() {
 
+        if (this.status == AdmissionTokenStatus.REVOKED) {
+            throw new QueueTokenRevokedException();
+        }
+
         if (this.status == AdmissionTokenStatus.USED) {
             throw new QueueTokenAlreadyUsedException();
         }
@@ -156,6 +189,32 @@ public class AdmissionToken {
 
         if (this.status != AdmissionTokenStatus.ACTIVE) {
             throw new QueueInvalidStatusException();
+        }
+    }
+
+    /**
+     * 토큰 상태와 만료 시간을 기준으로 해당 시간에 재활성화할 수 있는지 검증한다.
+     *
+     * <p>USED 상태이면서 만료 시간이 지나지 않은 토크만 재활성화를 허용한다.</p>
+     *
+     * @param currentTime 재활성화 가능 여부를 판단할 시간
+     */
+    private void validateReactivatableAt(LocalDateTime currentTime) {
+
+        if (this.status == AdmissionTokenStatus.REVOKED) {
+            throw new QueueTokenRevokedException();
+        }
+
+        if (this.status == AdmissionTokenStatus.EXPIRED) {
+            throw new QueueTokenExpiredException();
+        }
+
+        if (!this.status.equals(AdmissionTokenStatus.USED)) {
+            throw new QueueInvalidStatusException("사용 완료 상태의 토큰만 재활성화할 수 있습니다.");
+        }
+
+        if (this.isExpiredAt(currentTime)) {
+            throw new QueueTokenExpiredException();
         }
     }
 
