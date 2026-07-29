@@ -4,6 +4,7 @@ import jakarta.annotation.PostConstruct;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.Table;
 import jakarta.persistence.metamodel.EntityType;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,8 +24,18 @@ public class DatabaseCleaner {
     @PostConstruct
     public void findTableNames() {
         for (EntityType<?> entity : entityManager.getMetamodel().getEntities()) {
-            if (entity.getJavaType().getAnnotation(Entity.class) != null) {
-                String tableName = convertToSnakeCase(entity.getName());
+            Class<?> javaType = entity.getJavaType();
+            if (javaType != null && javaType.getAnnotation(Entity.class) != null) {
+                Table tableAnnotation = javaType.getAnnotation(Table.class);
+                String tableName;
+
+               //테이블 어노테이션이 존재하면 해당 이름을 우선 사용
+                if (tableAnnotation != null && !tableAnnotation.name().isBlank()) {
+                    tableName = tableAnnotation.name();
+                } else {
+                    //어노테이션에 테이블명이 명시되지 않은 경우만 fallback으로 snake_case 전환
+                    tableName = convertToSnakeCase(entity.getName());
+                }
                 tableNames.add(tableName);
             }
         }
