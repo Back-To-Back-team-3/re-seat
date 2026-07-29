@@ -264,7 +264,7 @@ class SeatHoldRepeatValidationTest {
                 .filter(rs -> rs.getGameSeat().getId().equals(targetGameSeatId))
                 .count();
 
-            log.info("==================================================");
+            log.info("===============================================================");
             log.info("[TC-001] over-booking 대량 반복 검증 — 회차 {}/{}", currentRound, REPEAT_COUNT);
             log.info("  동시 스레드 수               : {}", THREAD_COUNT);
             log.info("  선점 성공 건수               : {}", successCount.get());
@@ -275,7 +275,7 @@ class SeatHoldRepeatValidationTest {
             log.info("  game_seats.status           : {}", finalGameSeat.getStatus());
             log.info("  reservation_seats 행 수     : {}", reservationSeatRows);
             log.info("  {}초 내 종료 여부            : {}", AWAIT_SECONDS, finished);
-            log.info("==================================================");
+            log.info("===============================================================");
 
             // 회차별 어시션
             assertThat(finished)
@@ -299,6 +299,6 @@ class SeatHoldRepeatValidationTest {
         }
 
         log.info("[TC-001] 전 회차 완료 — {}회 × {}스레드 over-booking 0건 확인", REPEAT_COUNT, THREAD_COUNT);
-        log.info("==================================================");
+        log.info("===============================================================");
     }
 }
