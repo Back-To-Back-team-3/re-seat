@@ -36,16 +36,16 @@ public class DatabaseCleaner {
 
         //외래키 제약 조건 잠시 해제
         entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS = 0").executeUpdate();
-
-        //모든 테이블 TRUNCATE
-        for (String tableName : tableNames) {
-            entityManager.createNativeQuery("TRUNCATE TABLE " + tableName).executeUpdate();
+        try {
+            //모든 테이블 TRUNCATE
+            for (String tableName : tableNames) {
+                entityManager.createNativeQuery("TRUNCATE TABLE " + tableName).executeUpdate();
+            }
+        } finally {
+            //외래키 제약 조건 원복
+            entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS = 1").executeUpdate();
         }
-
-        //외래키 제약 조건 원복
-        entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS = 1").executeUpdate();
     }
-
     private String convertToSnakeCase(String camelCase) {
         return camelCase.replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
     }

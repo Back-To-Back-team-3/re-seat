@@ -19,26 +19,32 @@ public abstract class BaseConcurrencyTest extends BaseIntegrationTest {
     protected int executeConcurrentTasks(int threadCount, Consumer<Integer> task) throws InterruptedException {
 
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
-        CountDownLatch latch = new CountDownLatch(threadCount);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch endLatch = new CountDownLatch(threadCount);
         AtomicInteger successCount = new AtomicInteger();
 
         for (int i = 0; i < threadCount; i++) {
             final int threadIndex = i;
             executorService.submit(() -> {
                 try {
+                    startLatch.await(); // 모든 스레드가 준비될 때까지 대기 후 동시 시작
                     task.accept(threadIndex);
                     successCount.incrementAndGet();
                 } catch (Exception e) {
                     // 예외 발생 시 로그 출력 후 실패 처리
                     System.err.println("동시성 테스트 스레드 예외 발생: " + e.getMessage());
                 } finally {
-                    latch.countDown();
+                    endLatch.countDown();
                 }
             });
         }
 
-        latch.await(); // 모든 스레드가 끝날 때까지 대기
-        executorService.shutdown();
+        try {
+            startLatch.countDown(); // 동시에 모든 스레드 시작 신호
+            endLatch.await(); // 모든 스레드가 끝날 때까지 대기
+        } finally {
+            executorService.shutdown();
+        }
 
         return successCount.get();
     }

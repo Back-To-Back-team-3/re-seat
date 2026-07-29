@@ -1,6 +1,7 @@
 package com.backtoback.reseat.global.service;
 
 import com.backtoback.reseat.global.config.DatabaseCleaner;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,23 +12,21 @@ public class TestDatabaseCleanUpService {
     private final DatabaseCleaner databaseCleaner;
     private final StringRedisTemplate redisTemplate;
 
-    public TestDatabaseCleanUpService(DatabaseCleaner databaseCleaner, StringRedisTemplate
-        redisTemplate) {
+    public TestDatabaseCleanUpService(DatabaseCleaner databaseCleaner, StringRedisTemplate redisTemplate) {
         this.databaseCleaner = databaseCleaner;
         this.redisTemplate = redisTemplate;
     }
 
-
-
-     //모든 저장소 RDB+Redis 초기화
+    //모든 저장소 RDB+Redis 초기화
     @Transactional
     public void cleanUpAll() {
         // MySQL RDB 테이블 Truncate
         databaseCleaner.execute();
 
-        // Redis 데이터 전체 삭제
-        if (redisTemplate.getConnectionFactory() != null) {
-            redisTemplate.getConnectionFactory().getConnection().serverCommands().flushDb();
-        }
+        // Redis 데이터 전체 삭제 (RedisCallback으로 커넥션 안전 관리)
+        redisTemplate.execute((RedisCallback<Object>) connection -> {
+            connection.serverCommands().flushDb();
+            return null;
+        });
     }
 }
