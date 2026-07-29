@@ -64,8 +64,8 @@ public class SecurityConfig {
                 .requestMatchers(PathRequest.toH2Console()).permitAll()
                 .requestMatchers("/swagger-ui/**","/v3/api-docs/**").permitAll()
 
-                //경기 상세 목록 조회 GET API 공개 허용
-                .requestMatchers(HttpMethod.GET, "/api/v1/games", "/api/v1/games/*").permitAll()
+                // 경기 목록(/api/v1/games), 경기 상세(/api/v1/games/{gameId}) GET 공개 허용
+                .requestMatchers(HttpMethod.GET, "/api/v1/games", "/api/v1/games/{gameId}").permitAll()
 
                     //관리자 전용 API 인가 적용
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
