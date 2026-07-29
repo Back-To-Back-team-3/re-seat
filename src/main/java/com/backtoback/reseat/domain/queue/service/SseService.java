@@ -2,20 +2,27 @@ package com.backtoback.reseat.domain.queue.service;
 
 import com.backtoback.reseat.domain.queue.dto.response.QueueStatusResponse;
 import com.backtoback.reseat.domain.queue.exception.QueueEntryNotFoundException;
+import com.backtoback.reseat.domain.queue.exception.QueueInvalidStatusException;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * 대기열 순번과 입장 허용 이벤트를 SSE로 전송하는 서비스
+ * 대기열 상태와 입장 허용 이벤트를 SSE로 주기적으로 전송하고 연결을 관리하는 서비스
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SseService {
@@ -29,9 +36,18 @@ public class SseService {
     // 대기열 상태를 처음 조회하기 전의 지연 시간이며 이후 상태 전송 주기
     private static final long SSE_SEND_INTERVAL_SECONDS = 3L;
 
+    // 마지막 SSE 연결 종료 후 대기열 이탈 처리까지 기다리는 재연결 유예시간
+    private static final long SSE_RECONNECT_GRACE_MILLIS = 60L * 1000L;
+
     // SSE 연결별 대기 순번 조회 작업을 공동으로 실행하는 스케줄러다.
     // 연결마다 별도 스레드를 생성하지 않고 정해진 스레드 풀에서 주기 작업을 처리한다.
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(SSE_SCHEDULER_POOL_SIZE);
+
+    // 동일 사용자와 경기에서 현재 유지 중인 SSE 연결 수를 관리한다.
+    private final ConcurrentMap<QueueConnectionKey, Integer> activeConnectionCounts = new ConcurrentHashMap<>();
+
+    // 마지막 연결 종료 후 재연결 유예시간 동안 실행을 보류한 대기열 이탈 작업을 관리한다.
+    private final ConcurrentMap<QueueConnectionKey, ScheduledFuture<?>> pendingQueueExitTasks = new ConcurrentHashMap<>();
 
     private final QueueService queueService;
 
@@ -44,24 +60,22 @@ public class SseService {
      */
     public SseEmitter streamMyQueue(Long gameId, Long userId) {
 
+        QueueConnectionKey connectionKey = new QueueConnectionKey(gameId, userId);
+        registerConnection(connectionKey);
+
         SseEmitter sseEmitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
 
-        // ScheduledFuture 생성 전 콜백을 등록해야 하므로 AtomicReference로 작업 참조를 나중에 채운다.
+        // 연결 종료를 놓치지 않도록 종료 콜백을 주기 작업보다 먼저 등록한다.
+        // 아직 생성되지 않은 주기 작업은 나중에 저장하여 종료 콜백에서 조회한다.
         AtomicReference<ScheduledFuture<?>> futureRef = new AtomicReference<>();
 
-        // SSE 연결이 끝난 이후에도 순번 조회 작업이 계속 실행되지 않도록 등록된 주기 작업을 취소한다.
-        Runnable cancelTask = () -> {
-            ScheduledFuture<?> future = futureRef.get();
-            if (future != null) {
-                // 이미 작업이 실행 중인 경우네는 해당 스레드에 인터럽트를 요청하고 이후 반복 실행을 중단한다.
-                future.cancel(true);
-            }
-        };
+        // SSE 연결 종료 시 주기 작업과 현재 연결 수를 함께 정리할 작업을 생성한다.
+        Runnable cleanupTask = createConnectionCleanupTask(futureRef, connectionKey);
 
-        // 정상 완료, 시간 만료, 전송 오류 중 어떤 방식으로 연결이 종료되더라도 주기 작업을 정리한다.
-        sseEmitter.onCompletion(cancelTask);
-        sseEmitter.onTimeout(cancelTask);
-        sseEmitter.onError(t -> cancelTask.run());
+        // 정상 완료, 시간 만료, 전송 오류 중 어떤 방식으로 연결이 종료되더라도 동일한 정리 작업을 실행한다.
+        sseEmitter.onCompletion(cleanupTask);
+        sseEmitter.onTimeout(cleanupTask);
+        sseEmitter.onError(t -> cleanupTask.run());
 
         // Kafka Consumer가 DB와 Redis 등록을 완료할 시간을 고려하여 첫 상태 조회를 즉시 실행하지 않고 지연한다.
         // 이후 연결이 유지되는 동안 지정된 주기에 맞춰 대기 상태를 반복해서 조회한다.
@@ -105,11 +119,161 @@ public class SseService {
     }
 
     /**
-     * 애플리케이션 종료 시 SSE 순번 전송 스케줄러를 종료한다.
+     * 앱 종료 시 SSE 순번 전송과 예약된 대기열 이탈 작업을 모두 종료한다.
      */
     @PreDestroy
     public void shutdownScheduler() {
-        // 새로운 SSE 주기 작업의 등록을 막고 현재 등록된 작업들을 종료 절차로 전환한다.
-        scheduler.shutdown();
+
+        // 앱 종료 중 대기열 상태를 변경하지 않도록 실행 중인 작업과 예약된 작업을 즉시 종료한다.
+        scheduler.shutdownNow();
+    }
+
+    /**
+     * 동일 사용자와 경기의 SSE 연결 수를 관리하기 위한 식별값
+     *
+     * @param gameId SSE 연결 대상 경기 ID
+     * @param userId SSE 연결 사용자 ID
+     */
+    private record QueueConnectionKey(
+       Long gameId,
+       Long userId
+    ) {
+    }
+
+    /**
+     * 동일 사용자와 경기의 SSE 연결 수를 증가시키고 예약된 대기열 이탈 작업을 취소한다.
+     *
+     * @param connectionKey SSE 연결 식별값
+     */
+    private void registerConnection(QueueConnectionKey connectionKey) {
+
+        // 첫 연결이면 1로 등록하고 이미 연결이 있으면 기존 연결 수에 1을 더한다.
+        activeConnectionCounts.merge(connectionKey, 1, Integer::sum);
+
+        // 재연결된 사용자는 기존 순번을 유지하도록 예약된 대기열 이탈 작업을 취소한다.
+        cancelPendingQueueExit(connectionKey);
+    }
+
+    /**
+     * 동일 사용자와 경기에서 예약된 대기열 이탈 작업이 있으면 취소한다.
+     *
+     * @param connectionKey SSE 연결 식별값
+     */
+    private void cancelPendingQueueExit(QueueConnectionKey connectionKey) {
+
+        ScheduledFuture<?> pendingQueueExitTask = pendingQueueExitTasks.remove(connectionKey);
+        if (Objects.nonNull(pendingQueueExitTask)) {
+            pendingQueueExitTask.cancel(false);
+        }
+    }
+
+    /**
+     * 동일 사용자와 경기의 SSE 연결 수를 감소시키고 마지막 연결이 종료됐는지 반환한다.
+     *
+     * @param connectionKey SSE 연결 식별값
+     * @return 마지막 SSE 연결이 종료됐으면 true
+     */
+    private boolean removeConnection(QueueConnectionKey connectionKey) {
+
+        AtomicBoolean lastConnectionClosed = new AtomicBoolean(false);
+
+        // 여러 연결이 동시에 종료되어도 연결 수가 잚못 계산되지 않도록 한 번의 연산으로 처리한다.
+        activeConnectionCounts.computeIfPresent(
+                connectionKey,
+                (key, count) -> {
+                    if (count <= 1) {
+                        // 마지막 연결이면 null을 반환해 Map에서 식별값을 삭제한다.
+                        lastConnectionClosed.set(true);
+                        return null;
+                    } else {
+                        // 다른 연결이 남아 있을경우 종료된 연결 하나만 감소시킨다.
+                        return count - 1;
+                    }
+                }
+        );
+
+        return lastConnectionClosed.get();
+    }
+
+    /**
+     * SSE 연결 종료 시 주기 작업 취소와 연결 수 감소를 한 번만 수행하는 정리 작업을 생성한다.
+     *
+     * @param futureRef 취소할 주기 작업 참조
+     * @param connectionKey SSE 연결 식별값
+     * @return SSE 연결 종료 시 실행할 정리 작업
+     */
+    private Runnable createConnectionCleanupTask(
+            AtomicReference<ScheduledFuture<?>> futureRef,
+            QueueConnectionKey connectionKey
+    ) {
+
+        // 하나의 연결에서 종료 콜백이 여러 번 호출될 수 있으므로 정리가 시작됐는지 저장한다.
+        AtomicBoolean cleanupStarted = new AtomicBoolean(false);
+
+        // SSE 연결이 끝나면 주기 작업 취소와 연결 수 감소를 함께 수행할 정리 작업을 정의한다.
+        return () -> {
+            // false에서 true로 처음 변경한 콜백만 정리 작업을 실행한다.
+            if (cleanupStarted.compareAndSet(false, true)) {
+                ScheduledFuture<?> future = futureRef.get();
+                if (future != null) {
+                    // 실행 중인 조회에는 중단을 요청하고 이후 반복 실행도 막는다.
+                    future.cancel(true);
+                }
+
+                // 동일 사용자와 경기의 다른 연결은 유지하고 종료된 연결 하나만 현재 연결 수에서 제외한다.
+                if (removeConnection(connectionKey)) {
+                    // 마지막 연결이 종료되면 재연결 유예시간 후 대기열 이탈 처리를 예약한다.
+                    scheduleQueueExit(connectionKey);
+                }
+            }
+        };
+    }
+
+    /**
+     * 마지막 SSE 연결 종료 후 재연결 유예시간이 지나면 대기열 이탈 처리를 실행하도록 예약한다.
+     *
+     * @param connectionKey SSE 연결 식별값
+     */
+    private void scheduleQueueExit(QueueConnectionKey connectionKey) {
+
+        AtomicReference<ScheduledFuture<?>> queueExitTaskRef = new AtomicReference<>();
+
+        ScheduledFuture<?> queueExitTask = scheduler.schedule(() -> {
+            try {
+                queueService.cancelMyQueue(connectionKey.gameId(), connectionKey.userId());
+            } catch (QueueInvalidStatusException e) {
+
+                // 이미 취소됐거나 Queue-Token이 사용된 상태는 추가 이탈 처리를 생략한다.
+                log.info(
+                        "SSE 연결 종료 후 대기열 이탈 처리 대상이 아닙니다. gameId={}, userId={}",
+                        connectionKey.gameId(),
+                        connectionKey.userId()
+                );
+            } catch (RuntimeException e ) {
+                if (Thread.currentThread().isInterrupted()) {
+                    throw e;
+                }
+                log.error(
+                        "SSE 연결 종료 후 대기열 이탈 처리 실패. gameId={}, userId={}",
+                        connectionKey.gameId(),
+                        connectionKey.userId(),
+                        e
+                );
+            } finally {
+                // 이후 예약된 작업을 제거하지 않도록 현재 실행한 작업과 일치할 때만 Map에서 삭제한다.
+                pendingQueueExitTasks.remove(connectionKey, queueExitTaskRef.get());
+            }
+
+            }, SSE_RECONNECT_GRACE_MILLIS,
+                TimeUnit.MILLISECONDS
+        );
+
+        queueExitTaskRef.set(queueExitTask);
+        pendingQueueExitTasks.put(connectionKey, queueExitTask);
+
+        // 예약 작업을 저장하기 전에 재연결된 경우에도 이탈되지 않도록 현재 연결을 다시 확인한다.
+        if (Objects.nonNull(activeConnectionCounts.get(connectionKey))) {
+            cancelPendingQueueExit(connectionKey);
+        }
     }
 }
