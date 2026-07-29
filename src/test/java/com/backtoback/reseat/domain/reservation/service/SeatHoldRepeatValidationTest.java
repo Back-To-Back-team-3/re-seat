@@ -265,16 +265,16 @@ class SeatHoldRepeatValidationTest {
                 .count();
 
             log.info("===============================================================");
-            log.info("[TC-001] over-booking 대량 반복 검증 — 회차 {}/{}", currentRound, REPEAT_COUNT);
-            log.info("  동시 스레드 수               : {}", THREAD_COUNT);
-            log.info("  선점 성공 건수               : {}", successCount.get());
+            log.info("[TC-001] over-booking 대량 반복 검증 - 회차 {}/{}", currentRound, REPEAT_COUNT);
+            log.info("  동시 스레드 수              : {}", THREAD_COUNT);
+            log.info("  선점 성공 건수              : {}", successCount.get());
             log.info("  SEAT_ALREADY_HELD 건수      : {}", seatAlreadyHeldCount.get());
             log.info("  LOCK_FAILED 건수            : {}", lockFailedCount.get());
             log.info("  DataIntegrityViolation 건수 : {}", dataIntegrityViolationCount.get());
-            log.info("  예상 외 예외 건수            : {}", unexpectedExceptionCount.get());
+            log.info("  예상 외 예외 건수           : {}", unexpectedExceptionCount.get());
             log.info("  game_seats.status           : {}", finalGameSeat.getStatus());
             log.info("  reservation_seats 행 수     : {}", reservationSeatRows);
-            log.info("  {}초 내 종료 여부            : {}", AWAIT_SECONDS, finished);
+            log.info("  {}초 내 종료 여부           : {}", AWAIT_SECONDS, finished);
             log.info("===============================================================");
 
             // 회차별 어시션
@@ -298,7 +298,7 @@ class SeatHoldRepeatValidationTest {
                 .isZero();
         }
 
-        log.info("[TC-001] 전 회차 완료 — {}회 × {}스레드 over-booking 0건 확인", REPEAT_COUNT, THREAD_COUNT);
+        log.info("[TC-001] 전 회차 완료 - {}회 × {}스레드 over-booking 0건 확인", REPEAT_COUNT, THREAD_COUNT);
         log.info("===============================================================");
     }
 }
