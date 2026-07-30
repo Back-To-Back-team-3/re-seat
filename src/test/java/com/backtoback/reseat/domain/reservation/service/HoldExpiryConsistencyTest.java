@@ -19,6 +19,7 @@ import com.backtoback.reseat.domain.team.entity.Team;
 import com.backtoback.reseat.domain.team.repository.TeamRepository;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -39,6 +40,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p>실제 H2 DB에 커밋된 상태를 검증한다.
  */
+@Slf4j
 @SpringBootTest
 @ActiveProfiles("test")
 class HoldExpiryConsistencyTest {
@@ -144,9 +146,9 @@ class HoldExpiryConsistencyTest {
         if (savedStadiumId != null) stadiumRepository.deleteById(savedStadiumId);
     }
 
-    // ──────────────────────────────────────────────────────────────────────
+    // =============================================================================
     // 시나리오 1: TTL 만료 후 game_seats HELD→AVAILABLE, reservations HOLDING→EXPIRED
-    // ──────────────────────────────────────────────────────────────────────
+    // =============================================================================
 
     /**
      * B4 정합성 회귀 — TTL 만료 후 두 테이블이 동시에 올바른 상태로 전이되는지 검증한다.
@@ -199,5 +201,68 @@ class HoldExpiryConsistencyTest {
         assertThat(updatedGameSeat.getHoldExpiresAt())
             .as("회수된 좌석의 hold_expires_at은 null이어야 한다")
             .isNull();
+    }
+
+    // =============================================================================
+    // 시나리오 2: 선점 연장 후 스케줄러 오회수 방지
+    // =============================================================================
+
+    /**
+     * B4 정합성 회귀 — 주문 생성으로 hold_expires_at이 연장된 선점을 스케줄러가 오회수하지 않는지 검증한다.
+     */
+    @Test
+    @DisplayName("선점 연장 후 스케줄러 실행 시 정상 선점 오회수 없음 검증 (B4 경합 회귀)")
+    void scenario2_extendedHold_notReleasedByScheduler() {
+        // given — hold_expires_at을 미래로 세팅 (주문 생성으로 연장된 상태 시뮬레이션)
+        LocalDateTime extendedAt = LocalDateTime.now().plusMinutes(8);
+
+        GameSeat gameSeat = gameSeatRepository.findById(savedGameSeatId).orElseThrow();
+        gameSeat.hold(extendedAt);
+        gameSeatRepository.save(gameSeat);
+
+        Game game = gameRepository.findById(savedGameId).orElseThrow();
+        User user = userRepository.findById(savedUserId).orElseThrow();
+        Reservation reservation = reservationRepository.save(Reservation.builder()
+            .reservationNo("RSV-TEST-000002")
+            .user(user)
+            .game(game)
+            .status(ReservationStatus.HOLDING)
+            .holdExpiresAt(extendedAt) // reservations·game_seats 동일 값 — B↔C 계약 준수
+            .build());
+        savedReservationId = reservation.getId();
+
+        // when — 스케줄러 실행 (WHERE hold_expires_at < now() 조건 → 미래값이므로 대상 아님)
+        LocalDateTime now = LocalDateTime.now();
+        HoldExpiryService.HoldExpiryResult result = holdExpiryService.releaseExpired(now);
+
+        // then — 실제 DB 상태 재조회
+        Reservation updatedReservation = reservationRepository.findById(savedReservationId).orElseThrow();
+        GameSeat updatedGameSeat = gameSeatRepository.findById(savedGameSeatId).orElseThrow();
+
+        log.info("[B4 시나리오2] 선점 연장 후 오회수 방지 결과");
+        log.info("  expiredReservations={}, releasedSeats={} (expected=0, 0)",
+            result.expiredReservations(), result.releasedSeats());
+        log.info("  reservation.status={} (expected=HOLDING)", updatedReservation.getStatus());
+        log.info("  gameSeat.status={}, holdExpiresAt={} (expected=HELD, {})",
+            updatedGameSeat.getStatus(), updatedGameSeat.getHoldExpiresAt(), extendedAt);
+
+        // 오회수 없음 — 카운트 0건
+        assertThat(result.expiredReservations())
+            .as("연장된 선점은 회수 대상이 아니므로 expiredReservations=0이어야 한다")
+            .isZero();
+        assertThat(result.releasedSeats())
+            .as("연장된 선점은 회수 대상이 아니므로 releasedSeats=0이어야 한다")
+            .isZero();
+
+        // 오회수 없음 — 양쪽 테이블 상태 유지 (B4 핵심 검증)
+        assertThat(updatedReservation.getStatus())
+            .as("연장된 예약은 HOLDING 상태를 유지해야 한다")
+            .isEqualTo(ReservationStatus.HOLDING);
+        assertThat(updatedGameSeat.getStatus())
+            .as("연장된 좌석은 HELD 상태를 유지해야 한다")
+            .isEqualTo(GameSeatStatus.HELD);
+        assertThat(updatedGameSeat.getHoldExpiresAt())
+            .as("연장된 hold_expires_at이 변경되지 않아야 한다")
+            .isEqualTo(extendedAt);
     }
 }
