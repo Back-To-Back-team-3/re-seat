@@ -23,8 +23,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
@@ -40,6 +42,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @ActiveProfiles("test")
 class HoldExpiryConsistencyTest {
+
+    // test 프로파일에 Redisson 설정이 없으므로 MockitoBean으로 대체한다.
+    // PaymentService가 RedissonClient를 주입받아 컨텍스트 로드 실패하는 것을 방지한다.
+    @MockitoBean
+    private RedissonClient redissonClient;
 
     @Autowired private HoldExpiryService holdExpiryService;
 
