@@ -1,11 +1,13 @@
 package com.backtoback.reseat.domain.seatinventory.controller;
 
+import com.backtoback.reseat.domain.queue.service.AdmissionTokenService;
 import com.backtoback.reseat.domain.seatinventory.dto.SeatStatusResponse;
 import com.backtoback.reseat.domain.seatinventory.dto.ZoneSummaryResponse;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
 import com.backtoback.reseat.domain.seatinventory.service.SeatQueryService;
 import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
 import com.backtoback.reseat.global.common.ApiResponse;
+import com.backtoback.reseat.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -15,8 +17,10 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,11 +29,13 @@ import org.springframework.web.bind.annotation.RestController;
  * 경기 좌석 현황·구역 요약 조회 API.
  *
  * <p>프론트 좌석 배치도 UI의 데이터 소스.
- * 성공 응답은 팀 컨벤션에 따라 ResponseEntity<ApiResponse<T>>로 반환한다.
+ * 성공 응답은 팀 컨벤션에 따라 {@code ResponseEntity<ApiResponse<T>>}로 반환한다.
  * 에러 상태 코드는 GlobalExceptionHandler가 일괄 매핑한다.
+ *
  * <p>
- * 인가: 인증된 사용자 전체 접근 가능.
- * Queue-Token 검증은 B-3 계약 확정 후 추가 예정 (현재 stub).
+ * <p>인가: JWT 인증 + Queue-Token 검증.
+ * Queue-Token은 대기열 통과 사용자임을 보장하며, getSeats에서는 조회(validateToken)만 수행한다.
+ * 토큰 소비(consumeToken)는 holdSeats 성공 후 호출한다.
  */
 @Tag(name = "Game Seat", description = "경기 좌석 현황·구역 조회 API")
 @RestController
@@ -38,6 +44,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class GameSeatController {
 
     private final SeatQueryService seatQueryService;
+    private final AdmissionTokenService admissionTokenService;
 
     /**
      * 경기의 좌석 현황을 조회합니다.
@@ -57,7 +64,10 @@ public class GameSeatController {
                     경기의 좌석 현황을 조회한다. 필터 미지정 시 전체 500건 반환.
                     재고 미오픈 경기 조회 시 409 SEAT_INVENTORY_NOT_OPENED.
 
-                    Queue-Token 검증: B-3 대기열 토큰 계약 확정 후 추가 예정.
+                    Queue-Token 검증: validateToken으로 토큰 유효성을 확인한다.
+                    토큰 누락 시 403 QUEUE_TOKEN_REQUIRED.
+                    유효하지 않은 토큰 시 403 QUEUE_TOKEN_INVALID.
+                    만료된 토큰 시 410 QUEUE_TOKEN_EXPIRED.
                     """,
         security = @SecurityRequirement(name = "bearerAuth")
     )
@@ -65,10 +75,16 @@ public class GameSeatController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200", description = "조회 성공"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "403", description = "QUEUE_TOKEN_REQUIRED / QUEUE_TOKEN_INVALID",
+            content = @io.swagger.v3.oas.annotations.media.Content),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "404", description = "GAME_NOT_FOUND",
             content = @io.swagger.v3.oas.annotations.media.Content),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "409", description = "SEAT_INVENTORY_NOT_OPENED",
+            content = @io.swagger.v3.oas.annotations.media.Content),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "410", description = "QUEUE_TOKEN_EXPIRED",
             content = @io.swagger.v3.oas.annotations.media.Content)
     })
     // getSeats: 200 응답 래핑
@@ -86,11 +102,15 @@ public class GameSeatController {
         @Parameter(description = "좌석 상태 (선택)")
         @RequestParam(required = false) GameSeatStatus status,
 
-        // TODO: B-3 대기열 토큰 계약 확정 후 검증 로직 추가
-        @Parameter(description = "대기열 통과 토큰 (Queue-Token)", required = false)
-        @RequestParam(required = false) String queueToken
+        @Parameter(description = "대기열 통과 토큰")
+        @RequestHeader(value = "Queue-Token", required = false) String queueToken,
+
+        @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        // TODO: queueToken 검증 (B-3 완료 후)
+        // getSeats는 validateToken(조회)만 수행한다.
+        // consumeToken(USED 전이)은 holdSeats 성공 후 호출한다.
+        admissionTokenService.validateToken(userDetails.getId(), gameId, queueToken);
+
         List<SeatStatusResponse> seats = seatQueryService.getSeats(gameId, zoneId, grade, status);
         return ResponseEntity
             .status(HttpStatus.OK)
