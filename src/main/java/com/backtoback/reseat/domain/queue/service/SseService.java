@@ -69,8 +69,11 @@ public class SseService {
         // 아직 생성되지 않은 주기 작업은 나중에 저장하여 종료 콜백에서 조회한다.
         AtomicReference<ScheduledFuture<?>> futureRef = new AtomicReference<>();
 
+        // 입장 허용으로 종료된 연결과 재연결 대상 연결을 구분한다.
+        AtomicBoolean admitted = new AtomicBoolean(false);
+
         // SSE 연결 종료 시 주기 작업과 현재 연결 수를 함께 정리할 작업을 생성한다.
-        Runnable cleanupTask = createConnectionCleanupTask(futureRef, connectionKey);
+        Runnable cleanupTask = createConnectionCleanupTask(futureRef, connectionKey, admitted);
 
         // 정상 완료, 시간 만료, 전송 오류 중 어떤 방식으로 연결이 종료되더라도 동일한 정리 작업을 실행한다.
         sseEmitter.onCompletion(cleanupTask);
@@ -98,6 +101,7 @@ public class SseService {
                             .data(queueService.getAdmitEvent(gameId, userId))
                     );
 
+                    admitted.set(true);
                     sseEmitter.complete();
                 }
             } catch (QueueEntryNotFoundException exception) {
@@ -196,15 +200,17 @@ public class SseService {
     }
 
     /**
-     * SSE 연결 종료 시 주기 작업 취소와 연결 수 감소를 한 번만 수행하는 정리 작업을 생성한다.
+     * SSE 연결 종료 시 주기 작업과 연결 수를 정리하고 입장 완료 여부에 따라 대기열 이탈을 예약하는 작업을 생성한다.
      *
      * @param futureRef 취소할 주기 작업 참조
      * @param connectionKey SSE 연결 식별값
+     * @param admitted 입장 허용 이벤트 전송 완료 여부
      * @return SSE 연결 종료 시 실행할 정리 작업
      */
     private Runnable createConnectionCleanupTask(
             AtomicReference<ScheduledFuture<?>> futureRef,
-            QueueConnectionKey connectionKey
+            QueueConnectionKey connectionKey,
+            AtomicBoolean admitted
     ) {
 
         // 하나의 연결에서 종료 콜백이 여러 번 호출될 수 있으므로 정리가 시작됐는지 저장한다.
@@ -216,12 +222,13 @@ public class SseService {
             if (cleanupStarted.compareAndSet(false, true)) {
                 ScheduledFuture<?> future = futureRef.get();
                 if (future != null) {
-                    // 실행 중인 조회에는 중단을 요청하고 이후 반복 실행도 막는다.
-                    future.cancel(true);
+                    // 콜백이 주기 작업과 같은 스레드에서 실행될 수 있으므로 인터럽트 없이 반복 실행만 막는다.
+                    future.cancel(false);
                 }
 
                 // 동일 사용자와 경기의 다른 연결은 유지하고 종료된 연결 하나만 현재 연결 수에서 제외한다.
-                if (removeConnection(connectionKey)) {
+                // 입장 허용으로 종료된 연결은 재연결 대상이 아니므로 이탈을 예약하지 않는다.
+                if (removeConnection(connectionKey) && !admitted.get()) {
                     // 마지막 연결이 종료되면 재연결 유예시간 후 대기열 이탈 처리를 예약한다.
                     scheduleQueueExit(connectionKey);
                 }
