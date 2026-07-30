@@ -24,6 +24,10 @@ public final class QueueAdmissionPolicy {
      */
     public static long calculateEstimatedWaitSeconds(long rank) {
 
+        if (rank <= 0) {
+            throw new IllegalArgumentException("대기 순번은 1 이상이어야 합니다.");
+        }
+
         long admissionRounds = (rank + ADMIT_LIMIT - 1) / ADMIT_LIMIT;
         long admissionIntervalSeconds = ADMISSION_INTERVAL_MILLIS / 1000;
 

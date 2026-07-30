@@ -142,7 +142,7 @@ public class QueueService {
      * 사용자의 경기별 대기열 진입과 발급된 활성 입장 토큰을 취소한다.
      *
      * <p>사용자, 대기 이력, 입장 토큰을 순서대로 잠가
-     * 입장 허용 및 토큰 소비와의 상태 변경 충돌을 막는ㄴ다.</p>
+     * 입장 허용 및 토큰 소비와의 상태 변경 충돌을 막는다.</p>
      *
      * @param gameId 경기 ID
      * @param userId 사용자 ID
@@ -300,12 +300,18 @@ public class QueueService {
                 addRedisQueueEntryIfAbsent(queueZSet, redisKey, redisMember, score);
             }
 
-            // 취소된 이력은 새 요청 시간으로 갱신하고 Redis 점수도 덮어써서 대기열 맨 뒤에 등록한다.
+            // 취소된 이력은 새 요청 시간으로 갱신하고 DB 커밋 후 Redis 점수도 덮어써 대기열 맨 뒤에 등록한다.
             if (existingHistory.getStatus() == QueueEntryHistoryStatus.CANCELED) {
                 // 취소 시간보다 늦게 발행된 새로운 요청만 재진입으로 처리한다.
                 if (existingHistory.getCanceledAt().isBefore(requestedAt)) {
                     existingHistory.reenter(requestedAt);
-                    addOrUpdateRedisQueueEntry(queueZSet, redisKey, redisMember, score);
+                    // DB 커밋이 완료된 경우에만 Redis 대기 순서를 갱신하여 두 저장소의 상태 불일치를 방지한다.
+                    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            addOrUpdateRedisQueueEntry(queueZSet, redisKey, redisMember, score);
+                        }
+                    });
                 }
             }
 
