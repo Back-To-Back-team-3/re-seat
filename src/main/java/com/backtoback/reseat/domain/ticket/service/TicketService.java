@@ -133,7 +133,7 @@ public class TicketService {
 
     private Payment getApprovedPaymentByOrderId(Long orderId) {
         return paymentRepository.findByOrder_IdAndStatus(orderId, PaymentStatus.APPROVED)
-            .orElseGet(() -> paymentRepository.findByOrder_Id(orderId)
+            .orElseGet(() -> paymentRepository.findByOrderIdWithPessimisticWriteLock(orderId)
                 .orElseThrow(PaymentNotFoundException::new));
     }
 
