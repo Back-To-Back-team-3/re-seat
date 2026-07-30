@@ -28,7 +28,7 @@ public final class QueueAdmissionPolicy {
             throw new IllegalArgumentException("대기 순번은 1 이상이어야 합니다.");
         }
 
-        long admissionRounds = (rank + ADMIT_LIMIT - 1) / ADMIT_LIMIT;
+        long admissionRounds = (rank - 1) / ADMIT_LIMIT + 1;
         long admissionIntervalSeconds = ADMISSION_INTERVAL_MILLIS / 1000;
 
         return admissionRounds * admissionIntervalSeconds;
