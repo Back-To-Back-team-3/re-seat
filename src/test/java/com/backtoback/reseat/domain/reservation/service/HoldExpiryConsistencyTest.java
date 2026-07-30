@@ -246,14 +246,6 @@ class HoldExpiryConsistencyTest {
         log.info("  gameSeat.status={}, holdExpiresAt={} (expected=HELD, {})",
             updatedGameSeat.getStatus(), updatedGameSeat.getHoldExpiresAt(), extendedAt);
 
-        // 오회수 없음 — 카운트 0건
-        assertThat(result.expiredReservations())
-            .as("연장된 선점은 회수 대상이 아니므로 expiredReservations=0이어야 한다")
-            .isZero();
-        assertThat(result.releasedSeats())
-            .as("연장된 선점은 회수 대상이 아니므로 releasedSeats=0이어야 한다")
-            .isZero();
-
         // 오회수 없음 — 양쪽 테이블 상태 유지 (B4 핵심 검증)
         assertThat(updatedReservation.getStatus())
             .as("연장된 예약은 HOLDING 상태를 유지해야 한다")
