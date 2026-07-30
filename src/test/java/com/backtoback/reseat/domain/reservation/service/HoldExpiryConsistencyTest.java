@@ -214,7 +214,7 @@ class HoldExpiryConsistencyTest {
     @DisplayName("선점 연장 후 스케줄러 실행 시 정상 선점 오회수 없음 검증 (B4 경합 회귀)")
     void scenario2_extendedHold_notReleasedByScheduler() {
         // given — hold_expires_at을 미래로 세팅 (주문 생성으로 연장된 상태 시뮬레이션)
-        LocalDateTime extendedAt = LocalDateTime.now().plusMinutes(8);
+        LocalDateTime extendedAt = LocalDateTime.now().plusMinutes(8).withNano(0);
 
         GameSeat gameSeat = gameSeatRepository.findById(savedGameSeatId).orElseThrow();
         gameSeat.hold(extendedAt);
