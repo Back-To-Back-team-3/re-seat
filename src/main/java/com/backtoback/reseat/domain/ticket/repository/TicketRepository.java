@@ -27,6 +27,36 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
     Optional<Ticket> findByQrToken(String qrToken);
 
+    Optional<Ticket> findByQrTokenAndGameId(String qrToken, Long gameId);
+
+    boolean existsByOrderItemId(Long orderItemId);
+
+    boolean existsByTicketNo(String ticketNo);
+
+    boolean existsByQrToken(String qrToken);
+
+    Page<Ticket> findByUserId(Long userId, Pageable pageable);
+
+    Page<Ticket> findByUserIdAndStatus(Long userId, TicketStatus status, Pageable pageable);
+
+    /**
+     * 사용자 본인 티켓 단건 조회 (상세)
+     * - 사용자 취소 API
+     * - 사용자 상세 조회 API
+     * 에서 연관 엔티티(경기, 좌석 등)를 Fetch Join으로 함께 조회할 때 사용
+     */
+    @Query("select t from Ticket t " +
+        "join fetch t.user u " +
+        "join fetch t.game g " +
+        "join fetch g.stadium st " +
+        "join fetch g.homeTeam ht " +
+        "join fetch g.awayTeam at " +
+        "join fetch t.gameSeat gs " +
+        "join fetch gs.seat s " +
+        "join fetch s.zone z " +
+        "where t.id = :id")
+    Optional<Ticket> findDetailById(@Param("id") Long id);
+
     /**
      * 사용자 본인 티켓 단건 조회
      * - 사용자 취소 API
