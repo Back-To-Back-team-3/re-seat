@@ -39,6 +39,9 @@ public class SseService {
     // 마지막 SSE 연결 종료 후 대기열 이탈 처리까지 기다리는 재연결 유예시간
     private static final long SSE_RECONNECT_GRACE_MILLIS = 60L * 1000L;
 
+    // SSE 스케줄러 종료 후 실행 중인 작업을 기다리는 최대 시간
+    private static final long SSE_SCHEDULER_SHUTDOWN_TIMEOUT_SECONDS = 5L;
+
     // SSE 연결별 대기 순번 조회 작업을 공동으로 실행하는 스케줄러다.
     // 연결마다 별도 스레드를 생성하지 않고 정해진 스레드 풀에서 주기 작업을 처리한다.
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(SSE_SCHEDULER_POOL_SIZE);
@@ -128,8 +131,21 @@ public class SseService {
     @PreDestroy
     public void shutdownScheduler() {
 
-        // 앱 종료 중 대기열 상태를 변경하지 않도록 실행 중인 작업과 예약된 작업을 즉시 종료한다.
+        // 앱 종료 중 대기열 상태를 변경하지 않도록 실행 중인 작업과 예약된 작업에 즉시 종료를 요청한다.
         scheduler.shutdownNow();
+
+        try {
+            // 실행 중인 작업이 정리될 시간을 짧게 기다린다.
+            if (!scheduler.awaitTermination(SSE_SCHEDULER_SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                log.warn(
+                        "[SseService] 스케줄러 종료 대기 시간 초과 (timeoutSeconds={})",
+                        SSE_SCHEDULER_SHUTDOWN_TIMEOUT_SECONDS
+                );
+            }
+        } catch (InterruptedException e) {
+            log.warn("[SseService] 스케줄러 종료 대기 중 스레드가 중단되었습니다.");
+            Thread.currentThread().interrupt();
+        }
     }
 
     /**
@@ -247,6 +263,10 @@ public class SseService {
 
         ScheduledFuture<?> queueExitTask = scheduler.schedule(() -> {
             try {
+                // 유예시간 만료와 재연결이 겹칠 수 있으므로 실행 직전에 활성 연결을 다시 확인한다.
+                if (Objects.nonNull(activeConnectionCounts.get(connectionKey))) {
+                    return;
+                }
                 queueService.cancelMyQueue(connectionKey.gameId(), connectionKey.userId());
             } catch (QueueInvalidStatusException e) {
 
