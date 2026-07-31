@@ -100,13 +100,17 @@ public class QueueEntryHistory {
     }
 
     /**
-     * 대기 중인 사용자의 상태를 취소로 변경한다.
+     * 대기 중이거나 입장 허용된 사용자의 상태를 취소로 변경한다.
+     *
+     * <p>입장 허용 상태의 취소는 발급된 활성 입장 토큰을 함께 회수할 때 사용한다.</p>
      *
      * @param canceledAt 대기열 취소 시간
      */
     public void cancel(LocalDateTime canceledAt) {
-        if (this.status != QueueEntryHistoryStatus.WAITING) {
-            throw new QueueInvalidStatusException("대기 중인 상태만 취소할 수 있습니다.");
+
+        if (this.status != QueueEntryHistoryStatus.WAITING &&
+                this.status != QueueEntryHistoryStatus.ADMITTED) {
+            throw new QueueInvalidStatusException("대기 중 혹은 입장 허용된 상태만 취소할 수 있습니다.");
         }
 
         this.status = QueueEntryHistoryStatus.CANCELED;

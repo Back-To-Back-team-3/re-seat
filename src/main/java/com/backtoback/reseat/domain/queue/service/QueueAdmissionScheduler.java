@@ -19,12 +19,6 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class QueueAdmissionScheduler {
 
-    // 한 번 스케줄 실행에서 경기별로 조회할 최대 입장 처리 대상 수
-    private static final int ADMIT_LIMIT = 20;
-
-    // 애플리케이션 시작 후 최초 실행까지의 지연 시간이며 이전 작업 완료 후 다음 작업까지 기다리는 시간
-    private static final long ADMISSION_INTERVAL_MILLIS = 3000L;
-
     private final RedisTemplate<String, String> redisTemplate;
     private final AdmissionTokenService admissionTokenService;
 
@@ -34,7 +28,10 @@ public class QueueAdmissionScheduler {
      * <p>fixedDelay는 이전 작업이 시작된 시점이 아니라 완전히 종료된 시점부터 다음 실행 간격을 계산한다.
      * 최초 실행도 애플리케이션이 시작 직후가 아니라 동일한 시간만큼 기다린 후 시작한다.</p>
      */
-    @Scheduled(fixedDelay = ADMISSION_INTERVAL_MILLIS, initialDelay = ADMISSION_INTERVAL_MILLIS)
+    @Scheduled(
+            fixedDelay = QueueAdmissionPolicy.ADMISSION_INTERVAL_MILLIS,
+            initialDelay = QueueAdmissionPolicy.ADMISSION_INTERVAL_MILLIS
+    )
     public void admitWaitingUsers() {
 
         // Redis 전체 키를 한 번에 조회하는 KEYS 대신 SCAN을 사용하여 서버 부하를 줄인다.
@@ -74,7 +71,7 @@ public class QueueAdmissionScheduler {
         try {
             Long gameId = parseGameId(redisKey);
             // Redis 대기 순서가 앞선 사용자부터 설정된 최대 대상 수만큼 입장 처리를 위임한다.
-            admissionTokenService.admit(gameId, ADMIT_LIMIT);
+            admissionTokenService.admit(gameId, QueueAdmissionPolicy.ADMIT_LIMIT);
         }
         // 잘못된 Redis Key 또는 입장 처리 중 발생한 예외를 기록하고 다음 경기 대기열 처리를 계속한다.
         catch (RuntimeException e) {
