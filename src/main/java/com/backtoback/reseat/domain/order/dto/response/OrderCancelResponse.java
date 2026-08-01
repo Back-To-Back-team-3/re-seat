@@ -2,6 +2,7 @@ package com.backtoback.reseat.domain.order.dto.response;
 
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.entity.OrderStatus;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -15,9 +16,13 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @Builder
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
+@Schema(description = "주문 취소 응답")
 public class OrderCancelResponse {
 
+    @Schema(description = "주문 ID", example = "7001")
     private final Long orderId;
+
+    @Schema(description = "취소 후 주문 상태", example = "CANCELED")
     private final OrderStatus status;
 
     /**
