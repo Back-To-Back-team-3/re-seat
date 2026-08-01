@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/orders")
 @RequiredArgsConstructor
-public class OrderController {
+public class OrderController implements OrderControllerDocs {
 
     private final OrderService orderService;
 
@@ -37,6 +37,7 @@ public class OrderController {
      * @param userDetails JWT 인증 사용자
      * @return 생성된 주문 정보
      */
+    @Override
     @PostMapping
     public ResponseEntity<ApiResponse<OrderResponse>> createOrder(
             @Valid @RequestBody OrderCreateRequest request,
@@ -57,6 +58,7 @@ public class OrderController {
      * @param userDetails JWT 인증 사용자
      * @return 주문 상세 정보
      */
+    @Override
     @GetMapping("/{orderId}")
     public ResponseEntity<ApiResponse<OrderResponse>> getOrder(
             @PathVariable Long orderId,
@@ -77,6 +79,7 @@ public class OrderController {
      * @param userDetails JWT 인증 사용자
      * @return 취소된 주문 정보
      */
+    @Override
     @PostMapping("/{orderId}/cancel")
     public ResponseEntity<ApiResponse<OrderCancelResponse>> cancelOrder(
             @PathVariable Long orderId,
