@@ -29,7 +29,7 @@ import java.util.concurrent.CompletionStage;
 @RestController
 @RequestMapping("/api/v1/queues")
 @RequiredArgsConstructor
-public class QueueController {
+public class QueueController implements QueueControllerDocs {
 
     private final QueueService queueService;
     private final SseService sseService;
@@ -41,6 +41,7 @@ public class QueueController {
      * @param userDetails JWT 인증
      * @return 대기열 진입 요청 접수 결과
      */
+    @Override
     @PostMapping("/{gameId}/enter")
     public CompletionStage<ResponseEntity<ApiResponse<Void>>> requestQueueEntry(
             @PathVariable Long gameId,
@@ -65,6 +66,7 @@ public class QueueController {
      * @param userDetails JWT 인증
      * @return 현재 대기 순번 및 입장 허용 상태
      */
+    @Override
     @GetMapping("/{gameId}/me")
     public ResponseEntity<ApiResponse<QueueStatusResponse>> getMyQueueStatus(
             @PathVariable Long gameId,
@@ -86,6 +88,7 @@ public class QueueController {
      * @param userDetails JWT 인증
      * @return SSE 이벤트 연결
      */
+    @Override
     @GetMapping(value = "/{gameId}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamMyQueue(
             @PathVariable Long gameId,
@@ -102,6 +105,7 @@ public class QueueController {
      * @param userDetails JWT 인증
      * @return 대기열 취소 정보
      */
+    @Override
     @DeleteMapping("/{gameId}/me")
     public ResponseEntity<ApiResponse<QueueCancelResponse>> cancelMyQueue(
             @PathVariable Long gameId,

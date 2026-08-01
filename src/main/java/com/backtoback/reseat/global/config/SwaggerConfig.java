@@ -34,7 +34,7 @@ public class SwaggerConfig {
                 .name("Queue-Token")
                 .type(SecurityScheme.Type.APIKEY)
                 .in(SecurityScheme.In.HEADER)
-                .description("대기열을 통과한 후 발급받은 입장 토큰 (예: qt_eyJ...)"));
+                .description("대기열을 통과한 후 발급받은 입장 토큰 (예: qt_{UUID v4})"));
 
         return new OpenAPI()
             .info(new Info()
