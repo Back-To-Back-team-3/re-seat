@@ -47,6 +47,7 @@ export default function () {
             'Authorization': `Bearer ${JWT_TOKEN}`,
             'Queue-Token': QUEUE_TOKEN,
         },
+        responseCallback: http.expectedStatuses(201, 400, 409),
     };
 
     const res = http.post(url, payload, params);

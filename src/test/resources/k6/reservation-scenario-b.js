@@ -16,27 +16,31 @@ export const options = {
             startVUs: 1,
             stages: [
                 { duration: '10s', target: 50 },  // 10초간 VU 50까지 증가
-                { duration: '20s', target: 100 }, // 20초간 VU 100 유지
+                { duration: '10s', target: 100 }, // 10초간 VU 100까지 증가
+                { duration: '20s', target: 100 }, // 20초간 VU 100 상태 유지 (지속 부하)
                 { duration: '10s', target: 0 },   // 10초간 감소
             ],
         },
     },
     thresholds: {
-        http_req_duration: ['p(99)<2000'], // p99 지연 2초 이하
-        http_req_failed: ['rate<0.01'],    // 5xx 서버 에러율 1% 미만
+        http_req_duration: ['p(99)<2000'],       // p99 지연 2초 이하
+        http_req_failed: ['rate<0.01'],          // 5xx 서버 에러율 1% 미만
+        reservation_success_rate: ['rate>0.95'], // 병렬 선점 성공률 95% 이상
     },
 };
 
 // 환경 변수 설정
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
 const JWT_TOKEN = __ENV.JWT_TOKEN || 'DUMMY_JWT_TOKEN';
-const QUEUE_TOKEN = __ENV.QUEUE_TOKEN || 'DUMMY_QUEUE_TOKEN';
+const QUEUE_TOKENS = __ENV.QUEUE_TOKENS ? __ENV.QUEUE_TOKENS.split(',') : [__ENV.QUEUE_TOKEN || 'DUMMY_QUEUE_TOKEN'];
 const GAME_ID = __ENV.GAME_ID ? parseInt(__ENV.GAME_ID) : 1;
 const START_SEAT_ID = __ENV.START_SEAT_ID ? parseInt(__ENV.START_SEAT_ID) : 1000;
 
 export default function () {
     // VU 식별자(__VU)와 반복 회차(__ITER)를 활용하여 각 요청마다 서로 다른 고유 gameSeatId 생성
     const uniqueSeatId = START_SEAT_ID + (__VU * 100) + __ITER;
+    // 다중 큐 토큰이 전달된 경우 VU 식별자 기반으로 각 유저별 큐 토큰 분배
+    const currentQueueToken = QUEUE_TOKENS[(__VU - 1) % QUEUE_TOKENS.length];
 
     const url = `${BASE_URL}/api/v1/reservations`;
 
@@ -49,8 +53,9 @@ export default function () {
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${JWT_TOKEN}`,
-            'Queue-Token': QUEUE_TOKEN,
+            'Queue-Token': currentQueueToken,
         },
+        responseCallback: http.expectedStatuses(201),
     };
 
     const res = http.post(url, payload, params);
