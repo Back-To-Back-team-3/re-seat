@@ -1,6 +1,6 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { Rate } from 'k6/metrics';
+import { Counter, Rate } from 'k6/metrics';
 
 // C(선점) 파트 부하 테스트 - 시나리오 B: 서로 다른 좌석 병렬 처리
 // 측정 목적: N명이 각각 다른 gameSeatId로 동시 선점 요청 시 글로벌 락 직렬화 없이 병렬 처리되는지 확인
@@ -37,12 +37,13 @@ const JWT_TOKEN    = __ENV.JWT_TOKEN    || 'DUMMY_JWT_TOKEN';
 const QUEUE_TOKENS = __ENV.QUEUE_TOKENS ? __ENV.QUEUE_TOKENS.split(',') : ['DUMMY_QUEUE_TOKEN'];
 const GAME_ID      = __ENV.GAME_ID      ? parseInt(__ENV.GAME_ID)     : 1;
 const MIN_SEAT_ID  = __ENV.MIN_SEAT_ID  ? parseInt(__ENV.MIN_SEAT_ID) : 1;
-const MAX_SEAT_ID  = __ENV.MAX_SEAT_ID  ? parseInt(__ENV.MAX_SEAT_ID) : 103;
+const MAX_SEAT_ID  = __ENV.MAX_SEAT_ID  ? parseInt(__ENV.MAX_SEAT_ID) : 100;
 const SEAT_COUNT   = MAX_SEAT_ID - MIN_SEAT_ID + 1;
 
 export default function () {
     // VU별 유니크 gameSeatId — 실제 ID 범위 안에서 순환 할당
     const gameSeatId = ((__VU - 1) % SEAT_COUNT) + MIN_SEAT_ID;
+    // VU별 토큰 분배 — 토큰 수 < VU 수이면 순환 (SEAT_ALREADY_HELD 허용)
     const queueToken = QUEUE_TOKENS[(__VU - 1) % QUEUE_TOKENS.length];
 
     const res = http.post(
