@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 public class OrderCreateRequest {
 
     @Schema(
-            description = "주문으로 전활할 예약 ID",
+            description = "주문으로 전환할 예약 ID",
             example = "1001",
             requiredMode = Schema.RequiredMode.REQUIRED
     )
