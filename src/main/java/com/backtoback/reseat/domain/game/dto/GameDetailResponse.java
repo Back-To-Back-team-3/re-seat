@@ -2,7 +2,7 @@ package com.backtoback.reseat.domain.game.dto;
 
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
-import com.backtoback.reseat.domain.stadium.dto.StadiumSummaryResponse;
+import com.backtoback.reseat.domain.stadium.entity.Stadium;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.time.LocalDateTime;
@@ -18,7 +18,7 @@ public record GameDetailResponse(
     String title,
     TeamSummaryResponse homeTeam,
     TeamSummaryResponse awayTeam,
-    StadiumSummaryResponse stadium,
+    StadiumResponse stadium,
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime gameAt,
@@ -44,7 +44,7 @@ public record GameDetailResponse(
             game.getTitle(),
             TeamSummaryResponse.from(game.getHomeTeam()),
             TeamSummaryResponse.from(game.getAwayTeam()),
-            StadiumSummaryResponse.from(game.getStadium()),
+            StadiumResponse.from(game.getStadium()),
             game.getGameAt(),
             game.getBookingOpenAt(),
             game.getBookingCloseAt(),
@@ -53,28 +53,21 @@ public record GameDetailResponse(
     }
 
     /**
-     * 경기 상세 응답 내부에서 사용하는 구단 요약 응답 DTO.
-     */
-    public record TeamResponse(
-        Long teamId,
-        String name
-    ) {
-
-        public static TeamResponse from(Long teamId, String name) {
-            return new TeamResponse(teamId, name);
-        }
-    }
-
-    /**
-     * 경기 상세 응답 내부에서 사용하는 구장 요약 응답 DTO.
+     * 경기 상세 응답 전용 구장 DTO.
      */
     public record StadiumResponse(
         Long stadiumId,
-        String name
+        String name,
+        String address,
+        int totalCapacity
     ) {
-
-        public static StadiumResponse from(Long stadiumId, String name) {
-            return new StadiumResponse(stadiumId, name);
+        public static StadiumResponse from(Stadium stadium) {
+            return new StadiumResponse(
+                stadium.getId(),
+                stadium.getName(),
+                stadium.getAddress(),
+                stadium.getTotalCapacity()
+            );
         }
     }
 }
