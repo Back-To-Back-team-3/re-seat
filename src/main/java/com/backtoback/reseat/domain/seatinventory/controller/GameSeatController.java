@@ -8,11 +8,6 @@ import com.backtoback.reseat.domain.seatinventory.service.SeatQueryService;
 import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
 import com.backtoback.reseat.global.common.ApiResponse;
 import com.backtoback.reseat.global.security.CustomUserDetails;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -37,20 +32,19 @@ import org.springframework.web.bind.annotation.RestController;
  * Queue-Token은 대기열 통과 사용자임을 보장하며, getSeats에서는 조회(validateToken)만 수행한다.
  * 토큰 소비(consumeToken)는 holdSeats 성공 후 호출한다.
  */
-@Tag(name = "Game Seat", description = "경기 좌석 현황·구역 조회 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/games")
-public class GameSeatController {
+public class GameSeatController implements GameSeatControllerDocs {
 
     private final SeatQueryService seatQueryService;
     private final AdmissionTokenService admissionTokenService;
 
     /**
-     * 경기의 좌석 현황을 조회합니다.
+     * 경기의 좌석 현황을 조회한다.
      *
-     * <p>필터를 지정하지 않으면 전체 500건을 반환합니다.
-     * 좌석 배치도 렌더링 시 zoneId 필터로 구역 단위 조회를 권장합니다.
+     * <p>필터를 지정하지 않으면 전체 500건을 반환한다.
+     * 좌석 배치도 렌더링 시 zoneId 필터로 구역 단위 조회를 권장한다.
      *
      * @param gameId 경기 ID
      * @param zoneId 구역 ID (선택)
@@ -58,53 +52,15 @@ public class GameSeatController {
      * @param status 좌석 상태 (선택, AVAILABLE/HELD/SOLD/BLOCKED)
      * @return 좌석 현황 목록
      */
-    @Operation(
-        summary = "경기 좌석 현황 조회",
-        description = """
-                    경기의 좌석 현황을 조회한다. 필터 미지정 시 전체 500건 반환.
-                    재고 미오픈 경기 조회 시 409 SEAT_INVENTORY_NOT_OPENED.
-
-                    Queue-Token 검증: validateToken으로 토큰 유효성을 확인한다.
-                    토큰 누락 시 403 QUEUE_TOKEN_REQUIRED.
-                    유효하지 않은 토큰 시 403 QUEUE_TOKEN_INVALID.
-                    만료된 토큰 시 410 QUEUE_TOKEN_EXPIRED.
-                    """,
-        security = @SecurityRequirement(name = "bearerAuth")
-    )
-    @ApiResponses({
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "200", description = "조회 성공"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "403", description = "QUEUE_TOKEN_REQUIRED / QUEUE_TOKEN_INVALID",
-            content = @io.swagger.v3.oas.annotations.media.Content),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "404", description = "GAME_NOT_FOUND",
-            content = @io.swagger.v3.oas.annotations.media.Content),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "409", description = "SEAT_INVENTORY_NOT_OPENED",
-            content = @io.swagger.v3.oas.annotations.media.Content),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "410", description = "QUEUE_TOKEN_EXPIRED",
-            content = @io.swagger.v3.oas.annotations.media.Content)
-    })
     // getSeats: 200 응답 래핑
+    @Override
     @GetMapping("/{gameId}/seats")
     public ResponseEntity<ApiResponse<List<SeatStatusResponse>>> getSeats(
-        @Parameter(description = "경기 ID", example = "1146")
         @PathVariable Long gameId,
-
-        @Parameter(description = "구역 ID (선택)")
         @RequestParam(required = false) Long zoneId,
-
-        @Parameter(description = "좌석 등급 (선택)")
         @RequestParam(required = false) SeatGrade grade,
-
-        @Parameter(description = "좌석 상태 (선택)")
         @RequestParam(required = false) GameSeatStatus status,
-
-        @Parameter(description = "대기열 통과 토큰")
         @RequestHeader(value = "Queue-Token", required = false) String queueToken,
-
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         // getSeats는 validateToken(조회)만 수행한다.
@@ -123,32 +79,10 @@ public class GameSeatController {
      * @param gameId 경기 ID
      * @return 구역 요약 목록 (잔여수 0인 구역 포함)
      */
-    @Operation(
-        summary = "경기 구역별 잔여 좌석 조회",
-        description = """
-                    경기의 구역별 잔여 좌석 수를 집계해 반환한다.
-                    잔여수가 0인 구역(매진)도 결과에 포함된다.
-                    재고 미오픈 경기 조회 시 409 SEAT_INVENTORY_NOT_OPENED.
-                    """,
-        security = @SecurityRequirement(name = "bearerAuth")
-    )
-    @ApiResponses({
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "200", description = "조회 성공"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "401", description = "UNAUTHORIZED",
-            content = @io.swagger.v3.oas.annotations.media.Content),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "404", description = "GAME_NOT_FOUND",
-            content = @io.swagger.v3.oas.annotations.media.Content),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "409", description = "SEAT_INVENTORY_NOT_OPENED",
-            content = @io.swagger.v3.oas.annotations.media.Content)
-    })
     // getZoneSummaries: 200 응답 래핑
+    @Override
     @GetMapping("/{gameId}/zones")
     public ResponseEntity<ApiResponse<List<ZoneSummaryResponse>>> getZoneSummaries(
-        @Parameter(description = "경기 ID", example = "1146")
         @PathVariable Long gameId
     ) {
         List<ZoneSummaryResponse> zones = seatQueryService.getZoneSummaries(gameId);
