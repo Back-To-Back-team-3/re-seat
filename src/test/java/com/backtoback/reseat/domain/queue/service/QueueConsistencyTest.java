@@ -17,6 +17,8 @@ import com.backtoback.reseat.domain.user.entity.UserRole;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
 import com.backtoback.reseat.global.common.BaseIntegrationTest;
+import com.backtoback.reseat.global.service.TestDatabaseCleanUpService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -55,6 +57,8 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
 
     @Autowired private QueueService queueService;
     @Autowired private AdmissionTokenService admissionTokenService;
+
+    @Autowired private TestDatabaseCleanUpService testDatabaseCleanUpService;
 
     private User user;
     private Game game;
@@ -103,6 +107,15 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
                         .title("테스트 경기")
                         .build()
         );
+    }
+
+    /**
+     * 각 테스트 후 DB와 Redis에 남은 Queue 테스트 데이터를 정리한다.
+     */
+    @AfterEach
+    void tearDown() {
+
+        testDatabaseCleanUpService.cleanUpAll();
     }
 
     /**
