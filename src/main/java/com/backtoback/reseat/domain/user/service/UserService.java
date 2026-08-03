@@ -29,7 +29,6 @@ public class UserService {
     private final PasswordEncoder passwordEncoder; //BCryptPasswordEncoder가 주입
     private final RefreshTokenRepository refreshTokenRepository;
 
-
     @Transactional
     public UserSignUpResponse signUp(UserSignUpRequest request) {
         //1. 이메일 중복 검증
@@ -114,4 +113,5 @@ public class UserService {
         refreshTokenRepository.findByUser(user)
             .ifPresent(refreshTokenRepository::delete);
     }
+
 }

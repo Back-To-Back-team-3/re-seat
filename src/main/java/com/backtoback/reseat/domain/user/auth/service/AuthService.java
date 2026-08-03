@@ -1,16 +1,20 @@
 package com.backtoback.reseat.domain.user.auth.service;
 
 import com.backtoback.reseat.domain.user.auth.dto.request.ReissueRequest;
+import com.backtoback.reseat.domain.user.auth.dto.request.UserLoginRequest;
 import com.backtoback.reseat.domain.user.auth.dto.response.TokenResponse;
 import com.backtoback.reseat.domain.user.entity.RefreshToken;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
 import com.backtoback.reseat.domain.user.exception.DeleteUserException;
+import com.backtoback.reseat.domain.user.exception.InvalidPasswordException;
 import com.backtoback.reseat.domain.user.exception.InvalidTokenException;
 import com.backtoback.reseat.domain.user.exception.SuspendedUserException;
 import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
 import com.backtoback.reseat.domain.user.repository.RefreshTokenRepository;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
+import com.backtoback.reseat.global.exception.BusinessException;
+import com.backtoback.reseat.global.exception.ErrorCode;
 import com.backtoback.reseat.global.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,6 +32,47 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenRepository refreshTokenRepository;
+
+    @Transactional
+    public TokenResponse login(UserLoginRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new UserNotFoundException("존재하지 않는 회원입니다."));
+
+        // 1. 비밀번호 일치 검증을 먼저 수행하여 계정 상태 사전 노출 방지
+        if (user.getPassword() == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new InvalidPasswordException("비밀번호가 올바르지 않습니다.");
+        }
+
+        // 2. 비밀번호 검증 성공 후 계정 상태 확인
+        if (user.getStatus() == UserStatus.SUSPENDED) {
+            throw new SuspendedUserException("이용이 정지된 계정입니다.");
+        }
+        if (user.getStatus() == UserStatus.DELETED) {
+            throw new DeleteUserException("탈퇴 처리된 계정입니다.");
+        }
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new BusinessException(ErrorCode.USER_INACTIVE);
+        }
+
+        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail(), user.getRole().name());
+        String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
+        LocalDateTime expiredAt = LocalDateTime.now().plusDays(14);
+
+        RefreshToken dbRefreshToken = refreshTokenRepository.findByUser(user)
+                .orElseGet(() -> RefreshToken.builder()
+                        .user(user)
+                        .tokenValue(refreshToken)
+                        .expiredAt(expiredAt)
+                        .build());
+
+        dbRefreshToken.updateTokenValue(refreshToken, expiredAt);
+        refreshTokenRepository.save(dbRefreshToken);
+
+        return TokenResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .build();
+    }
 
     @Transactional
     public TokenResponse reissue(ReissueRequest request) {
