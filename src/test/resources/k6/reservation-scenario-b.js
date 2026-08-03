@@ -82,8 +82,11 @@ export default function () {
 
     // 응답 상태 검증
     check(res, {
-        'status is 201': (r) => r.status === 201,
-        'status is 409 SEAT_ALREADY_HELD': (r) => errorCode === 'SEAT_ALREADY_HELD',
-        'status is 409 LOCK_FAILED': (r) => errorCode === 'LOCK_FAILED',
+        'response is expected': (r) =>
+            r.status === 201 ||
+            (r.status === 409 && [
+                'SEAT_ALREADY_HELD',
+                'LOCK_FAILED',
+            ].includes(errorCode)),
     });
 }

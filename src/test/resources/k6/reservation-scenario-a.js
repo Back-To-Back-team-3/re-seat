@@ -75,9 +75,12 @@ export default function () {
 
     // 응답 상태 검증
     check(res, {
-        'status is 201': (r) => r.status === 201,
-        'status is 409 SEAT_ALREADY_HELD': (r) => errorCode === 'SEAT_ALREADY_HELD',
-        'status is 409 QUEUE_TOKEN_ALREADY_USED': (r) => errorCode === 'QUEUE_TOKEN_ALREADY_USED',
-        'status is 409 LOCK_FAILED': (r) => errorCode === 'LOCK_FAILED',
+        'response is expected': (r) =>
+            r.status === 201 ||
+            (r.status === 409 && [
+                'SEAT_ALREADY_HELD',
+                'QUEUE_TOKEN_ALREADY_USED',
+                'LOCK_FAILED',
+            ].includes(errorCode)),
     });
 }
