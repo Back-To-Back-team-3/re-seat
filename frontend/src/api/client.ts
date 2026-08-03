@@ -1,9 +1,8 @@
-import type { ApiResponse, ApiResult, TokenResponse } from "../types";
+import type { ApiResponse, TokenResponse } from "../types";
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api/v1";
 export const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL
   ?? API_BASE_URL.replace(/\/api\/v1\/?$/, "");
-const USE_MOCK_FALLBACK = (import.meta.env.VITE_USE_MOCK_FALLBACK ?? "true") === "true";
 
 export class ApiError extends Error {
   status: number;
@@ -200,17 +199,4 @@ export function unwrap<T>(response: ApiResponse<T>): T {
     throw new ApiError("서버 응답에 필요한 데이터가 없습니다.", 500, "EMPTY_RESPONSE_DATA");
   }
   return response.data;
-}
-
-export async function withMockFallback<T>(
-  apiCall: () => Promise<T>,
-  mockValue: T,
-  mockMessage = "현재 백엔드에 조회 API가 없어 샘플 데이터로 표시 중입니다."
-): Promise<ApiResult<T>> {
-  try {
-    return { data: await apiCall(), source: "api" };
-  } catch (error) {
-    if (!USE_MOCK_FALLBACK) throw error;
-    return { data: mockValue, source: "mock", message: mockMessage };
-  }
 }
