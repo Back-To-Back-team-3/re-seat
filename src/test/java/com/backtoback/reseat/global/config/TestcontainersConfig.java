@@ -5,8 +5,8 @@ package com.backtoback.reseat.global.config;
  //MySQL/PostgreSQL, Redis, Kafka 컨테이너 자동 구동 및 Spring DynamicPropertyRegistry 연동
 
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.context.annotation.Bean;
+import org.springframework.test.context.DynamicPropertyRegistrar;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -31,17 +31,19 @@ public class TestcontainersConfig {
     }
 
     //Spring Boot 프로퍼티에 동적으로 컨테이너 접속 정보 주입
-    @DynamicPropertySource
-    static void overrideProps(DynamicPropertyRegistry registry) {
-        // MySQL 설정 주입
-        registry.add("spring.datasource.url", MYSQL_CONTAINER::getJdbcUrl);
-        registry.add("spring.datasource.driver-class-name", MYSQL_CONTAINER::getDriverClassName);
-        registry.add("spring.datasource.username", MYSQL_CONTAINER::getUsername);
-        registry.add("spring.datasource.password", MYSQL_CONTAINER::getPassword);
-        registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.MySQLDialect");
+    @Bean
+    public DynamicPropertyRegistrar overrideProps() {
+        return registry -> {
+            // MySQL 설정 주입
+            registry.add("spring.datasource.url", MYSQL_CONTAINER::getJdbcUrl);
+            registry.add("spring.datasource.driver-class-name", MYSQL_CONTAINER::getDriverClassName);
+            registry.add("spring.datasource.username", MYSQL_CONTAINER::getUsername);
+            registry.add("spring.datasource.password", MYSQL_CONTAINER::getPassword);
+            registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.MySQLDialect");
 
-        // Redis 설정 주입
-        registry.add("spring.data.redis.host", REDIS_CONTAINER::getHost);
-        registry.add("spring.data.redis.port", () -> REDIS_CONTAINER.getMappedPort(6379));
+            // Redis 설정 주입
+            registry.add("spring.data.redis.host", REDIS_CONTAINER::getHost);
+            registry.add("spring.data.redis.port", () -> REDIS_CONTAINER.getMappedPort(6379));
+        };
     }
 }
