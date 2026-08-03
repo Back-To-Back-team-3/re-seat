@@ -38,12 +38,12 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new UserNotFoundException("존재하지 않는 회원입니다."));
 
-        // 1. 비밀번호 일치 검증을 먼저 수행하여 계정 상태 사전 노출 방지
+        // 비밀번호 일치 검증
         if (user.getPassword() == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new InvalidPasswordException("비밀번호가 올바르지 않습니다.");
         }
 
-        // 2. 비밀번호 검증 성공 후 계정 상태 확인
+        // 비밀번호 검증 성공 후 계정 상태 확인
         if (user.getStatus() == UserStatus.SUSPENDED) {
             throw new SuspendedUserException("이용이 정지된 계정입니다.");
         }
