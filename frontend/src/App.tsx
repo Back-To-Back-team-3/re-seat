@@ -424,12 +424,7 @@ function App() {
     sessionStorage.setItem(callbackKey, "processing");
     void run(async () => {
       try {
-        let callbackGame: GameSummary | null = null;
-        if (pendingPayment.gameId) {
-          const gameResult = await getGame(pendingPayment.gameId);
-          callbackGame = gameResult.data;
-          setSelectedGame(gameResult.data);
-        }
+        let approvedOrder: OrderResponse | null = null;
         if (paymentKey && pgOrderId && amount > 0) {
           const action = await completePayment(
             paymentId,
@@ -444,13 +439,7 @@ function App() {
           setPaymentResult({ data: { ...pendingPayment.payment, ...payment, status: action.status }, source: "api" });
           if (action.status === "APPROVED") {
             rememberCompletedGame(pendingPayment.gameId);
-            if (callbackGame) {
-              rememberMockTickets(createMockTickets(
-                callbackGame,
-                order.data,
-                pendingPayment.seats ?? []
-              ));
-            }
+            approvedOrder = order.data;
           }
           setToast(action.status === "APPROVED" ? "결제가 완료되었습니다." : "결제 결과를 확인했습니다.");
         } else if (code && message && pgOrderId) {
@@ -464,6 +453,23 @@ function App() {
             source: "api"
           });
           setError(`결제 실패: ${message}`);
+        }
+
+        // 경기 조회와 임시 티켓 저장 실패가 결제 결과 처리를 막지 않도록 후속 작업으로 분리한다.
+        try {
+          if (pendingPayment.gameId) {
+            const callbackGame = (await getGame(pendingPayment.gameId)).data;
+            setSelectedGame(callbackGame);
+            if (approvedOrder) {
+              rememberMockTickets(createMockTickets(
+                callbackGame,
+                approvedOrder,
+                pendingPayment.seats ?? []
+              ));
+            }
+          }
+        } catch {
+          // 결제 결과 처리와 콜백 정리는 그대로 유지한다.
         }
         sessionStorage.setItem(callbackKey, "completed");
       } catch (callbackError) {
