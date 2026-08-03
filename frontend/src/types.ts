@@ -158,7 +158,6 @@ export type TicketSummary = {
   ticketId: number;
   ticketNo: string;
   gameId: number;
-  title: string;
   seat: string;
   status: "ISSUED" | "USED" | "CANCELED";
   qrToken: string;
