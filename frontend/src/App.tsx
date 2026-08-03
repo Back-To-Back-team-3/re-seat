@@ -64,7 +64,9 @@ const PENDING_PAYMENT_KEY = "pendingTossPayment";
 const PAYMENT_CALLBACK_KEY_PREFIX = "tossPaymentCallback:";
 const PAYMENT_IDEMPOTENCY_KEY_PREFIX = "paymentIdempotencyKey:";
 const COMPLETED_GAME_IDS_KEY = "completedGameIds";
+const MOCK_TICKETS_KEY = "completedMockTickets";
 const KST_TIME_ZONE = "Asia/Seoul";
+const KST_OFFSET = "+09:00";
 const STADIUM_IMAGE_URL = "/jamsil-stadium.jpg";
 
 type PendingPayment = {
@@ -72,6 +74,7 @@ type PendingPayment = {
   gameId: number | null;
   payment: PaymentCreateResponse;
   idempotencyKey: string;
+  seats?: GameSeat[];
 };
 
 function getInitialStep(): Step {
@@ -90,8 +93,10 @@ function parseApiDateTime(value?: string | null) {
   let normalized = value.trim().replace(" ", "T");
   normalized = normalized.replace(/\.(\d{3})\d+/, ".$1");
   if (!/(?:Z|[+-]\d{2}:?\d{2})$/i.test(normalized)) {
-    // 백엔드 시간 정책이 통일되기 전까지 오프셋 없는 응답은 UTC로 해석한다.
-    normalized += "Z";
+    // 백엔드와 DB가 Asia/Seoul을 사용하므로 오프셋 없는 LocalDateTime도 KST로 해석한다.
+    normalized = normalized.includes("T")
+      ? `${normalized}${KST_OFFSET}`
+      : `${normalized}T00:00:00${KST_OFFSET}`;
   }
   const parsed = new Date(normalized);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
@@ -197,14 +202,41 @@ function rememberCompletedGame(gameId?: number | null) {
   localStorage.setItem(COMPLETED_GAME_IDS_KEY, JSON.stringify([...gameIds]));
 }
 
-function SourceNotice({ result }: { result?: ApiResult<unknown> | null }) {
-  if (!result || result.source !== "mock") return null;
-  return (
-    <div className="mock-notice">
-      <span>MOCK</span>
-      {result.message ?? "현재 백엔드에 조회 API가 없어 샘플 데이터로 표시 중입니다."}
-    </div>
+function getStoredMockTickets(): TicketSummary[] {
+  try {
+    const tickets = JSON.parse(sessionStorage.getItem(MOCK_TICKETS_KEY) ?? "[]");
+    return Array.isArray(tickets) ? tickets as TicketSummary[] : [];
+  } catch {
+    return [];
+  }
+}
+
+function createMockTickets(game: GameSummary, order: OrderResponse, seats: GameSeat[]): TicketSummary[] {
+  return order.orderItems.map((orderItem, index) => {
+    const seat = seats.find((candidate) => candidate.gameSeatId === orderItem.gameSeatId);
+    return {
+      ticketId: -orderItem.orderItemId,
+      ticketNo: `MOCK-${order.orderNo}-${index + 1}`,
+      gameId: game.gameId,
+      seat: seat
+        ? `${seat.zoneName} ${seat.seatRow}열 ${seat.seatNumber}번`
+        : `좌석 #${orderItem.gameSeatId}`,
+      status: "ISSUED" as const,
+      qrToken: `MOCK-QR-${order.orderId}-${orderItem.orderItemId}`,
+      gameAt: game.gameAt
+    };
+  });
+}
+
+function rememberMockTickets(tickets: TicketSummary[]) {
+  const ticketsByNumber = new Map(
+    [...getStoredMockTickets(), ...tickets].map((ticket) => [ticket.ticketNo, ticket])
   );
+  const storedTickets = [...ticketsByNumber.values()].sort((left, right) =>
+    right.gameAt.localeCompare(left.gameAt) || right.ticketId - left.ticketId
+  );
+  sessionStorage.setItem(MOCK_TICKETS_KEY, JSON.stringify(storedTickets));
+  return storedTickets;
 }
 
 function EmptyState({ title, description }: { title: string; description: string }) {
@@ -392,9 +424,11 @@ function App() {
     sessionStorage.setItem(callbackKey, "processing");
     void run(async () => {
       try {
+        let callbackGame: GameSummary | null = null;
         if (pendingPayment.gameId) {
-          const callbackGame = await getGame(pendingPayment.gameId);
-          setSelectedGame(callbackGame.data);
+          const gameResult = await getGame(pendingPayment.gameId);
+          callbackGame = gameResult.data;
+          setSelectedGame(gameResult.data);
         }
         if (paymentKey && pgOrderId && amount > 0) {
           const action = await completePayment(
@@ -408,7 +442,16 @@ function App() {
           ]);
           setOrderResult(order);
           setPaymentResult({ data: { ...pendingPayment.payment, ...payment, status: action.status }, source: "api" });
-          if (action.status === "APPROVED") rememberCompletedGame(pendingPayment.gameId);
+          if (action.status === "APPROVED") {
+            rememberCompletedGame(pendingPayment.gameId);
+            if (callbackGame) {
+              rememberMockTickets(createMockTickets(
+                callbackGame,
+                order.data,
+                pendingPayment.seats ?? []
+              ));
+            }
+          }
           setToast(action.status === "APPROVED" ? "결제가 완료되었습니다." : "결제 결과를 확인했습니다.");
         } else if (code && message && pgOrderId) {
           const action = await failPayment(
@@ -732,7 +775,8 @@ function App() {
       orderId: orderResult.data.orderId,
       gameId: selectedGame?.gameId ?? null,
       payment,
-      idempotencyKey: paymentIdempotencyKey
+      idempotencyKey: paymentIdempotencyKey,
+      seats: selectedSeatDetails
     } satisfies PendingPayment));
 
     const tossPayments = window.TossPayments(TOSS_CLIENT_KEY);
@@ -748,7 +792,31 @@ function App() {
   }
 
   async function handleLoadTickets() {
-    const result = await run(() => getTickets());
+    const result = await run(async () => {
+      const apiResult = await getTickets();
+      if (apiResult.data.length > 0) return apiResult;
+
+      let mockTickets = getStoredMockTickets();
+      if (mockTickets.length === 0 && selectedGame && orderResult?.data.status === "PAID") {
+        let seats = selectedSeatDetails;
+        if (seats.length === 0) {
+          try {
+            seats = (await getGameSeats(selectedGame.gameId)).data;
+          } catch {
+            // 좌석 재조회가 실패해도 주문의 gameSeatId로 임시 티켓을 표시한다.
+          }
+        }
+        mockTickets = rememberMockTickets(createMockTickets(selectedGame, orderResult.data, seats));
+      }
+
+      return mockTickets.length > 0
+        ? {
+            data: mockTickets,
+            source: "mock" as const,
+            message: "결제 완료 데이터를 바탕으로 만든 임시 티켓입니다."
+          }
+        : apiResult;
+    });
     if (!result) return;
     setTicketsResult(result);
     setActiveStep("tickets");
@@ -757,6 +825,7 @@ function App() {
   function performLogout() {
     clearTokens();
     localStorage.removeItem("isVerified");
+    sessionStorage.removeItem(MOCK_TICKETS_KEY);
     setIsAuthed(false);
     setProfile(null);
     setIsVerified(false);
@@ -963,7 +1032,12 @@ function App() {
             )}
 
             {activeStep === "tickets" && (
-              <TicketScreen result={ticketsResult} busy={busy} onReload={handleLoadTickets} />
+              <TicketScreen
+                result={ticketsResult}
+                games={gamesResult?.data ?? []}
+                busy={busy}
+                onReload={handleLoadTickets}
+              />
             )}
           </main>
         </>
@@ -1214,8 +1288,6 @@ function HomeScreen({
           <div><span className="eyebrow">— GAME CALENDAR</span><h2>경기 일정</h2><p>날짜와 구단, 구장을 선택해 전체 예매 상태를 확인하세요.</p></div>
           <button className="outline-button" onClick={onReload} disabled={busy}>↻ 일정 새로고침</button>
         </div>
-        <SourceNotice result={gamesResult} />
-
         <div className="calendar-shell">
           <div className="calendar-toolbar">
             <div className="calendar-month-control">
@@ -1392,7 +1464,6 @@ function SeatScreen({
 
         <div className="seat-picker-panel">
           <div className="panel-title"><span>02</span><div><strong>좌석 선택</strong><small>{selectedZone ? `${selectedZone.zoneName}의 실제 좌석을 선택하세요.` : "구역을 선택해주세요."}</small></div></div>
-          <SourceNotice result={seatsResult} />
           {seatRows.length === 0 ? (
             <EmptyState title="표시할 좌석이 없습니다." description="다른 구역을 선택하거나 좌석 상태를 새로 확인해주세요." />
           ) : (
@@ -1558,22 +1629,33 @@ function PaymentScreen({ game, order, payment, busy, onOpenPayment, onRefreshOrd
   );
 }
 
-function TicketScreen({ result, busy, onReload }: { result: ApiResult<TicketSummary[]> | null; busy: boolean; onReload: () => void }) {
+function TicketScreen({ result, games, busy, onReload }: {
+  result: ApiResult<TicketSummary[]> | null;
+  games: GameSummary[];
+  busy: boolean;
+  onReload: () => void;
+}) {
   return (
     <section className="ticket-page">
       <div className="section-head"><div><span className="eyebrow">MY TICKETS</span><h1>내 티켓</h1><p>결제 완료 후 발급된 모바일 티켓을 확인합니다.</p></div><button className="outline-button" onClick={onReload} disabled={busy}>↻ 티켓 새로고침</button></div>
-      <SourceNotice result={result} />
+      {result?.source === "mock" && (
+        <div className="mock-notice"><span>MOCK</span>{result.message}</div>
+      )}
       {(result?.data.length ?? 0) === 0 ? (
         <EmptyState title="보유한 티켓이 없습니다." description="경기 예매와 결제를 완료하면 이곳에 티켓이 표시됩니다." />
       ) : (
         <div className="ticket-list">
-          {result?.data.map((ticket) => (
-            <article className="ticket-card" key={ticket.ticketId}>
-              <div className="ticket-accent"><span>Re:<b>Seat</b></span><small>ADMIT ONE</small></div>
-              <div className="ticket-info"><span className={`status-pill ${ticket.status.toLowerCase()}`}>{ticket.status}</span><h2>{ticket.title}</h2><p>{ticket.seat}</p><small>{formatGameDate(ticket.gameAt)}</small><strong>{ticket.ticketNo}</strong></div>
-              <div className="qr-box"><span>QR</span><small>{ticket.qrToken}</small></div>
-            </article>
-          ))}
+          {result?.data.map((ticket) => {
+            const gameTitle = games.find((game) => game.gameId === ticket.gameId)?.title
+              ?? `경기 #${ticket.gameId}`;
+            return (
+              <article className="ticket-card" key={ticket.ticketId}>
+                <div className="ticket-accent"><span>Re:<b>Seat</b></span><small>ADMIT ONE</small></div>
+                <div className="ticket-info"><span className={`status-pill ${ticket.status.toLowerCase()}`}>{ticket.status}</span><h2>{gameTitle}</h2><p>{ticket.seat}</p><small>{formatGameDate(ticket.gameAt)}</small><strong>{ticket.ticketNo}</strong></div>
+                <div className="qr-box"><span>QR</span><small>{ticket.qrToken}</small></div>
+              </article>
+            );
+          })}
         </div>
       )}
     </section>
