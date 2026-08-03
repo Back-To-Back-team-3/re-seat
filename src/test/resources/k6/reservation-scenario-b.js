@@ -1,5 +1,5 @@
 import http from 'k6/http';
-import { check, sleep } from 'k6';
+import { check } from 'k6';
 import { Counter, Rate } from 'k6/metrics';
 
 // C(선점) 파트 부하 테스트 - 시나리오 B: 서로 다른 좌석 병렬 처리
@@ -9,6 +9,7 @@ const reservationSuccessRate = new Rate('reservation_success_rate');
 const seatAlreadyHeldCounter = new Counter('seat_already_held_count');
 const lockFailedCounter = new Counter('lock_failed_count');
 const unexpectedCounter = new Counter('unexpected_error_count');
+const serverErrorRate = new Rate('server_error_rate');
 
 export const options = {
     scenarios: {
@@ -24,8 +25,8 @@ export const options = {
         },
     },
     thresholds: {
-        http_req_duration: ['p(99)<2000'],       // p99 지연 2초 이하
-        http_req_failed: ['rate<0.01'],          // 5xx 서버 에러율 1% 미만
+        http_req_duration: ['p(99)<2000'],        // p99 지연 2초 이하
+        server_error_rate: ['rate<0.01'],         // 5xx 서버 에러율 1% 미만
         // reservation_success_rate threshold 미적용:
         // 좌석 소진 후 SEAT_ALREADY_HELD(409)는 정상 응답이므로 TPS 비교로 판단
     },
@@ -62,6 +63,8 @@ export default function () {
     // 응답 에러코드 파싱
     let errorCode = '';
     try { errorCode = JSON.parse(res.body).errorCode || ''; } catch (_) {}
+
+    serverErrorRate.add(res.status >= 500 ? 1 : 0);
 
     // 에러코드별 카운터 집계
     if (res.status === 201) {

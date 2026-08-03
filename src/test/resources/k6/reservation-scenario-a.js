@@ -1,5 +1,5 @@
 import http from 'k6/http';
-import { check, sleep } from 'k6';
+import { check } from 'k6';
 import { Counter, Rate } from 'k6/metrics';
 
 
@@ -12,6 +12,7 @@ const tokenAlreadyUsedCounter = new Counter('token_already_used_count');
 const lockFailedCounter = new Counter('lock_failed_count');
 const unexpectedCounter = new Counter('unexpected_error_count');
 const reservationSuccessRate = new Rate('reservation_success_rate');
+const serverErrorRate = new Rate('server_error_rate');
 
 export const options = {
     scenarios: {
@@ -23,8 +24,8 @@ export const options = {
         },
     },
     thresholds: {
-        http_req_duration: ['p(99)<2000'], // p99 지연 2초 이하
-        http_req_failed: ['rate<0.01'],    // 5xx 서버 에러율 1% 미만
+        http_req_duration: ['p(99)<2000'],   // p99 지연 2초 이하
+        server_error_rate: ['rate<0.01'],    // 5xx 서버 에러율 1% 미만
     },
 };
 
@@ -52,6 +53,8 @@ export default function () {
     // 응답 에러코드 파싱
     let errorCode = '';
     try { errorCode = JSON.parse(res.body).errorCode || ''; } catch (_) {}
+
+    serverErrorRate.add(res.status >= 500 ? 1 : 0);
 
     // 에러코드별 카운터 집계
     if (res.status === 201) {
