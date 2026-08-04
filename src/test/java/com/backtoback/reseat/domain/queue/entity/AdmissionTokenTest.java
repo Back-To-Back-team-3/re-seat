@@ -19,12 +19,13 @@ public class AdmissionTokenTest {
 
     private static final LocalDateTime ISSUED_AT = LocalDateTime.of(2026, 7, 23, 1, 0);
     private static final LocalDateTime EXPIRES_AT = ISSUED_AT.plusMinutes(5);
+    private static final String TOKEN = "qt_test";
 
     private AdmissionToken activeToken() {
         return AdmissionToken.of(
                 mock(Game.class),
                 mock(User.class),
-                "qt_test",
+                TOKEN,
                 ISSUED_AT,
                 EXPIRES_AT
         );
@@ -105,5 +106,32 @@ public class AdmissionTokenTest {
                 .isInstanceOf(QueueInvalidStatusException.class);
         assertThat(admissionToken.getStatus())
                 .isEqualTo(AdmissionTokenStatus.ACTIVE);
+    }
+
+    @Test
+    @DisplayName("USED 토큰을 만료 전에 재활성화하면 ACTIVE 상태가 되고 사용 시간이 초기화된다.")
+    void reactivate_beforeExpiration_changesStatusToActive() {
+
+        // given
+        AdmissionToken admissionToken = activeToken();
+        LocalDateTime usedAt = ISSUED_AT.plusMinutes(1);
+        admissionToken.use(usedAt);
+        LocalDateTime reactivationAt = ISSUED_AT.plusMinutes(2);
+
+        // when
+        admissionToken.reactivate(reactivationAt);
+
+        // then
+        // 기존 Queue-Token과 발급 · 만료 시간은 유지하고 사용 시간만 초기화한다.
+        assertThat(admissionToken.getStatus())
+                .isEqualTo(AdmissionTokenStatus.ACTIVE);
+        assertThat(admissionToken.getUsedAt())
+                .isNull();
+        assertThat(admissionToken.getToken())
+                .isEqualTo(TOKEN);
+        assertThat(admissionToken.getIssuedAt())
+                .isEqualTo(ISSUED_AT);
+        assertThat(admissionToken.getExpiresAt())
+                .isEqualTo(EXPIRES_AT);
     }
 }
