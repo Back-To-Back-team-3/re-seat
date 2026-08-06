@@ -1,4 +1,4 @@
-import { apiRequest, setQueueToken, streamSse, unwrap, withMockFallback } from "./client";
+import { apiRequest, setQueueToken, streamSse, unwrap } from "./client";
 import type {
   ApiResult,
   ApiResponse,
@@ -18,7 +18,6 @@ import type {
   TicketSummary,
   UserProfile
 } from "../types";
-import { mockTickets } from "../mocks/mockData";
 
 type UserProfilePayload = Omit<UserProfile, "isVerified"> & {
   isVerified?: boolean;
@@ -211,11 +210,28 @@ export async function getPayment(paymentId: number) {
   return unwrap(response);
 }
 
+async function getTicketPage(page: number) {
+  const response = await apiRequest<ApiResponse<PageResponse<TicketSummary>>>(
+    `/tickets?page=${page}&size=100`
+  );
+  return unwrap(response);
+}
+
 export async function getTickets() {
-  return withMockFallback(async () => {
-    const response = await apiRequest<ApiResponse<PageResponse<TicketSummary>>>("/tickets");
-    return unwrap(response).content;
-  }, mockTickets);
+  const firstPage = await getTicketPage(0);
+  const remainingPages = await Promise.all(
+    Array.from(
+      { length: Math.max(0, firstPage.totalPages - 1) },
+      (_, pageIndex) => getTicketPage(pageIndex + 1)
+    )
+  );
+  const tickets = [firstPage, ...remainingPages]
+    .flatMap((page) => page.content)
+    .sort((left, right) =>
+      right.gameAt.localeCompare(left.gameAt) || right.ticketId - left.ticketId
+    );
+
+  return { data: tickets, source: "api" } satisfies ApiResult<TicketSummary[]>;
 }
 
 export async function verifyIdentity(impUid: string) {

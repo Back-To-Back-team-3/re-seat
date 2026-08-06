@@ -16,12 +16,5 @@ npm run dev
 http://localhost:8080/api/v1
 ```
 
-## Mock fallback
-
-`.env` 또는 `.env.local`에 아래 값을 둘 수 있다.
-
-```env
-VITE_USE_MOCK_FALLBACK=true
-```
-
-현재 백엔드 API가 없는 티켓 화면만 mock 데이터를 사용해 화면 흐름을 유지한다.
+내 티켓 화면은 `GET /api/v1/tickets`를 우선 사용하며 로그인이 필요하다.
+티켓 발급 연동 전까지 API 결과가 비어 있고 현재 브라우저 세션에 결제 완료 정보가 있으면 해당 정보로 만든 MOCK 티켓을 표시한다.
