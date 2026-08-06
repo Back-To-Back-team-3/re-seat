@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { BookingHeader } from "@/components/booking/booking-header";
 import { BookingStoreProvider } from "@/providers/booking-store-provider";
 
 /**
@@ -9,5 +10,14 @@ import { BookingStoreProvider } from "@/providers/booking-store-provider";
  * 함께 폐기된다. 새로고침 복구를 추가하지 않는 기존 사용자 흐름도 그대로 유지한다.
  */
 export default function BookingLayout({ children }: { children: ReactNode }) {
-  return <BookingStoreProvider>{children}</BookingStoreProvider>;
+  return (
+    <BookingStoreProvider>
+      <div className="min-h-screen overflow-hidden">
+        <BookingHeader />
+        <main className="relative mx-auto min-h-[650px] w-full max-w-[1440px] px-[5vw] pt-12 pb-[90px] max-sm:px-4 max-sm:pt-[46px] max-sm:pb-[70px]">
+          {children}
+        </main>
+      </div>
+    </BookingStoreProvider>
+  );
 }
