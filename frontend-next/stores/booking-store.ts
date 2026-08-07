@@ -17,6 +17,7 @@ type BookingActions = {
   setGame: (gameId: number | null) => void;
   setZone: (zoneId: number | null) => void;
   toggleSeat: (seat: GameSeat) => void;
+  clearSeats: () => void;
   setReservation: (reservation: ReservationResponse | null) => void;
   setOrderId: (orderId: number | null) => void;
   setPaymentId: (paymentId: number | null) => void;
@@ -54,6 +55,9 @@ export function createBookingStore() {
         );
 
         // 같은 좌석을 다시 누르면 해제하고, 처음 누른 좌석이면 기존 선택 뒤에 추가한다.
+        if (state.reservation || (!alreadySelected && state.selectedSeats.length >= 2)) {
+          return state;
+        }
         return {
           selectedSeats: alreadySelected
             ? state.selectedSeats.filter(
@@ -63,6 +67,7 @@ export function createBookingStore() {
             : [...state.selectedSeats, seat],
         };
       }),
+    clearSeats: () => set({ selectedSeats: [] }),
     setReservation: (reservation) => set({ reservation }),
     setOrderId: (orderId) => set({ orderId }),
     setPaymentId: (paymentId) => set({ paymentId }),
