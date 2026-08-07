@@ -1,30 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
-import { getStoredTheme, setStoredTheme, type Theme } from "@/lib/theme";
+import {
+  getServerThemeSnapshot,
+  getThemeSnapshot,
+  setStoredTheme,
+  subscribeTheme,
+  type Theme,
+} from "@/lib/theme";
 
 /**
  * 문서 루트의 data-theme 속성과 localStorage를 하나의 상태로 묶는다.
  *
- * 마운트 시 저장된 값을 읽어 document root에 반영하고(Root Layout의 초기화
- * 스크립트가 이미 같은 값을 칠해 두었을 수 있지만, hydration 이후 React 상태와
- * DOM을 다시 한 번 맞춰 어긋남을 막는다), 토글할 때마다 상태·저장값·DOM 속성을
- * 함께 갱신해 기존 Vite 앱의 즉시 반영 동작을 재현한다.
+ * React가 `lib/theme.ts`의 외부 저장소를 `useSyncExternalStore`로 구독하므로
+ * 마운트 시 별도의 setState 없이도 저장된 값이 초기 상태로 반영된다. 서버
+ * 렌더링에서는 고정된 스냅샷("light")을 사용하는데, 이는 Root Layout의
+ * 초기화 스크립트가 hydration 전에 칠하는 기본값과 같다. document root의
+ * data-theme 속성은 상태가 바뀔 때마다 effect가 동기화해, 토글은 물론 다른
+ * 탭에서의 변경도 즉시 화면에 반영되도록 기존 Vite 앱의 동작을 재현한다.
  */
 export function useTheme() {
-  const [theme, setTheme] = useState<Theme>("light");
+  const theme = useSyncExternalStore(
+    subscribeTheme,
+    getThemeSnapshot,
+    getServerThemeSnapshot,
+  );
 
   useEffect(() => {
-    const stored = getStoredTheme();
-    setTheme(stored);
-    document.documentElement.dataset.theme = stored;
-  }, []);
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
 
   function toggleTheme() {
     const next: Theme = theme === "dark" ? "light" : "dark";
-    setTheme(next);
-    document.documentElement.dataset.theme = next;
     setStoredTheme(next);
   }
 

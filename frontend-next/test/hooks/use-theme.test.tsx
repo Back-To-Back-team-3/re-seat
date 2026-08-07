@@ -44,4 +44,14 @@ describe("useTheme", () => {
     expect(document.documentElement.dataset.theme).toBe("light");
     expect(localStorage.getItem("theme")).toBe("light");
   });
+
+  it("다른 탭에서 storage에 기록된 테마를 리마운트 없이 반영한다", () => {
+    render(<ThemeProbe />);
+
+    localStorage.setItem("theme", "dark");
+    fireEvent(window, new Event("storage"));
+
+    expect(screen.getByRole("button")).toHaveTextContent("dark");
+    expect(document.documentElement.dataset.theme).toBe("dark");
+  });
 });
