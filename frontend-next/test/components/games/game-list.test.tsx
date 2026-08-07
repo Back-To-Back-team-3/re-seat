@@ -32,6 +32,24 @@ const games = statuses.map(
   }),
 );
 
+/**
+ * GameList가 요구하는 필수 props 중 새로고침 관련 값은 대부분의 테스트와
+ * 무관하므로 기본값을 여기서 한 번에 채우고 필요한 테스트에서만 덮어쓴다.
+ */
+function renderGameList(overrides: Partial<React.ComponentProps<typeof GameList>> = {}) {
+  return render(
+    <GameList
+      games={games}
+      onBook={vi.fn()}
+      onReload={vi.fn()}
+      onSelect={vi.fn()}
+      reloading={false}
+      selectedGameId={null}
+      {...overrides}
+    />,
+  );
+}
+
 describe("경기 목록", () => {
   afterEach(() => {
     cleanup();
@@ -50,14 +68,7 @@ describe("경기 목록", () => {
       gameAt: "2026-08-08T18:00:00",
     };
 
-    render(
-      <GameList
-        games={[todayGame, tomorrowGame]}
-        onBook={vi.fn()}
-        onSelect={vi.fn()}
-        selectedGameId={null}
-      />,
-    );
+    renderGameList({ games: [todayGame, tomorrowGame] });
 
     expect(screen.getByText("2026.08.07 경기")).toBeInTheDocument();
     expect(screen.getAllByRole("article")).toHaveLength(1);
@@ -75,14 +86,7 @@ describe("경기 목록", () => {
   });
 
   it("네 가지 예매 상태를 표시하고 경기 시각순으로 정렬한다", () => {
-    render(
-      <GameList
-        games={games}
-        onBook={vi.fn()}
-        onSelect={vi.fn()}
-        selectedGameId={null}
-      />,
-    );
+    renderGameList();
     fireEvent.click(
       screen.getByRole("button", { name: "날짜 선택 해제" }),
     );
@@ -104,14 +108,7 @@ describe("경기 목록", () => {
     const onSelect = vi.fn();
     const onBook = vi.fn();
 
-    render(
-      <GameList
-        games={[games[1]]}
-        onBook={onBook}
-        onSelect={onSelect}
-        selectedGameId={null}
-      />,
-    );
+    renderGameList({ games: [games[1]], onBook, onSelect });
     fireEvent.click(
       screen.getByRole("button", { name: "날짜 선택 해제" }),
     );
@@ -120,7 +117,8 @@ describe("경기 목록", () => {
     expect(onSelect).toHaveBeenCalledWith(games[1]);
     expect(onBook).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "예매 시작" }));
+    // Vite의 OPEN 상태 카드 버튼 문구는 "경기 선택"이다(App.tsx의 gameStatusMeta).
+    fireEvent.click(screen.getByRole("button", { name: "경기 선택" }));
     expect(onBook).toHaveBeenCalledWith(games[1]);
   });
 
@@ -128,17 +126,10 @@ describe("경기 목록", () => {
     ["SCHEDULED", "예매 준비 중"],
     ["CLOSED", "예매 종료"],
     ["CANCELLED", "경기 취소"],
-  ] as const)("%s 경기는 예매 시작 버튼을 비활성화한다", (status, label) => {
+  ] as const)("%s 경기는 예매 버튼을 비활성화한다", (status, label) => {
     const game = games.find((candidate) => candidate.bookingStatus === status)!;
 
-    render(
-      <GameList
-        games={[game]}
-        onBook={vi.fn()}
-        onSelect={vi.fn()}
-        selectedGameId={null}
-      />,
-    );
+    renderGameList({ games: [game] });
     fireEvent.click(
       screen.getByRole("button", { name: "날짜 선택 해제" }),
     );
@@ -149,18 +140,75 @@ describe("경기 목록", () => {
   it("선택한 경기는 예매 상태와 관계없이 선택됨으로 표시한다", () => {
     const scheduledGame = games[0];
 
-    render(
-      <GameList
-        games={[scheduledGame]}
-        onBook={vi.fn()}
-        onSelect={vi.fn()}
-        selectedGameId={scheduledGame.gameId}
-      />,
-    );
+    renderGameList({
+      games: [scheduledGame],
+      selectedGameId: scheduledGame.gameId,
+    });
     fireEvent.click(
       screen.getByRole("button", { name: "날짜 선택 해제" }),
     );
 
     expect(screen.getByRole("button", { name: "선택됨" })).toBeDisabled();
+  });
+
+  it("경기 카드는 날짜 블록과 경기 제목을 함께 보여준다", () => {
+    const game: GameSummary = {
+      ...games[1],
+      gameAt: "2026-08-07T18:00:00",
+      title: "두산 베어스 홈 개막전",
+    };
+
+    renderGameList({ games: [game] });
+    fireEvent.click(
+      screen.getByRole("button", { name: "날짜 선택 해제" }),
+    );
+
+    const article = screen.getByRole("article");
+    expect(within(article).getByText("8월")).toBeInTheDocument();
+    expect(within(article).getByText("07")).toBeInTheDocument();
+    expect(within(article).getByText("금")).toBeInTheDocument();
+    expect(
+      within(article).getByText("두산 베어스 홈 개막전"),
+    ).toBeInTheDocument();
+  });
+
+  it("새로고침 버튼을 누르면 일정을 다시 불러온다", () => {
+    const onReload = vi.fn();
+    renderGameList({ onReload });
+
+    const button = screen.getByRole("button", { name: "↻ 일정 새로고침" });
+    fireEvent.click(button);
+
+    expect(onReload).toHaveBeenCalledTimes(1);
+  });
+
+  it("일정을 불러오는 동안에는 새로고침 버튼을 비활성화한다", () => {
+    renderGameList({ reloading: true });
+
+    expect(
+      screen.getByRole("button", { name: "↻ 일정 새로고침" }),
+    ).toBeDisabled();
+  });
+
+  it("예매 상태 범례를 표시한다", () => {
+    renderGameList();
+
+    const legend = screen.getByRole("list", { name: "예매 상태 범례" });
+    expect(within(legend).getByText("예매 예정")).toBeInTheDocument();
+    expect(within(legend).getByText("예매중")).toBeInTheDocument();
+    expect(within(legend).getByText("예매 종료")).toBeInTheDocument();
+    expect(within(legend).getByText("경기 취소")).toBeInTheDocument();
+  });
+
+  it("구단별·구장별·상태 필터를 제공한다", () => {
+    renderGameList();
+
+    expect(
+      screen.getByRole("combobox", { name: "구단별" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: "구장별" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "상태" })).toBeInTheDocument();
   });
 });
