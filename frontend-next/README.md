@@ -10,11 +10,15 @@ npm install
 npm run dev
 ```
 
-- Next.js: `http://localhost:3000`
+- Next.js: `http://localhost:5173`
 - 기존 Vite 앱: `http://localhost:5173`
 - Backend: `http://localhost:8080`
 
 환경 변수는 `.env.example`을 참고해 `.env`에 설정합니다.
+
+Next.js와 기존 Vite 앱은 같은 포트를 사용하므로 동시에 실행할 수 없습니다.
+기능을 비교할 때는 현재 실행 중인 프론트엔드 서버를 종료한 뒤 다른 앱을
+실행합니다.
 
 ## 검증
 
