@@ -103,10 +103,6 @@ management:
     tags:
       application: re-seat
 
-frontend:
-  # 기본값은 기존 Vite 앱을 유지하는 동안 5173을 유지, Next.js 검증 시 FRONTEND_URL로 변경한다.
-  base-url: ${FRONTEND_URL:http://localhost:5173}
-
 jwt:
   secret: c3ByaW5nYm9vdC1zZWN1cml0eS1qd3QtdG9rZW4tc2VjcmV0LWtleS1kZW1vLWJmYWtiZmtiYWZiYWY=
 

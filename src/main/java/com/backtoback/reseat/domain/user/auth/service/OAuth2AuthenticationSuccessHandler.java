@@ -9,7 +9,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -25,12 +24,6 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenRepository refreshTokenRepository;
-
-    /**
-     * OAuth 공급자 인증을 마친 뒤 토큰을 전달할 프론트엔드 주소
-     */
-    @Value("${frontend.base-url}")
-    private String frontendUrl;
 
     @Override
     @Transactional
@@ -63,7 +56,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         }
 
         // 프론트엔드 리다이렉트 URL 생성 (토큰 전달)
-        String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl)
+        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/")
                 .queryParam("accessToken", accessToken)
                 .queryParam("refreshToken", refreshToken)
                 //본인인증 여부에 따라 카카오 로그인 후 포트원 본인인증으로 넘어갈지 말지
