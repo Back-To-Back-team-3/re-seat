@@ -1,11 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -81,15 +75,13 @@ describe("인증과 사용자 프로필 흐름", () => {
     cleanup();
   });
 
-  it("로그인하지 않은 사용자에게 카카오 로그인 동작을 표시한다", async () => {
-    renderHome();
+  // 로그인 버튼과 로그인/로그아웃 후 프로필 표시는 이제 모든 route가 공유하는
+  // 상단 Header(components/layout/header.tsx)가 소유하며, 이 페이지의 렌더링
+  // 트리에는 포함되지 않는다. 해당 UI 동작은 test/components/layout/header.test.tsx가
+  // 검증한다. 이 파일에는 GamesPage 자신이 소유한 동작(토큰 저장, 쿼리 문자열
+  // 정리 같은 페이지 레벨 부수효과와 Alert/VerificationPanel 분기)만 남긴다.
 
-    expect(
-      await screen.findByRole("button", { name: "카카오 로그인" }),
-    ).toBeInTheDocument();
-  });
-
-  it("OAuth 콜백 토큰을 저장하고 프로필을 표시한다", async () => {
+  it("OAuth 콜백 토큰을 저장하고 쿼리 문자열을 정리한다", async () => {
     server.use(
       http.get(`${API_BASE_URL}/users/me`, () =>
         HttpResponse.json(profileResponse(true)),
@@ -103,11 +95,12 @@ describe("인증과 사용자 프로필 흐름", () => {
 
     renderHome();
 
-    expect(await screen.findByText("야구팬")).toBeInTheDocument();
-    expect(localStorage.getItem("accessToken")).toBe("access-token");
-    expect(localStorage.getItem("refreshToken")).toBe("refresh-token");
-    expect(localStorage.getItem("isVerified")).toBe("true");
-    expect(window.location.search).toBe("");
+    await waitFor(() => {
+      expect(localStorage.getItem("accessToken")).toBe("access-token");
+      expect(localStorage.getItem("refreshToken")).toBe("refresh-token");
+      expect(localStorage.getItem("isVerified")).toBe("true");
+      expect(window.location.search).toBe("");
+    });
   });
 
   it("프로필 조회 오류를 공통 알림으로 표시한다", async () => {
@@ -131,31 +124,6 @@ describe("인증과 사용자 프로필 흐름", () => {
     expect(
       await screen.findByText("사용자 정보를 찾을 수 없습니다."),
     ).toBeInTheDocument();
-  });
-
-  it("로그아웃하면 인증 저장소를 비우고 로그인 상태로 돌아간다", async () => {
-    localStorage.setItem("accessToken", "access-token");
-    localStorage.setItem("refreshToken", "refresh-token");
-    localStorage.setItem("queueToken", "queue-token");
-    localStorage.setItem("isVerified", "true");
-    server.use(
-      http.get(`${API_BASE_URL}/users/me`, () =>
-        HttpResponse.json(profileResponse(true)),
-      ),
-    );
-
-    renderHome();
-    fireEvent.click(await screen.findByRole("button", { name: "로그아웃" }));
-
-    await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: "카카오 로그인" }),
-      ).toBeInTheDocument();
-    });
-    expect(localStorage.getItem("accessToken")).toBeNull();
-    expect(localStorage.getItem("refreshToken")).toBeNull();
-    expect(localStorage.getItem("queueToken")).toBeNull();
-    expect(localStorage.getItem("isVerified")).toBeNull();
   });
 
   it("본인인증이 필요한 사용자는 인증 화면을 먼저 표시한다", async () => {
