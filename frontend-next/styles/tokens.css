@@ -15,6 +15,11 @@
   --panel-radius: 12px;
   --modal-radius: 16px;
   --fast-duration: 160ms;
+  /* Vite frontend/src/styles.css의 .topbar, .footer, .flow-header, .page-content가
+     공유하는 셸 폭·여백 값. Header, Footer, Booking Layout이 같은 값을 쓰게 한다. */
+  --width-shell: 1440px;
+  --gutter-desktop: 5vw;
+  --gutter-mobile: 16px;
 }
 
 html[data-theme="dark"] {

@@ -34,7 +34,7 @@ export function BookingHeader() {
   }
 
   return (
-    <header className="grid min-h-[78px] grid-cols-[auto_auto_auto_1fr] items-center gap-2 border-b border-border bg-surface px-[5vw] text-[11px] text-muted-foreground max-sm:min-h-16 max-sm:grid-cols-1 max-sm:px-4">
+    <header className="grid min-h-[78px] grid-cols-[auto_auto_auto_1fr] items-center gap-2 border-b border-border bg-surface px-[var(--gutter-desktop)] text-[11px] text-muted-foreground max-sm:min-h-16 max-sm:grid-cols-1 max-sm:px-[var(--gutter-mobile)]">
       <Link className="max-sm:hidden" href="/games">
         홈
       </Link>
