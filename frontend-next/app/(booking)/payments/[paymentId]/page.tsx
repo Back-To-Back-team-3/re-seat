@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation";
 
+import { Alert } from "@/components/common/alert";
 import { PaymentScreen } from "@/components/payments/payment-screen";
 import { usePayment } from "@/hooks/use-payment";
 import { openTossPayment } from "@/lib/payment-sdk";
@@ -11,8 +12,12 @@ export default function PaymentPage() {
   const params = useParams<{ paymentId: string }>();
   const paymentId = Number(params.paymentId);
   const payment = usePayment(paymentId);
+  if (!Number.isSafeInteger(paymentId) || paymentId <= 0) {
+    return <Alert message="올바르지 않은 결제 주소입니다." variant="error" />;
+  }
   return (
     <PaymentScreen
+      error={payment.detail.error?.message ?? null}
       onPay={() => {
         const data = payment.detail.data;
         const pending = getPendingPayment();

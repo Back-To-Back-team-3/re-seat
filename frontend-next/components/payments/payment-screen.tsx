@@ -1,13 +1,17 @@
+import { Alert } from "@/components/common/alert";
 import { formatPrice } from "@/lib/currency";
 import type { PaymentResponse } from "@/types/payment";
 
 export function PaymentScreen({
+  error,
   payment,
   onPay,
 }: {
+  error: string | null;
   payment: PaymentResponse | null;
   onPay: () => void;
 }) {
+  if (error) return <Alert message={error} variant="error" />;
   if (!payment) return <p>결제 정보를 불러오고 있습니다.</p>;
   return (
     <section className="grid gap-5">

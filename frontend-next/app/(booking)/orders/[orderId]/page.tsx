@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { Alert } from "@/components/common/alert";
 import { Countdown } from "@/components/common/countdown";
 import { OrderSummary } from "@/components/orders/order-summary";
 import { useOrder } from "@/hooks/use-order";
@@ -19,6 +20,12 @@ export default function OrderPage() {
   const gameId = useBookingStore((state) => state.selectedGameId);
   const seats = useBookingStore((state) => state.selectedSeats);
   const [expired, setExpired] = useState(false);
+  if (!Number.isSafeInteger(orderId) || orderId <= 0) {
+    return <Alert message="올바르지 않은 주문 주소입니다." variant="error" />;
+  }
+  if (order.detail.isError) {
+    return <Alert message={order.detail.error.message} variant="error" />;
+  }
   if (!order.detail.data) return <p>주문을 불러오고 있습니다.</p>;
   return (
     <div className="grid gap-5">
