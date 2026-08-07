@@ -53,4 +53,7 @@ html[data-theme="dark"] {
   --radius-panel: var(--panel-radius);
   --radius-modal: var(--modal-radius);
   --duration-fast: var(--fast-duration);
+  /* Vite frontend/src/styles.css의 .brand, .footer > div > strong이 공유하는
+     브랜드 워드마크 서체. Header, Footer가 같은 값을 쓰게 한다. */
+  --font-brand: "Arial Narrow", Impact, sans-serif;
 }
