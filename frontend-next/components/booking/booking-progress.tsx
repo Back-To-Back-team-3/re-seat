@@ -44,7 +44,10 @@ export function BookingProgress({ activeStep }: { activeStep: BookingStep }) {
             >
               {isDone ? "✓" : index + 1}
             </span>
-            <strong className="text-[10px] max-[900px]:hidden">
+            {/* Vite styles.css는 .booking-progress strong을 10px로 선언하지만
+                뒤쪽 "2026 UI readability" 구간이 같은 선택자를 12px로 다시
+                선언해 실제로 적용되는 값은 12px다. */}
+            <strong className="text-xs max-[900px]:hidden">
               {step.label}
             </strong>
           </li>
