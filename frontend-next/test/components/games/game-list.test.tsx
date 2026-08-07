@@ -33,7 +33,46 @@ const games = statuses.map(
 );
 
 describe("경기 목록", () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
+
+  it("처음에는 KST 기준 오늘 경기만 표시한다", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-07T03:00:00Z"));
+    const todayGame = {
+      ...games[0],
+      gameAt: "2026-08-07T18:00:00",
+    };
+    const tomorrowGame = {
+      ...games[1],
+      gameAt: "2026-08-08T18:00:00",
+    };
+
+    render(
+      <GameList
+        games={[todayGame, tomorrowGame]}
+        onBook={vi.fn()}
+        onSelect={vi.fn()}
+        selectedGameId={null}
+      />,
+    );
+
+    expect(screen.getByText("2026.08.07 경기")).toBeInTheDocument();
+    expect(screen.getAllByRole("article")).toHaveLength(1);
+    expect(screen.getByRole("article")).toHaveAttribute(
+      "data-game-id",
+      String(todayGame.gameId),
+    );
+
+    // 기존 화면처럼 사용자가 원할 때 날짜 조건을 해제해 전체 일정을 볼 수 있어야 한다.
+    fireEvent.click(
+      screen.getByRole("button", { name: "날짜 선택 해제" }),
+    );
+    expect(screen.getByText("전체 경기")).toBeInTheDocument();
+    expect(screen.getAllByRole("article")).toHaveLength(2);
+  });
 
   it("네 가지 예매 상태를 표시하고 경기 시각순으로 정렬한다", () => {
     render(
@@ -43,6 +82,9 @@ describe("경기 목록", () => {
         onSelect={vi.fn()}
         selectedGameId={null}
       />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "날짜 선택 해제" }),
     );
 
     const articles = screen.getAllByRole("article");
@@ -70,6 +112,9 @@ describe("경기 목록", () => {
         selectedGameId={null}
       />,
     );
+    fireEvent.click(
+      screen.getByRole("button", { name: "날짜 선택 해제" }),
+    );
 
     fireEvent.click(screen.getByRole("button", { name: /OPEN 경기 선택/ }));
     expect(onSelect).toHaveBeenCalledWith(games[1]);
@@ -94,7 +139,28 @@ describe("경기 목록", () => {
         selectedGameId={null}
       />,
     );
+    fireEvent.click(
+      screen.getByRole("button", { name: "날짜 선택 해제" }),
+    );
 
     expect(screen.getByRole("button", { name: label })).toBeDisabled();
+  });
+
+  it("선택한 경기는 예매 상태와 관계없이 선택됨으로 표시한다", () => {
+    const scheduledGame = games[0];
+
+    render(
+      <GameList
+        games={[scheduledGame]}
+        onBook={vi.fn()}
+        onSelect={vi.fn()}
+        selectedGameId={scheduledGame.gameId}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "날짜 선택 해제" }),
+    );
+
+    expect(screen.getByRole("button", { name: "선택됨" })).toBeDisabled();
   });
 });
