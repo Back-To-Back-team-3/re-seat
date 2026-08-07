@@ -1,6 +1,7 @@
 import type { ApiResponse } from "@/types/api";
 import type { TokenResponse } from "@/types/auth";
 
+import { expireAuth, setAuthTokens } from "@/api/auth";
 import { storage } from "@/lib/storage";
 
 export const API_BASE_URL =
@@ -39,7 +40,10 @@ let refreshPromise: Promise<boolean> | null = null;
  */
 export async function refreshAccessToken() {
   const refreshToken = storage.local.get("refreshToken");
-  if (!refreshToken) return false;
+  if (!refreshToken) {
+    expireAuth();
+    return false;
+  }
 
   if (!refreshPromise) {
     refreshPromise = fetch(`${API_BASE_URL}/auth/reissue`, {
@@ -53,24 +57,21 @@ export async function refreshAccessToken() {
         const tokens = (await parsePayload(response)) as TokenResponse | null;
         if (!tokens?.accessToken || !tokens.refreshToken) return false;
 
-        storage.local.set("accessToken", tokens.accessToken);
-        storage.local.set("refreshToken", tokens.refreshToken);
+        setAuthTokens(tokens.accessToken, tokens.refreshToken);
         return true;
       })
       .catch(() => false)
+      .then((refreshed) => {
+        // 공유 Promise 안에서 한 번만 만료 처리해 동시 401마다 알림이 반복되지 않게 한다.
+        if (!refreshed) expireAuth();
+        return refreshed;
+      })
       .finally(() => {
         refreshPromise = null;
       });
   }
 
-  const refreshed = await refreshPromise;
-  if (!refreshed) {
-    storage.local.remove("accessToken");
-    storage.local.remove("refreshToken");
-    storage.local.remove("queueToken");
-  }
-
-  return refreshed;
+  return refreshPromise;
 }
 
 function createHeaders(options: RequestInit) {
@@ -110,6 +111,11 @@ export async function apiRequest<T>(
       // 3. allowRefresh=false로 넘겨 재시도 응답이 다시 401이어도 반복하지 않는다.
       return apiRequest<T>(path, options, false);
     }
+  }
+
+  if (response.status === 401 && !allowRefresh) {
+    // 재발급 직후의 토큰도 거부되면 더 복구하지 않고 현재 세션을 종료한다.
+    expireAuth();
   }
 
   const payload = (await parsePayload(response)) as {
