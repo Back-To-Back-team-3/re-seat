@@ -17,6 +17,7 @@ export function useReservation(gameId: number) {
   const reservation = useBookingStore((state) => state.reservation);
   const setReservation = useBookingStore((state) => state.setReservation);
   const clearSeats = useBookingStore((state) => state.clearSeats);
+  const setQueueExpiry = useBookingStore((state) => state.setQueueExpiry);
 
   const create = useMutation({
     mutationFn: async () => {
@@ -25,7 +26,10 @@ export function useReservation(gameId: number) {
         selectedSeats.map((seat) => seat.gameSeatId),
       );
       // 예약이 좌석 선점을 소유한 뒤에는 대기열 토큰을 먼저 제거한다.
+      // 입장 토큰은 1회용이므로 여기서 소비되고, 예약을 취소하더라도 되살아나지
+      // 않는다. 화면이 이 사실을 알 수 있도록 만료 시각도 함께 비운다.
       storage.local.remove("queueToken");
+      setQueueExpiry(null);
       // 이어서 서버의 실제 잔여 시간을 확인해 만료된 예약으로 주문하지 않게 한다.
       const holdTime = await getReservationHoldTime(created.reservationId);
       return { reservation: created, holdTime };
