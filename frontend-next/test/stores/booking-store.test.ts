@@ -43,6 +43,21 @@ describe("bookingStore", () => {
     expect(store.getState().selectedSeats).toEqual([]);
   });
 
+  it("최대 두 좌석까지만 선택하고 예약 후에는 선택을 변경하지 않는다", () => {
+    const store = createBookingStore();
+    const second = { ...seat, gameSeatId: 2 };
+    const third = { ...seat, gameSeatId: 3 };
+
+    store.getState().toggleSeat(seat);
+    store.getState().toggleSeat(second);
+    store.getState().toggleSeat(third);
+    expect(store.getState().selectedSeats).toEqual([seat, second]);
+
+    store.getState().setReservation(reservation);
+    store.getState().toggleSeat(seat);
+    expect(store.getState().selectedSeats).toEqual([seat, second]);
+  });
+
   it("예매 진행에 필요한 식별자와 응답 snapshot을 기록한다", () => {
     const store = createBookingStore();
 
