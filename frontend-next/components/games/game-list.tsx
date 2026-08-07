@@ -8,6 +8,7 @@ import {
   GameCard,
   GAME_STATUS_META,
 } from "@/components/games/game-card";
+import { KST_TIME_ZONE } from "@/lib/constants";
 import { formatGameDate } from "@/lib/date";
 import type { GameSummary } from "@/types/game";
 
@@ -31,7 +32,19 @@ export function GameList({
   onSelect,
   onBook,
 }: GameListProps) {
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(() => {
+    /*
+     * 백엔드의 경기 일시는 KST를 기준으로 저장됩니다. 브라우저가 다른 시간대에
+     * 있어도 기존 화면과 같은 날짜가 선택되도록 로컬 시간이 아닌 KST 날짜를
+     * 초기값으로 사용합니다.
+     */
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: KST_TIME_ZONE,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+  });
   const [status, setStatus] = useState<
     GameSummary["bookingStatus"] | "ALL"
   >("ALL");
@@ -121,12 +134,25 @@ export function GameList({
 
       <div className="flex items-end justify-between gap-4">
         <div>
-          <strong className="block text-xl">전체 경기</strong>
+          <strong className="block text-xl">
+            {selectedDate
+              ? `${selectedDate.replaceAll("-", ".")} 경기`
+              : "전체 경기"}
+          </strong>
           <span className="text-sm text-muted-foreground">
             {filteredGames.length}개 일정
           </span>
         </div>
         <div className="flex flex-wrap gap-2">
+          {selectedDate && (
+            <button
+              className="cursor-pointer rounded-control border border-border bg-background px-3 py-2 text-sm font-bold text-foreground"
+              onClick={() => setSelectedDate(null)}
+              type="button"
+            >
+              날짜 선택 해제
+            </button>
+          )}
           <label className="grid gap-1 text-xs font-bold text-muted-foreground">
             구단
             <select

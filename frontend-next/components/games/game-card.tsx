@@ -80,7 +80,7 @@ export function GameCard({
         onClick={() => onBook(game)}
         type="button"
       >
-        {selected && game.bookingStatus === "OPEN" ? "예매 시작" : meta.action}
+        {selected ? "선택됨" : meta.action}
       </button>
     </article>
   );
