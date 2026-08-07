@@ -7,12 +7,16 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import Home from "@/app/page";
 import { clearAuthNotice } from "@/api/auth";
 import { API_BASE_URL } from "@/api/client";
 import { server } from "@/test/mocks/server";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
 
 function renderHome() {
   // 테스트마다 독립된 QueryClient를 사용해 이전 테스트의 프로필 캐시가 섞이지 않게 한다.
@@ -51,6 +55,26 @@ describe("인증과 사용자 프로필 흐름", () => {
     localStorage.clear();
     clearAuthNotice();
     window.history.replaceState({}, "", "/");
+    server.use(
+      // 홈 화면이 공개 경기 목록도 함께 조회하므로 인증 테스트에는 빈 정상 응답을 제공한다.
+      http.get(`${API_BASE_URL}/games`, ({ request }) => {
+        const page = Number(new URL(request.url).searchParams.get("page"));
+        return HttpResponse.json({
+          success: true,
+          errorCode: null,
+          message: "경기 목록 조회 성공",
+          data: {
+            content: [],
+            pageNumber: page,
+            pageSize: 100,
+            totalElements: 0,
+            totalPages: 1,
+            isFirst: true,
+            isLast: true,
+          },
+        });
+      }),
+    );
   });
 
   afterEach(() => {
