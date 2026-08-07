@@ -1,6 +1,12 @@
-import { formatGameDate } from "@/lib/date";
+import { formatGameDate, formatShortDate } from "@/lib/date";
 import type { GameSummary } from "@/types/game";
 
+/**
+ * Vite의 gameStatusMeta(App.tsx)를 그대로 옮긴 상태별 라벨.
+ *
+ * 히어로의 SELECTED GAME 버튼, 오늘의 경기 패널, 이 카드가 모두 이 맵 하나를
+ * 공유하므로 라벨을 여기서만 고치면 세 곳이 함께 Vite와 맞는다.
+ */
 export const GAME_STATUS_META: Record<
   GameSummary["bookingStatus"],
   { label: string; action: string; description: string }
@@ -12,7 +18,7 @@ export const GAME_STATUS_META: Record<
   },
   OPEN: {
     label: "예매중",
-    action: "예매 시작",
+    action: "경기 선택",
     description: "지금 예매할 수 있습니다.",
   },
   CLOSED: {
@@ -25,6 +31,17 @@ export const GAME_STATUS_META: Record<
     action: "경기 취소",
     description: "취소된 경기입니다.",
   },
+};
+
+/**
+ * Vite의 .status-pill.* 색상 변형(styles.css). 이 카드와 오늘의 경기 패널이
+ * 함께 사용해 상태 색이 화면마다 달라지지 않게 한다.
+ */
+export const STATUS_PILL_CLASSES: Record<GameSummary["bookingStatus"], string> = {
+  SCHEDULED: "bg-[rgba(43,103,203,0.1)] text-[#2b67cb]",
+  OPEN: "bg-success/10 text-success",
+  CLOSED: "bg-[rgba(91,97,112,0.12)] text-muted-foreground",
+  CANCELLED: "bg-brand/10 text-brand",
 };
 
 type GameCardProps = {
@@ -47,40 +64,69 @@ export function GameCard({
   onBook,
 }: GameCardProps) {
   const meta = GAME_STATUS_META[game.bookingStatus];
+  const date = formatShortDate(game.gameAt);
 
   return (
     <article
-      className={`grid overflow-hidden rounded-panel border bg-surface shadow-card transition ${
-        selected ? "border-brand ring-1 ring-brand" : "border-border"
-      } md:grid-cols-[1fr_auto]`}
+      className={`relative overflow-hidden rounded-panel border bg-surface shadow-card transition ${
+        selected
+          ? "border-brand shadow-[0_14px_30px_rgb(21_28_46/8%)]"
+          : "border-border"
+      }`}
       data-game-id={game.gameId}
     >
+      {selected && (
+        <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[3px] bg-brand" />
+      )}
       <button
         aria-label={`${game.title} 선택`}
-        className="grid cursor-pointer gap-3 border-0 bg-transparent p-5 text-left text-foreground"
+        className="grid w-full cursor-pointer grid-cols-[52px_1fr] gap-3 border-0 bg-transparent px-4 pt-5 pb-4 text-left text-foreground"
         onClick={() => onSelect(game)}
         type="button"
       >
-        <span className="w-fit rounded-full bg-muted px-3 py-1 text-xs font-bold text-muted-foreground">
-          {meta.label}
-        </span>
-        <strong className="text-xl">
-          {game.homeTeam.name}
-          <span className="mx-3 text-sm font-medium text-brand">VS</span>
-          {game.awayTeam.name}
-        </strong>
-        <span className="text-sm text-muted-foreground">
-          {formatGameDate(game.gameAt)} · {game.stadium.name} ·{" "}
-          {meta.description}
-        </span>
+        <div className="grid content-start justify-items-center border-r border-border pr-3">
+          <span className="text-xs text-muted-foreground">{date.month}</span>
+          <strong className="font-mono text-[27px] leading-[1.1]">
+            {date.day}
+          </strong>
+          <small className="text-xs text-muted-foreground">
+            {date.weekday}
+          </small>
+        </div>
+        <div className="grid min-w-0 content-start gap-1.5">
+          <span
+            className={`w-fit rounded-full px-[7px] py-[3px] text-[11px] font-black ${STATUS_PILL_CLASSES[game.bookingStatus]}`}
+          >
+            {meta.label}
+          </span>
+          <div className="mt-[3px] grid gap-0.5">
+            <strong className="truncate text-base">
+              {game.homeTeam.name}
+            </strong>
+            <span className="text-xs font-black text-brand">VS</span>
+            <strong className="truncate text-base">
+              {game.awayTeam.name}
+            </strong>
+          </div>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+            {game.title}
+          </p>
+          <small className="text-xs leading-[1.45] text-muted-foreground">
+            {formatGameDate(game.gameAt)} · {game.stadium.name} ·{" "}
+            {meta.description}
+          </small>
+        </div>
       </button>
       <button
-        className="cursor-pointer border-0 border-t border-border bg-foreground px-7 py-4 font-bold text-surface disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground md:border-t-0 md:border-l"
+        className={`flex w-full cursor-pointer items-center justify-between border-0 border-t border-border bg-surface-soft/72 px-4 py-3 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-[0.58] ${
+          selected ? "text-brand" : "text-muted-foreground"
+        }`}
         disabled={game.bookingStatus !== "OPEN"}
         onClick={() => onBook(game)}
         type="button"
       >
         {selected ? "선택됨" : meta.action}
+        <span aria-hidden="true">→</span>
       </button>
     </article>
   );
