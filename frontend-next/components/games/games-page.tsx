@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { LoginPanel } from "@/components/auth/login-panel";
 import { VerificationPanel } from "@/components/auth/verification-panel";
 import { Alert } from "@/components/common/alert";
 import { EmptyState } from "@/components/common/empty-state";
@@ -62,46 +60,7 @@ export function GamesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-50 grid min-h-[70px] grid-cols-[auto_1fr_auto] items-center border-b border-border bg-background/92 px-[5vw] shadow-[0_1px_12px_rgb(0_0_0/4%)] backdrop-blur-2xl">
-        <Link
-          aria-label="Re:Seat 홈"
-          className="text-[28px] font-black tracking-[-1.5px] text-foreground"
-          href="/games"
-        >
-          Re:<span className="text-brand">Seat</span>
-        </Link>
-        <nav
-          aria-label="주요 메뉴"
-          className="flex h-[70px] justify-center gap-[30px]"
-        >
-          <Link
-            className="relative grid place-items-center px-1 text-sm font-bold text-foreground after:absolute after:right-0 after:bottom-0 after:left-0 after:h-0.5 after:bg-brand after:content-['']"
-            href="/games"
-          >
-            경기 예매
-          </Link>
-          <Link
-            aria-disabled={!auth.isAuthed}
-            className={`grid place-items-center px-1 text-sm font-bold ${
-              auth.isAuthed
-                ? "text-foreground"
-                : "pointer-events-none text-muted-foreground opacity-50"
-            }`}
-            href="/tickets"
-          >
-            내 티켓
-          </Link>
-        </nav>
-        <LoginPanel
-          isAuthed={auth.isAuthed}
-          onLogin={auth.login}
-          onLogout={auth.logout}
-          profile={auth.profile}
-          role={auth.role}
-        />
-      </header>
-
+    <>
       {message && (
         <Alert
           message={message}
@@ -169,6 +128,6 @@ export function GamesPage() {
           )}
         </main>
       )}
-    </div>
+    </>
   );
 }

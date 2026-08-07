@@ -45,7 +45,7 @@ export function LoginPanel({
       <span className="grid size-9 place-items-center rounded-full bg-foreground font-extrabold text-surface">
         {initial}
       </span>
-      <div className="grid gap-px">
+      <div className="grid gap-px max-sm:hidden">
         <strong className="max-w-[100px] overflow-hidden text-xs text-ellipsis whitespace-nowrap">
           {displayName}
         </strong>
@@ -54,7 +54,7 @@ export function LoginPanel({
         </small>
       </div>
       <button
-        className="cursor-pointer border-0 bg-transparent p-1.5 text-[11px] text-muted-foreground"
+        className="cursor-pointer border-0 bg-transparent p-1.5 text-[11px] text-muted-foreground max-sm:hidden"
         onClick={onLogout}
         type="button"
       >

@@ -12,7 +12,7 @@ import { BookingStoreProvider } from "@/providers/booking-store-provider";
 export default function BookingLayout({ children }: { children: ReactNode }) {
   return (
     <BookingStoreProvider>
-      <div className="min-h-screen overflow-hidden">
+      <div className="overflow-hidden">
         <BookingHeader />
         <main className="relative mx-auto min-h-[650px] w-full max-w-[var(--width-shell)] px-[var(--gutter-desktop)] pt-12 pb-[90px] max-sm:px-[var(--gutter-mobile)] max-sm:pt-[46px] max-sm:pb-[70px]">
           {children}

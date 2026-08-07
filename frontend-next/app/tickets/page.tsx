@@ -13,7 +13,7 @@ export default function TicketsPage() {
 
   if (!auth.isAuthed) {
     return (
-      <main className="grid min-h-screen place-items-center p-6">
+      <main className="grid min-h-[60vh] place-items-center p-6">
         <section className="text-center">
           <h1 className="text-2xl font-bold">로그인이 필요합니다.</h1>
           <Link className="mt-4 inline-block text-brand" href="/games">
@@ -25,7 +25,7 @@ export default function TicketsPage() {
   }
 
   return (
-    <main className="mx-auto grid min-h-screen w-full max-w-5xl gap-8 px-[5vw] py-14">
+    <main className="mx-auto grid w-full max-w-5xl gap-8 px-[5vw] py-14">
       <div>
         <Link className="text-sm text-muted-foreground" href="/games">
           ← 경기 목록
