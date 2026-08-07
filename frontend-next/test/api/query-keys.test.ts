@@ -4,6 +4,7 @@ import { gameKeys } from "@/api/query-keys/games";
 import { orderKeys } from "@/api/query-keys/orders";
 import { paymentKeys } from "@/api/query-keys/payments";
 import { ticketKeys } from "@/api/query-keys/tickets";
+import { userKeys } from "@/api/query-keys/users";
 
 describe("query key factories", () => {
   it("같은 조회 조건에는 구조적으로 동일한 key를 만든다", () => {
@@ -24,5 +25,6 @@ describe("query key factories", () => {
     expect(orderKeys.detail(2)).toEqual(["orders", "detail", 2]);
     expect(paymentKeys.detail(3)).toEqual(["payments", "detail", 3]);
     expect(ticketKeys.list()).toEqual(["tickets", "list"]);
+    expect(userKeys.me()).toEqual(["users", "me"]);
   });
 });

@@ -1,13 +1,18 @@
 import { delay, http, HttpResponse } from "msw";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { getAuthSnapshot, parseAuthSnapshot, subscribeAuth } from "@/api/auth";
 import { apiRequest, AppError, unwrap } from "@/api/client";
 import { storage } from "@/lib/storage";
 import { server } from "@/test/mocks/server";
 
 const API_BASE_URL = "http://localhost:8080/api/v1";
+let unsubscribeAuth: (() => void) | null = null;
 
 afterEach(() => {
+  unsubscribeAuth?.();
+  unsubscribeAuth = null;
+
   // 인증 상태가 다음 테스트에 남으면 요청 헤더와 401 시나리오가 달라질 수 있다.
   window.localStorage.clear();
 });
@@ -68,6 +73,8 @@ describe("apiRequest", () => {
 
     let protectedRequestCount = 0;
     let retryAuthorization: string | null = null;
+    const authListener = vi.fn();
+    unsubscribeAuth = subscribeAuth(authListener);
 
     server.use(
       http.get(`${API_BASE_URL}/protected`, ({ request }) => {
@@ -97,6 +104,90 @@ describe("apiRequest", () => {
     });
     expect(protectedRequestCount).toBe(2);
     expect(retryAuthorization).toBe("Bearer new-access-token");
+    expect(storage.local.get("accessToken")).toBe("new-access-token");
+    expect(storage.local.get("refreshToken")).toBe("new-refresh-token");
+    expect(authListener).toHaveBeenCalledTimes(1);
+  });
+
+  it("토큰 재발급이 실패하면 인증값을 모두 제거하고 만료를 알린다", async () => {
+    storage.local.set("accessToken", "expired-token");
+    storage.local.set("refreshToken", "invalid-refresh-token");
+    storage.local.set("queueToken", "queue-token");
+    storage.local.set("isVerified", "true");
+    const authListener = vi.fn();
+    unsubscribeAuth = subscribeAuth(authListener);
+
+    server.use(
+      http.get(`${API_BASE_URL}/protected`, () =>
+        new HttpResponse(null, { status: 401 }),
+      ),
+      http.post(`${API_BASE_URL}/auth/reissue`, () =>
+        new HttpResponse(null, { status: 401 }),
+      ),
+    );
+
+    await expect(apiRequest("/protected")).rejects.toMatchObject({
+      status: 401,
+    });
+    expect(storage.local.get("accessToken")).toBeNull();
+    expect(storage.local.get("refreshToken")).toBeNull();
+    expect(storage.local.get("queueToken")).toBeNull();
+    expect(storage.local.get("isVerified")).toBeNull();
+    expect(parseAuthSnapshot(getAuthSnapshot()).notice).toBe(
+      "로그인이 만료되었습니다.",
+    );
+    expect(authListener).toHaveBeenCalledTimes(1);
+  });
+
+  it("refresh token이 없으면 남은 인증값을 제거한다", async () => {
+    storage.local.set("accessToken", "invalid-access-token");
+    storage.local.set("queueToken", "queue-token");
+    storage.local.set("isVerified", "true");
+    const authListener = vi.fn();
+    unsubscribeAuth = subscribeAuth(authListener);
+
+    server.use(
+      http.get(`${API_BASE_URL}/protected`, () =>
+        new HttpResponse(null, { status: 401 }),
+      ),
+    );
+
+    await expect(apiRequest("/protected")).rejects.toMatchObject({
+      status: 401,
+    });
+    expect(storage.local.get("accessToken")).toBeNull();
+    expect(storage.local.get("queueToken")).toBeNull();
+    expect(storage.local.get("isVerified")).toBeNull();
+    expect(authListener).toHaveBeenCalledTimes(1);
+  });
+
+  it("재발급한 토큰도 거부되면 세션을 만료한다", async () => {
+    storage.local.set("accessToken", "expired-token");
+    storage.local.set("refreshToken", "refresh-token");
+    storage.local.set("isVerified", "true");
+    const authListener = vi.fn();
+    unsubscribeAuth = subscribeAuth(authListener);
+
+    server.use(
+      http.get(`${API_BASE_URL}/protected`, () =>
+        new HttpResponse(null, { status: 401 }),
+      ),
+      http.post(`${API_BASE_URL}/auth/reissue`, () =>
+        HttpResponse.json({
+          grantType: "Bearer",
+          accessToken: "rejected-access-token",
+          refreshToken: "new-refresh-token",
+        }),
+      ),
+    );
+
+    await expect(apiRequest("/protected")).rejects.toMatchObject({
+      status: 401,
+    });
+    expect(storage.local.get("accessToken")).toBeNull();
+    expect(storage.local.get("refreshToken")).toBeNull();
+    expect(storage.local.get("isVerified")).toBeNull();
+    expect(authListener).toHaveBeenCalled();
   });
 
   it("동시에 받은 401 응답은 하나의 토큰 재발급 요청을 공유한다", async () => {
