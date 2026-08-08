@@ -12,6 +12,7 @@ import type { OrderResponse } from "@/types/order";
 const routeParams = vi.hoisted(() => ({ orderId: "1" }));
 const mocks = vi.hoisted(() => ({
   routerPush: vi.fn(),
+  routerBack: vi.fn(),
   cancelMutate: vi.fn(),
   refetch: vi.fn(),
   prepareMutate: vi.fn(),
@@ -32,7 +33,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({
   useParams: () => routeParams,
-  useRouter: () => ({ push: mocks.routerPush }),
+  useRouter: () => ({ back: mocks.routerBack, push: mocks.routerPush }),
 }));
 
 vi.mock("@/hooks/use-order", () => ({
@@ -124,6 +125,7 @@ describe("주문 상세 페이지", () => {
     mocks.refetch.mockClear();
     mocks.prepareMutate.mockClear();
     mocks.routerPush.mockClear();
+    mocks.routerBack.mockClear();
   });
 
   it("주문 조회가 실패하면 로딩 대신 오류 원인을 표시한다", () => {
@@ -198,5 +200,18 @@ describe("주문 상세 페이지", () => {
     fireEvent.click(refreshButton);
 
     expect(mocks.refetch).toHaveBeenCalled();
+  });
+
+  it("좌석 선택으로 돌아가면 현재 경기의 좌석 route로 이동한다", async () => {
+    mocks.order = makeOrder();
+    mockGameDetail();
+    renderOrderPage();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "← 좌석 선택으로" }),
+    );
+
+    expect(mocks.routerPush).toHaveBeenCalledWith("/games/1/seats");
+    expect(mocks.routerBack).not.toHaveBeenCalled();
   });
 });

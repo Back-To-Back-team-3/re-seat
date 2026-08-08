@@ -1,10 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { API_BASE_URL } from "@/api/client";
 import PaymentPage from "@/app/(booking)/payments/[paymentId]/page";
+import { savePendingPayment } from "@/lib/payment-storage";
 import { server } from "@/test/mocks/server";
 import type { OrderResponse } from "@/types/order";
 import type { PaymentResponse } from "@/types/payment";
@@ -12,6 +13,7 @@ import type { PaymentResponse } from "@/types/payment";
 const routeParams = vi.hoisted(() => ({ paymentId: "not-a-number" }));
 const mocks = vi.hoisted(() => ({
   routerPush: vi.fn(),
+  routerBack: vi.fn(),
   refetch: vi.fn(),
   payment: null as PaymentResponse | null,
   paymentError: null as Error | null,
@@ -20,7 +22,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({
   useParams: () => routeParams,
-  useRouter: () => ({ push: mocks.routerPush }),
+  useRouter: () => ({ back: mocks.routerBack, push: mocks.routerPush }),
 }));
 
 vi.mock("@/hooks/use-payment", () => ({
@@ -125,6 +127,8 @@ describe("결제 상세 페이지", () => {
     mocks.order = null;
     mocks.refetch.mockClear();
     mocks.routerPush.mockClear();
+    mocks.routerBack.mockClear();
+    sessionStorage.clear();
   });
 
   it("숫자가 아닌 결제 ID로 진입하면 잘못된 주소임을 안내한다", () => {
@@ -166,5 +170,35 @@ describe("결제 상세 페이지", () => {
     expect(
       screen.queryByRole("button", { name: "Toss 결제창 열기 →" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("주문으로 돌아가면 pending 결제의 주문 route로 이동한다", async () => {
+    routeParams.paymentId = "1";
+    mocks.payment = makePayment();
+    mocks.order = makeOrder();
+    mockGameDetail();
+    savePendingPayment({
+      orderId: 2,
+      gameId: 1,
+      payment: {
+        paymentId: 1,
+        paymentNo: "P-1",
+        orderId: 2,
+        amount: 15000,
+        method: null,
+        status: "READY",
+        pgProvider: "TOSS",
+        pgOrderId: "PG-1",
+      },
+      idempotencyKey: "test-key",
+    });
+
+    renderPaymentPage();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "← 주문으로 돌아가기" }),
+    );
+
+    expect(mocks.routerPush).toHaveBeenCalledWith("/orders/2");
+    expect(mocks.routerBack).not.toHaveBeenCalled();
   });
 });

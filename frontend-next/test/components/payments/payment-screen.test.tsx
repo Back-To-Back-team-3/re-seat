@@ -49,6 +49,7 @@ function makePayment(overrides: Partial<PaymentResponse> = {}): PaymentResponse 
 
 const noop = {
   onBack: vi.fn(),
+  onGames: vi.fn(),
   onOpenPayment: vi.fn(),
   onRefreshOrder: vi.fn(),
   onTickets: vi.fn(),
@@ -159,7 +160,7 @@ describe("결제 화면", () => {
     ).toBeDisabled();
   });
 
-  it("결제가 승인되면 완료 화면과 티켓 확인 버튼을 보여주고 PG 버튼을 숨긴다", () => {
+  it("결제가 승인되면 티켓과 경기 목록 이동을 제공하고 PG 버튼을 숨긴다", () => {
     render(
       <PaymentScreen
         {...noop}
@@ -174,6 +175,9 @@ describe("결제 화면", () => {
     expect(screen.getByText("예매가 완료되었습니다!")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "내 티켓 확인 →" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "경기 목록으로 돌아가기" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Toss 결제창 열기 →" }),
