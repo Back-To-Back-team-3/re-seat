@@ -51,7 +51,15 @@ function PaymentDetail({ paymentId }: { paymentId: number }) {
       busy={payment.detail.isFetching}
       error={payment.detail.error?.message ?? null}
       game={game.data ?? null}
-      onBack={() => router.back()}
+      onBack={() => {
+        if (orderId) {
+          router.push(`/orders/${orderId}`);
+          return;
+        }
+
+        router.push("/games");
+      }}
+      onGames={() => router.push("/games")}
       onOpenPayment={() => {
         const data = payment.detail.data;
         const stored = getPendingPayment();

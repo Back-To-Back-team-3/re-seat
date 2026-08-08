@@ -14,6 +14,7 @@ import { getOrder } from "@/api/orders";
 import { orderKeys } from "@/api/query-keys/orders";
 import { paymentKeys } from "@/api/query-keys/payments";
 import { ticketKeys } from "@/api/query-keys/tickets";
+import { rememberCompletedGame } from "@/lib/completed-games";
 import {
   beginPaymentCallback,
   clearPendingPayment,
@@ -28,6 +29,7 @@ import { useBookingStore } from "@/providers/booking-store-provider";
 export function usePayment(paymentId?: number) {
   const queryClient = useQueryClient();
   const setPaymentId = useBookingStore((state) => state.setPaymentId);
+  const selectedGameId = useBookingStore((state) => state.selectedGameId);
   const callbackStarted = useRef(false);
   const detail = useQuery({
     queryKey: paymentKeys.detail(paymentId ?? 0),
@@ -41,8 +43,19 @@ export function usePayment(paymentId?: number) {
       const payment = await requestPayment(orderId, idempotencyKey);
       return { payment, idempotencyKey };
     },
-    onSuccess: ({ payment }) => setPaymentId(payment.paymentId),
+    onSuccess: ({ payment }) => {
+      setPaymentId(payment.paymentId);
+      if (payment.status === "APPROVED") {
+        rememberCompletedGame(selectedGameId);
+      }
+    },
   });
+
+  useEffect(() => {
+    if (detail.data?.status === "APPROVED") {
+      rememberCompletedGame(selectedGameId);
+    }
+  }, [detail.data?.status, selectedGameId]);
 
   useEffect(() => {
     if (!paymentId || callbackStarted.current) return;
@@ -71,6 +84,7 @@ export function usePayment(paymentId?: number) {
             },
           );
           if (action.status === "APPROVED" && pending!.gameId) {
+            rememberCompletedGame(pending!.gameId);
             // 결제 완료가 확정된 뒤의 경기·주문 재조회 실패는 callback 자체를 재실행시키지 않는다.
             try {
               const [game, order] = await Promise.all([

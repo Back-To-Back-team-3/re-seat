@@ -10,9 +10,9 @@ import type { GameSummary } from "@/types/game";
 
 type GameListProps = {
   games: GameSummary[];
+  completedGameIds: ReadonlySet<number>;
   selectedGameId: number | null;
   onSelect: (game: GameSummary) => void;
-  onBook: (game: GameSummary) => void;
   /** games-page.tsx의 gamesQuery.refetch를 그대로 전달받아 재조회 경로를 하나로 유지한다. */
   onReload: () => void;
   reloading: boolean;
@@ -31,9 +31,9 @@ type GameListProps = {
  */
 export function GameList({
   games,
+  completedGameIds,
   selectedGameId,
   onSelect,
-  onBook,
   onReload,
   reloading,
 }: GameListProps) {
@@ -229,9 +229,9 @@ export function GameList({
         <div className="grid grid-cols-3 gap-3 max-[1024px]:grid-cols-2 max-[640px]:grid-cols-1">
           {filteredGames.map((game) => (
             <GameCard
+              completed={completedGameIds.has(game.gameId)}
               game={game}
               key={game.gameId}
-              onBook={onBook}
               onSelect={onSelect}
               selected={selectedGameId === game.gameId}
             />

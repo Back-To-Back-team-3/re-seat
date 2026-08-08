@@ -68,8 +68,9 @@ export function GamesPage() {
   const selectedMeta = selectedGame
     ? GAME_STATUS_META[selectedGame.bookingStatus]
     : null;
+  const completedGameIds = getCompletedGameIds();
   const selectedCompleted = selectedGame
-    ? getCompletedGameIds().has(selectedGame.gameId)
+    ? completedGameIds.has(selectedGame.gameId)
     : false;
 
   function startBooking(game: GameSummary) {
@@ -228,8 +229,8 @@ export function GamesPage() {
               </div>
             ) : (
               <GameList
+                completedGameIds={completedGameIds}
                 games={games}
-                onBook={startBooking}
                 onReload={() => {
                   void gamesQuery.refetch();
                 }}

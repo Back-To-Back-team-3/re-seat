@@ -25,6 +25,7 @@ type PaymentScreenProps = {
   onOpenPayment: () => void;
   onRefreshOrder: () => void;
   onTickets: () => void;
+  onGames: () => void;
   onBack: () => void;
 };
 
@@ -45,6 +46,7 @@ export function PaymentScreen({
   onOpenPayment,
   onRefreshOrder,
   onTickets,
+  onGames,
   onBack,
 }: PaymentScreenProps) {
   const deadline = order?.paymentDeadline ?? null;
@@ -146,9 +148,18 @@ export function PaymentScreen({
         </div>
 
         {approved ? (
-          <button className={PRIMARY_BUTTON} onClick={onTickets} type="button">
-            내 티켓 확인 →
-          </button>
+          <div className="flex flex-wrap justify-center gap-2.5">
+            <button
+              className={PRIMARY_BUTTON}
+              onClick={onTickets}
+              type="button"
+            >
+              내 티켓 확인 →
+            </button>
+            <button className={OUTLINE_BUTTON} onClick={onGames} type="button">
+              경기 목록으로 돌아가기
+            </button>
+          </div>
         ) : (
           <div className="flex justify-center gap-2.5">
             <button

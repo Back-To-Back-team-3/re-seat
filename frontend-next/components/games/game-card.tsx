@@ -46,22 +46,22 @@ export const STATUS_PILL_CLASSES: Record<GameSummary["bookingStatus"], string> =
 
 type GameCardProps = {
   game: GameSummary;
+  completed: boolean;
   selected: boolean;
   onSelect: (game: GameSummary) => void;
-  onBook: (game: GameSummary) => void;
 };
 
 /**
- * 한 경기의 상태와 팀, 경기장 정보를 표시하고 선택과 예매 시작을 구분합니다.
+ * 한 경기의 상태와 팀, 경기장 정보를 표시합니다.
  *
- * 카드 본문은 상세 확인을 위한 선택만 수행하며, 우측 버튼만 대기열 진입으로
- * 이어집니다. OPEN이 아닌 경기는 기존 화면과 동일하게 예매 버튼을 비활성화합니다.
+ * 카드 본문과 하단 버튼은 모두 경기만 선택한다. 실제 대기열 진입은 상단의
+ * 선택 경기 패널에서 처리해 기존 Vite 화면의 사용자 흐름을 유지한다.
  */
 export function GameCard({
   game,
+  completed,
   selected,
   onSelect,
-  onBook,
 }: GameCardProps) {
   const meta = GAME_STATUS_META[game.bookingStatus];
   const date = formatShortDate(game.gameAt);
@@ -97,7 +97,7 @@ export function GameCard({
           <span
             className={`w-fit rounded-full px-[7px] py-[3px] text-[11px] font-black ${STATUS_PILL_CLASSES[game.bookingStatus]}`}
           >
-            {meta.label}
+            {completed ? "예매 완료" : meta.label}
           </span>
           <div className="mt-[3px] grid gap-0.5">
             <strong className="truncate text-base">
@@ -121,11 +121,11 @@ export function GameCard({
         className={`flex w-full cursor-pointer items-center justify-between border-0 border-t border-border bg-surface-soft/72 px-4 py-3 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-[0.58] ${
           selected ? "text-brand" : "text-muted-foreground"
         }`}
-        disabled={game.bookingStatus !== "OPEN"}
-        onClick={() => onBook(game)}
+        disabled={game.bookingStatus !== "OPEN" || completed}
+        onClick={() => onSelect(game)}
         type="button"
       >
-        {selected ? "선택됨" : meta.action}
+        {completed ? "예매 완료" : selected ? "선택됨" : meta.action}
         <span aria-hidden="true">→</span>
       </button>
     </article>

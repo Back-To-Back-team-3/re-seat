@@ -46,7 +46,14 @@ export default function OrderPage() {
     <CheckoutScreen
       busy={order.cancel.isPending || payment.prepare.isPending}
       game={game.data ?? null}
-      onBack={() => router.back()}
+      onBack={() => {
+        if (gameId) {
+          router.push(`/games/${gameId}/seats`);
+          return;
+        }
+
+        router.push("/games");
+      }}
       onCancelOrder={() => order.cancel.mutate(orderId)}
       onPayment={() =>
         payment.prepare.mutate(orderId, {
