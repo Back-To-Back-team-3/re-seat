@@ -6,12 +6,13 @@ ALTER TABLE payments
 -- 기존 기본값으로 저장된 미승인 결제의 결제수단을 미확정 상태로 보정한다.
 UPDATE payments
 SET method_new = CASE
-    WHEN status = 'READY' AND method = 'MOCK' THEN NULL
-    ELSE method
-END;
+                     WHEN status = 'READY' AND method = 'MOCK' THEN NULL
+                     ELSE method
+    END;
 
 ALTER TABLE payments
-    DROP COLUMN method;
+DROP
+COLUMN method;
 
 ALTER TABLE payments
     RENAME COLUMN method_new TO method;

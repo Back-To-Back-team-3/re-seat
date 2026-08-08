@@ -1,9 +1,12 @@
 package com.backtoback.reseat.domain.seatinventory.entity;
 
+import java.time.LocalDateTime;
+
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.seatinventory.exception.InvalidStateTransitionException;
 import com.backtoback.reseat.domain.stadium.entity.Seat;
 import com.backtoback.reseat.global.common.BaseEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -23,8 +26,6 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 @Getter
 @Entity
@@ -121,7 +122,6 @@ public class GameSeat extends BaseEntity {
         this.status = GameSeatStatus.HELD;
         this.holdExpiresAt = holdExpiresAt;
     }
-
 
     /**
      * HELD → AVAILABLE (선점 해제 / TTL 만료).

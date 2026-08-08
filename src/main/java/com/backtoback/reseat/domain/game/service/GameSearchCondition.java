@@ -1,9 +1,9 @@
 package com.backtoback.reseat.domain.game.service;
 
+import java.time.LocalDate;
+
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.exception.InvalidGameSearchConditionException;
-
-import java.time.LocalDate;
 
 /**
  * 경기 목록 검색 조건.

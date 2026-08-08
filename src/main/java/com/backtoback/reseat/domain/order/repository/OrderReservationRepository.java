@@ -1,10 +1,8 @@
 package com.backtoback.reseat.domain.order.repository;
 
-import com.backtoback.reseat.domain.order.entity.OrderStatus;
-import com.backtoback.reseat.domain.reservation.entity.Reservation;
-import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
-import jakarta.persistence.LockModeType;
-import jakarta.persistence.QueryHint;
+import java.time.LocalDateTime;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
@@ -12,8 +10,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
-import java.util.Optional;
+import com.backtoback.reseat.domain.order.entity.OrderStatus;
+import com.backtoback.reseat.domain.reservation.entity.Reservation;
+import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
+
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.QueryHint;
 
 /**
  * 주문 생성 과정에서 Reservation 잠금 · 선점 만료 시간 갱신과

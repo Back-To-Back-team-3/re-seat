@@ -1,6 +1,6 @@
 import http from 'k6/http';
-import { check } from 'k6';
-import { Counter, Rate } from 'k6/metrics';
+import {check} from 'k6';
+import {Counter, Rate} from 'k6/metrics';
 
 
 // C(선점) 파트 부하 테스트 — 시나리오 A: 동일 좌석 경합
@@ -30,16 +30,16 @@ export const options = {
 };
 
 // 환경 변수 설정
-const BASE_URL       = __ENV.BASE_URL        || 'http://localhost:8080';
-const JWT_TOKEN      = __ENV.JWT_TOKEN       || 'DUMMY_JWT_TOKEN';
-const QUEUE_TOKEN    = __ENV.QUEUE_TOKEN     || 'DUMMY_QUEUE_TOKEN';
-const GAME_ID        = __ENV.GAME_ID         ? parseInt(__ENV.GAME_ID)        : 1;
-const TARGET_SEAT_ID = __ENV.TARGET_SEAT_ID  ? parseInt(__ENV.TARGET_SEAT_ID) : 1;
+const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
+const JWT_TOKEN = __ENV.JWT_TOKEN || 'DUMMY_JWT_TOKEN';
+const QUEUE_TOKEN = __ENV.QUEUE_TOKEN || 'DUMMY_QUEUE_TOKEN';
+const GAME_ID = __ENV.GAME_ID ? parseInt(__ENV.GAME_ID) : 1;
+const TARGET_SEAT_ID = __ENV.TARGET_SEAT_ID ? parseInt(__ENV.TARGET_SEAT_ID) : 1;
 
 export default function () {
     const res = http.post(
         `${BASE_URL}/api/v1/reservations`,
-        JSON.stringify({ gameId: GAME_ID, gameSeatIds: [TARGET_SEAT_ID] }),
+        JSON.stringify({gameId: GAME_ID, gameSeatIds: [TARGET_SEAT_ID]}),
         {
             headers: {
                 'Content-Type': 'application/json',
@@ -52,7 +52,10 @@ export default function () {
 
     // 응답 에러코드 파싱
     let errorCode = '';
-    try { errorCode = JSON.parse(res.body).errorCode || ''; } catch (_) {}
+    try {
+        errorCode = JSON.parse(res.body).errorCode || '';
+    } catch (_) {
+    }
 
     serverErrorRate.add(res.status >= 500 ? 1 : 0);
 

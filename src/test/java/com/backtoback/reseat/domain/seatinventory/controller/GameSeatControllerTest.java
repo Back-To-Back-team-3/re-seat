@@ -1,14 +1,10 @@
 package com.backtoback.reseat.domain.seatinventory.controller;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
-import com.backtoback.reseat.domain.seatinventory.service.GameSeatCreateService;
-import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
@@ -20,7 +16,12 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
+import com.backtoback.reseat.domain.seatinventory.service.GameSeatCreateService;
+import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 
 /**
  * 경기 좌석 현황·구역 요약 조회 API 통합 테스트.
@@ -217,12 +218,12 @@ class GameSeatControllerTest {
     private Long findFirstGameIdOfDifferentStadium() {
         return entityManager.createQuery(
                 """
-                SELECT g.id FROM Game g
-                WHERE NOT EXISTS (
-                    SELECT 1 FROM GameSeat gs WHERE gs.game.id = g.id
-                )
-                ORDER BY g.id ASC
-                """,
+                    SELECT g.id FROM Game g
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM GameSeat gs WHERE gs.game.id = g.id
+                    )
+                    ORDER BY g.id ASC
+                    """,
                 Long.class)
             .setMaxResults(1)
             .getSingleResult();

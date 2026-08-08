@@ -2,6 +2,7 @@ package com.backtoback.reseat.domain.reservation.dto.response;
 
 import com.backtoback.reseat.domain.reservation.entity.Reservation;
 import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**

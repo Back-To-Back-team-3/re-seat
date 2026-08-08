@@ -1,11 +1,8 @@
 //securityConfig
 package com.backtoback.reseat.global.security;
 
-import com.backtoback.reseat.domain.user.auth.service.CustomOAuth2UserService;
-import com.backtoback.reseat.domain.user.auth.service.OAuth2AuthenticationFailureHandler;
-import com.backtoback.reseat.domain.user.auth.service.OAuth2AuthenticationSuccessHandler;
-import jakarta.servlet.DispatcherType;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,7 +20,12 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.List;
+import com.backtoback.reseat.domain.user.auth.service.CustomOAuth2UserService;
+import com.backtoback.reseat.domain.user.auth.service.OAuth2AuthenticationFailureHandler;
+import com.backtoback.reseat.domain.user.auth.service.OAuth2AuthenticationSuccessHandler;
+
+import jakarta.servlet.DispatcherType;
+import lombok.RequiredArgsConstructor;
 
 @Configuration
 @EnableWebSecurity
@@ -54,7 +56,6 @@ public class SecurityConfig {
 
                 // 헬스체크 및 모니터링 경로 허용
                 .requestMatchers("/actuator", "/actuator/**").permitAll()
-
 
                 // 비동기 요청 처리 후 발생하는 ASYNC 디스패치를 허용한다.
                 .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()

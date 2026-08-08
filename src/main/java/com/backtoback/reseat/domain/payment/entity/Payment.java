@@ -2,12 +2,15 @@
 
 package com.backtoback.reseat.domain.payment.entity;
 
+import java.time.LocalDateTime;
+
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCallbackMismatchException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelNotAllowedException;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.global.common.BaseEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -27,8 +30,6 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 // JPA 엔티티 + Lombok 기본 설정
 @Entity
@@ -115,9 +116,9 @@ public class Payment extends BaseEntity {
     // 빌더 생성자
     @Builder
     public Payment(String paymentNo, Order order, User user, Integer amount,
-                   String method, PaymentStatus status, String idempotencyKey,
-                   PgProvider pgProvider, String pgOrderId, String pgPaymentKey,
-                   String failReason, LocalDateTime approvedAt, LocalDateTime failedAt) {
+        String method, PaymentStatus status, String idempotencyKey,
+        PgProvider pgProvider, String pgOrderId, String pgPaymentKey,
+        String failReason, LocalDateTime approvedAt, LocalDateTime failedAt) {
         this.paymentNo = paymentNo;
         this.order = order;
         this.user = user;

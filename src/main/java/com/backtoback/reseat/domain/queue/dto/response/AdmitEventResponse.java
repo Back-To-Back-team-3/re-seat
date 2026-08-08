@@ -1,12 +1,12 @@
 package com.backtoback.reseat.domain.queue.dto.response;
 
+import java.time.LocalDateTime;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-
-import java.time.LocalDateTime;
 
 /**
  * 대기열을 통과한 사용자에게 SSE admit 이벤트로 전달하는 입장 정보 DTO

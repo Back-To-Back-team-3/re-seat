@@ -1,5 +1,22 @@
 package com.backtoback.reseat.domain.order.service;
 
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.BDDMockito.*;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
 import com.backtoback.reseat.domain.order.dto.response.OrderResponse;
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.entity.OrderStatus;
@@ -16,29 +33,6 @@ import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
-
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("OrderService")
@@ -72,56 +66,50 @@ public class OrderServiceTest {
 
     private Order createdOrder() {
         return Order.of(
-                ORDER_NO,
-                mock(User.class),
-                mock(Reservation.class),
-                TOTAL_AMOUNT,
-                PAYMENT_DEADLINE
+            ORDER_NO,
+            mock(User.class),
+            mock(Reservation.class),
+            TOTAL_AMOUNT,
+            PAYMENT_DEADLINE
         );
     }
 
-    private record CreateOrderFixture(
-            List<GameSeat> gameSeats
-    ) {
-
-    }
-
     private void givenLockedReservation(
-            LocalDateTime createdAt,
-            LocalDateTime holdExpiresAt
+        LocalDateTime createdAt,
+        LocalDateTime holdExpiresAt
     ) {
 
         User user = User.builder()
-                .id(USER_ID)
-                .build();
+            .id(USER_ID)
+            .build();
 
         Reservation reservation = Reservation.builder()
-                .user(user)
-                .status(ReservationStatus.HOLDING)
-                .holdExpiresAt(holdExpiresAt)
-                .build();
+            .user(user)
+            .status(ReservationStatus.HOLDING)
+            .holdExpiresAt(holdExpiresAt)
+            .build();
 
         // 생성 시간을 테스트 조건에 맞게 설정한다.
         ReflectionTestUtils.setField(reservation, "createdAt", createdAt);
 
         given(userRepository.findById(USER_ID))
-                .willReturn(Optional.of(user));
+            .willReturn(Optional.of(user));
         given(orderReservationRepository.findByIdWithPessimisticWriteLock(RESERVATION_ID))
-                .willReturn(Optional.of(reservation));
+            .willReturn(Optional.of(reservation));
     }
 
     private CreateOrderFixture givenValidCreateOrder(
-            LocalDateTime createdAt,
-            LocalDateTime holdExpiresAt
+        LocalDateTime createdAt,
+        LocalDateTime holdExpiresAt
     ) {
 
         return givenValidCreateOrder(createdAt, holdExpiresAt, 1);
     }
 
     private CreateOrderFixture givenValidCreateOrder(
-            LocalDateTime createdAt,
-            LocalDateTime holdExpiresAt,
-            int seatCount
+        LocalDateTime createdAt,
+        LocalDateTime holdExpiresAt,
+        int seatCount
     ) {
 
         givenLockedReservation(createdAt, holdExpiresAt);
@@ -131,28 +119,26 @@ public class OrderServiceTest {
 
         for (int i = 0; i < seatCount; i++) {
             GameSeat gameSeat = GameSeat.builder()
-                    .status(GameSeatStatus.HELD)
-                    .build();
+                .status(GameSeatStatus.HELD)
+                .build();
 
             gameSeats.add(gameSeat);
 
             ReservationSeat reservationSeat = ReservationSeat.builder()
-                    .gameSeat(gameSeat)
-                    .build();
+                .gameSeat(gameSeat)
+                .build();
 
             reservationSeats.add(reservationSeat);
         }
 
         given(reservationSeatRepository.findByReservation_Id(RESERVATION_ID))
-                .willReturn(reservationSeats);
+            .willReturn(reservationSeats);
 
         given(orderRepository.save(any(Order.class)))
-                .willAnswer(invocation -> invocation.getArgument(0));
+            .willAnswer(invocation -> invocation.getArgument(0));
 
         return new CreateOrderFixture(gameSeats);
     }
-
-    // ---------- 주문 상태 전이 ----------
 
     @Test
     @DisplayName("CREATED 주문을 결제 완료 처리하면 PAID 상태로 변경된다.")
@@ -161,15 +147,17 @@ public class OrderServiceTest {
         Order order = createdOrder();
 
         when(orderRepository.findById(ORDER_ID))
-                .thenReturn(Optional.of(order));
+            .thenReturn(Optional.of(order));
 
         orderService.completeOrder(ORDER_ID);
 
         assertThat(order.getStatus())
-                .isEqualTo(OrderStatus.PAID);
+            .isEqualTo(OrderStatus.PAID);
 
         verify(orderRepository).findById(ORDER_ID);
     }
+
+    // ---------- 주문 상태 전이 ----------
 
     @Test
     @DisplayName("CREATED 주문을 결제 기한 만료 처리하면 EXPIRED 상태로 변경된다.")
@@ -178,12 +166,12 @@ public class OrderServiceTest {
         Order order = createdOrder();
 
         when(orderRepository.findById(ORDER_ID))
-                .thenReturn(Optional.of(order));
+            .thenReturn(Optional.of(order));
 
         orderService.expireOrder(ORDER_ID);
 
         assertThat(order.getStatus())
-                .isEqualTo(OrderStatus.EXPIRED);
+            .isEqualTo(OrderStatus.EXPIRED);
 
         verify(orderRepository).findById(ORDER_ID);
     }
@@ -195,12 +183,12 @@ public class OrderServiceTest {
         Order order = createdOrder();
 
         when(orderRepository.findById(ORDER_ID))
-                .thenReturn(Optional.of(order));
+            .thenReturn(Optional.of(order));
 
         orderService.failOrder(ORDER_ID);
 
         assertThat(order.getStatus())
-                .isEqualTo(OrderStatus.CANCELED);
+            .isEqualTo(OrderStatus.CANCELED);
 
         verify(orderRepository).findById(ORDER_ID);
     }
@@ -210,15 +198,13 @@ public class OrderServiceTest {
     void completeOrder_throwsExceptionWhenOrderNotFound() {
 
         when(orderRepository.findById(ORDER_ID))
-                .thenReturn(Optional.empty());
+            .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> orderService.completeOrder(ORDER_ID))
-                .isInstanceOf(OrderNotFoundException.class);
+            .isInstanceOf(OrderNotFoundException.class);
 
         verify(orderRepository).findById(ORDER_ID);
     }
-
-    // ---------- 주문 생성 시 선점 만료 시간 연장 ----------
 
     @Test
     @DisplayName("선점 만료 시간이 결제 기한보다 빠르면 연장된다.")
@@ -235,8 +221,10 @@ public class OrderServiceTest {
 
         // then
         assertThat(response.getHoldExpiresAt())
-                .isEqualTo(response.getPaymentDeadline());
+            .isEqualTo(response.getPaymentDeadline());
     }
+
+    // ---------- 주문 생성 시 선점 만료 시간 연장 ----------
 
     @Test
     @DisplayName("선점 만료 시간이 더 늦으면 기존 시간을 유지한다.")
@@ -253,7 +241,7 @@ public class OrderServiceTest {
 
         // then
         assertThat(response.getHoldExpiresAt())
-                .isEqualTo(holdExpiresAt);
+            .isEqualTo(holdExpiresAt);
     }
 
     @Test
@@ -272,7 +260,7 @@ public class OrderServiceTest {
 
         // then
         assertThat(response.getHoldExpiresAt())
-                .isEqualTo(expectedExpiresAt);
+            .isEqualTo(expectedExpiresAt);
     }
 
     @Test
@@ -287,14 +275,14 @@ public class OrderServiceTest {
 
         // when & then
         assertThatThrownBy(() -> orderService.createOrder(USER_ID, RESERVATION_ID))
-                .isInstanceOf(PreReservationExpiredException.class);
+            .isInstanceOf(PreReservationExpiredException.class);
 
         // then
         verifyNoInteractions(reservationSeatRepository);
         verifyNoInteractions(orderRepository);
         verifyNoInteractions(orderItemRepository);
         verify(orderReservationRepository, never())
-                .updateHoldExpiresAtById(eq(RESERVATION_ID), any(LocalDateTime.class));
+            .updateHoldExpiresAtById(eq(RESERVATION_ID), any(LocalDateTime.class));
     }
 
     @Test
@@ -315,10 +303,10 @@ public class OrderServiceTest {
         verify(orderReservationRepository).updateHoldExpiresAtById(RESERVATION_ID, response.getHoldExpiresAt());
 
         assertThat(gameSeats)
-                .allSatisfy(gameSeat ->
-                        assertThat(gameSeat.getHoldExpiresAt())
-                                .isEqualTo(response.getHoldExpiresAt())
-                );
+            .allSatisfy(gameSeat ->
+                assertThat(gameSeat.getHoldExpiresAt())
+                    .isEqualTo(response.getHoldExpiresAt())
+            );
     }
 
     @Test
@@ -333,12 +321,18 @@ public class OrderServiceTest {
 
         // when & then
         assertThatThrownBy(() -> orderService.createOrder(USER_ID, RESERVATION_ID))
-                .isInstanceOf(PreReservationExpiredException.class);
+            .isInstanceOf(PreReservationExpiredException.class);
 
         // then
         verify(reservationSeatRepository, never()).findByReservation_Id(RESERVATION_ID);
         verify(orderRepository, never()).save(any(Order.class));
         verify(orderItemRepository, never()).saveAll(any());
         verify(orderReservationRepository, never()).updateHoldExpiresAtById(any(), any(LocalDateTime.class));
+    }
+
+    private record CreateOrderFixture(
+        List<GameSeat> gameSeats
+    ) {
+
     }
 }

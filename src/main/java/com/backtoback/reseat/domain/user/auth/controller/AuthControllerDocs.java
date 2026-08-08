@@ -1,14 +1,16 @@
 package com.backtoback.reseat.domain.user.auth.controller;
 
+import org.springframework.http.ResponseEntity;
+
 import com.backtoback.reseat.domain.user.auth.dto.request.ReissueRequest;
 import com.backtoback.reseat.domain.user.auth.dto.request.UserLoginRequest;
 import com.backtoback.reseat.domain.user.auth.dto.response.TokenResponse;
 import com.backtoback.reseat.global.common.ApiResponse;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.http.ResponseEntity;
 
 @Tag(name = "Auth", description = "사용자 인증 · 로그인 · 토큰 관리 API")
 public interface AuthControllerDocs {

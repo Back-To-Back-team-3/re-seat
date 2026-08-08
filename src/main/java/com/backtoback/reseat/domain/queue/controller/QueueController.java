@@ -1,12 +1,7 @@
 package com.backtoback.reseat.domain.queue.controller;
 
-import com.backtoback.reseat.domain.queue.dto.response.QueueCancelResponse;
-import com.backtoback.reseat.domain.queue.dto.response.QueueStatusResponse;
-import com.backtoback.reseat.domain.queue.service.QueueService;
-import com.backtoback.reseat.domain.queue.service.SseService;
-import com.backtoback.reseat.global.common.ApiResponse;
-import com.backtoback.reseat.global.security.CustomUserDetails;
-import lombok.RequiredArgsConstructor;
+import java.util.concurrent.CompletionStage;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +14,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.util.concurrent.CompletionStage;
+import com.backtoback.reseat.domain.queue.dto.response.QueueCancelResponse;
+import com.backtoback.reseat.domain.queue.dto.response.QueueStatusResponse;
+import com.backtoback.reseat.domain.queue.service.QueueService;
+import com.backtoback.reseat.domain.queue.service.SseService;
+import com.backtoback.reseat.global.common.ApiResponse;
+import com.backtoback.reseat.global.security.CustomUserDetails;
+
+import lombok.RequiredArgsConstructor;
 
 /**
  * 대기열 API Controller
@@ -56,7 +58,7 @@ public class QueueController implements QueueControllerDocs {
             .requestQueueEntry(gameId, userId)
             .thenApply(ignored -> ResponseEntity
                 .status(HttpStatus.ACCEPTED)
-                .body(ApiResponse.<Void>success("대기열 진입 요청 접수", null)));
+                .body(ApiResponse.success("대기열 진입 요청 접수", null)));
     }
 
     /**

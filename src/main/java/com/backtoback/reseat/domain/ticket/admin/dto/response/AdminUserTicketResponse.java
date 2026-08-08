@@ -1,11 +1,12 @@
 package com.backtoback.reseat.domain.ticket.admin.dto.response;
 
+import java.time.LocalDateTime;
+
 import com.backtoback.reseat.domain.ticket.entity.Ticket;
 import com.backtoback.reseat.domain.ticket.entity.TicketStatus;
 import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.Builder;
 
-import java.time.LocalDateTime;
+import lombok.Builder;
 
 @Builder
 public record AdminUserTicketResponse(

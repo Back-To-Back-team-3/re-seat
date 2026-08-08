@@ -1,6 +1,7 @@
 package com.backtoback.reseat.domain.stadium.entity;
 
 import com.backtoback.reseat.global.common.BaseEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

@@ -1,13 +1,7 @@
 package com.backtoback.reseat.domain.game.controller;
 
-import com.backtoback.reseat.domain.game.dto.GameDetailResponse;
-import com.backtoback.reseat.domain.game.dto.GameListResponse;
-import com.backtoback.reseat.domain.game.entity.BookingStatus;
-import com.backtoback.reseat.domain.game.service.GameQueryService;
-import com.backtoback.reseat.domain.game.service.GameSearchCondition;
-import com.backtoback.reseat.global.common.ApiResponse;
-import com.backtoback.reseat.global.common.PageResponse;
-import lombok.RequiredArgsConstructor;
+import java.time.LocalDate;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -21,7 +15,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDate;
+import com.backtoback.reseat.domain.game.dto.GameDetailResponse;
+import com.backtoback.reseat.domain.game.dto.GameListResponse;
+import com.backtoback.reseat.domain.game.entity.BookingStatus;
+import com.backtoback.reseat.domain.game.service.GameQueryService;
+import com.backtoback.reseat.domain.game.service.GameSearchCondition;
+import com.backtoback.reseat.global.common.ApiResponse;
+import com.backtoback.reseat.global.common.PageResponse;
+
+import lombok.RequiredArgsConstructor;
 
 /**
  * 경기 조회 API Controller.

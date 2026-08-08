@@ -23,20 +23,20 @@ public class KakaoOAuth2UserInfo implements OAuth2UserInfo {
     @SuppressWarnings("unchecked")
     @Override
     public String getEmail() {
-        Map<String, Object> kakaoAccount = (Map<String, Object>) attributes.get("kakao_account");
+        Map<String, Object> kakaoAccount = (Map<String, Object>)attributes.get("kakao_account");
         if (kakaoAccount == null) {
             return null;
         }
-        return (String) kakaoAccount.get("email");
+        return (String)kakaoAccount.get("email");
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public String getName() {
-        Map<String, Object> properties = (Map<String, Object>) attributes.get("properties");
+        Map<String, Object> properties = (Map<String, Object>)attributes.get("properties");
         if (properties == null) {
             return null;
         }
-        return (String) properties.get("nickname");
+        return (String)properties.get("nickname");
     }
 }

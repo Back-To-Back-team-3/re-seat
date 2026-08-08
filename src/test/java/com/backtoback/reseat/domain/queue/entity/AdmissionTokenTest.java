@@ -1,18 +1,18 @@
 package com.backtoback.reseat.domain.queue.entity;
 
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import java.time.LocalDateTime;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.queue.exception.QueueInvalidStatusException;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenAlreadyUsedException;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenExpiredException;
 import com.backtoback.reseat.domain.user.entity.User;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
-import java.time.LocalDateTime;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
 
 @DisplayName("AdmissionToken 상태 전이")
 public class AdmissionTokenTest {
@@ -23,11 +23,11 @@ public class AdmissionTokenTest {
 
     private AdmissionToken activeToken() {
         return AdmissionToken.of(
-                mock(Game.class),
-                mock(User.class),
-                TOKEN,
-                ISSUED_AT,
-                EXPIRES_AT
+            mock(Game.class),
+            mock(User.class),
+            TOKEN,
+            ISSUED_AT,
+            EXPIRES_AT
         );
     }
 
@@ -40,9 +40,9 @@ public class AdmissionTokenTest {
         admissionToken.use(usedAt);
 
         assertThat(admissionToken.getStatus())
-                .isEqualTo(AdmissionTokenStatus.USED);
+            .isEqualTo(AdmissionTokenStatus.USED);
         assertThat(admissionToken.getUsedAt())
-                .isEqualTo(usedAt);
+            .isEqualTo(usedAt);
     }
 
     @Test
@@ -51,9 +51,9 @@ public class AdmissionTokenTest {
         AdmissionToken admissionToken = activeToken();
 
         assertThatThrownBy(() -> admissionToken.use(EXPIRES_AT))
-                .isInstanceOf(QueueTokenExpiredException.class);
+            .isInstanceOf(QueueTokenExpiredException.class);
         assertThat(admissionToken.getStatus())
-                .isEqualTo(AdmissionTokenStatus.ACTIVE);
+            .isEqualTo(AdmissionTokenStatus.ACTIVE);
     }
 
     @Test
@@ -63,9 +63,9 @@ public class AdmissionTokenTest {
         LocalDateTime usedAt = EXPIRES_AT.plusSeconds(1);
 
         assertThatThrownBy(() -> admissionToken.use(usedAt))
-                .isInstanceOf(QueueTokenExpiredException.class);
+            .isInstanceOf(QueueTokenExpiredException.class);
         assertThat(admissionToken.getStatus())
-                .isEqualTo(AdmissionTokenStatus.ACTIVE);
+            .isEqualTo(AdmissionTokenStatus.ACTIVE);
     }
 
     @Test
@@ -78,11 +78,11 @@ public class AdmissionTokenTest {
         admissionToken.use(firstUsedAt);
 
         assertThatThrownBy(() -> admissionToken.use(secondUseAt))
-                .isInstanceOf(QueueTokenAlreadyUsedException.class);
+            .isInstanceOf(QueueTokenAlreadyUsedException.class);
         assertThat(admissionToken.getStatus())
-                .isEqualTo(AdmissionTokenStatus.USED);
+            .isEqualTo(AdmissionTokenStatus.USED);
         assertThat(admissionToken.getUsedAt())
-                .isEqualTo(firstUsedAt);
+            .isEqualTo(firstUsedAt);
     }
 
     @Test
@@ -93,7 +93,7 @@ public class AdmissionTokenTest {
         admissionToken.expire(EXPIRES_AT);
 
         assertThat(admissionToken.getStatus())
-                .isEqualTo(AdmissionTokenStatus.EXPIRED);
+            .isEqualTo(AdmissionTokenStatus.EXPIRED);
     }
 
     @Test
@@ -103,9 +103,9 @@ public class AdmissionTokenTest {
         LocalDateTime expiredAt = EXPIRES_AT.minusSeconds(1);
 
         assertThatThrownBy(() -> admissionToken.expire(expiredAt))
-                .isInstanceOf(QueueInvalidStatusException.class);
+            .isInstanceOf(QueueInvalidStatusException.class);
         assertThat(admissionToken.getStatus())
-                .isEqualTo(AdmissionTokenStatus.ACTIVE);
+            .isEqualTo(AdmissionTokenStatus.ACTIVE);
     }
 
     @Test
@@ -124,14 +124,14 @@ public class AdmissionTokenTest {
         // then
         // 기존 Queue-Token과 발급 · 만료 시간은 유지하고 사용 시간만 초기화한다.
         assertThat(admissionToken.getStatus())
-                .isEqualTo(AdmissionTokenStatus.ACTIVE);
+            .isEqualTo(AdmissionTokenStatus.ACTIVE);
         assertThat(admissionToken.getUsedAt())
-                .isNull();
+            .isNull();
         assertThat(admissionToken.getToken())
-                .isEqualTo(TOKEN);
+            .isEqualTo(TOKEN);
         assertThat(admissionToken.getIssuedAt())
-                .isEqualTo(ISSUED_AT);
+            .isEqualTo(ISSUED_AT);
         assertThat(admissionToken.getExpiresAt())
-                .isEqualTo(EXPIRES_AT);
+            .isEqualTo(EXPIRES_AT);
     }
 }

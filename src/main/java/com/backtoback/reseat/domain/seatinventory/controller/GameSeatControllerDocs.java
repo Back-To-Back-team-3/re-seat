@@ -1,10 +1,15 @@
 package com.backtoback.reseat.domain.seatinventory.controller;
 
+import java.util.List;
+
+import org.springframework.http.ResponseEntity;
+
 import com.backtoback.reseat.domain.seatinventory.dto.SeatStatusResponse;
 import com.backtoback.reseat.domain.seatinventory.dto.ZoneSummaryResponse;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
 import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
 import com.backtoback.reseat.global.security.CustomUserDetails;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -12,9 +17,6 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.http.ResponseEntity;
-
-import java.util.List;
 
 /**
  * 경기 좌석 현황·구역 조회 API Swagger 문서화 인터페이스.

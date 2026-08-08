@@ -2,16 +2,6 @@
 
 package com.backtoback.reseat.domain.user.controller;
 
-import com.backtoback.reseat.domain.user.dto.request.PasswordChangeRequest;
-import com.backtoback.reseat.domain.user.dto.request.UserSignUpRequest;
-import com.backtoback.reseat.domain.user.dto.request.UserUpdateRequest;
-import com.backtoback.reseat.domain.user.dto.response.UserProfileResponse;
-import com.backtoback.reseat.domain.user.dto.response.UserSignUpResponse;
-import com.backtoback.reseat.domain.user.service.UserService;
-import com.backtoback.reseat.global.common.ApiResponse;
-import com.backtoback.reseat.global.security.CustomUserDetails;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -24,6 +14,17 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.backtoback.reseat.domain.user.dto.request.PasswordChangeRequest;
+import com.backtoback.reseat.domain.user.dto.request.UserSignUpRequest;
+import com.backtoback.reseat.domain.user.dto.request.UserUpdateRequest;
+import com.backtoback.reseat.domain.user.dto.response.UserProfileResponse;
+import com.backtoback.reseat.domain.user.dto.response.UserSignUpResponse;
+import com.backtoback.reseat.domain.user.service.UserService;
+import com.backtoback.reseat.global.common.ApiResponse;
+import com.backtoback.reseat.global.security.CustomUserDetails;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/v1")

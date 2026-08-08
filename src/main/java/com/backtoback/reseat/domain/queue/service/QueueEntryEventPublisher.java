@@ -1,14 +1,16 @@
 package com.backtoback.reseat.domain.queue.service;
 
-import com.backtoback.reseat.domain.queue.dto.event.QueueEntryRequestedEvent;
-import com.backtoback.reseat.global.config.KafkaConfig;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.concurrent.CompletableFuture;
+
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
 
-import java.util.concurrent.CompletableFuture;
+import com.backtoback.reseat.domain.queue.dto.event.QueueEntryRequestedEvent;
+import com.backtoback.reseat.global.config.KafkaConfig;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 대기열 진입 요청 이벤트를 Kafka로 발행한다.

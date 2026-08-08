@@ -1,9 +1,15 @@
 package com.backtoback.reseat.domain.game.controller;
 
+import java.time.LocalDate;
+
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
+
 import com.backtoback.reseat.domain.game.dto.GameDetailResponse;
 import com.backtoback.reseat.domain.game.dto.GameListResponse;
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.global.common.PageResponse;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -11,10 +17,6 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.ResponseEntity;
-
-import java.time.LocalDate;
 
 /**
  * 경기 조회 API Swagger 문서화 인터페이스.

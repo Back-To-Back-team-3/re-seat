@@ -1,10 +1,11 @@
 package com.backtoback.reseat.domain.seatinventory.dto;
 
-import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
-import io.swagger.v3.oas.annotations.media.Schema;
-
 import java.util.IntSummaryStatistics;
 import java.util.List;
+
+import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
+
+import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * 경기 좌석 재고 오픈 결과 응답.
@@ -22,7 +23,6 @@ public record GameSeatOpenResponse(
     @Schema(description = "생성된 재고의 가격 범위")
     PriceRange priceRange
 ) {
-
 
     /**
      * 생성된 좌석 재고 목록으로부터 응답을 만든다.

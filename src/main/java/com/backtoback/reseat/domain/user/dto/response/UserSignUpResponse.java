@@ -5,6 +5,7 @@ package com.backtoback.reseat.domain.user.dto.response;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserRole;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
+
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;

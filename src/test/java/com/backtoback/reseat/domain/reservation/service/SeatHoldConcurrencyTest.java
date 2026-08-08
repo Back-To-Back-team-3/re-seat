@@ -1,5 +1,27 @@
 package com.backtoback.reseat.domain.reservation.service;
 
+import static org.assertj.core.api.Assertions.*;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
@@ -22,23 +44,8 @@ import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserRole;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
+
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * [이슈 #172] 락 미적용 over-booking 재현 동시성 테스트.
@@ -61,18 +68,27 @@ class SeatHoldConcurrencyTest {
 
     // 재현이 안 될 경우 THREAD_COUNT를 20~50으로 올려서 재시도한다.
     private static final int THREAD_COUNT = 10;
-
-    @Autowired private ReservationService reservationService;
-    @Autowired private ReservationSeatRepository reservationSeatRepository;
-    @Autowired private ReservationRepository reservationRepository;
-    @Autowired private GameSeatRepository gameSeatRepository;
-    @Autowired private GameRepository gameRepository;
-    @Autowired private SeatRepository seatRepository;
-    @Autowired private SeatZoneRepository seatZoneRepository;
-    @Autowired private StadiumRepository stadiumRepository;
-    @Autowired private TeamRepository teamRepository;
-    @Autowired private UserRepository userRepository;
-
+    private final List<Long> userIds = new ArrayList<>();
+    @Autowired
+    private ReservationService reservationService;
+    @Autowired
+    private ReservationSeatRepository reservationSeatRepository;
+    @Autowired
+    private ReservationRepository reservationRepository;
+    @Autowired
+    private GameSeatRepository gameSeatRepository;
+    @Autowired
+    private GameRepository gameRepository;
+    @Autowired
+    private SeatRepository seatRepository;
+    @Autowired
+    private SeatZoneRepository seatZoneRepository;
+    @Autowired
+    private StadiumRepository stadiumRepository;
+    @Autowired
+    private TeamRepository teamRepository;
+    @Autowired
+    private UserRepository userRepository;
     // 테스트 픽스처 ID — @AfterEach 수동 정리에 사용
     private Long targetGameSeatId;
     private Long gameId;
@@ -81,7 +97,6 @@ class SeatHoldConcurrencyTest {
     private Long stadiumId;
     private Long homeTeamId;
     private Long awayTeamId;
-    private final List<Long> userIds = new ArrayList<>();
 
     // @Transactional 금지 → @AfterEach 수동 정리
     @BeforeEach

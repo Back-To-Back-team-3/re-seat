@@ -1,19 +1,22 @@
 package com.backtoback.reseat.domain.seatinventory.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.*;
 
-import com.backtoback.reseat.domain.seatinventory.dto.SeatStatusResponse;
-import jakarta.persistence.EntityManager;
 import java.util.List;
+
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
-import org.junit.jupiter.api.Disabled;
+
+import com.backtoback.reseat.domain.seatinventory.dto.SeatStatusResponse;
+
+import jakarta.persistence.EntityManager;
 
 /**
  * SeatQueryService의 N+1 회귀 테스트.

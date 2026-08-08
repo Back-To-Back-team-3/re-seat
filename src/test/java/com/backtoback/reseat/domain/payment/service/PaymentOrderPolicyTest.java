@@ -1,13 +1,20 @@
 package com.backtoback.reseat.domain.payment.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.entity.OrderStatus;
@@ -20,17 +27,6 @@ import com.backtoback.reseat.domain.payment.exception.PaymentAccessDeniedExcepti
 import com.backtoback.reseat.domain.payment.exception.PaymentOrderNotFoundException;
 import com.backtoback.reseat.domain.payment.exception.PaymentOrderNotPayableException;
 import com.backtoback.reseat.domain.user.entity.User;
-import java.time.LocalDateTime;
-import java.util.Optional;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PaymentOrderPolicy 결제·주문 검증 정책")
@@ -72,7 +68,7 @@ class PaymentOrderPolicyTest {
             when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> paymentOrderPolicy.getOwnedOrder(USER_ID, ORDER_ID))
-                    .isInstanceOf(PaymentOrderNotFoundException.class);
+                .isInstanceOf(PaymentOrderNotFoundException.class);
         }
 
         @Test
@@ -85,7 +81,7 @@ class PaymentOrderPolicyTest {
             when(user.getId()).thenReturn(2L);
 
             assertThatThrownBy(() -> paymentOrderPolicy.getOwnedOrder(USER_ID, ORDER_ID))
-                    .isInstanceOf(PaymentAccessDeniedException.class);
+                .isInstanceOf(PaymentAccessDeniedException.class);
         }
     }
 
@@ -101,7 +97,7 @@ class PaymentOrderPolicyTest {
             when(order.getStatus()).thenReturn(OrderStatus.CREATED);
 
             assertThatCode(() -> paymentOrderPolicy.ensurePayable(null, order))
-                    .doesNotThrowAnyException();
+                .doesNotThrowAnyException();
 
             verifyNoInteractions(orderService);
         }
@@ -111,14 +107,14 @@ class PaymentOrderPolicyTest {
         void expiresExistingPaymentAndOrderAfterDeadline() {
             Order order = mock(Order.class);
             Payment payment = Payment.builder()
-                    .order(order)
-                    .status(PaymentStatus.READY)
-                    .build();
+                .order(order)
+                .status(PaymentStatus.READY)
+                .build();
             when(order.getPaymentDeadline()).thenReturn(LocalDateTime.now().minusDays(1));
             when(order.getId()).thenReturn(ORDER_ID);
 
             assertThatThrownBy(() -> paymentOrderPolicy.ensurePayable(payment, order))
-                    .isInstanceOf(OrderExpiredException.class);
+                .isInstanceOf(OrderExpiredException.class);
 
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.FAILED);
             assertThat(payment.getFailReason()).isEqualTo("주문 결제 기한이 만료되었습니다.");
@@ -134,16 +130,16 @@ class PaymentOrderPolicyTest {
             when(order.getId()).thenReturn(ORDER_ID);
 
             assertThatThrownBy(() -> paymentOrderPolicy.ensurePayable(null, order))
-                    .isInstanceOf(OrderExpiredException.class);
+                .isInstanceOf(OrderExpiredException.class);
 
             verify(orderService).expireOrder(ORDER_ID);
         }
 
         @ParameterizedTest(name = "{0} 주문은 결제할 수 없다")
         @EnumSource(
-                value = OrderStatus.class,
-                mode = EnumSource.Mode.EXCLUDE,
-                names = "CREATED"
+            value = OrderStatus.class,
+            mode = EnumSource.Mode.EXCLUDE,
+            names = "CREATED"
         )
         @DisplayName("결제 기한이 남아도 CREATED가 아닌 주문은 결제할 수 없다.")
         void rejectsNonCreatedOrder(OrderStatus status) {
@@ -152,7 +148,7 @@ class PaymentOrderPolicyTest {
             when(order.getStatus()).thenReturn(status);
 
             assertThatThrownBy(() -> paymentOrderPolicy.ensurePayable(null, order))
-                    .isInstanceOf(PaymentOrderNotPayableException.class);
+                .isInstanceOf(PaymentOrderNotPayableException.class);
 
             verify(orderService, never()).expireOrder(ORDER_ID);
         }

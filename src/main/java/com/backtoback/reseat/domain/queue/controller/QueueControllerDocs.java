@@ -1,8 +1,14 @@
 package com.backtoback.reseat.domain.queue.controller;
 
+import java.util.concurrent.CompletionStage;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
 import com.backtoback.reseat.domain.queue.dto.response.QueueCancelResponse;
 import com.backtoback.reseat.domain.queue.dto.response.QueueStatusResponse;
 import com.backtoback.reseat.global.security.CustomUserDetails;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -11,10 +17,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-
-import java.util.concurrent.CompletionStage;
 
 @Tag(name = "Queue", description = "대기열 진입 · 상태 조회 · SSE · 취소 API")
 public interface QueueControllerDocs {

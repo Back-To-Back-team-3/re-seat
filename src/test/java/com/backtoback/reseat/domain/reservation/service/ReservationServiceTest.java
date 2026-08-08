@@ -1,10 +1,11 @@
 package com.backtoback.reseat.domain.reservation.service;
 
-import com.backtoback.reseat.domain.reservation.entity.Reservation;
-import com.backtoback.reseat.domain.reservation.exception.ReservationAccessDeniedException;
-import com.backtoback.reseat.domain.reservation.exception.ReservationNotFoundException;
-import com.backtoback.reseat.domain.reservation.repository.ReservationRepository;
-import com.backtoback.reseat.domain.user.entity.User;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.BDDMockito.*;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,13 +13,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
+import com.backtoback.reseat.domain.reservation.entity.Reservation;
+import com.backtoback.reseat.domain.reservation.exception.ReservationAccessDeniedException;
+import com.backtoback.reseat.domain.reservation.exception.ReservationNotFoundException;
+import com.backtoback.reseat.domain.reservation.repository.ReservationRepository;
+import com.backtoback.reseat.domain.user.entity.User;
 
 /**
  * ReservationService 단위 테스트.
@@ -35,7 +34,9 @@ class ReservationServiceTest {
     @InjectMocks
     private ReservationService reservationService;
 
-    /** getHoldTime — 소유자 검증 **/
+    /**
+     * getHoldTime — 소유자 검증
+     **/
 
     @Test
     @DisplayName("본인 예약의 남은 시간을 조회하면 정상 응답한다")
@@ -79,7 +80,9 @@ class ReservationServiceTest {
             .isInstanceOf(ReservationAccessDeniedException.class);
     }
 
-    /** releaseHold — 소유자 검증 **/
+    /**
+     * releaseHold — 소유자 검증
+     **/
 
     @Test
     @DisplayName("타인 예약을 해제하면 RESERVATION_ACCESS_DENIED(403)가 발생한다")
@@ -103,7 +106,9 @@ class ReservationServiceTest {
             .isInstanceOf(ReservationAccessDeniedException.class);
     }
 
-    /** 공통 — 존재하지 않는 예약 **/
+    /**
+     * 공통 — 존재하지 않는 예약
+     **/
 
     @Test
     @DisplayName("존재하지 않는 예약 ID로 조회하면 ReservationNotFoundException이 발생한다 — 소유권 검증 전 처리")

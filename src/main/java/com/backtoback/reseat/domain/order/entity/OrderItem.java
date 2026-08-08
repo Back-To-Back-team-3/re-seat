@@ -1,6 +1,9 @@
 package com.backtoback.reseat.domain.order.entity;
 
+import java.time.LocalDateTime;
+
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -15,8 +18,6 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 @Entity
 @Table(

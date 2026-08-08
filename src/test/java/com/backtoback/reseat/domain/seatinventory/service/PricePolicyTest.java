@@ -1,13 +1,15 @@
 package com.backtoback.reseat.domain.seatinventory.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.*;
 
-import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
 import java.time.LocalDateTime;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+
+import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
 
 /**
  * PricePolicy 단위 테스트.

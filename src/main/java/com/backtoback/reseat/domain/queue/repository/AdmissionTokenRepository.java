@@ -1,15 +1,17 @@
 package com.backtoback.reseat.domain.queue.repository;
 
-import com.backtoback.reseat.domain.queue.entity.AdmissionToken;
-import com.backtoback.reseat.domain.queue.entity.AdmissionTokenStatus;
-import jakarta.persistence.LockModeType;
+import java.time.LocalDateTime;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
-import java.util.Optional;
+import com.backtoback.reseat.domain.queue.entity.AdmissionToken;
+import com.backtoback.reseat.domain.queue.entity.AdmissionTokenStatus;
+
+import jakarta.persistence.LockModeType;
 
 /**
  * 입장 토큰의 저장과 조회를 담당하는 Repository

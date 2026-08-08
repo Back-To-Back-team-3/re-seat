@@ -1,8 +1,11 @@
 package com.backtoback.reseat.domain.game.entity;
 
+import java.time.LocalDateTime;
+
 import com.backtoback.reseat.domain.stadium.entity.Stadium;
 import com.backtoback.reseat.domain.team.entity.Team;
 import com.backtoback.reseat.global.common.BaseEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -20,8 +23,6 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 @Getter
 @Entity
@@ -76,8 +77,8 @@ public class Game extends BaseEntity {
 
     @Builder
     private Game(Team homeTeam, Team awayTeam, Stadium stadium,
-                 LocalDateTime gameAt, LocalDateTime bookingOpenAt, LocalDateTime bookingCloseAt,
-                 BookingStatus bookingStatus, String title) {
+        LocalDateTime gameAt, LocalDateTime bookingOpenAt, LocalDateTime bookingCloseAt,
+        BookingStatus bookingStatus, String title) {
         this.homeTeam = homeTeam;
         this.awayTeam = awayTeam;
         this.stadium = stadium;

@@ -1,23 +1,16 @@
 package com.backtoback.reseat.global.security;
 
-import com.backtoback.reseat.domain.user.entity.User;
-import com.backtoback.reseat.domain.user.entity.UserStatus;
-import lombok.Getter;
+import java.util.Collection;
+import java.util.Collections;
+
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.Collection;
-import java.util.Collections;
+import com.backtoback.reseat.domain.user.entity.User;
+import com.backtoback.reseat.domain.user.entity.UserStatus;
 
-@Getter
-public class CustomUserDetails implements UserDetails {
-
-    private final User user;
-
-    public CustomUserDetails(User user) {
-        this.user = user;
-    }
+public record CustomUserDetails(User user) implements UserDetails {
 
     public Long getId() {
         return user.getId();
@@ -60,6 +53,5 @@ public class CustomUserDetails implements UserDetails {
         //탈토회원 아닐 경우~
         return user.getStatus() != UserStatus.DELETED;
     }
-
 
 }

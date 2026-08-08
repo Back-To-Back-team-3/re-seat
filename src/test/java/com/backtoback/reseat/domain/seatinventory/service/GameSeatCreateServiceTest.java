@@ -1,7 +1,17 @@
 package com.backtoback.reseat.domain.seatinventory.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.*;
+
+import java.util.List;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
@@ -11,16 +21,8 @@ import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
 import com.backtoback.reseat.domain.seatinventory.exception.SeatInventoryAlreadyOpenedException;
 import com.backtoback.reseat.domain.seatinventory.repository.GameSeatRepository;
 import com.backtoback.reseat.global.config.QuerydslConfig;
+
 import jakarta.persistence.EntityManager;
-import java.util.List;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.transaction.annotation.Transactional;
-import org.junit.jupiter.api.Disabled;
 
 /**
  * 좌석 재고 생성 서비스 통합 테스트.
@@ -164,12 +166,12 @@ class GameSeatCreateServiceTest {
 
     private List<GameSeat> findGameSeats(Long gameId) {
         return entityManager.createQuery("""
-                        select gs
-                        from GameSeat gs
-                        join fetch gs.seat s
-                        join fetch s.zone
-                        where gs.game.id = :gameId
-                        """, GameSeat.class)
+                select gs
+                from GameSeat gs
+                join fetch gs.seat s
+                join fetch s.zone
+                where gs.game.id = :gameId
+                """, GameSeat.class)
             .setParameter("gameId", gameId)
             .getResultList();
     }

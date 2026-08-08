@@ -3,6 +3,7 @@
 package com.backtoback.reseat.domain.user.entity;
 
 import com.backtoback.reseat.global.common.BaseEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -16,7 +17,6 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
 
 @Entity
 @Table(
@@ -74,8 +74,8 @@ public class User extends BaseEntity {
 
     @Builder
     public User(Long id, String email, String password, String name, String phone,
-                String ci, boolean isVerified, UserRole role, UserStatus status,
-                String provider, String providerId) {
+        String ci, boolean isVerified, UserRole role, UserStatus status,
+        String provider, String providerId) {
         this.id = id;
         this.email = email;
         this.password = password;
@@ -103,7 +103,6 @@ public class User extends BaseEntity {
         this.name = name;
         this.phone = phone;
     }
-
 
     public void changePassword(String newEncodedPassword) {
         this.password = newEncodedPassword;

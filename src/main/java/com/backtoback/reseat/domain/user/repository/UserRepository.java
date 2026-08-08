@@ -1,9 +1,10 @@
 package com.backtoback.reseat.domain.user.repository;
 
-import com.backtoback.reseat.domain.user.entity.User;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.Optional;
+import com.backtoback.reseat.domain.user.entity.User;
 
 public interface UserRepository extends JpaRepository<User, Long>, UserRepositoryCustom {
     //이메일로 유저 정보 조회 (로그인 시 사용)

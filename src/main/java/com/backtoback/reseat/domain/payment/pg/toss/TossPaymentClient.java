@@ -1,22 +1,24 @@
 package com.backtoback.reseat.domain.payment.pg.toss;
 
-import com.backtoback.reseat.domain.payment.pg.toss.dto.request.TossCancelRequest;
-import com.backtoback.reseat.domain.payment.pg.toss.dto.request.TossConfirmRequest;
-import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
-import com.backtoback.reseat.domain.payment.pg.toss.exception.TossApiException;
-import com.backtoback.reseat.domain.payment.pg.toss.exception.TossPaymentStatusUnknownException;
-import lombok.extern.slf4j.Slf4j;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.Base64;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.util.Base64;
+import com.backtoback.reseat.domain.payment.pg.toss.dto.request.TossCancelRequest;
+import com.backtoback.reseat.domain.payment.pg.toss.dto.request.TossConfirmRequest;
+import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
+import com.backtoback.reseat.domain.payment.pg.toss.exception.TossApiException;
+import com.backtoback.reseat.domain.payment.pg.toss.exception.TossPaymentStatusUnknownException;
+
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
 
 @Slf4j
 @Component
@@ -63,7 +65,6 @@ public class TossPaymentClient {
             // 외부 API 응답 지연으로 요청 스레드가 오래 묶이지 않게 최대 5초만 기다린다.
             .block(Duration.ofSeconds(5));
     }
-
 
     /**
      * 취소 응답을 받지 못하면 결제를 재조회해 Toss의 취소 완료 상태를 반환한다.

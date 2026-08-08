@@ -1,15 +1,5 @@
 package com.backtoback.reseat.domain.reservation.controller;
 
-import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
-import com.backtoback.reseat.domain.reservation.dto.response.HoldTimeResponse;
-import com.backtoback.reseat.domain.reservation.dto.response.ReservationCancelResponse;
-import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse;
-import com.backtoback.reseat.domain.reservation.service.ReservationService;
-import com.backtoback.reseat.domain.reservation.service.SeatHoldFacade;
-import com.backtoback.reseat.global.common.ApiResponse;
-import com.backtoback.reseat.global.security.CustomUserDetails;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,6 +11,18 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
+import com.backtoback.reseat.domain.reservation.dto.response.HoldTimeResponse;
+import com.backtoback.reseat.domain.reservation.dto.response.ReservationCancelResponse;
+import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse;
+import com.backtoback.reseat.domain.reservation.service.ReservationService;
+import com.backtoback.reseat.domain.reservation.service.SeatHoldFacade;
+import com.backtoback.reseat.global.common.ApiResponse;
+import com.backtoback.reseat.global.security.CustomUserDetails;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 좌석 선점(HOLD)·남은시간 조회·해제 API 컨트롤러.

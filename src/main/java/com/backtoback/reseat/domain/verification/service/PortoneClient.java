@@ -1,24 +1,25 @@
 package com.backtoback.reseat.domain.verification.service;
 
-import com.backtoback.reseat.domain.verification.dto.response.PortoneVerificationResponse;
+import java.time.Duration;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
-import java.time.Duration;
+import com.backtoback.reseat.domain.verification.dto.response.PortoneVerificationResponse;
+
+import reactor.core.publisher.Mono;
 
 @Component
 public class PortoneClient {
 
-    //하드코딩 유출 방지를 위해 application.yml 또는 환경변수에서 토큰 주입
-    @Value("${portone.api-secret}")
-    private String issuerToken;
-
     private final WebClient webClient = WebClient.builder()
         .baseUrl("https://api.iamport.kr")
         .build();
+    //하드코딩 유출 방지를 위해 application.yml 또는 환경변수에서 토큰 주입
+    @Value("${portone.api-secret}")
+    private String issuerToken;
 
     public PortoneVerificationResponse fetchVerificationInfo(String impUid) {
         return webClient.get()

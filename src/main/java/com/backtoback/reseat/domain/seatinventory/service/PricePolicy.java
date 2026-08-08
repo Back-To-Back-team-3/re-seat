@@ -1,8 +1,5 @@
 package com.backtoback.reseat.domain.seatinventory.service;
 
-import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
-import org.springframework.stereotype.Component;
-
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -10,6 +7,10 @@ import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
+
+import org.springframework.stereotype.Component;
+
+import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
 
 /**
  * 경기 좌석 재고(game_seats)의 판매 가격을 산정하는 정책 클래스.

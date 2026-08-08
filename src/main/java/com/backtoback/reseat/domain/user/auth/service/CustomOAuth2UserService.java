@@ -1,13 +1,7 @@
 package com.backtoback.reseat.domain.user.auth.service;
 
-import com.backtoback.reseat.domain.user.auth.dto.CustomOAuth2User;
-import com.backtoback.reseat.domain.user.auth.dto.KakaoOAuth2UserInfo;
-import com.backtoback.reseat.domain.user.auth.dto.OAuth2UserInfo;
-import com.backtoback.reseat.domain.user.entity.User;
-import com.backtoback.reseat.domain.user.entity.UserRole;
-import com.backtoback.reseat.domain.user.entity.UserStatus;
-import com.backtoback.reseat.domain.user.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
+import java.util.Map;
+
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
@@ -15,7 +9,15 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Map;
+import com.backtoback.reseat.domain.user.auth.dto.CustomOAuth2User;
+import com.backtoback.reseat.domain.user.auth.dto.KakaoOAuth2UserInfo;
+import com.backtoback.reseat.domain.user.auth.dto.OAuth2UserInfo;
+import com.backtoback.reseat.domain.user.entity.User;
+import com.backtoback.reseat.domain.user.entity.UserRole;
+import com.backtoback.reseat.domain.user.entity.UserStatus;
+import com.backtoback.reseat.domain.user.repository.UserRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor

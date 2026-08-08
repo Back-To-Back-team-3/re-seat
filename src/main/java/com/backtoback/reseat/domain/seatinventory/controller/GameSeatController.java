@@ -1,14 +1,7 @@
 package com.backtoback.reseat.domain.seatinventory.controller;
 
-import com.backtoback.reseat.domain.queue.service.AdmissionTokenService;
-import com.backtoback.reseat.domain.seatinventory.dto.SeatStatusResponse;
-import com.backtoback.reseat.domain.seatinventory.dto.ZoneSummaryResponse;
-import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
-import com.backtoback.reseat.domain.seatinventory.service.SeatQueryService;
-import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
-import com.backtoback.reseat.global.common.ApiResponse;
-import com.backtoback.reseat.global.security.CustomUserDetails;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,7 +12,16 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import com.backtoback.reseat.domain.queue.service.AdmissionTokenService;
+import com.backtoback.reseat.domain.seatinventory.dto.SeatStatusResponse;
+import com.backtoback.reseat.domain.seatinventory.dto.ZoneSummaryResponse;
+import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
+import com.backtoback.reseat.domain.seatinventory.service.SeatQueryService;
+import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
+import com.backtoback.reseat.global.common.ApiResponse;
+import com.backtoback.reseat.global.security.CustomUserDetails;
+
+import lombok.RequiredArgsConstructor;
 
 /**
  * 경기 좌석 현황·구역 요약 조회 API.

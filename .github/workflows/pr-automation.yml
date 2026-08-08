@@ -2,7 +2,7 @@ name: PR Automation
 
 on:
   pull_request:
-    types: [opened, edited, synchronize, ready_for_review, reopened, closed]
+    types: [ opened, edited, synchronize, ready_for_review, reopened, closed ]
 
 permissions:
   contents: read
@@ -171,7 +171,7 @@ jobs:
                 }
               ' >/dev/null
           }
-          
+
           update_status() {
             local option_id="$1"
 

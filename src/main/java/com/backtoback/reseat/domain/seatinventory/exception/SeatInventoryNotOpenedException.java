@@ -2,6 +2,7 @@ package com.backtoback.reseat.domain.seatinventory.exception;
 
 import com.backtoback.reseat.global.exception.BusinessException;
 import com.backtoback.reseat.global.exception.ErrorCode;
+
 import lombok.Getter;
 
 /**

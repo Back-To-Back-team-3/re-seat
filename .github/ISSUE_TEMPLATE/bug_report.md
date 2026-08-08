@@ -37,9 +37,9 @@ assignees: ""
 **Then**: 400 INVALID_REQUEST가 아닌 500 INTERNAL_SERVER_ERROR가 반환됩니다.
 -->
 
-**Given**: 
-**When**: 
-**Then**: 
+**Given**:
+**When**:
+**Then**:
 
 ## ✅ 예상 결과
 
@@ -93,9 +93,9 @@ yyyy-mm-dd(요일)
 2026-07-16(목)
 -->
 
-yyyy-mm-dd(요일)
+yyyy-mm-dd (요일)
 
-## 📎 참고 사항(선택)
+## 📎 참고 사항 (선택)
 
 <!--
 버그가 발생한 환경, 재현 명령, 오류 로그 또는 관련 자료가 있을 때 작성해주세요.
@@ -130,9 +130,9 @@ GitHub Actions CI 환경에서 RedisConnectionException이 발생합니다.
 **수정 코드 / PR**: #93 - 경기 검색 기간 검증 예외 처리 수정
 -->
 
-**원인 분석**: 
-**해결 과정**: 
-**수정 코드 / PR**: 
+**원인 분석**:
+**해결 과정**:
+**수정 코드 / PR**:
 
 ## 👀 이슈 확인
 

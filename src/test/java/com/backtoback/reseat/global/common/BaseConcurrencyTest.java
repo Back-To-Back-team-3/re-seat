@@ -1,8 +1,7 @@
 package com.backtoback.reseat.global.common;
 
 //동시성 테스트
- //멀티스레드 요청 동시성 실행(ExecutorService, CountDownLatch 등) 헬퍼 기능 제공
-
+//멀티스레드 요청 동시성 실행(ExecutorService, CountDownLatch 등) 헬퍼 기능 제공
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;

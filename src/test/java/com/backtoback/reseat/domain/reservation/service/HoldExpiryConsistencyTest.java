@@ -1,5 +1,19 @@
 package com.backtoback.reseat.domain.reservation.service;
 
+import static org.assertj.core.api.Assertions.*;
+
+import java.time.LocalDateTime;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.redisson.api.RedissonClient;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
 import com.backtoback.reseat.domain.reservation.entity.Reservation;
@@ -19,21 +33,8 @@ import com.backtoback.reseat.domain.team.entity.Team;
 import com.backtoback.reseat.domain.team.repository.TeamRepository;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
+
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.redisson.api.RedissonClient;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.context.ActiveProfiles;
-
-import java.time.LocalDateTime;
-
-import static org.assertj.core.api.Assertions.assertThat;
-
 
 /**
  * B4 버그(Redis–DB 정합성 불일치) 회귀 통합 테스트.
@@ -50,18 +51,27 @@ class HoldExpiryConsistencyTest {
     @MockitoBean
     private RedissonClient redissonClient;
 
-    @Autowired private HoldExpiryService holdExpiryService;
+    @Autowired
+    private HoldExpiryService holdExpiryService;
 
-    @Autowired private ReservationRepository reservationRepository;
-    @Autowired private GameSeatRepository gameSeatRepository;
+    @Autowired
+    private ReservationRepository reservationRepository;
+    @Autowired
+    private GameSeatRepository gameSeatRepository;
 
     // 픽스처 구성에 필요한 연관 엔티티 저장소
-    @Autowired private UserRepository userRepository;
-    @Autowired private TeamRepository teamRepository;
-    @Autowired private StadiumRepository stadiumRepository;
-    @Autowired private SeatZoneRepository seatZoneRepository;
-    @Autowired private SeatRepository seatRepository;
-    @Autowired private GameRepository gameRepository;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private TeamRepository teamRepository;
+    @Autowired
+    private StadiumRepository stadiumRepository;
+    @Autowired
+    private SeatZoneRepository seatZoneRepository;
+    @Autowired
+    private SeatRepository seatRepository;
+    @Autowired
+    private GameRepository gameRepository;
 
     // @AfterEach 수동 정리용 ID 추적
     private Long savedReservationId;
@@ -138,12 +148,18 @@ class HoldExpiryConsistencyTest {
         }
         // FK 역순 삭제: game → team → seat → zone → user → stadium
         // Team이 stadium을 참조하므로 team을 stadium보다 먼저 삭제해야 한다
-        if (savedGameId != null)    gameRepository.deleteById(savedGameId);
-        if (savedTeamId != null)    teamRepository.deleteById(savedTeamId);
-        if (savedSeatId != null)    seatRepository.deleteById(savedSeatId);
-        if (savedZoneId != null)    seatZoneRepository.deleteById(savedZoneId);
-        if (savedUserId != null)    userRepository.deleteById(savedUserId);
-        if (savedStadiumId != null) stadiumRepository.deleteById(savedStadiumId);
+        if (savedGameId != null)
+            gameRepository.deleteById(savedGameId);
+        if (savedTeamId != null)
+            teamRepository.deleteById(savedTeamId);
+        if (savedSeatId != null)
+            seatRepository.deleteById(savedSeatId);
+        if (savedZoneId != null)
+            seatZoneRepository.deleteById(savedZoneId);
+        if (savedUserId != null)
+            userRepository.deleteById(savedUserId);
+        if (savedStadiumId != null)
+            stadiumRepository.deleteById(savedStadiumId);
     }
 
     // =============================================================================

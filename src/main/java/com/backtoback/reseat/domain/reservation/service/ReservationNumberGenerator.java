@@ -1,10 +1,10 @@
 package com.backtoback.reseat.domain.reservation.service;
 
-import org.springframework.stereotype.Component;
-
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
+
+import org.springframework.stereotype.Component;
 
 /**
  * 예약 번호 생성기.

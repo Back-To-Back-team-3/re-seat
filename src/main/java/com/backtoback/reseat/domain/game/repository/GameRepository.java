@@ -1,11 +1,12 @@
 package com.backtoback.reseat.domain.game.repository;
 
-import com.backtoback.reseat.domain.game.entity.Game;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.Optional;
+import com.backtoback.reseat.domain.game.entity.Game;
 
 /**
  * 경기 Repository.

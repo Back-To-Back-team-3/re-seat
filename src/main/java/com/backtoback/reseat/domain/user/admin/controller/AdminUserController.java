@@ -1,14 +1,5 @@
 package com.backtoback.reseat.domain.user.admin.controller;
 
-import com.backtoback.reseat.domain.user.admin.dto.request.AdminUserRoleUpdateRequest;
-import com.backtoback.reseat.domain.user.admin.dto.request.AdminUserStatusUpdateRequest;
-import com.backtoback.reseat.domain.user.admin.dto.request.UserSearchCondition;
-import com.backtoback.reseat.domain.user.admin.dto.response.AdminUserResponse;
-import com.backtoback.reseat.domain.user.admin.service.AdminUserService;
-import com.backtoback.reseat.global.common.ApiResponse;
-import com.backtoback.reseat.global.common.PageResponse;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -21,6 +12,17 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.backtoback.reseat.domain.user.admin.dto.request.AdminUserRoleUpdateRequest;
+import com.backtoback.reseat.domain.user.admin.dto.request.AdminUserStatusUpdateRequest;
+import com.backtoback.reseat.domain.user.admin.dto.request.UserSearchCondition;
+import com.backtoback.reseat.domain.user.admin.dto.response.AdminUserResponse;
+import com.backtoback.reseat.domain.user.admin.service.AdminUserService;
+import com.backtoback.reseat.global.common.ApiResponse;
+import com.backtoback.reseat.global.common.PageResponse;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/v1/admin/users")
@@ -36,7 +38,6 @@ public class AdminUserController {
         @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
         Page<AdminUserResponse> pageResult = adminUserService.searchUsers(condition, pageable);
-
 
         return ResponseEntity
             .status(HttpStatus.OK)

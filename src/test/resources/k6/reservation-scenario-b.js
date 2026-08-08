@@ -1,6 +1,6 @@
 import http from 'k6/http';
-import { check } from 'k6';
-import { Counter, Rate } from 'k6/metrics';
+import {check} from 'k6';
+import {Counter, Rate} from 'k6/metrics';
 
 // C(선점) 파트 부하 테스트 - 시나리오 B: 서로 다른 좌석 병렬 처리
 // 측정 목적: N명이 각각 다른 gameSeatId로 동시 선점 요청 시 글로벌 락 직렬화 없이 병렬 처리되는지 확인
@@ -17,10 +17,10 @@ export const options = {
             executor: 'ramping-vus',
             startVUs: 1,
             stages: [
-                { duration: '10s', target: 50 },  // 10초간 VU 50까지 증가
-                { duration: '10s', target: 100 }, // 10초간 VU 100까지 증가
-                { duration: '20s', target: 100 }, // 20초간 VU 100 상태 유지 (지속 부하)
-                { duration: '10s', target: 0 },   // 10초간 감소
+                {duration: '10s', target: 50},  // 10초간 VU 50까지 증가
+                {duration: '10s', target: 100}, // 10초간 VU 100까지 증가
+                {duration: '20s', target: 100}, // 20초간 VU 100 상태 유지 (지속 부하)
+                {duration: '10s', target: 0},   // 10초간 감소
             ],
         },
     },
@@ -33,13 +33,13 @@ export const options = {
 };
 
 // 환경 변수 설정
-const BASE_URL     = __ENV.BASE_URL     || 'http://localhost:8080';
-const JWT_TOKEN    = __ENV.JWT_TOKEN    || 'DUMMY_JWT_TOKEN';
+const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
+const JWT_TOKEN = __ENV.JWT_TOKEN || 'DUMMY_JWT_TOKEN';
 const QUEUE_TOKENS = __ENV.QUEUE_TOKENS ? __ENV.QUEUE_TOKENS.split(',') : ['DUMMY_QUEUE_TOKEN'];
-const GAME_ID      = __ENV.GAME_ID      ? parseInt(__ENV.GAME_ID)     : 1;
-const MIN_SEAT_ID  = __ENV.MIN_SEAT_ID  ? parseInt(__ENV.MIN_SEAT_ID) : 1;
-const MAX_SEAT_ID  = __ENV.MAX_SEAT_ID  ? parseInt(__ENV.MAX_SEAT_ID) : 100;
-const SEAT_COUNT   = MAX_SEAT_ID - MIN_SEAT_ID + 1;
+const GAME_ID = __ENV.GAME_ID ? parseInt(__ENV.GAME_ID) : 1;
+const MIN_SEAT_ID = __ENV.MIN_SEAT_ID ? parseInt(__ENV.MIN_SEAT_ID) : 1;
+const MAX_SEAT_ID = __ENV.MAX_SEAT_ID ? parseInt(__ENV.MAX_SEAT_ID) : 100;
+const SEAT_COUNT = MAX_SEAT_ID - MIN_SEAT_ID + 1;
 
 export default function () {
     // VU별 유니크 gameSeatId — 실제 ID 범위 안에서 순환 할당
@@ -49,7 +49,7 @@ export default function () {
 
     const res = http.post(
         `${BASE_URL}/api/v1/reservations`,
-        JSON.stringify({ gameId: GAME_ID, gameSeatIds: [gameSeatId] }),
+        JSON.stringify({gameId: GAME_ID, gameSeatIds: [gameSeatId]}),
         {
             headers: {
                 'Content-Type': 'application/json',
@@ -62,7 +62,10 @@ export default function () {
 
     // 응답 에러코드 파싱
     let errorCode = '';
-    try { errorCode = JSON.parse(res.body).errorCode || ''; } catch (_) {}
+    try {
+        errorCode = JSON.parse(res.body).errorCode || '';
+    } catch (_) {
+    }
 
     serverErrorRate.add(res.status >= 500 ? 1 : 0);
 

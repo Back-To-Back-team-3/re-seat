@@ -1,12 +1,12 @@
 package com.backtoback.reseat.domain.reservation.dto.request;
 
+import java.util.List;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
-
-import java.util.List;
 
 /**
  * 좌석 선점 요청 DTO.

@@ -1,6 +1,5 @@
 package com.backtoback.reseat.domain.user.auth.dto.request;
 
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

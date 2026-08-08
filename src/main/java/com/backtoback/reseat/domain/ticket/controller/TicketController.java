@@ -1,14 +1,5 @@
 package com.backtoback.reseat.domain.ticket.controller;
 
-import com.backtoback.reseat.domain.ticket.dto.response.TicketCancelResponse;
-import com.backtoback.reseat.domain.ticket.dto.response.TicketDetailResponse;
-import com.backtoback.reseat.domain.ticket.dto.response.TicketListResponse;
-import com.backtoback.reseat.domain.ticket.entity.TicketStatus;
-import com.backtoback.reseat.domain.ticket.service.TicketService;
-import com.backtoback.reseat.global.common.ApiResponse;
-import com.backtoback.reseat.global.common.PageResponse;
-import com.backtoback.reseat.global.security.CustomUserDetails;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -20,6 +11,17 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.backtoback.reseat.domain.ticket.dto.response.TicketCancelResponse;
+import com.backtoback.reseat.domain.ticket.dto.response.TicketDetailResponse;
+import com.backtoback.reseat.domain.ticket.dto.response.TicketListResponse;
+import com.backtoback.reseat.domain.ticket.entity.TicketStatus;
+import com.backtoback.reseat.domain.ticket.service.TicketService;
+import com.backtoback.reseat.global.common.ApiResponse;
+import com.backtoback.reseat.global.common.PageResponse;
+import com.backtoback.reseat.global.security.CustomUserDetails;
+
+import lombok.RequiredArgsConstructor;
 
 /**
  * 사용자 티켓 API 컨트롤러

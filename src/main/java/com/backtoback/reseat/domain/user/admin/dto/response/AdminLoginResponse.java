@@ -2,6 +2,7 @@ package com.backtoback.reseat.domain.user.admin.dto.response;
 
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserRole;
+
 import lombok.Builder;
 
 @Builder

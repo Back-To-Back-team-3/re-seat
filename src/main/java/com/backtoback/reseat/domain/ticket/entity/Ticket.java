@@ -1,5 +1,7 @@
 package com.backtoback.reseat.domain.ticket.entity;
 
+import java.time.LocalDateTime;
+
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.order.entity.OrderItem;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
@@ -7,6 +9,7 @@ import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.global.common.BaseEntity;
 import com.backtoback.reseat.global.exception.BusinessException;
 import com.backtoback.reseat.global.exception.ErrorCode;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -25,8 +28,6 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 @Getter
 @Entity
@@ -104,7 +105,6 @@ public class Ticket extends BaseEntity {
     @Column(name = "cancel_detail", length = 255)
     private String cancelDetail;
 
-
     // 입장 검증용 QR 토큰
     @Column(name = "qr_token", length = 255)
     private String qrToken;
@@ -120,7 +120,6 @@ public class Ticket extends BaseEntity {
     // 티켓 취소 시간
     @Column(name = "canceled_at")
     private LocalDateTime canceledAt;
-
 
     public static Ticket issue(
         String ticketNo,
@@ -174,7 +173,6 @@ public class Ticket extends BaseEntity {
         this.status = TicketStatus.USED;
         this.usedAt = LocalDateTime.now();
     }
-
 
     //관리자 전용 직권 취소 처리
     //@param detail 관리자가 입력한 취소 상세 사유 (예: "매크로 부정 예매 탐지")

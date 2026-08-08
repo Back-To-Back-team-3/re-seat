@@ -1,14 +1,15 @@
 package com.backtoback.reseat.domain.reservation.repository;
 
-import com.backtoback.reseat.domain.reservation.entity.Reservation;
-import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
+import java.time.LocalDateTime;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
-import java.util.Optional;
+import com.backtoback.reseat.domain.reservation.entity.Reservation;
+import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
 
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
 

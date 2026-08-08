@@ -1,5 +1,11 @@
 package com.backtoback.reseat.domain.user.auth.service;
 
+import java.time.LocalDateTime;
+
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.backtoback.reseat.domain.user.auth.dto.request.ReissueRequest;
 import com.backtoback.reseat.domain.user.auth.dto.request.UserLoginRequest;
 import com.backtoback.reseat.domain.user.auth.dto.response.TokenResponse;
@@ -16,12 +22,8 @@ import com.backtoback.reseat.domain.user.repository.UserRepository;
 import com.backtoback.reseat.global.exception.BusinessException;
 import com.backtoback.reseat.global.exception.ErrorCode;
 import com.backtoback.reseat.global.security.JwtTokenProvider;
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -108,7 +110,8 @@ public class AuthService {
         }
 
         // 4. 새로운 토큰 쌍 생성 및 토큰 회전(Rotation)
-        String newAccessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail(), user.getRole().name());
+        String newAccessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail(),
+            user.getRole().name());
         String newRefreshToken = jwtTokenProvider.createRefreshToken(user.getId());
         LocalDateTime newExpiredAt = LocalDateTime.now().plusDays(14);
 

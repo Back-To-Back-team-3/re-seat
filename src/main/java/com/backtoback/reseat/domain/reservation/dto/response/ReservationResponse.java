@@ -1,14 +1,15 @@
 package com.backtoback.reseat.domain.reservation.dto.response;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 import com.backtoback.reseat.domain.reservation.entity.Reservation;
 import com.backtoback.reseat.domain.reservation.entity.ReservationSeat;
 import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
-import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * 좌석 선점 응답 DTO.

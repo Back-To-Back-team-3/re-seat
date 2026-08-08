@@ -1,16 +1,17 @@
 package com.backtoback.reseat.domain.seatinventory.repository;
 
-import com.backtoback.reseat.domain.seatinventory.dto.ZoneSummaryResponse;
-import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
-import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
-import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
+import java.time.LocalDateTime;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import com.backtoback.reseat.domain.seatinventory.dto.ZoneSummaryResponse;
+import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
+import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
+import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
 
 public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
 

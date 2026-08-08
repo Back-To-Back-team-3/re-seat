@@ -1,11 +1,12 @@
 package com.backtoback.reseat.domain.reservation.dto.response;
 
-import com.backtoback.reseat.domain.reservation.entity.Reservation;
-import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
-import io.swagger.v3.oas.annotations.media.Schema;
-
 import java.time.Duration;
 import java.time.LocalDateTime;
+
+import com.backtoback.reseat.domain.reservation.entity.Reservation;
+import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
+
+import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * 선점 남은 시간 응답 DTO.

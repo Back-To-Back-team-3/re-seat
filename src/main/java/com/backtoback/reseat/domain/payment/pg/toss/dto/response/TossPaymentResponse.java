@@ -1,10 +1,11 @@
 package com.backtoback.reseat.domain.payment.pg.toss.dto.response;
 
+import java.util.Optional;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.util.Optional;
 
 // 토스 결제 응답 중 결제 상태 동기화에 필요한 필드만 매핑한다.
 @Getter
