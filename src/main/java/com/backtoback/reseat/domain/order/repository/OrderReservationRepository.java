@@ -33,12 +33,12 @@ public interface OrderReservationRepository extends JpaRepository<Reservation, L
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
-            SELECT r
-            FROM Reservation r
-            WHERE r.id = :reservationId
-            """)
+        SELECT r
+        FROM Reservation r
+        WHERE r.id = :reservationId
+        """)
     @QueryHints(value = {
-            @QueryHint(name = "jakarta.persistence.lock.timeout", value = "2000")
+        @QueryHint(name = "jakarta.persistence.lock.timeout", value = "2000")
     })
     Optional<Reservation> findByIdWithPessimisticWriteLock(@Param("reservationId") Long reservationId);
 
@@ -52,13 +52,13 @@ public interface OrderReservationRepository extends JpaRepository<Reservation, L
      */
     @Modifying
     @Query("""
-            UPDATE Reservation r
-            SET r.holdExpiresAt = :holdExpiresAt
-            WHERE r.id = :reservationId
-            """)
+        UPDATE Reservation r
+        SET r.holdExpiresAt = :holdExpiresAt
+        WHERE r.id = :reservationId
+        """)
     void updateHoldExpiresAtById(
-            @Param("reservationId") Long reservationId,
-            @Param("holdExpiresAt") LocalDateTime holdExpiresAt
+        @Param("reservationId") Long reservationId,
+        @Param("holdExpiresAt") LocalDateTime holdExpiresAt
     );
 
     /**
@@ -67,29 +67,29 @@ public interface OrderReservationRepository extends JpaRepository<Reservation, L
      * <p>EXPIRED 주문의 결제 기한을 함께 확인해
      * 주문 만료 처리 대상과 연결된 예약만 변경한다.</p>
      *
-     * @param now 만료 판정 기준 시간
-     * @param holding 만료 처리 대상 예약 상태
-     * @param orderExpired 연결된 주문의 만료 상태
+     * @param now                만료 판정 기준 시간
+     * @param holding            만료 처리 대상 예약 상태
+     * @param orderExpired       연결된 주문의 만료 상태
      * @param reservationExpired 변경할 예약 상태
      * @return EXPIRED로 전이된 예약 수
      */
     @Modifying(clearAutomatically = true)
     @Query("""
-            UPDATE Reservation r
-            SET r.status = :reservationExpired
-            WHERE r.status = :holding
-            AND EXISTS (
-                SELECT o.id
-                FROM Order o
-                WHERE o.reservation = r
-                AND o.status = :orderExpired
-                AND o.paymentDeadline <= :now
-            )
-            """)
+        UPDATE Reservation r
+        SET r.status = :reservationExpired
+        WHERE r.status = :holding
+        AND EXISTS (
+            SELECT o.id
+            FROM Order o
+            WHERE o.reservation = r
+            AND o.status = :orderExpired
+            AND o.paymentDeadline <= :now
+        )
+        """)
     int expireReservationsByExpiredOrders(
-            @Param("now") LocalDateTime now,
-            @Param("holding") ReservationStatus holding,
-            @Param("orderExpired") OrderStatus orderExpired,
-            @Param("reservationExpired") ReservationStatus reservationExpired
+        @Param("now") LocalDateTime now,
+        @Param("holding") ReservationStatus holding,
+        @Param("orderExpired") OrderStatus orderExpired,
+        @Param("reservationExpired") ReservationStatus reservationExpired
     );
 }

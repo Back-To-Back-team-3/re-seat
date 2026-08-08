@@ -25,10 +25,10 @@ import java.time.LocalDateTime;
 @Getter
 @Entity
 @Table(
-        name = "reservation_seats",
-        indexes = {
-                @Index(name = "idx_reservation_seats_reservation", columnList = "reservation_id")
-        }
+    name = "reservation_seats",
+    indexes = {
+        @Index(name = "idx_reservation_seats_reservation", columnList = "reservation_id")
+    }
 )
 @EntityListeners(AuditingEntityListener.class)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -40,28 +40,15 @@ public class ReservationSeat {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "reservation_id", nullable = false,
-            foreignKey = @ForeignKey(name = "fk_reservation_seats_reservation"))
+        foreignKey = @ForeignKey(name = "fk_reservation_seats_reservation"))
     private Reservation reservation;
-
-    /**
-     * 연관관계 편의 메서드.
-     *
-     * <p>외부에서 직접 호출하면 Reservation 쪽 컬렉션과 정합성이 깨진다.
-     * 반드시 Reservation.addReservationSeat()을 통해 간접 호출할 것.
-     */
-    public void assignReservation(Reservation reservation) {
-        this.reservation = reservation;
-    }
-
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "game_seat_id", nullable = false,
-            foreignKey = @ForeignKey(name = "fk_reservation_seats_game_seat"))
+        foreignKey = @ForeignKey(name = "fk_reservation_seats_game_seat"))
     private GameSeat gameSeat;
-
     // 선점 시점 가격 스냅샷. GameSeat.price가 나중에 바뀌어도 예약 시점 가격 유지 (2차 재판매 대비).
     @Column(name = "price", nullable = false)
     private int price;
-
     // reservation_seats는 ERD상 created_at만 있고 updated_at은 없음 → BaseTimeEntity 상속 대신 이 필드만.
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -72,5 +59,15 @@ public class ReservationSeat {
         this.reservation = reservation;
         this.gameSeat = gameSeat;
         this.price = price;
+    }
+
+    /**
+     * 연관관계 편의 메서드.
+     *
+     * <p>외부에서 직접 호출하면 Reservation 쪽 컬렉션과 정합성이 깨진다.
+     * 반드시 Reservation.addReservationSeat()을 통해 간접 호출할 것.
+     */
+    public void assignReservation(Reservation reservation) {
+        this.reservation = reservation;
     }
 }

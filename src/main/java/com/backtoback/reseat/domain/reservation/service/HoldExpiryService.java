@@ -39,7 +39,7 @@ public class HoldExpiryService {
      * 예약만 EXPIRED로 바뀌고 좌석은 HELD로 남는 부분 회수가 발생하지 않는다.
      *
      * @param now 만료 판정 기준 시각 (HoldExpiryScheduler가 주입)
-     * @return    회수된 예약/좌석 건수
+     * @return 회수된 예약/좌석 건수
      */
     @Transactional
     public HoldExpiryResult releaseExpired(LocalDateTime now) {

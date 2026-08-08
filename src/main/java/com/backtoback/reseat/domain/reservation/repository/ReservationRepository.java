@@ -19,11 +19,11 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
      * 컬렉션 페치 조인은 reservationSeats 하나만 사용(MultipleBagFetchException 방지).
      */
     @Query("""
-            SELECT r FROM Reservation r
-            LEFT JOIN FETCH r.reservationSeats rs
-            LEFT JOIN FETCH rs.gameSeat
-            WHERE r.id = :id
-            """)
+        SELECT r FROM Reservation r
+        LEFT JOIN FETCH r.reservationSeats rs
+        LEFT JOIN FETCH rs.gameSeat
+        WHERE r.id = :id
+        """)
     Optional<Reservation> findWithSeatsById(@Param("id") Long id);
 
     /**
@@ -40,15 +40,15 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
      * 인덱스: idx_reservations_status_expires(status, hold_expires_at)
      *
      * @param now 만료 판정 기준 시각 (HoldExpiryService가 주입)
-     * @return    EXPIRED로 전이된 예약 행 수
+     * @return EXPIRED로 전이된 예약 행 수
      */
     @Modifying(clearAutomatically = true)
     @Query("""
-            update Reservation r
-               set r.status = :expired
-             where r.status = :holding
-               and r.holdExpiresAt < :now
-            """)
+        update Reservation r
+           set r.status = :expired
+         where r.status = :holding
+           and r.holdExpiresAt < :now
+        """)
     int expireHoldingReservations(
         @Param("now") LocalDateTime now,
         @Param("holding") ReservationStatus holding,

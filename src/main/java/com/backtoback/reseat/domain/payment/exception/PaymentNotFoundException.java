@@ -10,7 +10,9 @@ import com.backtoback.reseat.global.exception.ErrorCode;
  */
 public class PaymentNotFoundException extends BusinessException {
 
-    /** 결제 없음 에러 코드로 예외를 생성한다. */
+    /**
+     * 결제 없음 에러 코드로 예외를 생성한다.
+     */
     public PaymentNotFoundException() {
         super(ErrorCode.PAYMENT_NOT_FOUND);
     }

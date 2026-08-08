@@ -11,9 +11,10 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.time.LocalDate;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+
+import java.time.LocalDate;
 
 /**
  * 경기 조회 API Swagger 문서화 인터페이스.
@@ -26,15 +27,15 @@ public interface GameControllerDocs {
     @Operation(
         summary = "경기 목록 조회",
         description = """
-                    예매 대상 경기 목록을 조회한다.
+            예매 대상 경기 목록을 조회한다.
 
-                    - 인증 없이 접근 가능한 공개 API
-                    - 홈팀, 원정팀, 날짜 범위, 예매 상태로 필터링 가능
-                    - 기본 페이지 크기: 20
-                    - 기본 정렬: gameAt ASC
-                    - 허용 sort 필드: gameAt, bookingOpenAt, bookingCloseAt, id
-                    - 그 외 sort 필드는 무시되고 id ASC 보조정렬이 뒤에 붙음
-                    """,
+            - 인증 없이 접근 가능한 공개 API
+            - 홈팀, 원정팀, 날짜 범위, 예매 상태로 필터링 가능
+            - 기본 페이지 크기: 20
+            - 기본 정렬: gameAt ASC
+            - 허용 sort 필드: gameAt, bookingOpenAt, bookingCloseAt, id
+            - 그 외 sort 필드는 무시되고 id ASC 보조정렬이 뒤에 붙음
+            """,
         security = {}
     )
     @ApiResponses({
@@ -45,32 +46,32 @@ public interface GameControllerDocs {
                 examples = @ExampleObject(
                     name = "경기 목록 조회 성공 예시",
                     value = """
-                            {
-                                "success": true,
-                                "message": "경기 목록 조회 성공",
-                                "data": {
-                                    "content": [
-                                        {
-                                            "gameId": 1,
-                                            "title": "LG vs 한화",
-                                            "homeTeam": { "teamId": 1, "name": "LG" },
-                                            "awayTeam": { "teamId": 2, "name": "한화" },
-                                            "stadium": { "stadiumId": 1, "name": "잠실야구장" },
-                                            "gameAt": "2026-07-11 18:30:00",
-                                            "bookingOpenAt": "2026-07-04 14:00:00",
-                                            "bookingCloseAt": "2026-07-11 18:30:00",
-                                            "bookingStatus": "OPEN"
-                                        }
-                                    ],
-                                    "pageNumber": 0,
-                                    "pageSize": 20,
-                                    "totalElements": 1,
-                                    "totalPages": 1,
-                                    "isFirst": true,
-                                    "isLast": true
-                                }
+                        {
+                            "success": true,
+                            "message": "경기 목록 조회 성공",
+                            "data": {
+                                "content": [
+                                    {
+                                        "gameId": 1,
+                                        "title": "LG vs 한화",
+                                        "homeTeam": { "teamId": 1, "name": "LG" },
+                                        "awayTeam": { "teamId": 2, "name": "한화" },
+                                        "stadium": { "stadiumId": 1, "name": "잠실야구장" },
+                                        "gameAt": "2026-07-11 18:30:00",
+                                        "bookingOpenAt": "2026-07-04 14:00:00",
+                                        "bookingCloseAt": "2026-07-11 18:30:00",
+                                        "bookingStatus": "OPEN"
+                                    }
+                                ],
+                                "pageNumber": 0,
+                                "pageSize": 20,
+                                "totalElements": 1,
+                                "totalPages": 1,
+                                "isFirst": true,
+                                "isLast": true
                             }
-                            """
+                        }
+                        """
                 )
             )
         ),
@@ -81,12 +82,12 @@ public interface GameControllerDocs {
                 examples = @ExampleObject(
                     name = "잘못된 요청 예시",
                     value = """
-                            {
-                                "success": false,
-                                "errorCode": "INVALID_REQUEST",
-                                "message": "요청 값이 올바르지 않습니다."
-                            }
-                            """
+                        {
+                            "success": false,
+                            "errorCode": "INVALID_REQUEST",
+                            "message": "요청 값이 올바르지 않습니다."
+                        }
+                        """
                 )
             )
         )
@@ -118,12 +119,12 @@ public interface GameControllerDocs {
     @Operation(
         summary = "경기 상세 조회",
         description = """
-                    특정 경기의 상세 정보를 조회한다.
+            특정 경기의 상세 정보를 조회한다.
 
-                    - 인증 없이 접근 가능한 공개 API
-                    - 목록 응답과 달리 stadium에 address, totalCapacity를 추가로 포함
-                    - 좌석 재고와 가격 정보는 포함하지 않음
-                    """,
+            - 인증 없이 접근 가능한 공개 API
+            - 목록 응답과 달리 stadium에 address, totalCapacity를 추가로 포함
+            - 좌석 재고와 가격 정보는 포함하지 않음
+            """,
         security = {}
     )
     @ApiResponses({
@@ -134,27 +135,27 @@ public interface GameControllerDocs {
                 examples = @ExampleObject(
                     name = "경기 상세 조회 성공 예시",
                     value = """
-                            {
-                                "success": true,
-                                "message": "경기 상세 조회 성공",
-                                "data": {
-                                    "gameId": 1,
-                                    "title": "LG vs 한화",
-                                    "homeTeam": { "teamId": 1, "name": "LG" },
-                                    "awayTeam": { "teamId": 2, "name": "한화" },
-                                    "stadium": {
-                                        "stadiumId": 1,
-                                        "name": "잠실야구장",
-                                        "address": "서울특별시 송파구 올림픽로 25",
-                                        "totalCapacity": 25000
-                                    },
-                                    "gameAt": "2026-07-11 18:30:00",
-                                    "bookingOpenAt": "2026-07-04 14:00:00",
-                                    "bookingCloseAt": "2026-07-11 18:30:00",
-                                    "bookingStatus": "OPEN"
-                                }
+                        {
+                            "success": true,
+                            "message": "경기 상세 조회 성공",
+                            "data": {
+                                "gameId": 1,
+                                "title": "LG vs 한화",
+                                "homeTeam": { "teamId": 1, "name": "LG" },
+                                "awayTeam": { "teamId": 2, "name": "한화" },
+                                "stadium": {
+                                    "stadiumId": 1,
+                                    "name": "잠실야구장",
+                                    "address": "서울특별시 송파구 올림픽로 25",
+                                    "totalCapacity": 25000
+                                },
+                                "gameAt": "2026-07-11 18:30:00",
+                                "bookingOpenAt": "2026-07-04 14:00:00",
+                                "bookingCloseAt": "2026-07-11 18:30:00",
+                                "bookingStatus": "OPEN"
                             }
-                            """
+                        }
+                        """
                 )
             )
         ),
@@ -165,12 +166,12 @@ public interface GameControllerDocs {
                 examples = @ExampleObject(
                     name = "타입 오류 예시",
                     value = """
-                            {
-                                "success": false,
-                                "errorCode": "INVALID_REQUEST",
-                                "message": "요청 값이 올바르지 않습니다."
-                            }
-                            """
+                        {
+                            "success": false,
+                            "errorCode": "INVALID_REQUEST",
+                            "message": "요청 값이 올바르지 않습니다."
+                        }
+                        """
                 )
             )
         ),
@@ -181,12 +182,12 @@ public interface GameControllerDocs {
                 examples = @ExampleObject(
                     name = "경기 없음 예시",
                     value = """
-                            {
-                                "success": false,
-                                "errorCode": "GAME_NOT_FOUND",
-                                "message": "경기를 찾을 수 없습니다."
-                            }
-                            """
+                        {
+                            "success": false,
+                            "errorCode": "GAME_NOT_FOUND",
+                            "message": "경기를 찾을 수 없습니다."
+                        }
+                        """
                 )
             )
         )

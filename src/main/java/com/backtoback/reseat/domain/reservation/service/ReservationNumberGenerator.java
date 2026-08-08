@@ -1,9 +1,10 @@
 package com.backtoback.reseat.domain.reservation.service;
 
+import org.springframework.stereotype.Component;
+
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
-import org.springframework.stereotype.Component;
 
 /**
  * 예약 번호 생성기.
@@ -21,7 +22,9 @@ public class ReservationNumberGenerator {
     private static final String CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final int RANDOM_LENGTH = 6;
 
-    /** return 예: RSV-20260711-A7B3C1} */
+    /**
+     * return 예: RSV-20260711-A7B3C1}
+     */
     public String generate() {
         String date = LocalDate.now().format(DATE_FORMATTER);
         return "RSV-" + date + "-" + generateRandom();

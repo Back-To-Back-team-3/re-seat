@@ -5,11 +5,11 @@ import com.backtoback.reseat.domain.user.auth.service.CustomOAuth2UserService;
 import com.backtoback.reseat.domain.user.auth.service.OAuth2AuthenticationFailureHandler;
 import com.backtoback.reseat.domain.user.auth.service.OAuth2AuthenticationSuccessHandler;
 import jakarta.servlet.DispatcherType;
-import org.springframework.http.HttpMethod;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -33,9 +33,10 @@ public class SecurityConfig {
     private final JwtTokenProvider jwtTokenProvider;
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
     private final CustomAccessDeniedHandler accessDeniedHandler;
-    private final CustomOAuth2UserService   customOAuth2UserService;
+    private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
     private final OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -52,8 +53,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
 
                 // 헬스체크 및 모니터링 경로 허용
-                .requestMatchers("/actuator","/actuator/**").permitAll()
-
+                .requestMatchers("/actuator", "/actuator/**").permitAll()
 
 
                 // 비동기 요청 처리 후 발생하는 ASYNC 디스패치를 허용한다.
@@ -62,12 +62,12 @@ public class SecurityConfig {
                 //인증이 불필요한 경로 허용
                 .requestMatchers("/api/v1/auth/**", "/oauth2/**", "/login/**").permitAll()
                 .requestMatchers(PathRequest.toH2Console()).permitAll()
-                .requestMatchers("/swagger-ui/**","/v3/api-docs/**").permitAll()
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
 
                 // 경기 목록(/api/v1/games), 경기 상세(/api/v1/games/{gameId}) GET 공개 허용
                 .requestMatchers(HttpMethod.GET, "/api/v1/games", "/api/v1/games/{gameId}").permitAll()
 
-                    //관리자 전용 API 인가 적용
+                //관리자 전용 API 인가 적용
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
@@ -86,12 +86,12 @@ public class SecurityConfig {
             )
 
             // 4. H2 콘솔의 iframe 사용 허용을 위한 X-Frame-Options 설정
-                .headers(headers -> headers
-                        .frameOptions(frameOptions -> frameOptions.sameOrigin())
-                )
+            .headers(headers -> headers
+                .frameOptions(frameOptions -> frameOptions.sameOrigin())
+            )
 
-                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
-                        UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
+                UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -100,17 +100,18 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
+
     //프론트엔드 연동대비
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-            configuration.setAllowedOrigins(List.of(
-                "http://localhost:3000",             // React 개발용 로컬 주소
-                "http://localhost:5173",             // Vite 개발용 로컬 주소
-                "https://re-seat.netlify.app",        // 프론트엔드 임시/배포 주소 예시
-                "https://your-frontend-domain.com"   // 실서버 프론트엔드 도메인 (필요시 추가)
-            ));
+        configuration.setAllowedOrigins(List.of(
+            "http://localhost:3000",             // React 개발용 로컬 주소
+            "http://localhost:5173",             // Vite 개발용 로컬 주소
+            "https://re-seat.netlify.app",        // 프론트엔드 임시/배포 주소 예시
+            "https://your-frontend-domain.com"   // 실서버 프론트엔드 도메인 (필요시 추가)
+        ));
 
         configuration.addAllowedMethod("*");      // GET, POST, PUT, DELETE 등 전체 허용
         configuration.addAllowedHeader("*");      // Authorization, Queue-Token, Idempotency-Key 등 허용

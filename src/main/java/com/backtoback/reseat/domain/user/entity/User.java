@@ -20,13 +20,13 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(
-        name = "users",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "uk_users_email", columnNames = "email"),       // 이메일 중복 방지
-               // @UniqueConstraint(name = "uk_users_nickname", columnNames = "nickname"), // 닉네임 중복 방지
-                @UniqueConstraint(name = "uk_users_phone", columnNames = "phone"),        // 전화번호 중복 방지
-                @UniqueConstraint(name = "uk_users_ci", columnNames = "ci")
-        }
+    name = "users",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_users_email", columnNames = "email"),       // 이메일 중복 방지
+        // @UniqueConstraint(name = "uk_users_nickname", columnNames = "nickname"), // 닉네임 중복 방지
+        @UniqueConstraint(name = "uk_users_phone", columnNames = "phone"),        // 전화번호 중복 방지
+        @UniqueConstraint(name = "uk_users_ci", columnNames = "ci")
+    }
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -63,7 +63,7 @@ public class User extends BaseEntity {
     @Column(name = "ci", nullable = true)
     private String ci;
 
-    @Column(name="is_verified", nullable = false)
+    @Column(name = "is_verified", nullable = false)
     private boolean isVerified = false;
 
     @Column(name = "provider", nullable = true, length = 50)
@@ -122,7 +122,7 @@ public class User extends BaseEntity {
         this.providerId = providerId;
     }
 
-    public void withdraw(){
+    public void withdraw() {
         //회원상태 DELETE로 변경
         this.status = UserStatus.DELETED;
 
@@ -138,8 +138,9 @@ public class User extends BaseEntity {
         this.ci = null;
         this.isVerified = false;
     }
-    public void completeVerification(String ci, String name, String phone){
-        if(this.isVerified){
+
+    public void completeVerification(String ci, String name, String phone) {
+        if (this.isVerified) {
             throw new IllegalStateException("이미 본인인증이 완료된 회원입니다.");
         }
         this.ci = ci;

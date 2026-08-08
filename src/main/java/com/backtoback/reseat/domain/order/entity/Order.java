@@ -27,14 +27,14 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(
-        name = "orders",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "uk_orders_no", columnNames = "order_no"),
-                @UniqueConstraint(name = "uk_orders_reservation", columnNames = "reservation_id")
-        },
-        indexes = {
-                @Index(name = "idx_orders_user_status", columnList = "user_id, status")
-        }
+    name = "orders",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_orders_no", columnNames = "order_no"),
+        @UniqueConstraint(name = "uk_orders_reservation", columnNames = "reservation_id")
+    },
+    indexes = {
+        @Index(name = "idx_orders_user_status", columnList = "user_id, status")
+    }
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -49,17 +49,17 @@ public class Order extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
-            name = "user_id",
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_orders_user")
+        name = "user_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_orders_user")
     )
     private User user;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
-            name = "reservation_id",
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_orders_reservation")
+        name = "reservation_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_orders_reservation")
     )
     private Reservation reservation;
 
@@ -76,18 +76,18 @@ public class Order extends BaseEntity {
     /**
      * 주문 Entity를 생성한다.
      *
-     * @param orderNo 주문 번호
-     * @param user 주문 사용자
+     * @param orderNo     주문 번호
+     * @param user        주문 사용자
      * @param reservation 주문으로 전환할 예약
      * @param totalAmount 총 주문 금액
      * @return CREATE 상태의 주문
      */
     public static Order of(
-            String orderNo,
-            User user,
-            Reservation reservation,
-            int totalAmount,
-            LocalDateTime paymentDeadline
+        String orderNo,
+        User user,
+        Reservation reservation,
+        int totalAmount,
+        LocalDateTime paymentDeadline
     ) {
         Order order = new Order();
         order.orderNo = orderNo;

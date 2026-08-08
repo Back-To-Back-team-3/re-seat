@@ -8,7 +8,21 @@ import com.backtoback.reseat.domain.payment.exception.PaymentCallbackMismatchExc
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelNotAllowedException;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.global.common.BaseEntity;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -45,9 +59,9 @@ public class Payment extends BaseEntity {
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
-            name = "order_id",
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_payments_order")
+        name = "order_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_payments_order")
     )
     private Order order;
 
@@ -119,7 +133,9 @@ public class Payment extends BaseEntity {
         this.failedAt = failedAt;
     }
 
-    /** Toss 승인 요청에 사용할 PG 결제 키를 연결한다. */
+    /**
+     * Toss 승인 요청에 사용할 PG 결제 키를 연결한다.
+     */
     public void assignPgPaymentKey(String pgPaymentKey) {
         if (this.pgPaymentKey != null && !this.pgPaymentKey.equals(pgPaymentKey)) {
             throw new PaymentCallbackMismatchException();

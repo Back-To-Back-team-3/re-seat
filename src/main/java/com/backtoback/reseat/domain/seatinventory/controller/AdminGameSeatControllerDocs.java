@@ -22,16 +22,16 @@ public interface AdminGameSeatControllerDocs {
     @Operation(
         summary = "경기 좌석 재고 오픈",
         description = """
-                    ROLE_ADMIN 필요. 해당 경기의 판매 좌석 재고(game_seats)를 일괄 생성한다.
+            ROLE_ADMIN 필요. 해당 경기의 판매 좌석 재고(game_seats)를 일괄 생성한다.
 
-                    가격 산정식: 구역 성인 기본가(요일 반영) × 시기 배수
-                      - 화~목: seat_zones.base_price (INFIELD 18,000 / OUTFIELD 16,000)
-                      - 금~월: INFIELD 25,000 / OUTFIELD 23,000
-                      - 9~10월: × 1.2
+            가격 산정식: 구역 성인 기본가(요일 반영) × 시기 배수
+              - 화~목: seat_zones.base_price (INFIELD 18,000 / OUTFIELD 16,000)
+              - 금~월: INFIELD 25,000 / OUTFIELD 23,000
+              - 9~10월: × 1.2
 
-                    가격은 서버 정책이 결정한다. 요청 바디 없음.
-                    경기당 1회만 호출 가능하며 재호출 시 409를 반환한다.
-                    """,
+            가격은 서버 정책이 결정한다. 요청 바디 없음.
+            경기당 1회만 호출 가능하며 재호출 시 409를 반환한다.
+            """,
         security = @SecurityRequirement(name = "JWT Bearer Token")
     )
     @ApiResponses({
@@ -42,19 +42,19 @@ public interface AdminGameSeatControllerDocs {
                 examples = @ExampleObject(
                     name = "재고 오픈 성공 예시",
                     value = """
-                            {
-                                "success": true,
-                                "message": "좌석 재고 오픈 성공",
-                                "data": {
-                                    "gameId": 1146,
-                                    "createdCount": 500,
-                                    "priceRange": {
-                                        "min": 16000,
-                                        "max": 18000
-                                    }
+                        {
+                            "success": true,
+                            "message": "좌석 재고 오픈 성공",
+                            "data": {
+                                "gameId": 1146,
+                                "createdCount": 500,
+                                "priceRange": {
+                                    "min": 16000,
+                                    "max": 18000
                                 }
                             }
-                            """
+                        }
+                        """
                 )
             )
         ),

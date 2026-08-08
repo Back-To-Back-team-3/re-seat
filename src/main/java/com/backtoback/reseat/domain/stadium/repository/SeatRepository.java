@@ -15,16 +15,16 @@ public interface SeatRepository extends JpaRepository<Seat, Long> {
      *
      * @param stadiumId 구장 ID
      * @param status    조회할 좌석 상태 (재고 오픈 시 {@link SeatStatus#ACTIVE})
-     * @return          구역이 함꼐 로딩된 좌석 목록 (좌석 ID 오름차순)
+     * @return 구역이 함꼐 로딩된 좌석 목록 (좌석 ID 오름차순)
      */
     @Query("""
-            select s
-            from Seat s
-            join fetch s.zone
-            where s.stadium.id = :stadiumId
-              and s.status = :status
-            order by s.id asc
-            """)
+        select s
+        from Seat s
+        join fetch s.zone
+        where s.stadium.id = :stadiumId
+          and s.status = :status
+        order by s.id asc
+        """)
     List<Seat> findAllByStadiumIdAndStatusWithZone(
         @Param("stadiumId") Long stadiumId,
         @Param("status") SeatStatus status

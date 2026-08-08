@@ -22,9 +22,9 @@ public interface QueueUserRepository extends JpaRepository<User, Long> {
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
-            SELECT u
-            FROM User u
-            WHERE u.id = :userId
-            """)
+        SELECT u
+        FROM User u
+        WHERE u.id = :userId
+        """)
     Optional<User> findByIdWithPessimisticWriteLock(@Param("userId") Long userId);
 }

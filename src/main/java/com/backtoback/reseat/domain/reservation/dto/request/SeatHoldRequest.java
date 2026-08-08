@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+
 import java.util.List;
 
 /**
@@ -29,4 +30,5 @@ public record SeatHoldRequest(
     @NotEmpty(message = "gameSeatIds는 1개 이상이어야 합니다.")
     @Size(min = 1, max = 2, message = "좌석은 최소 1개, 최대 2개까지 선점 가능합니다.")
     List<@NotNull @Positive Long> gameSeatIds
-) {}
+) {
+}

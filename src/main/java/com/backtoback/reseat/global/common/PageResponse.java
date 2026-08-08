@@ -32,6 +32,7 @@ public class PageResponse<T> {
         this.isFirst = page.isFirst();
         this.isLast = page.isLast();
     }
+
     public static <T> PageResponse<T> of(Page<T> page) {
         return new PageResponse<>(page);
     }

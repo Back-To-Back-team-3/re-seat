@@ -14,10 +14,10 @@ import lombok.NoArgsConstructor;
 public class PaymentCancelRequest {
 
     @Schema(
-            description = "Toss 취소 요청에 전달할 사유",
-            example = "사용자 요청에 따른 예매 취소",
-            maxLength = 200,
-            requiredMode = Schema.RequiredMode.REQUIRED
+        description = "Toss 취소 요청에 전달할 사유",
+        example = "사용자 요청에 따른 예매 취소",
+        maxLength = 200,
+        requiredMode = Schema.RequiredMode.REQUIRED
     )
     @NotBlank(message = "취소 사유는 필수입니다.")
     @Size(max = 200, message = "취소 사유는 200자 이하여야 합니다.")

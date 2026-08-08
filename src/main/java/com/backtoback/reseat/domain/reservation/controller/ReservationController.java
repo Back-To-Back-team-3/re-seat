@@ -36,7 +36,9 @@ public class ReservationController implements ReservationControllerDocs {
     private final SeatHoldFacade seatHoldFacade;
     private final ReservationService reservationService;
 
-    /** POST /api/v1/reservations */
+    /**
+     * POST /api/v1/reservations
+     */
     @Override
     @PostMapping
     public ResponseEntity<ApiResponse<ReservationResponse>> holdSeats(
@@ -51,7 +53,9 @@ public class ReservationController implements ReservationControllerDocs {
             .body(ApiResponse.success("좌석 선점 성공", response));
     }
 
-    /** GET /api/v1/reservations/{reservationId}/hold-time */
+    /**
+     * GET /api/v1/reservations/{reservationId}/hold-time
+     */
     @Override
     @GetMapping("/{reservationId}/hold-time")
     public ResponseEntity<ApiResponse<HoldTimeResponse>> getHoldTime(
@@ -65,7 +69,9 @@ public class ReservationController implements ReservationControllerDocs {
             .body(ApiResponse.success("선점 잔여 시간 조회 성공", response));
     }
 
-    /** DELETE /api/v1/reservations/{reservationId} */
+    /**
+     * DELETE /api/v1/reservations/{reservationId}
+     */
     @Override
     @DeleteMapping("/{reservationId}")
     public ResponseEntity<ApiResponse<ReservationCancelResponse>> releaseHold(

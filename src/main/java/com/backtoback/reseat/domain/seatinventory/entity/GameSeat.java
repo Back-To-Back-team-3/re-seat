@@ -29,15 +29,15 @@ import java.time.LocalDateTime;
 @Getter
 @Entity
 @Table(
-        name = "game_seats",
-        uniqueConstraints = {
-                // over-booking 최후 물리 방어선: 한 경기에 같은 좌석 재고는 하나만
-                @UniqueConstraint(name = "uk_game_seats_game_seat", columnNames = {"game_id", "seat_id"})
-        },
-        indexes = {
-                @Index(name = "idx_game_seats_game_status_expires", columnList = "game_id, status, hold_expires_at"),
-                @Index(name = "idx_game_seats_hold_expires", columnList = "status, hold_expires_at")
-        }
+    name = "game_seats",
+    uniqueConstraints = {
+        // over-booking 최후 물리 방어선: 한 경기에 같은 좌석 재고는 하나만
+        @UniqueConstraint(name = "uk_game_seats_game_seat", columnNames = {"game_id", "seat_id"})
+    },
+    indexes = {
+        @Index(name = "idx_game_seats_game_status_expires", columnList = "game_id, status, hold_expires_at"),
+        @Index(name = "idx_game_seats_hold_expires", columnList = "status, hold_expires_at")
+    }
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class GameSeat extends BaseEntity {
@@ -48,12 +48,12 @@ public class GameSeat extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "game_id", nullable = false,
-            foreignKey = @ForeignKey(name = "fk_game_seats_game"))
+        foreignKey = @ForeignKey(name = "fk_game_seats_game"))
     private Game game;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "seat_id", nullable = false,
-            foreignKey = @ForeignKey(name = "fk_game_seats_seat"))
+        foreignKey = @ForeignKey(name = "fk_game_seats_seat"))
     private Seat seat;
 
     /**
@@ -156,12 +156,16 @@ public class GameSeat extends BaseEntity {
         this.soldAt = LocalDateTime.now();
     }
 
-    /** 좌석 판매 상태 전이. 상태 전이 검증(AVAILABLE→HELD 등)은 C-3에서 도메인에 추가. */
+    /**
+     * 좌석 판매 상태 전이. 상태 전이 검증(AVAILABLE→HELD 등)은 C-3에서 도메인에 추가.
+     */
     public void updateStatus(GameSeatStatus status) {
         this.status = status;
     }
 
-    /** 선점 만료 시각 세팅. 해제 시 null로 초기화. */
+    /**
+     * 선점 만료 시각 세팅. 해제 시 null로 초기화.
+     */
     public void updateHoldExpiresAt(LocalDateTime holdExpiresAt) {
         this.holdExpiresAt = holdExpiresAt;
     }

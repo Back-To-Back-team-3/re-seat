@@ -41,15 +41,14 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class OrderService {
 
+    private static final DateTimeFormatter ORDER_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final long PAYMENT_DEADLINE_MINUTES = 8;
+    private static final long MAX_HOLD_DURATION_MINUTES = 18;
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final OrderReservationRepository orderReservationRepository;
     private final ReservationSeatRepository reservationSeatRepository;
     private final UserRepository userRepository;
-
-    private static final DateTimeFormatter ORDER_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
-    private static final long PAYMENT_DEADLINE_MINUTES = 8;
-    private static final long MAX_HOLD_DURATION_MINUTES = 18;
 
     /**
      * 예약 선점 정보를 기반으로 주문을 생성한다.
@@ -60,7 +59,7 @@ public class OrderService {
      * <p>주문 생성 후 Reservation과 주문에 포함된
      * 모든 GameSeat의 선점 만료 시간을 결제 기한에 맞춰 동일하게 연장한다.</p>
      *
-     * @param userId 현재 사용자 ID
+     * @param userId        현재 사용자 ID
      * @param reservationId 주문으로 전활할 예약 ID
      * @return 생성된 주문 응답 DTO
      */
@@ -68,11 +67,11 @@ public class OrderService {
     public OrderResponse createOrder(Long userId, Long reservationId) {
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
+            .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
 
         // 만료 스케줄러와의 경합을 막기 위해 주문 생성 대상으로 한 예약 행을 비관적 락으로 조회한다.
         Reservation reservation = orderReservationRepository.findByIdWithPessimisticWriteLock(reservationId)
-                .orElseThrow(ReservationNotFoundException::new);
+            .orElseThrow(ReservationNotFoundException::new);
 
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime paymentDeadline = now.plusMinutes(PAYMENT_DEADLINE_MINUTES);
@@ -93,17 +92,17 @@ public class OrderService {
 
         // 주문 금액은 선점 당시 저장된 예약 좌석 가격으로 확정한다.
         int totalAmount = reservationSeats.stream()
-                .mapToInt(ReservationSeat::getPrice)
-                .sum();
+            .mapToInt(ReservationSeat::getPrice)
+            .sum();
 
         Order order = Order.of(orderNo, user, reservation, totalAmount, paymentDeadline);
         Order saveOrder = orderRepository.save(order);
 
         // 예약 좌석을 기준으로 주문 목록을 생성한다.
         List<OrderItem> orderItems = reservationSeats.stream()
-                .map(reservationSeat ->
-                    OrderItem.of(saveOrder, reservationSeat.getGameSeat(), reservationSeat.getPrice())
-                ).toList();
+            .map(reservationSeat ->
+                OrderItem.of(saveOrder, reservationSeat.getGameSeat(), reservationSeat.getPrice())
+            ).toList();
 
         List<OrderItem> saveOrderItems = orderItemRepository.saveAll(orderItems);
 
@@ -111,16 +110,16 @@ public class OrderService {
         extendHoldExpiresAt(reservationId, reservationSeats, extendedHoldExpiresAt);
 
         return OrderResponse.from(
-                saveOrder,
-                saveOrderItems,
-                extendedHoldExpiresAt
+            saveOrder,
+            saveOrderItems,
+            extendedHoldExpiresAt
         );
     }
 
     /**
      * 주문 ID로 주문 상세 정보를 조회한다.
      *
-     * @param userId 현재 사용자 ID
+     * @param userId  현재 사용자 ID
      * @param orderId 조회할 주문 ID
      * @return 주문 상세 응답 DTO
      */
@@ -144,7 +143,7 @@ public class OrderService {
      *
      * <p>CREATE 상태 주문만 취소할 수 있으며, 주문 취소와 함께 예약을 취소하고 선점 좌석을 해제한다.</p>
      *
-     * @param userId 현재 사용자 ID
+     * @param userId  현재 사용자 ID
      * @param orderId 취소할 주문 ID
      * @return 주문 취소 응답 DTO
      */
@@ -222,19 +221,19 @@ public class OrderService {
      *
      * <p>예약 소유자, 예약 상태, 선점 만료 여부, 중복 주문 여부를 확인한다.</p>
      *
-     * @param reservation 주문으로 전환할 예약
-     * @param userId 현재 사용자 ID
+     * @param reservation   주문으로 전환할 예약
+     * @param userId        현재 사용자 ID
      * @param reservationId 예약 ID
-     * @param now 현재 시간
+     * @param now           현재 시간
      */
     private void validateReservationInfo(Reservation reservation, Long userId, Long reservationId, LocalDateTime now) {
-         if (!reservation.getUser().getId().equals(userId)) {
-             throw new ReservationAccessDeniedException();
-         }
+        if (!reservation.getUser().getId().equals(userId)) {
+            throw new ReservationAccessDeniedException();
+        }
 
-         if (!reservation.getStatus().equals(ReservationStatus.HOLDING)) {
-             throw new InvalidReservationStatusException();
-         }
+        if (!reservation.getStatus().equals(ReservationStatus.HOLDING)) {
+            throw new InvalidReservationStatusException();
+        }
 
         if (!reservation.getHoldExpiresAt().isAfter(now)) {
             throw new PreReservationExpiredException();
@@ -258,9 +257,9 @@ public class OrderService {
     private String generateOrderNo(LocalDateTime now) {
         String date = now.format(ORDER_DATE_FORMATTER);
         String random = UUID.randomUUID().toString()
-                .replace("-", "")
-                .substring(0, 6)
-                .toUpperCase();
+            .replace("-", "")
+            .substring(0, 6)
+            .toUpperCase();
 
         return "ORD-" + date + "-" + random;
     }
@@ -273,7 +272,7 @@ public class OrderService {
      */
     private Order findOrderById(Long orderId) {
         return orderRepository.findById(orderId)
-                .orElseThrow(OrderNotFoundException::new);
+            .orElseThrow(OrderNotFoundException::new);
     }
 
     /**
@@ -282,7 +281,7 @@ public class OrderService {
      * <p>기존 선점 만료 시간과 결제 기한 중 늦은 시간을 선택하고,
      * 최초 선점 시간부터 최대 18분을 넘기지 않도록 제한한다.</p>
      *
-     * @param reservation 주문 생성 대상 예약
+     * @param reservation     주문 생성 대상 예약
      * @param paymentDeadline 주문 결제 기한
      * @return 최종 선점 만료 시간
      */
@@ -290,8 +289,8 @@ public class OrderService {
 
         // 기존 만료 시간과 결제 기한 중 늦은 값을 연장 후보로 선택한다.
         LocalDateTime laterHoldExpiresAt = reservation.getHoldExpiresAt().isAfter(paymentDeadline)
-                ? reservation.getHoldExpiresAt()
-                : paymentDeadline;
+            ? reservation.getHoldExpiresAt()
+            : paymentDeadline;
 
         // 최초 선점 시간부터 18분을 최대 만료 시간으로 계산한다.
         LocalDateTime maxHoldExpiresAt = reservation.getCreatedAt().plusMinutes(MAX_HOLD_DURATION_MINUTES);
@@ -303,8 +302,8 @@ public class OrderService {
 
         // 연장 후보가 최대 만료 시간을 넘으면 18분 상한으로 제한한다.
         return laterHoldExpiresAt.isBefore(maxHoldExpiresAt)
-                ? laterHoldExpiresAt
-                : maxHoldExpiresAt;
+            ? laterHoldExpiresAt
+            : maxHoldExpiresAt;
     }
 
     /**
@@ -312,14 +311,14 @@ public class OrderService {
      *
      * <p>Reservation과 GameSeat에 동일한 만료 시간을 적용하여 정합성을 보장한다.</p>
      *
-     * @param reservationId 연장할 예약 ID
-     * @param reservationSeats 예약에 포함된 좌석 목록
+     * @param reservationId         연장할 예약 ID
+     * @param reservationSeats      예약에 포함된 좌석 목록
      * @param extendedHoldExpiresAt 최종 선점 만료 시간
      */
     private void extendHoldExpiresAt(
-            Long reservationId,
-            List<ReservationSeat> reservationSeats,
-            LocalDateTime extendedHoldExpiresAt
+        Long reservationId,
+        List<ReservationSeat> reservationSeats,
+        LocalDateTime extendedHoldExpiresAt
     ) {
 
         // 잠금 조회한 Reservation의 선점 만료 시간을 계산 결과로 갱신한다.
@@ -327,9 +326,9 @@ public class OrderService {
 
         // 예약에 포함된 모든 GameSeat에도 동일한 만료 시간을 적용한다.
         reservationSeats
-                .forEach(reservationSeat -> {
-                    GameSeat gameSeat = reservationSeat.getGameSeat();
-                    gameSeat.updateHoldExpiresAt(extendedHoldExpiresAt);
-                });
+            .forEach(reservationSeat -> {
+                GameSeat gameSeat = reservationSeat.getGameSeat();
+                gameSeat.updateHoldExpiresAt(extendedHoldExpiresAt);
+            });
     }
 }

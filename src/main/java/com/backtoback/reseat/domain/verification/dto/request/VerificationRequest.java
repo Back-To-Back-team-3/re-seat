@@ -7,9 +7,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class VerificationRequest {
 
-     private String impUid;
+    private String impUid;
 
-     public VerificationRequest(String impUid){
-         this.impUid = impUid;
-     }
+    public VerificationRequest(String impUid) {
+        this.impUid = impUid;
+    }
 }

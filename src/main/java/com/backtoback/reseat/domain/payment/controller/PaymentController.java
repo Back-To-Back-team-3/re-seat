@@ -1,7 +1,7 @@
 package com.backtoback.reseat.domain.payment.controller;
 
-import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentCancelRequest;
+import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentFailRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentRequest;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentActionResponse;
@@ -32,14 +32,14 @@ public class PaymentController implements PaymentControllerDocs {
     @Override
     @PostMapping
     public ResponseEntity<ApiResponse<PaymentCreateResponse>> requestPayment(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestHeader("Idempotency-Key") String idempotencyKey,
-            @Valid @RequestBody PaymentRequest request
+        @AuthenticationPrincipal CustomUserDetails userDetails,
+        @RequestHeader("Idempotency-Key") String idempotencyKey,
+        @Valid @RequestBody PaymentRequest request
     ) {
         PaymentCreateResponse response = paymentService.requestPayment(
-                userDetails.getId(),
-                idempotencyKey,
-                request
+            userDetails.getId(),
+            idempotencyKey,
+            request
         );
 
         return ResponseEntity.ok(ApiResponse.success("결제 요청 처리 완료", response));
@@ -48,16 +48,16 @@ public class PaymentController implements PaymentControllerDocs {
     @Override
     @PostMapping("/{paymentId}/complete")
     public ResponseEntity<ApiResponse<PaymentActionResponse>> completePayment(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable Long paymentId,
-            @RequestHeader("Idempotency-Key") String idempotencyKey,
-            @Valid @RequestBody PaymentCompleteRequest request
+        @AuthenticationPrincipal CustomUserDetails userDetails,
+        @PathVariable Long paymentId,
+        @RequestHeader("Idempotency-Key") String idempotencyKey,
+        @Valid @RequestBody PaymentCompleteRequest request
     ) {
         PaymentActionResponse response = paymentService.completePayment(
-                userDetails.getId(),
-                paymentId,
-                idempotencyKey,
-                request
+            userDetails.getId(),
+            paymentId,
+            idempotencyKey,
+            request
         );
 
         return ResponseEntity.ok(ApiResponse.success("결제 승인 처리 완료", response));
@@ -66,16 +66,16 @@ public class PaymentController implements PaymentControllerDocs {
     @Override
     @PostMapping("/{paymentId}/fail")
     public ResponseEntity<ApiResponse<PaymentActionResponse>> failPayment(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable Long paymentId,
-            @RequestHeader("Idempotency-Key") String idempotencyKey,
-            @Valid @RequestBody PaymentFailRequest request
+        @AuthenticationPrincipal CustomUserDetails userDetails,
+        @PathVariable Long paymentId,
+        @RequestHeader("Idempotency-Key") String idempotencyKey,
+        @Valid @RequestBody PaymentFailRequest request
     ) {
         PaymentActionResponse response = paymentService.failPayment(
-                userDetails.getId(),
-                paymentId,
-                idempotencyKey,
-                request
+            userDetails.getId(),
+            paymentId,
+            idempotencyKey,
+            request
         );
 
         return ResponseEntity.ok(ApiResponse.success("결제 실패 처리 완료", response));
@@ -84,14 +84,14 @@ public class PaymentController implements PaymentControllerDocs {
     @Override
     @PostMapping("/{paymentId}/cancel")
     public ResponseEntity<ApiResponse<PaymentActionResponse>> cancelPayment(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable Long paymentId,
-            @Valid @RequestBody PaymentCancelRequest request
+        @AuthenticationPrincipal CustomUserDetails userDetails,
+        @PathVariable Long paymentId,
+        @Valid @RequestBody PaymentCancelRequest request
     ) {
         PaymentActionResponse response = paymentService.cancelPayment(
-                userDetails.getId(),
-                paymentId,
-                request
+            userDetails.getId(),
+            paymentId,
+            request
         );
 
         return ResponseEntity.ok(ApiResponse.success("결제 취소 처리 완료", response));
@@ -100,8 +100,8 @@ public class PaymentController implements PaymentControllerDocs {
     @Override
     @GetMapping("/{paymentId}")
     public ResponseEntity<ApiResponse<PaymentResponse>> getPayment(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable Long paymentId
+        @AuthenticationPrincipal CustomUserDetails userDetails,
+        @PathVariable Long paymentId
     ) {
         PaymentResponse response = paymentService.getPayment(userDetails.getId(), paymentId);
 

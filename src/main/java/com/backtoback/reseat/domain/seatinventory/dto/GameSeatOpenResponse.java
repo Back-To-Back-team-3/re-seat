@@ -21,7 +21,7 @@ public record GameSeatOpenResponse(
 
     @Schema(description = "생성된 재고의 가격 범위")
     PriceRange priceRange
-){
+) {
 
 
     /**

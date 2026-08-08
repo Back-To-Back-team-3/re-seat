@@ -122,7 +122,6 @@ public class Ticket extends BaseEntity {
     private LocalDateTime canceledAt;
 
 
-
     public static Ticket issue(
         String ticketNo,
         User user,
@@ -144,12 +143,41 @@ public class Ticket extends BaseEntity {
         return ticket;
     }
 
+    // 티켓 발급 시 필수 파라미터 검증
+    private static void validateIssueParams(
+        String ticketNo,
+        User user,
+        OrderItem orderItem,
+        GameSeat gameSeat,
+        String qrToken
+    ) {
+        if (ticketNo == null || ticketNo.isBlank()) {
+            throw new IllegalArgumentException("ticketNo는 필수입니다.");
+        }
+        if (qrToken == null || qrToken.isBlank()) {
+            throw new IllegalArgumentException("qrToken은 필수입니다.");
+        }
+        if (user == null) {
+            throw new IllegalArgumentException("user는 필수입니다.");
+        }
+        if (orderItem == null) {
+            throw new IllegalArgumentException("orderItem은 필수입니다.");
+        }
+        if (gameSeat == null) {
+            throw new IllegalArgumentException("gameSeat는 필수입니다.");
+        }
+    }
+
     // 티켓 사용 처리, ISSUED 상태의 티켓만 사용 가능
     public void markUsed() {
         validateStatus(TicketStatus.ISSUED);
         this.status = TicketStatus.USED;
         this.usedAt = LocalDateTime.now();
     }
+
+
+    //관리자 전용 직권 취소 처리
+    //@param detail 관리자가 입력한 취소 상세 사유 (예: "매크로 부정 예매 탐지")
 
     // 티켓 취소 처리, ISSUED 상태의 티켓만 취소 가능
     public void cancel(TicketCancelReason cancelReason) {
@@ -163,10 +191,6 @@ public class Ticket extends BaseEntity {
         this.cancelReason = cancelReason;
         this.canceledAt = LocalDateTime.now();
     }
-
-
-      //관리자 전용 직권 취소 처리
-      //@param detail 관리자가 입력한 취소 상세 사유 (예: "매크로 부정 예매 탐지")
 
     public void cancelByAdmin(String detail) {
         validateStatus(TicketStatus.ISSUED);
@@ -202,31 +226,6 @@ public class Ticket extends BaseEntity {
                 ErrorCode.INVALID_REQUEST,
                 "티켓 상태가 올바르지 않습니다. expected=" + expected + ", current=" + this.status
             );
-        }
-    }
-
-    // 티켓 발급 시 필수 파라미터 검증
-    private static void validateIssueParams(
-        String ticketNo,
-        User user,
-        OrderItem orderItem,
-        GameSeat gameSeat,
-        String qrToken
-    ) {
-        if (ticketNo == null || ticketNo.isBlank()) {
-            throw new IllegalArgumentException("ticketNo는 필수입니다.");
-        }
-        if (qrToken == null || qrToken.isBlank()) {
-            throw new IllegalArgumentException("qrToken은 필수입니다.");
-        }
-        if (user == null) {
-            throw new IllegalArgumentException("user는 필수입니다.");
-        }
-        if (orderItem == null) {
-            throw new IllegalArgumentException("orderItem은 필수입니다.");
-        }
-        if (gameSeat == null) {
-            throw new IllegalArgumentException("gameSeat는 필수입니다.");
         }
     }
 }

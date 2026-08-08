@@ -21,7 +21,7 @@ public class VerificationService {
     public void verifyAndUpdateUser(Long userId, String impUid) {
         // 1. 현재 세션 유저 조회
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+            .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         String certifiedCi;
         String certifiedName;

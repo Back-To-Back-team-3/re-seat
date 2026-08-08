@@ -21,14 +21,14 @@ public class UserSignUpResponse {
     private final UserStatus status;
 
     //엔티티를 받아 응답 DTO로 변환해 주는 정적 팩토리 메서드
-    public static UserSignUpResponse from(User user){
+    public static UserSignUpResponse from(User user) {
         return UserSignUpResponse.builder()
-                .userId(user.getId())
-                .email(user.getEmail())
-                .name(user.getName())
-                .role(user.getRole())
-                .status(user.getStatus())
-                .build();
+            .userId(user.getId())
+            .email(user.getEmail())
+            .name(user.getName())
+            .role(user.getRole())
+            .status(user.getStatus())
+            .build();
 
     }
 }

@@ -18,7 +18,7 @@ public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
      * 해당 경기의 좌석 재고가 이미 생성되었는지 확인한다.
      *
      * @param gameId 경기 ID
-     * @return       재고가 1건 이상 존재하면 true
+     * @return 재고가 1건 이상 존재하면 true
      */
     boolean existsByGameId(Long gameId);
 
@@ -31,13 +31,13 @@ public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
      * @return 좌석 현황 목록 (seat·zone 로딩 완료)
      */
     @Query("""
-            select gs
-            from GameSeat gs
-            join fetch gs.seat s
-            join fetch s.zone z
-            where gs.game.id = :gameId
-            order by z.id asc, s.seatRow asc, s.seatNumber asc
-            """)
+        select gs
+        from GameSeat gs
+        join fetch gs.seat s
+        join fetch s.zone z
+        where gs.game.id = :gameId
+        order by z.id asc, s.seatRow asc, s.seatNumber asc
+        """)
     List<GameSeat> findAllByGameIdWithSeatAndZone(@Param("gameId") Long gameId);
 
     /**
@@ -46,23 +46,23 @@ public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
      * <p>필터가 null이면 해당 조건을 무시한다.
      * <p>QueryDSL 미사용 환경에서 JPQL 동적 조건으로 처리한다.
      *
-     * @param gameId   경기 ID (필수)
-     * @param zoneId   구역 ID (선택)
-     * @param grade    좌석 등급 (선택)
-     * @param status   좌석 상태 (선택)
+     * @param gameId 경기 ID (필수)
+     * @param zoneId 구역 ID (선택)
+     * @param grade  좌석 등급 (선택)
+     * @param status 좌석 상태 (선택)
      * @return 필터 적용된 좌석 현황 목록
      */
     @Query("""
-            select gs
-            from GameSeat gs
-            join fetch gs.seat s
-            join fetch s.zone z
-            where gs.game.id = :gameId
-              and (:zoneId is null or z.id = :zoneId)
-              and (:grade is null or z.grade = :grade)
-              and (:status is null or gs.status = :status)
-            order by z.id asc, s.seatRow asc, s.seatNumber asc
-            """)
+        select gs
+        from GameSeat gs
+        join fetch gs.seat s
+        join fetch s.zone z
+        where gs.game.id = :gameId
+          and (:zoneId is null or z.id = :zoneId)
+          and (:grade is null or z.grade = :grade)
+          and (:status is null or gs.status = :status)
+        order by z.id asc, s.seatRow asc, s.seatNumber asc
+        """)
     List<GameSeat> findAllByGameIdWithFilters(
         @Param("gameId") Long gameId,
         @Param("zoneId") Long zoneId,
@@ -84,21 +84,21 @@ public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
      * @return 구역별 요약 목록
      */
     @Query("""
-            select new com.backtoback.reseat.domain.seatinventory.dto.ZoneSummaryResponse(
-                z.id,
-                z.name,
-                z.grade,
-                z.basePrice,
-                50,
-                cast(count(case when gs.status = 'AVAILABLE' then 1 end) as int)
-            )
-            from SeatZone z
-            left join GameSeat gs on gs.seat.zone.id = z.id
-                                 and gs.game.id = :gameId
-            where z.stadium.id = :stadiumId
-            group by z.id, z.name, z.grade, z.basePrice
-            order by z.id asc
-            """)
+        select new com.backtoback.reseat.domain.seatinventory.dto.ZoneSummaryResponse(
+            z.id,
+            z.name,
+            z.grade,
+            z.basePrice,
+            50,
+            cast(count(case when gs.status = 'AVAILABLE' then 1 end) as int)
+        )
+        from SeatZone z
+        left join GameSeat gs on gs.seat.zone.id = z.id
+                             and gs.game.id = :gameId
+        where z.stadium.id = :stadiumId
+        group by z.id, z.name, z.grade, z.basePrice
+        order by z.id asc
+        """)
     List<ZoneSummaryResponse> findZoneSummariesByGameId(
         @Param("gameId") Long gameId,
         @Param("stadiumId") Long stadiumId
@@ -120,16 +120,16 @@ public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
      * 인덱스: idx_game_seats_hold_expires(status, hold_expires_at)
      *
      * @param now 만료 판정 기준 시각 (HoldExpiryService가 주입)
-     * @return    회수된 좌석 행 수
+     * @return 회수된 좌석 행 수
      */
     @Modifying(clearAutomatically = true)
     @Query("""
-            update GameSeat gs
-               set gs.status = :available,
-                   gs.holdExpiresAt = null
-             where gs.status = :held
-               and gs.holdExpiresAt < :now
-            """)
+        update GameSeat gs
+           set gs.status = :available,
+               gs.holdExpiresAt = null
+         where gs.status = :held
+           and gs.holdExpiresAt < :now
+        """)
     int releaseExpiredSeats(
         @Param("now") LocalDateTime now,
         @Param("held") GameSeatStatus held,

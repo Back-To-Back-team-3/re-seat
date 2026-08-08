@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 
 /**
  * 티켓 목록 조회 응답 DTO
- *
+ * <p>
  * API 명세 8.1의 응답 예시 기반
  * 사용자가 보유한 티켓의 기본 정보와 경기 정보를 포함
  */

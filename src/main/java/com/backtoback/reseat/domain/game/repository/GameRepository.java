@@ -1,10 +1,11 @@
 package com.backtoback.reseat.domain.game.repository;
 
 import com.backtoback.reseat.domain.game.entity.Game;
-import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+import java.util.Optional;
 
 /**
  * 경기 Repository.
@@ -24,12 +25,12 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
      * @return 팀/구장 정보가 함께 로딩된 경기
      */
     @Query("""
-            select g
-            from Game g
-            join fetch g.homeTeam
-            join fetch g.awayTeam
-            join fetch g.stadium
-            where g.id = :gameId
-            """)
+        select g
+        from Game g
+        join fetch g.homeTeam
+        join fetch g.awayTeam
+        join fetch g.stadium
+        where g.id = :gameId
+        """)
     Optional<Game> findDetailById(@Param("gameId") Long gameId);
 }

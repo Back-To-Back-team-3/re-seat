@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class PasswordChangeRequest {
 
-    @NotBlank(message="현재 비밀번호는 필수 입력값입니다,")
+    @NotBlank(message = "현재 비밀번호는 필수 입력값입니다,")
     private String currentPassword;
 
     @NotBlank(message = "새로운 비밀번호는 필수 입력값입니다.")

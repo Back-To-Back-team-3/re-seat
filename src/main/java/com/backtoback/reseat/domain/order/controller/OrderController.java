@@ -33,64 +33,64 @@ public class OrderController implements OrderControllerDocs {
     /**
      * 6.1 주문 생성
      *
-     * @param request 주문 생성 요청
+     * @param request     주문 생성 요청
      * @param userDetails JWT 인증 사용자
      * @return 생성된 주문 정보
      */
     @Override
     @PostMapping
     public ResponseEntity<ApiResponse<OrderResponse>> createOrder(
-            @Valid @RequestBody OrderCreateRequest request,
-            @AuthenticationPrincipal CustomUserDetails userDetails
+        @Valid @RequestBody OrderCreateRequest request,
+        @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         Long userId = userDetails.getId();
         OrderResponse response = orderService.createOrder(userId, request.getReservationId());
 
         return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(ApiResponse.success("주문 생성", response));
+            .status(HttpStatus.CREATED)
+            .body(ApiResponse.success("주문 생성", response));
     }
 
     /**
      * 6.2 주문 조회
      *
-     * @param orderId 조회할 주문 ID
+     * @param orderId     조회할 주문 ID
      * @param userDetails JWT 인증 사용자
      * @return 주문 상세 정보
      */
     @Override
     @GetMapping("/{orderId}")
     public ResponseEntity<ApiResponse<OrderResponse>> getOrder(
-            @PathVariable Long orderId,
-            @AuthenticationPrincipal CustomUserDetails userDetails
+        @PathVariable Long orderId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         Long userId = userDetails.getId();
         OrderResponse response = orderService.getOrder(userId, orderId);
 
         return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(ApiResponse.success("주문 조회", response));
+            .status(HttpStatus.OK)
+            .body(ApiResponse.success("주문 조회", response));
     }
 
     /**
      * 6.3 주문 취소
      *
-     * @param orderId 취소할 주문 ID
+     * @param orderId     취소할 주문 ID
      * @param userDetails JWT 인증 사용자
      * @return 취소된 주문 정보
      */
     @Override
     @PostMapping("/{orderId}/cancel")
     public ResponseEntity<ApiResponse<OrderCancelResponse>> cancelOrder(
-            @PathVariable Long orderId,
-            @AuthenticationPrincipal CustomUserDetails userDetails
+        @PathVariable Long orderId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
 
         Long userId = userDetails.getId();
         OrderCancelResponse response = orderService.cancelOrder(userId, orderId);
 
         return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(ApiResponse.success("주문 취소", response));
+            .status(HttpStatus.OK)
+            .body(ApiResponse.success("주문 취소", response));
     }
 }

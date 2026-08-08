@@ -4,6 +4,7 @@ import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.reservation.exception.InvalidReservationStatusException;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.global.common.BaseEntity;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -16,30 +17,29 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.OneToMany;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import java.util.ArrayList;
-import java.util.List;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Entity
 @Table(
-        name = "reservations",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "uk_reservations_no", columnNames = "reservation_no")
-        },
-        indexes = {
-                @Index(name = "idx_reservations_user_status", columnList = "user_id, status"),
-                @Index(name = "idx_reservations_status_expires", columnList = "status, hold_expires_at")
-        }
+    name = "reservations",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_reservations_no", columnNames = "reservation_no")
+    },
+    indexes = {
+        @Index(name = "idx_reservations_user_status", columnList = "user_id, status"),
+        @Index(name = "idx_reservations_status_expires", columnList = "status, hold_expires_at")
+    }
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Reservation extends BaseEntity {
@@ -54,12 +54,12 @@ public class Reservation extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false,
-            foreignKey = @ForeignKey(name = "fk_reservations_user"))
+        foreignKey = @ForeignKey(name = "fk_reservations_user"))
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "game_id", nullable = false,
-            foreignKey = @ForeignKey(name = "fk_reservations_game"))
+        foreignKey = @ForeignKey(name = "fk_reservations_game"))
     private Game game;
 
     @Enumerated(EnumType.STRING)
@@ -127,14 +127,16 @@ public class Reservation extends BaseEntity {
         }
     }
 
-    /** 예약 상태 전이. 상태 전이 검증은 C-3에서 추가. */
+    /**
+     * 예약 상태 전이. 상태 전이 검증은 C-3에서 추가.
+     */
     public void updateStatus(ReservationStatus status) {
         this.status = status;
     }
 
     /**
-    * 연관관계 편의 메서드. ReservationSeat을 이 예약에 연결한다.
-    */
+     * 연관관계 편의 메서드. ReservationSeat을 이 예약에 연결한다.
+     */
     public void addReservationSeat(ReservationSeat seat) {
         this.reservationSeats.add(seat);
         seat.assignReservation(this);    // ReservationSeat 쪽 역방향 세팅

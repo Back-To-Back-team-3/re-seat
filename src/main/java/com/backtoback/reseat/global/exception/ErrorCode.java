@@ -111,7 +111,7 @@ public enum ErrorCode {
     private final String message;
 
     //응답 바디의 errorCode 값, enum 상수명과 항상 동일 name()으로 대체
-    public String getCode(){
+    public String getCode() {
         return name();
     }
 }

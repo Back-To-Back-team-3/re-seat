@@ -9,9 +9,10 @@ import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.exception.PaymentAccessDeniedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentOrderNotFoundException;
 import com.backtoback.reseat.domain.payment.exception.PaymentOrderNotPayableException;
-import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
 
 @Component
 @RequiredArgsConstructor
@@ -20,10 +21,12 @@ public class PaymentOrderPolicy {
     private final OrderRepository orderRepository;
     private final OrderService orderService;
 
-    /** 주문을 조회하고 결제 요청 사용자에게 소유권이 있는지 검증한다. */
+    /**
+     * 주문을 조회하고 결제 요청 사용자에게 소유권이 있는지 검증한다.
+     */
     public Order getOwnedOrder(Long userId, Long orderId) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(PaymentOrderNotFoundException::new);
+            .orElseThrow(PaymentOrderNotFoundException::new);
 
         if (!order.getUser().getId().equals(userId)) {
             throw new PaymentAccessDeniedException();
@@ -32,7 +35,9 @@ public class PaymentOrderPolicy {
         return order;
     }
 
-    /** 주문 결제 기한과 상태를 검증하고, 기한이 지났다면 READY 결제를 실패 처리한다. */
+    /**
+     * 주문 결제 기한과 상태를 검증하고, 기한이 지났다면 READY 결제를 실패 처리한다.
+     */
     public void ensurePayable(Payment payment, Order order) {
         LocalDateTime now = LocalDateTime.now();
         if (!order.getPaymentDeadline().isAfter(now)) {
