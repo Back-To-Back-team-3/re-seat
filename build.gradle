@@ -115,6 +115,7 @@ spotless {
 
     format 'markdown', {
         target '**/*.md'
+        targetExclude '**/node_modules/**'
         endWithNewline()
     }
 }
