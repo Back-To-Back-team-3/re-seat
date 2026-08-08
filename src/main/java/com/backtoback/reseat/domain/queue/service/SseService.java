@@ -86,37 +86,37 @@ public class SseService {
         // Kafka Consumer가 DB와 Redis 등록을 완료할 시간을 고려하여 첫 상태 조회를 즉시 실행하지 않고 지연한다.
         // 이후 연결이 유지되는 동안 지정된 주기에 맞춰 대기 상태를 반복해서 조회한다.
         ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(() -> {
-            try {
-                // 현재 순번 또는 입장 허용 여부가 담긴 대기 상태를 rank 이벤트로 전송한다.
-                QueueStatusResponse response =
+                try {
+                    // 현재 순번 또는 입장 허용 여부가 담긴 대기 상태를 rank 이벤트로 전송한다.
+                    QueueStatusResponse response =
                         queueService.getMyQueueStatus(gameId, userId);
 
-                sseEmitter.send(SseEmitter.event()
+                    sseEmitter.send(SseEmitter.event()
                         .name("rank")
                         .data(response)
-                );
-
-                if (response.isAdmitted()) {
-                    // ADMITTED 상태가 확인되면 활성 Queue-Token 정보를 admit 이벤트로 추가 전송한다.
-                    // 입장 정보 전송까지 끝나면 더 이상 순번을 조회할 필요가 없으므로 SSE 연결을 정상 종료한다.
-                    sseEmitter.send(SseEmitter.event()
-                            .name("admit")
-                            .data(queueService.getAdmitEvent(gameId, userId))
                     );
 
-                    admitted.set(true);
-                    sseEmitter.complete();
+                    if (response.isAdmitted()) {
+                        // ADMITTED 상태가 확인되면 활성 Queue-Token 정보를 admit 이벤트로 추가 전송한다.
+                        // 입장 정보 전송까지 끝나면 더 이상 순번을 조회할 필요가 없으므로 SSE 연결을 정상 종료한다.
+                        sseEmitter.send(SseEmitter.event()
+                            .name("admit")
+                            .data(queueService.getAdmitEvent(gameId, userId))
+                        );
+
+                        admitted.set(true);
+                        sseEmitter.complete();
+                    }
+                } catch (QueueEntryNotFoundException exception) {
+                    // HTTP 요청은 Kafka 발행 직후 반환되므로 SSE 연결 시점에는 Consumer의 대기열 등록이 끝나지 않았을 수도 있다.
+                    // 해당 상태를 일시적인 등록 지연으로 처리하여 연결을 종료하지 않고 다음 주기에 다시 조회한다.
+                } catch (Exception e) {
+                    // 상태 조회 또는 SSE 전송 중 복구할 수 없는 예외가 발생하면 오류와 함께 연결을 종료한다.
+                    sseEmitter.completeWithError(e);
                 }
-            } catch (QueueEntryNotFoundException exception) {
-                // HTTP 요청은 Kafka 발행 직후 반환되므로 SSE 연결 시점에는 Consumer의 대기열 등록이 끝나지 않았을 수도 있다.
-                // 해당 상태를 일시적인 등록 지연으로 처리하여 연결을 종료하지 않고 다음 주기에 다시 조회한다.
-            } catch (Exception e) {
-                // 상태 조회 또는 SSE 전송 중 복구할 수 없는 예외가 발생하면 오류와 함께 연결을 종료한다.
-                sseEmitter.completeWithError(e);
-            }
-        }, SSE_SEND_INTERVAL_SECONDS,
-                SSE_SEND_INTERVAL_SECONDS,
-                TimeUnit.SECONDS
+            }, SSE_SEND_INTERVAL_SECONDS,
+            SSE_SEND_INTERVAL_SECONDS,
+            TimeUnit.SECONDS
         );
 
         // 연결 종료 콜백에서 방금 생성한 주기 작업을 취소할 수 있도록 참조를 저장한다.
@@ -138,26 +138,14 @@ public class SseService {
             // 실행 중인 작업이 정리될 시간을 짧게 기다린다.
             if (!scheduler.awaitTermination(SSE_SCHEDULER_SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
                 log.warn(
-                        "[SseService] 스케줄러 종료 대기 시간 초과 (timeoutSeconds={})",
-                        SSE_SCHEDULER_SHUTDOWN_TIMEOUT_SECONDS
+                    "[SseService] 스케줄러 종료 대기 시간 초과 (timeoutSeconds={})",
+                    SSE_SCHEDULER_SHUTDOWN_TIMEOUT_SECONDS
                 );
             }
         } catch (InterruptedException e) {
             log.warn("[SseService] 스케줄러 종료 대기 중 스레드가 중단되었습니다.");
             Thread.currentThread().interrupt();
         }
-    }
-
-    /**
-     * 동일 사용자와 경기의 SSE 연결 수를 관리하기 위한 식별값
-     *
-     * @param gameId SSE 연결 대상 경기 ID
-     * @param userId SSE 연결 사용자 ID
-     */
-    private record QueueConnectionKey(
-       Long gameId,
-       Long userId
-    ) {
     }
 
     /**
@@ -199,17 +187,17 @@ public class SseService {
 
         // 여러 연결이 동시에 종료되어도 연결 수가 잚못 계산되지 않도록 한 번의 연산으로 처리한다.
         activeConnectionCounts.computeIfPresent(
-                connectionKey,
-                (key, count) -> {
-                    if (count <= 1) {
-                        // 마지막 연결이면 null을 반환해 Map에서 식별값을 삭제한다.
-                        lastConnectionClosed.set(true);
-                        return null;
-                    } else {
-                        // 다른 연결이 남아 있을경우 종료된 연결 하나만 감소시킨다.
-                        return count - 1;
-                    }
+            connectionKey,
+            (key, count) -> {
+                if (count <= 1) {
+                    // 마지막 연결이면 null을 반환해 Map에서 식별값을 삭제한다.
+                    lastConnectionClosed.set(true);
+                    return null;
+                } else {
+                    // 다른 연결이 남아 있을경우 종료된 연결 하나만 감소시킨다.
+                    return count - 1;
                 }
+            }
         );
 
         return lastConnectionClosed.get();
@@ -218,15 +206,15 @@ public class SseService {
     /**
      * SSE 연결 종료 시 주기 작업과 연결 수를 정리하고 입장 완료 여부에 따라 대기열 이탈을 예약하는 작업을 생성한다.
      *
-     * @param futureRef 취소할 주기 작업 참조
+     * @param futureRef     취소할 주기 작업 참조
      * @param connectionKey SSE 연결 식별값
-     * @param admitted 입장 허용 이벤트 전송 완료 여부
+     * @param admitted      입장 허용 이벤트 전송 완료 여부
      * @return SSE 연결 종료 시 실행할 정리 작업
      */
     private Runnable createConnectionCleanupTask(
-            AtomicReference<ScheduledFuture<?>> futureRef,
-            QueueConnectionKey connectionKey,
-            AtomicBoolean admitted
+        AtomicReference<ScheduledFuture<?>> futureRef,
+        QueueConnectionKey connectionKey,
+        AtomicBoolean admitted
     ) {
 
         // 하나의 연결에서 종료 콜백이 여러 번 호출될 수 있으므로 정리가 시작됐는지 저장한다.
@@ -262,37 +250,37 @@ public class SseService {
         AtomicReference<ScheduledFuture<?>> queueExitTaskRef = new AtomicReference<>();
 
         ScheduledFuture<?> queueExitTask = scheduler.schedule(() -> {
-            try {
-                // 유예시간 만료와 재연결이 겹칠 수 있으므로 실행 직전에 활성 연결을 다시 확인한다.
-                if (Objects.nonNull(activeConnectionCounts.get(connectionKey))) {
-                    return;
-                }
-                queueService.cancelMyQueue(connectionKey.gameId(), connectionKey.userId());
-            } catch (QueueInvalidStatusException e) {
+                try {
+                    // 유예시간 만료와 재연결이 겹칠 수 있으므로 실행 직전에 활성 연결을 다시 확인한다.
+                    if (Objects.nonNull(activeConnectionCounts.get(connectionKey))) {
+                        return;
+                    }
+                    queueService.cancelMyQueue(connectionKey.gameId(), connectionKey.userId());
+                } catch (QueueInvalidStatusException e) {
 
-                // 이미 취소됐거나 Queue-Token이 사용된 상태는 추가 이탈 처리를 생략한다.
-                log.info(
+                    // 이미 취소됐거나 Queue-Token이 사용된 상태는 추가 이탈 처리를 생략한다.
+                    log.info(
                         "SSE 연결 종료 후 대기열 이탈 처리 대상이 아닙니다. gameId={}, userId={}",
                         connectionKey.gameId(),
                         connectionKey.userId()
-                );
-            } catch (RuntimeException e ) {
-                if (Thread.currentThread().isInterrupted()) {
-                    throw e;
-                }
-                log.error(
+                    );
+                } catch (RuntimeException e) {
+                    if (Thread.currentThread().isInterrupted()) {
+                        throw e;
+                    }
+                    log.error(
                         "SSE 연결 종료 후 대기열 이탈 처리 실패. gameId={}, userId={}",
                         connectionKey.gameId(),
                         connectionKey.userId(),
                         e
-                );
-            } finally {
-                // 이후 예약된 작업을 제거하지 않도록 현재 실행한 작업과 일치할 때만 Map에서 삭제한다.
-                pendingQueueExitTasks.remove(connectionKey, queueExitTaskRef.get());
-            }
+                    );
+                } finally {
+                    // 이후 예약된 작업을 제거하지 않도록 현재 실행한 작업과 일치할 때만 Map에서 삭제한다.
+                    pendingQueueExitTasks.remove(connectionKey, queueExitTaskRef.get());
+                }
 
             }, SSE_RECONNECT_GRACE_MILLIS,
-                TimeUnit.MILLISECONDS
+            TimeUnit.MILLISECONDS
         );
 
         queueExitTaskRef.set(queueExitTask);
@@ -302,5 +290,17 @@ public class SseService {
         if (Objects.nonNull(activeConnectionCounts.get(connectionKey))) {
             cancelPendingQueueExit(connectionKey);
         }
+    }
+
+    /**
+     * 동일 사용자와 경기의 SSE 연결 수를 관리하기 위한 식별값
+     *
+     * @param gameId SSE 연결 대상 경기 ID
+     * @param userId SSE 연결 사용자 ID
+     */
+    private record QueueConnectionKey(
+        Long gameId,
+        Long userId
+    ) {
     }
 }

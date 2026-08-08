@@ -1,6 +1,8 @@
 package com.backtoback.reseat.domain.seatinventory.service;
 
 import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
+import org.springframework.stereotype.Component;
+
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -8,7 +10,6 @@ import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
-import org.springframework.stereotype.Component;
 
 /**
  * 경기 좌석 재고(game_seats)의 판매 가격을 산정하는 정책 클래스.
@@ -30,6 +31,11 @@ public class PricePolicy {
 
     // 금~일(및 예외적 월요일) 성인 기본가
     private static final Map<SeatGrade, Integer> RAISED_BASE_PRICES;
+    // 성수기 시작인 달
+    private static final int PEAK_SEASON_START_MONTH = 9;
+    // 성수기 배수 1.2를 정수 연산으로 표현한 분자/분모
+    private static final int PEAK_MULTIPLIER_NUMERATOR = 12;
+    private static final int MULTIPLIER_DENOMINATOR = 10;
 
     static {
         Map<SeatGrade, Integer> prices = new EnumMap<>(SeatGrade.class);
@@ -38,20 +44,13 @@ public class PricePolicy {
         RAISED_BASE_PRICES = Collections.unmodifiableMap(prices);
     }
 
-    // 성수기 시작인 달
-    private static final int PEAK_SEASON_START_MONTH = 9;
-
-    // 성수기 배수 1.2를 정수 연산으로 표현한 분자/분모
-    private static final int PEAK_MULTIPLIER_NUMERATOR = 12;
-    private static final int MULTIPLIER_DENOMINATOR = 10;
-
     /**
      * 경기 일시와 좌석 등급으로 산정한 최종 판매 가격
      *
-     *  @param gameAt    경기 일시 (요일·월 판정에 사용)
-     *  @param grade     좌석 등급 (금~일 상승가 조회에 사용)
-     *  @param basePrice 구역 기본 가격 ({@code seat_zones.base_price}, 화~목 기준값)
-     *  @return 성인 정가 (원)
+     * @param gameAt    경기 일시 (요일·월 판정에 사용)
+     * @param grade     좌석 등급 (금~일 상승가 조회에 사용)
+     * @param basePrice 구역 기본 가격 ({@code seat_zones.base_price}, 화~목 기준값)
+     * @return 성인 정가 (원)
      */
     public int calculate(LocalDateTime gameAt, SeatGrade grade, int basePrice) {
         int dayPrice = resolveDayPrice(gameAt.getDayOfWeek(), grade, basePrice);

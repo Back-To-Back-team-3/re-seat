@@ -3,10 +3,10 @@ package com.backtoback.reseat.domain.reservation.service;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
+import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
 import com.backtoback.reseat.domain.reservation.dto.response.HoldTimeResponse;
 import com.backtoback.reseat.domain.reservation.dto.response.ReservationCancelResponse;
 import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse;
-import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
 import com.backtoback.reseat.domain.reservation.entity.Reservation;
 import com.backtoback.reseat.domain.reservation.entity.ReservationSeat;
 import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
@@ -21,12 +21,13 @@ import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
 import com.backtoback.reseat.global.exception.BusinessException;
 import com.backtoback.reseat.global.exception.ErrorCode;
-import java.time.LocalDateTime;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 예약(선점) 도메인 서비스.
@@ -35,12 +36,12 @@ import org.springframework.transaction.annotation.Transactional;
  * holdSeats()}는 락 획득 이후 실행되므로, 좌석 상태 재검증이 over-booking 방어의 최종 게이트 역할을 한다.
  * <p>
  * C-4-1 변경 사항:
- *   - HOLD_TTL 5분 → HoldPolicy.HOLD_TTL(10분) 정합.
- *   - holdSeats(): gs.updateStatus/updateHoldExpiresAt → gs.hold(expiresAt) 도메인 메서드로 교체.
- *   - releaseHold(): updateStatus/updateHoldExpiresAt → rs.getGameSeat().release() 로 교체.
- *   - releaseHold(): reservation.updateStatus(CANCELED) → reservation.cancel() 로 교체.
+ * - HOLD_TTL 5분 → HoldPolicy.HOLD_TTL(10분) 정합.
+ * - holdSeats(): gs.updateStatus/updateHoldExpiresAt → gs.hold(expiresAt) 도메인 메서드로 교체.
+ * - releaseHold(): updateStatus/updateHoldExpiresAt → rs.getGameSeat().release() 로 교체.
+ * - releaseHold(): reservation.updateStatus(CANCELED) → reservation.cancel() 로 교체.
  * C-5-2 변경 사항:
- *   - holdSeats() 락 획득 후 재검증 주석 명확화
+ * - holdSeats() 락 획득 후 재검증 주석 명확화
  */
 @Slf4j
 @Service

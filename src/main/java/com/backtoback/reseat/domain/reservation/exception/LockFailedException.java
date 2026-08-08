@@ -18,6 +18,7 @@ public class LockFailedException extends BusinessException {
 
     /**
      * 예외를 내부 디버그용 상세 메시지와 함께 생성한다.
+     *
      * @param message 내부 로그용 메시지
      */
     public LockFailedException(String message) {

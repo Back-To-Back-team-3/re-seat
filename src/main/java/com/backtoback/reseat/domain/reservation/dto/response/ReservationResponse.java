@@ -6,6 +6,7 @@ import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -42,6 +43,21 @@ public record ReservationResponse(
     LocalDateTime gameAt
 ) {
 
+    public static ReservationResponse from(Reservation reservation) {
+        List<SeatHoldInfo> seats = reservation.getReservationSeats().stream()
+            .map(SeatHoldInfo::from)
+            .toList();
+
+        return new ReservationResponse(
+            reservation.getId(),
+            reservation.getReservationNo(),
+            reservation.getStatus(),
+            seats,
+            reservation.getHoldExpiresAt(),
+            reservation.getGame().getGameAt()
+        );
+    }
+
     /**
      * 좌석 단위 선점 정보. gameSeats 배열의 원소.
      */
@@ -61,20 +77,5 @@ public record ReservationResponse(
             GameSeat gs = rs.getGameSeat();
             return new SeatHoldInfo(gs.getId(), gs.getStatus(), rs.getPrice());
         }
-    }
-
-    public static ReservationResponse from(Reservation reservation) {
-        List<SeatHoldInfo> seats = reservation.getReservationSeats().stream()
-            .map(SeatHoldInfo::from)
-            .toList();
-
-        return new ReservationResponse(
-            reservation.getId(),
-            reservation.getReservationNo(),
-            reservation.getStatus(),
-            seats,
-            reservation.getHoldExpiresAt(),
-            reservation.getGame().getGameAt()
-        );
     }
 }

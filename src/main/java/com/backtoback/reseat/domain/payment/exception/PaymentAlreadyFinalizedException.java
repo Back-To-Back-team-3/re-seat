@@ -10,7 +10,9 @@ import com.backtoback.reseat.global.exception.ErrorCode;
  */
 public class PaymentAlreadyFinalizedException extends BusinessException {
 
-    /** 이미 최종 처리된 결제 에러 코드로 예외를 생성한다. */
+    /**
+     * 이미 최종 처리된 결제 에러 코드로 예외를 생성한다.
+     */
     public PaymentAlreadyFinalizedException() {
         super(ErrorCode.PAYMENT_ALREADY_FINALIZED);
     }

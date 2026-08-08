@@ -31,14 +31,14 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(
-        name = "admission_tokens",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "uk_admission_tokens_token", columnNames = "token")
-        },
-        indexes = {
-                @Index(name = "idx_admission_tokens_game_user", columnList = "game_id, user_id"),
-                @Index(name = "idx_admission_tokens_status_expires", columnList = "status, expires_at")
-        }
+    name = "admission_tokens",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_admission_tokens_token", columnNames = "token")
+    },
+    indexes = {
+        @Index(name = "idx_admission_tokens_game_user", columnList = "game_id, user_id"),
+        @Index(name = "idx_admission_tokens_status_expires", columnList = "status, expires_at")
+    }
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -50,17 +50,17 @@ public class AdmissionToken {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
-            name = "game_id",
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_admission_tokens_game")
+        name = "game_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_admission_tokens_game")
     )
     private Game game;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
-            name = "user_id",
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_admission_tokens_user")
+        name = "user_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_admission_tokens_user")
     )
     private User user;
 
@@ -83,10 +83,10 @@ public class AdmissionToken {
     /**
      * 대기열을 통과한 사용자에게 발급할 활성 입장 토큰을 생성한다.
      *
-     * @param game 입장 대상 경기
-     * @param user 입장 토큰을 발급받을 사용자
-     * @param token 고유 Queue-Token 값
-     * @param issuedAt 토큰 발급 시간
+     * @param game      입장 대상 경기
+     * @param user      입장 토큰을 발급받을 사용자
+     * @param token     고유 Queue-Token 값
+     * @param issuedAt  토큰 발급 시간
      * @param expiresAt 토큰 만료 시간
      * @return ACTIVE 상태로 생성된 입장 토큰
      */
@@ -225,7 +225,7 @@ public class AdmissionToken {
      */
     public void validateUsableAt(LocalDateTime currentTime) {
 
-       validateActiveStatus();
+        validateActiveStatus();
 
         if (isExpiredAt(currentTime)) {
             throw new QueueTokenExpiredException();

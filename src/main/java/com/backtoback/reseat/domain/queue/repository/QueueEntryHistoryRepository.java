@@ -29,9 +29,9 @@ public interface QueueEntryHistoryRepository extends JpaRepository<QueueEntryHis
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
-            SELECT qeh
-            FROM QueueEntryHistory qeh
-            WHERE qeh.queueKey = :queueKey
-            """)
+        SELECT qeh
+        FROM QueueEntryHistory qeh
+        WHERE qeh.queueKey = :queueKey
+        """)
     Optional<QueueEntryHistory> findByQueueKeyWithPessimisticWriteLock(@Param("queueKey") String queueKey);
 }

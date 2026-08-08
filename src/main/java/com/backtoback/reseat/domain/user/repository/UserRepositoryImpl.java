@@ -1,7 +1,5 @@
 package com.backtoback.reseat.domain.user.repository;
 
-import static com.backtoback.reseat.domain.user.entity.QUser.user;
-
 import com.backtoback.reseat.domain.user.admin.dto.request.UserSearchCondition;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserRole;
@@ -10,13 +8,16 @@ import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import java.util.ArrayList;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import static com.backtoback.reseat.domain.user.entity.QUser.user;
 
 @RequiredArgsConstructor
 public class UserRepositoryImpl implements UserRepositoryCustom {
@@ -26,32 +27,32 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
     @Override
     public Page<User> searchUsers(UserSearchCondition condition, Pageable pageable) {
         List<User> content = queryFactory
-                .selectFrom(user)
-                .where(
-                        emailContains(condition.email()),
-                        nameContains(condition.name()),
-                        nicknameContains(condition.nickname()),
-                        phoneContains(condition.phone()),
-                        roleEq(condition.role()),
-                        statusEq(condition.status())
-                )
-                .orderBy(getOrderSpecifiers(pageable))
-                .offset(pageable.getOffset())
-                .limit(pageable.getPageSize())
-                .fetch();
+            .selectFrom(user)
+            .where(
+                emailContains(condition.email()),
+                nameContains(condition.name()),
+                nicknameContains(condition.nickname()),
+                phoneContains(condition.phone()),
+                roleEq(condition.role()),
+                statusEq(condition.status())
+            )
+            .orderBy(getOrderSpecifiers(pageable))
+            .offset(pageable.getOffset())
+            .limit(pageable.getPageSize())
+            .fetch();
 
         Long total = queryFactory
-                .select(user.count())
-                .from(user)
-                .where(
-                        emailContains(condition.email()),
-                        nameContains(condition.name()),
-                        nicknameContains(condition.nickname()),
-                        phoneContains(condition.phone()),
-                        roleEq(condition.role()),
-                        statusEq(condition.status())
-                )
-                .fetchOne();
+            .select(user.count())
+            .from(user)
+            .where(
+                emailContains(condition.email()),
+                nameContains(condition.name()),
+                nicknameContains(condition.nickname()),
+                phoneContains(condition.phone()),
+                roleEq(condition.role()),
+                statusEq(condition.status())
+            )
+            .fetchOne();
 
         return new PageImpl<>(content, pageable, total == null ? 0 : total);
     }

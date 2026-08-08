@@ -8,6 +8,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 /**
  * Spring Scheduling 설정.
  * <p>
+ *
  * @EnableScheduling만으로는 단일 스레드 풀이 기본 적용된다.
  * HoldExpiryScheduler 외에 예매 오픈/마감 booking_status 전이 등
  * 다른 스케줄러가 추가될 것을 고려해 전용 TaskScheduler 풀을 미리 등록한다.

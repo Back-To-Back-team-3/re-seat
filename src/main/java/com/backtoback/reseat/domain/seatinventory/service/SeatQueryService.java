@@ -10,10 +10,11 @@ import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
 import com.backtoback.reseat.domain.seatinventory.exception.SeatInventoryNotOpenedException;
 import com.backtoback.reseat.domain.seatinventory.repository.GameSeatRepository;
 import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 /**
  * 경기별 좌석 현황·구역 요약 조회 서비스.

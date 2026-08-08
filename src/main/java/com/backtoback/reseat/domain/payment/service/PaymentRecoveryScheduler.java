@@ -2,13 +2,14 @@ package com.backtoback.reseat.domain.payment.service;
 
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
 import com.backtoback.reseat.domain.payment.repository.PaymentRecoveryTaskRepository;
-import java.time.LocalDateTime;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Slf4j
 @Component
@@ -20,15 +21,17 @@ public class PaymentRecoveryScheduler {
     private final PaymentRecoveryTaskRepository paymentRecoveryTaskRepository;
     private final PaymentRecoveryService paymentRecoveryService;
 
-    /** 승인 상태가 불명확한 결제 복구 작업을 주기적으로 실행한다. */
+    /**
+     * 승인 상태가 불명확한 결제 복구 작업을 주기적으로 실행한다.
+     */
     @Scheduled(fixedDelay = 30_000, initialDelay = 30_000)
     public void recoverUnknownConfirmPayments() {
         LocalDateTime now = LocalDateTime.now();
         List<Long> taskIds = paymentRecoveryTaskRepository.findRecoverableTaskIds(
-                PaymentRecoveryStatus.PENDING,
-                PaymentRecoveryStatus.RETRY,
-                now,
-                PageRequest.of(0, RECOVERY_BATCH_SIZE));
+            PaymentRecoveryStatus.PENDING,
+            PaymentRecoveryStatus.RETRY,
+            now,
+            PageRequest.of(0, RECOVERY_BATCH_SIZE));
 
         for (Long taskId : taskIds) {
             try {

@@ -18,29 +18,25 @@ import java.util.Date;
 @RequiredArgsConstructor
 public class JwtTokenProvider {
 
-    @Value("${jwt.secret}")
-    private String secretKeyString;
-
-    private SecretKey secretKey;
-
     //커스텀 유저 디테일 서비스를 주입받습니다.
     private final CustomUserDetailsService customUserDetailsService;
-
     // AccessToken 만료시간 1시간(3600초)
     private final long accessTokenValidityInMilliseconds = 3600 * 1000L;
-
     // RefreshToken 만료시간 14일
     private final Long refreshToeknValidityInMillseconds = 14 * 24 * 60 * 60 * 1000L;
+    @Value("${jwt.secret}")
+    private String secretKeyString;
+    private SecretKey secretKey;
 
     // 객체 생성 후 주입받은 secretKey 문자열을 암호화 키 객체로 변환
     @PostConstruct
-    protected void init(){
+    protected void init() {
         byte[] keyBytes = Decoders.BASE64.decode(secretKeyString);
         this.secretKey = Keys.hmacShaKeyFor(keyBytes);
     }
 
     // access Token 생성
-    public String createAccessToken(Long userId, String email, String userRole){
+    public String createAccessToken(Long userId, String email, String userRole) {
         Claims claims = Jwts.claims()
             .subject(email)
             .add("userId", userId)
@@ -59,7 +55,7 @@ public class JwtTokenProvider {
     }
 
     // refresh Token 생성
-    public String createRefreshToken(Long userId){
+    public String createRefreshToken(Long userId) {
         Claims claims = Jwts.claims()
             .add("userId", userId)
             .build();

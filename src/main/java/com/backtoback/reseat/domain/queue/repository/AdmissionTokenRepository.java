@@ -18,10 +18,10 @@ public interface AdmissionTokenRepository extends JpaRepository<AdmissionToken, 
 
     // 경기, 사용자, 토큰 상태가 일치하고 기준 시간 이후까지 유효한 입장 토큰을 조회한다.
     Optional<AdmissionToken> findByGame_IdAndUser_IdAndStatusAndExpiresAtAfter(
-            Long gameId,
-            Long userId,
-            AdmissionTokenStatus status,
-            LocalDateTime now
+        Long gameId,
+        Long userId,
+        AdmissionTokenStatus status,
+        LocalDateTime now
     );
 
     // 토큰 값으로 상태와 만료 여부에 관계없이 입장 토큰을 조회한다.
@@ -31,7 +31,7 @@ public interface AdmissionTokenRepository extends JpaRepository<AdmissionToken, 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from AdmissionToken a where a.token = :token")
     Optional<AdmissionToken> findByTokenWithPessimisticWriteLock(
-            @Param("token") String token
+        @Param("token") String token
     );
 
     // 사용자의 만료되지 않은 활성 입장 토큰이 있는지 확인한다.
@@ -47,15 +47,15 @@ public interface AdmissionTokenRepository extends JpaRepository<AdmissionToken, 
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
-            SELECT at
-            FROM AdmissionToken at
-            WHERE at.game.id = :gameId
-            AND at.user.id = :userId
-            AND at.status = :status
-            """)
+        SELECT at
+        FROM AdmissionToken at
+        WHERE at.game.id = :gameId
+        AND at.user.id = :userId
+        AND at.status = :status
+        """)
     Optional<AdmissionToken> findByGame_IdAndUser_IdAndStatusWithPessimisticWriteLock(
-            @Param("gameId") Long gameId,
-            @Param("userId") Long userId,
-            @Param("status") AdmissionTokenStatus status
+        @Param("gameId") Long gameId,
+        @Param("userId") Long userId,
+        @Param("status") AdmissionTokenStatus status
     );
 }

@@ -22,23 +22,24 @@ public class GlobalExceptionHandler {
 
     //@Valid 유효성 검증 실패 처리 - 400 에러
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValidException(MethodArgumentNotValidException e){
+    public ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
         log.warn("MethodArgumentNotvalidException 발생: {}", e.getMessage());
 
         ErrorCode errorCode = ErrorCode.INVALID_REQUEST;
 
         return ResponseEntity
-                .status(errorCode.getHttpStatus())
-                .body(ApiResponse.failure(errorCode.getCode(), errorCode.getMessage()));
+            .status(errorCode.getHttpStatus())
+            .body(ApiResponse.failure(errorCode.getCode(), errorCode.getMessage()));
     }
+
     //도메인 에서 던지는 비즈니스 예외 처리
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e) {
         log.warn("{} 발생: {}", e.getClass().getSimpleName(), e.getMessage());
 
         return ResponseEntity
-                   .status(e.getErrorCode().getHttpStatus())
-                   .body(ApiResponse.failure(e.getErrorCode().getCode(), e.getMessage()));
+            .status(e.getErrorCode().getHttpStatus())
+            .body(ApiResponse.failure(e.getErrorCode().getCode(), e.getMessage()));
     }
 
     //서버 내부 에러 - 500 에러
@@ -56,7 +57,7 @@ public class GlobalExceptionHandler {
     //HTTP 요청 파라미터 타입 불일치
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiResponse<Void>>
-    handleMethodArgumenTpyeMismatchException(MethodArgumentTypeMismatchException e){
+    handleMethodArgumenTpyeMismatchException(MethodArgumentTypeMismatchException e) {
         log.warn("MethodArgumentTypeMismatchException 발생: {} ", e.getMessage());
 
         String requiredTypeName = e.getRequiredType() != null ? e.getRequiredType().getSimpleName() : "Unknown";
@@ -67,6 +68,7 @@ public class GlobalExceptionHandler {
             .status(HttpStatus.BAD_REQUEST)
             .body(ApiResponse.failure(ErrorCode.INVALID_REQUEST.getCode(), detailMessage));
     }
+
     // 필수 쿼리 파라미터 누락 처리
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ApiResponse<Void>>

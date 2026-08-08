@@ -13,7 +13,7 @@ public class VerificationResponse {
 
     @Getter
     @NoArgsConstructor
-    public static class ResponseData{
+    public static class ResponseData {
         @JsonProperty("unique_key")
         private String unique_key;
         private String name;

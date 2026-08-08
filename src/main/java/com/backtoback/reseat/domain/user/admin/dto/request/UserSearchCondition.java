@@ -10,4 +10,5 @@ public record UserSearchCondition(
     String phone,
     UserRole role,
     UserStatus status
-) {}
+) {
+}

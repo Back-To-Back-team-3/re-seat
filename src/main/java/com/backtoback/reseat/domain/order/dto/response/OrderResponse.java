@@ -50,27 +50,27 @@ public class OrderResponse {
     /**
      * Order Entity와 주문 항목 목록을 주문 응답 DTO로 변환한다.
      *
-     * @param order 주문 Entity
-     * @param orderItems 저장된 주문 항목 목록
+     * @param order         주문 Entity
+     * @param orderItems    저장된 주문 항목 목록
      * @param holdExpiresAt 선점 만료 시간
      * @return 주문 응답 DTO
      */
     public static OrderResponse from(
-            Order order,
-            List<OrderItem> orderItems,
-            LocalDateTime holdExpiresAt
+        Order order,
+        List<OrderItem> orderItems,
+        LocalDateTime holdExpiresAt
     ) {
         return OrderResponse.builder()
-                .orderId(order.getId())
-                .orderNo(order.getOrderNo())
-                .totalAmount(order.getTotalAmount())
-                .status(order.getStatus())
-                .paymentDeadline(order.getPaymentDeadline())
-                .holdExpiresAt(holdExpiresAt)
-                .orderItems(orderItems.stream()
-                        .map(OrderItemResponse::from)
-                        .toList())
-                .build();
+            .orderId(order.getId())
+            .orderNo(order.getOrderNo())
+            .totalAmount(order.getTotalAmount())
+            .status(order.getStatus())
+            .paymentDeadline(order.getPaymentDeadline())
+            .holdExpiresAt(holdExpiresAt)
+            .orderItems(orderItems.stream()
+                .map(OrderItemResponse::from)
+                .toList())
+            .build();
     }
 
     /**
@@ -99,10 +99,10 @@ public class OrderResponse {
          */
         public static OrderItemResponse from(OrderItem orderItem) {
             return OrderItemResponse.builder()
-                    .orderItemId(orderItem.getId())
-                    .gameSeatId(orderItem.getGameSeat().getId())
-                    .price(orderItem.getPrice())
-                    .build();
+                .orderItemId(orderItem.getId())
+                .gameSeatId(orderItem.getGameSeat().getId())
+                .price(orderItem.getPrice())
+                .build();
         }
     }
 }

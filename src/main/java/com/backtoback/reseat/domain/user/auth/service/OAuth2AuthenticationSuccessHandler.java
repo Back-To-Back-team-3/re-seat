@@ -40,28 +40,28 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         // Refresh Token DB 저장/갱신 (동시성 충돌 방지 대응)
         try {
             refreshTokenRepository.findByUser(user)
-                    .ifPresentOrElse(
-                            token -> token.updateTokenValue(refreshToken, expiredAt),
-                            () -> refreshTokenRepository.save(
-                                    RefreshToken.builder()
-                                            .user(user)
-                                            .tokenValue(refreshToken)
-                                            .expiredAt(expiredAt)
-                                            .build()
-                            )
-                    );
+                .ifPresentOrElse(
+                    token -> token.updateTokenValue(refreshToken, expiredAt),
+                    () -> refreshTokenRepository.save(
+                        RefreshToken.builder()
+                            .user(user)
+                            .tokenValue(refreshToken)
+                            .expiredAt(expiredAt)
+                            .build()
+                    )
+                );
         } catch (org.springframework.dao.DataIntegrityViolationException ex) {
             refreshTokenRepository.findByUser(user)
-                    .ifPresent(token -> token.updateTokenValue(refreshToken, expiredAt));
+                .ifPresent(token -> token.updateTokenValue(refreshToken, expiredAt));
         }
 
         // 프론트엔드 리다이렉트 URL 생성 (토큰 전달)
         String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/")
-                .queryParam("accessToken", accessToken)
-                .queryParam("refreshToken", refreshToken)
-                //본인인증 여부에 따라 카카오 로그인 후 포트원 본인인증으로 넘어갈지 말지
-                .queryParam("isVerified", user.isVerified())
-                .build().toUriString();
+            .queryParam("accessToken", accessToken)
+            .queryParam("refreshToken", refreshToken)
+            //본인인증 여부에 따라 카카오 로그인 후 포트원 본인인증으로 넘어갈지 말지
+            .queryParam("isVerified", user.isVerified())
+            .build().toUriString();
 
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }

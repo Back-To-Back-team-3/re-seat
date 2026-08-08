@@ -29,24 +29,6 @@ public class OrderExpiryService {
     private final OrderGameSeatRepository orderGameSeatRepository;
 
     /**
-     * 주문 만료 처리 결과.
-     *
-     * @param expiredOrders EXPIRED로 전이된 주문 수
-     * @param expiredReservations EXPIRED로 전이된 예약 수
-     * @param releasedSeats AVAILABLE로 반환된 경기 좌석 수
-     */
-    public record OrderExpiryResult(
-           int expiredOrders,
-           int expiredReservations,
-           int releasedSeats
-    ) {
-
-        public int total() {
-            return expiredOrders + expiredReservations + releasedSeats;
-        }
-    }
-
-    /**
      * 기준 시간까지 결제되지 않은 주문과 연결된 선점을 만료 처리한다.
      *
      * @param now 만료 판정 기준 시간
@@ -57,19 +39,37 @@ public class OrderExpiryService {
 
         // Reservation과 GameSeat가 EXPIRED 주문을 기준으로 조회되므로 주문을 먼저 만료 처리한다.
         int expiredOrders = orderRepository.expireCreatedOrders(
-                now,
-                OrderStatus.CREATED,
-                OrderStatus.EXPIRED);
+            now,
+            OrderStatus.CREATED,
+            OrderStatus.EXPIRED);
         int expiredReservations = orderReservationRepository.expireReservationsByExpiredOrders(now,
-                ReservationStatus.HOLDING,
-                OrderStatus.EXPIRED,
-                ReservationStatus.EXPIRED);
+            ReservationStatus.HOLDING,
+            OrderStatus.EXPIRED,
+            ReservationStatus.EXPIRED);
         int releasedSeats = orderGameSeatRepository.releaseGameSeatsByExpiredOrders(
-                now,
-                GameSeatStatus.HELD,
-                OrderStatus.EXPIRED,
-                GameSeatStatus.AVAILABLE);
+            now,
+            GameSeatStatus.HELD,
+            OrderStatus.EXPIRED,
+            GameSeatStatus.AVAILABLE);
 
         return new OrderExpiryResult(expiredOrders, expiredReservations, releasedSeats);
+    }
+
+    /**
+     * 주문 만료 처리 결과.
+     *
+     * @param expiredOrders       EXPIRED로 전이된 주문 수
+     * @param expiredReservations EXPIRED로 전이된 예약 수
+     * @param releasedSeats       AVAILABLE로 반환된 경기 좌석 수
+     */
+    public record OrderExpiryResult(
+        int expiredOrders,
+        int expiredReservations,
+        int releasedSeats
+    ) {
+
+        public int total() {
+            return expiredOrders + expiredReservations + releasedSeats;
+        }
     }
 }

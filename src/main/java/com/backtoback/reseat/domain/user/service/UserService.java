@@ -98,14 +98,14 @@ public class UserService {
 
     //회원탈퇴 서비스 로직
     @Transactional
-    public void withdraw(Long userId){
+    public void withdraw(Long userId) {
         //사용자 조회 및 404예외처리
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new UserNotFoundException(String.valueOf(userId)));
 
         //이미 탈퇴한 회원인 경우 중복처리 방지
-        if(user.getStatus() == UserStatus.DELETED){
-            throw new BusinessException(ErrorCode.INVALID_REQUEST,"이미 탈퇴한 회원입니다");
+        if (user.getStatus() == UserStatus.DELETED) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "이미 탈퇴한 회원입니다");
         }
         //엔티티 메서드를 호출하여 상태 변경 및 개인정보 마스킹
         user.withdraw();

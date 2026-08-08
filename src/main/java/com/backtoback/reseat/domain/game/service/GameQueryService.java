@@ -28,7 +28,7 @@ public class GameQueryService {
      * 경기 목록을 조회한다.
      *
      * @param condition 검색 조건
-     * @param pageable 페이징 조건
+     * @param pageable  페이징 조건
      * @return 경기 목록 응답 페이지
      */
     public Page<GameListResponse> getGames(GameSearchCondition condition, Pageable pageable) {

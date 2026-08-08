@@ -29,8 +29,8 @@ public class QueueAdmissionScheduler {
      * 최초 실행도 애플리케이션이 시작 직후가 아니라 동일한 시간만큼 기다린 후 시작한다.</p>
      */
     @Scheduled(
-            fixedDelay = QueueAdmissionPolicy.ADMISSION_INTERVAL_MILLIS,
-            initialDelay = QueueAdmissionPolicy.ADMISSION_INTERVAL_MILLIS
+        fixedDelay = QueueAdmissionPolicy.ADMISSION_INTERVAL_MILLIS,
+        initialDelay = QueueAdmissionPolicy.ADMISSION_INTERVAL_MILLIS
     )
     public void admitWaitingUsers() {
 
@@ -39,9 +39,9 @@ public class QueueAdmissionScheduler {
         // count는 전체 조회 개수의 제한이 아니라 Redis에 전달하는 예상 조회량에 대한 힌트다.
         // 실제 한 번의 SCAN에서 반환되는 Key 개수는 count와 다를 수 있다.
         ScanOptions scanOptions = ScanOptions.scanOptions()
-                .match(redisKeyPattern())
-                .count(100)
-                .build();
+            .match(redisKeyPattern())
+            .count(100)
+            .build();
 
         // SCAN Cursor가 사용한 Redis 연결이 작업 종료 후  반드시 반환되도록 try-with-resources로 관리한다.
         try (Cursor<String> cursor = redisTemplate.scan(scanOptions)) {
@@ -80,8 +80,8 @@ public class QueueAdmissionScheduler {
                 throw e;
             }
             log.error(
-                    "대기열 자동 입장 처리 실패. redisKey={}",
-                    redisKey, e
+                "대기열 자동 입장 처리 실패. redisKey={}",
+                redisKey, e
             );
         }
     }

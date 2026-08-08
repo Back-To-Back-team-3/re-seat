@@ -35,12 +35,12 @@ public class AdminTicketService {
         }
 
         return ticketRepository.findAllByUserIdAndStatusWithDetails(userId, status, pageable)
-                .map(AdminUserTicketResponse::from);
+            .map(AdminUserTicketResponse::from);
     }
 
     //관리자 전용: 특정 티켓 강제 취소 및 자원 반환
     @Transactional
-    public AdminTicketCancelResponse cancelTicketByAdmin(Long ticketId, AdminTicketCancelRequest request){
+    public AdminTicketCancelResponse cancelTicketByAdmin(Long ticketId, AdminTicketCancelRequest request) {
         //티켓 존재 여부 조회
         Ticket ticket = ticketRepository.findById(ticketId)
             .orElseThrow(() -> new BusinessException(ErrorCode.TICKET_NOT_FOUND));
@@ -50,12 +50,12 @@ public class AdminTicketService {
 
         //연관된 경기 좌석 자원 즉시 원복(Status = AVAILABLE, HoldExpiresAt = null)
         GameSeat gameSeat = ticket.getGameSeat();
-        if(gameSeat != null){
+        if (gameSeat != null) {
             gameSeat.available();
         }
 
         //연관된 결제 내역이 존재하는 경우 결제 상태 Canceled 전환
-        if(ticket.getOrderItem() != null && ticket.getOrderItem().getOrder().getId() != null){
+        if (ticket.getOrderItem() != null && ticket.getOrderItem().getOrder().getId() != null) {
             Long orderId = ticket.getOrderItem().getOrder().getId();
             paymentRepository.findByOrder_IdAndStatus(orderId, PaymentStatus.APPROVED)
                 .ifPresent(Payment::cancel);

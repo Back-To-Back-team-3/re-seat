@@ -12,7 +12,7 @@ public class UserLoginResponse {
     private final String userRole;
     private final Long expiresIn;
 
-    public static UserLoginResponse of(String accessToken, String refreshToken, String userRole, long expiresIn){
+    public static UserLoginResponse of(String accessToken, String refreshToken, String userRole, long expiresIn) {
         return new UserLoginResponse(accessToken, refreshToken, userRole, expiresIn);
     }
 }

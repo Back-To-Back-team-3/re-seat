@@ -20,10 +20,10 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(
-        name = "order_items",
-        indexes = {
-                @Index(name = "idx_order_items_order", columnList = "order_id")
-        }
+    name = "order_items",
+    indexes = {
+        @Index(name = "idx_order_items_order", columnList = "order_id")
+    }
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -35,17 +35,17 @@ public class OrderItem {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
-            name = "order_id",
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_order_items_order")
+        name = "order_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_order_items_order")
     )
     private Order order;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
-            name = "game_seat_id",
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_order_items_game_seat")
+        name = "game_seat_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_order_items_game_seat")
     )
     private GameSeat gameSeat;
 
@@ -58,9 +58,9 @@ public class OrderItem {
     /**
      * 주문 항목 Entity를 생성한다.
      *
-     * @param order 주문
+     * @param order    주문
      * @param gameSeat 주문 대상의 경기 좌석
-     * @param price 주문 항목 가격
+     * @param price    주문 항목 가격
      * @return 주문 항목 Entity
      */
     public static OrderItem of(Order order, GameSeat gameSeat, int price) {

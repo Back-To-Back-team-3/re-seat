@@ -13,17 +13,17 @@ import lombok.NoArgsConstructor;
 public class PaymentCompleteRequest {
 
     @Schema(
-            description = "Toss 결제 인증 후 발급된 결제 키",
-            example = "tgen_20260725120000AbCdE",
-            requiredMode = Schema.RequiredMode.REQUIRED
+        description = "Toss 결제 인증 후 발급된 결제 키",
+        example = "tgen_20260725120000AbCdE",
+        requiredMode = Schema.RequiredMode.REQUIRED
     )
     @NotBlank(message = "paymentKey는 필수입니다.")
     private String paymentKey;
 
     @Schema(
-            description = "Toss 결제 인증에 사용된 주문 번호",
-            example = "ORD-20260725-A1B2C3",
-            requiredMode = Schema.RequiredMode.REQUIRED
+        description = "Toss 결제 인증에 사용된 주문 번호",
+        example = "ORD-20260725-A1B2C3",
+        requiredMode = Schema.RequiredMode.REQUIRED
     )
     @NotBlank(message = "orderId는 필수입니다.")
     private String orderId;

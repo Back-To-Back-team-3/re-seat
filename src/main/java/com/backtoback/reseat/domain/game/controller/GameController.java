@@ -7,7 +7,6 @@ import com.backtoback.reseat.domain.game.service.GameQueryService;
 import com.backtoback.reseat.domain.game.service.GameSearchCondition;
 import com.backtoback.reseat.global.common.ApiResponse;
 import com.backtoback.reseat.global.common.PageResponse;
-import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,6 +20,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDate;
 
 /**
  * 경기 조회 API Controller.
@@ -38,12 +39,12 @@ public class GameController implements GameControllerDocs {
     /**
      * 경기 목록 조회.
      *
-     * @param homeTeamId 홈팀 ID
-     * @param awayTeamId 원정팀 ID
-     * @param from 검색 시작 날짜
-     * @param to 검색 종료 날짜
+     * @param homeTeamId    홈팀 ID
+     * @param awayTeamId    원정팀 ID
+     * @param from          검색 시작 날짜
+     * @param to            검색 종료 날짜
      * @param bookingStatus 예매 상태
-     * @param pageable 페이징 조건
+     * @param pageable      페이징 조건
      * @return 경기 목록 응답
      */
     @Override

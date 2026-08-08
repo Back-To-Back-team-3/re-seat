@@ -38,14 +38,14 @@ public class PaymentCreateResponse {
 
     public static PaymentCreateResponse from(Payment payment) {
         return PaymentCreateResponse.builder()
-                .paymentId(payment.getId())
-                .paymentNo(payment.getPaymentNo())
-                .orderId(payment.getOrder().getId())
-                .amount(payment.getAmount())
-                .method(payment.getMethod())
-                .status(payment.getStatus())
-                .pgProvider(payment.getPgProvider())
-                .pgOrderId(payment.getPgOrderId())
-                .build();
+            .paymentId(payment.getId())
+            .paymentNo(payment.getPaymentNo())
+            .orderId(payment.getOrder().getId())
+            .amount(payment.getAmount())
+            .method(payment.getMethod())
+            .status(payment.getStatus())
+            .pgProvider(payment.getPgProvider())
+            .pgOrderId(payment.getPgOrderId())
+            .build();
     }
 }

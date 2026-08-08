@@ -23,14 +23,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 사용자 티켓 API 컨트롤러
- *
+ * <p>
  * API 명세 기준으로 일반 사용자 기능만 담당
- *
+ * <p>
  * 담당 기능
  * 1. 내 티켓 목록 조회 (8.1)
  * 2. 내 티켓 상세 조회 (8.2)
  * 3. 내 티켓 취소 (8.3)
- *
+ * <p>
  * 관리자 QR 검표 기능(8.4)은 별도의 AdminTicketController에서 처리
  */
 @RestController
@@ -42,12 +42,12 @@ public class TicketController {
 
     /**
      * 내 티켓 목록 조회
-     *
+     * <p>
      * GET /api/v1/tickets
      *
      * @param userDetails 현재 로그인 사용자 정보
-     * @param status 티켓 상태 필터(선택)
-     * @param pageable 페이지 정보
+     * @param status      티켓 상태 필터(선택)
+     * @param pageable    페이지 정보
      * @return 페이지 형태의 내 티켓 목록
      */
     @GetMapping
@@ -69,11 +69,11 @@ public class TicketController {
 
     /**
      * 내 티켓 상세 조회
-     *
+     * <p>
      * GET /api/v1/tickets/{ticketId}
      *
      * @param userDetails 현재 로그인 사용자 정보
-     * @param ticketId 티켓 ID
+     * @param ticketId    티켓 ID
      * @return 티켓 상세 응답
      */
     @GetMapping("/{ticketId}")
@@ -93,11 +93,11 @@ public class TicketController {
 
     /**
      * 내 티켓 취소
-     *
+     * <p>
      * POST /api/v1/tickets/{ticketId}/cancel
      *
      * @param userDetails 현재 로그인 사용자 정보
-     * @param ticketId 취소할 티켓 ID
+     * @param ticketId    취소할 티켓 ID
      * @return 티켓 취소 응답
      */
     @PostMapping("/{ticketId}/cancel")

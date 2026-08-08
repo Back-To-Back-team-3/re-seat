@@ -18,8 +18,8 @@ public class OAuth2AuthenticationFailureHandler extends SimpleUrlAuthenticationF
                                         AuthenticationException exception) throws IOException, ServletException {
 
         String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173")
-                .queryParam("error", exception.getLocalizedMessage())
-                .build().toUriString();
+            .queryParam("error", exception.getLocalizedMessage())
+            .build().toUriString();
 
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }

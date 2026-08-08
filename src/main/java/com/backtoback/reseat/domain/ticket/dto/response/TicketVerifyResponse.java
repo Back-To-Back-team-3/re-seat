@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 
 /**
  * 티켓 검표 응답 DTO
- *
+ * <p>
  * API 명세 8.4의 응답 예시 기반
  * 검표 완료된 티켓의 상태, 사용 시각, 좌석 정보, 예매자 이름을 포함
  */

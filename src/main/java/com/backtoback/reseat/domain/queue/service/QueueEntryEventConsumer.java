@@ -33,33 +33,33 @@ public class QueueEntryEventConsumer {
      * <p>일시적인 처리 실패는 설정된 간격에 따라 재시도하고, 최종 실패한 이벤트는 DLT로 전달한다.
      * 이벤트 값이 잘못됐거나 경기 · 사용자가 존재하지 않는 경우에는 재시도해도 성공할 수 없으므로 즉시 DLT로 전달한다.</p>
      *
-     * @param record Kafka Consumer Record
+     * @param record         Kafka Consumer Record
      * @param acknowledgment 수동 Offset 커밋 객체
      */
     @RetryableTopic(
-            attempts = "4",             // 최초 실행을 포함한 총 시도 횟수
-            backoff = @Backoff(         // 다음 재시도 까지 기다릴 시간
-                    delay = 2000,
-                    multiplier = 2.0
-            ),
-            numPartitions = "3",        // 자동 생성되는 재시도 토픽과 DLT의 파티션 수
-            replicationFactor = "1",    // 단일 Kafka 브로커 환경에 맞춘 재시도 토픽과 DLT 복제본 수
-            exclude = {
-                    QueueInvalidEventException.class,
-                    GameNotFoundException.class,
-                    UserNotFoundException.class
-            },
-            topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE,
-            dltStrategy = DltStrategy.FAIL_ON_ERROR
+        attempts = "4",             // 최초 실행을 포함한 총 시도 횟수
+        backoff = @Backoff(         // 다음 재시도 까지 기다릴 시간
+            delay = 2000,
+            multiplier = 2.0
+        ),
+        numPartitions = "3",        // 자동 생성되는 재시도 토픽과 DLT의 파티션 수
+        replicationFactor = "1",    // 단일 Kafka 브로커 환경에 맞춘 재시도 토픽과 DLT 복제본 수
+        exclude = {
+            QueueInvalidEventException.class,
+            GameNotFoundException.class,
+            UserNotFoundException.class
+        },
+        topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE,
+        dltStrategy = DltStrategy.FAIL_ON_ERROR
     )
     @KafkaListener(
-            topics = KafkaConfig.QUEUE_ENTRY_REQUESTED_TOPIC,
-            groupId = KafkaConfig.QUEUE_ENTRY_CONSUMER_GROUP,
-            concurrency = "3"
+        topics = KafkaConfig.QUEUE_ENTRY_REQUESTED_TOPIC,
+        groupId = KafkaConfig.QUEUE_ENTRY_CONSUMER_GROUP,
+        concurrency = "3"
     )
     public void consume(
-            ConsumerRecord<String, QueueEntryRequestedEvent> record,
-            Acknowledgment acknowledgment
+        ConsumerRecord<String, QueueEntryRequestedEvent> record,
+        Acknowledgment acknowledgment
     ) {
 
         QueueEntryRequestedEvent event = record.value();
@@ -73,13 +73,13 @@ public class QueueEntryEventConsumer {
             acknowledgment.acknowledge();
 
             log.info(
-                    "대기열 진입 이벤트 처리 완료: eventId={}, partition={}, offset={}",
-                    eventId, record.partition(), record.offset()
+                "대기열 진입 이벤트 처리 완료: eventId={}, partition={}, offset={}",
+                eventId, record.partition(), record.offset()
             );
         } catch (RuntimeException exception) {
             log.error(
-                    "대기열 진입 이벤트 처리 실패: eventId={}, partition={}, offset={}",
-                    eventId, record.partition(), record.offset(), exception
+                "대기열 진입 이벤트 처리 실패: eventId={}, partition={}, offset={}",
+                eventId, record.partition(), record.offset(), exception
             );
 
             // 예외를 다시 전달해야 Spring Kafka의 재시도 및 DLT 처리가 동작한다.
@@ -103,8 +103,8 @@ public class QueueEntryEventConsumer {
         }
 
         log.error(
-                "대기열 진입 이벤트 DLT 도착: eventId={}, gameId={}, userId={}",
-                event.eventId(), event.gameId(), event.userId()
+            "대기열 진입 이벤트 DLT 도착: eventId={}, gameId={}, userId={}",
+            event.eventId(), event.gameId(), event.userId()
         );
     }
 }

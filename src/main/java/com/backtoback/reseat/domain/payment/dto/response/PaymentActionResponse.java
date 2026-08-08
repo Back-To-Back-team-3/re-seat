@@ -19,8 +19,8 @@ public class PaymentActionResponse {
 
     public static PaymentActionResponse from(Payment payment) {
         return PaymentActionResponse.builder()
-                .paymentId(payment.getId())
-                .status(payment.getStatus())
-                .build();
+            .paymentId(payment.getId())
+            .status(payment.getStatus())
+            .build();
     }
 }

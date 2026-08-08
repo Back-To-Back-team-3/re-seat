@@ -28,17 +28,17 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(
-        name = "queue_entry_histories",
-        uniqueConstraints = {
-                // 동일 경기와 사용자의 DB 대기 이력 중복 생성 방지
-                @UniqueConstraint(name = "uk_queue_entry_histories_queue_key", columnNames = "queue_key")
-        },
-        indexes = {
-                // 경기와 사용자 기준 이력 조회
-                @Index(name = "idx_queue_entry_histories_game_user", columnList = "game_id, user_id"),
-                // 경기별 상태 기준 이력 조회
-                @Index(name = "idx_queue_entry_histories_game_status", columnList = "game_id, status")
-        }
+    name = "queue_entry_histories",
+    uniqueConstraints = {
+        // 동일 경기와 사용자의 DB 대기 이력 중복 생성 방지
+        @UniqueConstraint(name = "uk_queue_entry_histories_queue_key", columnNames = "queue_key")
+    },
+    indexes = {
+        // 경기와 사용자 기준 이력 조회
+        @Index(name = "idx_queue_entry_histories_game_user", columnList = "game_id, user_id"),
+        // 경기별 상태 기준 이력 조회
+        @Index(name = "idx_queue_entry_histories_game_status", columnList = "game_id, status")
+    }
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -50,17 +50,17 @@ public class QueueEntryHistory {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
-            name = "game_id",
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_queue_entry_histories_game")
+        name = "game_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_queue_entry_histories_game")
     )
     private Game game;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
-            name = "user_id",
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_queue_entry_histories_user")
+        name = "user_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_queue_entry_histories_user")
     )
     private User user;
 
@@ -83,9 +83,9 @@ public class QueueEntryHistory {
     /**
      * 경기와 사용자의 최초 대기열 진입 이력을 생성한다.
      *
-     * @param game 대기열 진입 대상 경기
-     * @param user 대기열에 진입한 사용자
-     * @param queueKey 경기와 사용자를 조합한 고유 대기열 식별값
+     * @param game      대기열 진입 대상 경기
+     * @param user      대기열에 진입한 사용자
+     * @param queueKey  경기와 사용자를 조합한 고유 대기열 식별값
      * @param enteredAt DB 대기열 진입 이력 생성 시간
      * @return WAITING 상태로 생성된 대기열 진입 이력
      */
@@ -109,7 +109,7 @@ public class QueueEntryHistory {
     public void cancel(LocalDateTime canceledAt) {
 
         if (this.status != QueueEntryHistoryStatus.WAITING &&
-                this.status != QueueEntryHistoryStatus.ADMITTED) {
+            this.status != QueueEntryHistoryStatus.ADMITTED) {
             throw new QueueInvalidStatusException("대기 중 혹은 입장 허용된 상태만 취소할 수 있습니다.");
         }
 

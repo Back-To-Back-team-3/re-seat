@@ -1,7 +1,7 @@
 package com.backtoback.reseat.domain.team.entity;
 
-import com.backtoback.reseat.global.common.BaseEntity;
 import com.backtoback.reseat.domain.stadium.entity.Stadium;
+import com.backtoback.reseat.global.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -22,13 +22,13 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(
-        name = "teams",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "uk_teams_name", columnNames = "name") // 팀명 중복 방지
-        },
-        indexes = {
-                @Index(name = "idx_teams_home_stadium", columnList = "home_stadium_id")
-        }
+    name = "teams",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_teams_name", columnNames = "name") // 팀명 중복 방지
+    },
+    indexes = {
+        @Index(name = "idx_teams_home_stadium", columnList = "home_stadium_id")
+    }
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -43,9 +43,9 @@ public class Team extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
-            name = "home_stadium_id",
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_teams_home_stadium")
+        name = "home_stadium_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_teams_home_stadium")
     )
     private Stadium homeStadium;
 

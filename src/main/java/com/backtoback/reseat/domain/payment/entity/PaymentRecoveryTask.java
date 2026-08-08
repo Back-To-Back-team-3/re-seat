@@ -15,23 +15,24 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(
-        name = "payment_recovery_tasks",
-        uniqueConstraints = {
-            @UniqueConstraint(name = "uk_payment_recovery_tasks_payment", columnNames = "payment_id")
-        },
-        indexes = {
-            @Index(
-                    name = "idx_payment_recovery_tasks_status_retry",
-                    columnList = "status, next_retry_at"
-            )
-        }
+    name = "payment_recovery_tasks",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_payment_recovery_tasks_payment", columnNames = "payment_id")
+    },
+    indexes = {
+        @Index(
+            name = "idx_payment_recovery_tasks_status_retry",
+            columnList = "status, next_retry_at"
+        )
+    }
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -43,9 +44,9 @@ public class PaymentRecoveryTask extends BaseEntity {
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
-            name = "payment_id",
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_payment_recovery_tasks_payment")
+        name = "payment_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_payment_recovery_tasks_payment")
     )
     private Payment payment;
 
@@ -74,7 +75,9 @@ public class PaymentRecoveryTask extends BaseEntity {
         this.attemptCount = 0;
     }
 
-    /** 대기 또는 재시도 중인 복구 작업을 처리 중 상태로 전환한다. */
+    /**
+     * 대기 또는 재시도 중인 복구 작업을 처리 중 상태로 전환한다.
+     */
     public void startProcessing(LocalDateTime processingStartedAt) {
         if (status != PaymentRecoveryStatus.PENDING && status != PaymentRecoveryStatus.RETRY) {
             throw new IllegalStateException("대기 또는 재시도 중인 결제 복구 작업만 처리할 수 있습니다.");
@@ -84,7 +87,9 @@ public class PaymentRecoveryTask extends BaseEntity {
         this.processingStartedAt = processingStartedAt;
     }
 
-    /** 복구 실패를 기록하고 다음 자동 재시도를 예약한다. */
+    /**
+     * 복구 실패를 기록하고 다음 자동 재시도를 예약한다.
+     */
     public void scheduleRetry(String lastError, LocalDateTime nextRetryAt) {
         validateProcessing();
         this.attemptCount++;
@@ -94,7 +99,9 @@ public class PaymentRecoveryTask extends BaseEntity {
         this.processingStartedAt = null;
     }
 
-    /** 복구 작업을 완료하고 처리 중·재시도 정보를 정리한다. */
+    /**
+     * 복구 작업을 완료하고 처리 중·재시도 정보를 정리한다.
+     */
     public void complete(LocalDateTime completedAt) {
         validateProcessing();
         this.status = PaymentRecoveryStatus.COMPLETED;
@@ -104,7 +111,9 @@ public class PaymentRecoveryTask extends BaseEntity {
         this.completedAt = completedAt;
     }
 
-    /** 자동 복구할 수 없는 작업을 최종 실패 처리한다. */
+    /**
+     * 자동 복구할 수 없는 작업을 최종 실패 처리한다.
+     */
     public void fail(String lastError) {
         validateProcessing();
         this.status = PaymentRecoveryStatus.FAILED;
