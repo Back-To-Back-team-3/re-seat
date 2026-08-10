@@ -22,8 +22,7 @@ public class TicketCancelResponse {
     public static TicketCancelResponse of(
         Ticket ticket,
         boolean refunded,
-        Integer refundAmount
-    ) {
+        Integer refundAmount) {
         return TicketCancelResponse.builder()
             .ticketId(ticket.getId())
             .status(ticket.getStatus())

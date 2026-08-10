@@ -15,18 +15,18 @@ const reservationSuccessRate = new Rate('reservation_success_rate');
 const serverErrorRate = new Rate('server_error_rate');
 
 export const options = {
-    scenarios: {
-        concurrent_same_seat: {
-            executor: 'per-vu-iterations', // 모든 VU 동시 출발
-            vus: __ENV.VUS ? parseInt(__ENV.VUS) : 50,
-            iterations: 1,
-            maxDuration: '30s',
-        },
-    },
-    thresholds: {
-        http_req_duration: ['p(99)<2000'],   // p99 지연 2초 이하
-        server_error_rate: ['rate<0.01'],    // 5xx 서버 에러율 1% 미만
-    },
+	scenarios: {
+		concurrent_same_seat: {
+			executor: 'per-vu-iterations', // 모든 VU 동시 출발
+			vus: __ENV.VUS ? parseInt(__ENV.VUS) : 50,
+			iterations: 1,
+			maxDuration: '30s',
+		},
+	},
+	thresholds: {
+		http_req_duration: ['p(99)<2000'],   // p99 지연 2초 이하
+		server_error_rate: ['rate<0.01'],    // 5xx 서버 에러율 1% 미만
+	},
 };
 
 // 환경 변수 설정
@@ -37,53 +37,53 @@ const GAME_ID = __ENV.GAME_ID ? parseInt(__ENV.GAME_ID) : 1;
 const TARGET_SEAT_ID = __ENV.TARGET_SEAT_ID ? parseInt(__ENV.TARGET_SEAT_ID) : 1;
 
 export default function () {
-    const res = http.post(
-        `${BASE_URL}/api/v1/reservations`,
-        JSON.stringify({gameId: GAME_ID, gameSeatIds: [TARGET_SEAT_ID]}),
-        {
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${JWT_TOKEN}`,
-                'Queue-Token': QUEUE_TOKEN,
-            },
-            responseCallback: http.expectedStatuses(201, 409),
-        }
-    );
+	const res = http.post(
+			`${BASE_URL}/api/v1/reservations`,
+			JSON.stringify({gameId: GAME_ID, gameSeatIds: [TARGET_SEAT_ID]}),
+			{
+				headers: {
+					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${JWT_TOKEN}`,
+					'Queue-Token': QUEUE_TOKEN,
+				},
+				responseCallback: http.expectedStatuses(201, 409),
+			}
+	);
 
-    // 응답 에러코드 파싱
-    let errorCode = '';
-    try {
-        errorCode = JSON.parse(res.body).errorCode || '';
-    } catch (_) {
-    }
+	// 응답 에러코드 파싱
+	let errorCode = '';
+	try {
+		errorCode = JSON.parse(res.body).errorCode || '';
+	} catch (_) {
+	}
 
-    serverErrorRate.add(res.status >= 500 ? 1 : 0);
+	serverErrorRate.add(res.status >= 500 ? 1 : 0);
 
-    // 에러코드별 카운터 집계
-    if (res.status === 201) {
-        reservationSuccessRate.add(1);
-    } else if (errorCode === 'SEAT_ALREADY_HELD') {
-        reservationSuccessRate.add(0);
-        seatAlreadyHeldCounter.add(1);
-    } else if (errorCode === 'QUEUE_TOKEN_ALREADY_USED') {
-        reservationSuccessRate.add(0);
-        tokenAlreadyUsedCounter.add(1);
-    } else if (errorCode === 'LOCK_FAILED') {
-        reservationSuccessRate.add(0);
-        lockFailedCounter.add(1);
-    } else {
-        reservationSuccessRate.add(0);
-        unexpectedCounter.add(1);
-    }
+	// 에러코드별 카운터 집계
+	if (res.status === 201) {
+		reservationSuccessRate.add(1);
+	} else if (errorCode === 'SEAT_ALREADY_HELD') {
+		reservationSuccessRate.add(0);
+		seatAlreadyHeldCounter.add(1);
+	} else if (errorCode === 'QUEUE_TOKEN_ALREADY_USED') {
+		reservationSuccessRate.add(0);
+		tokenAlreadyUsedCounter.add(1);
+	} else if (errorCode === 'LOCK_FAILED') {
+		reservationSuccessRate.add(0);
+		lockFailedCounter.add(1);
+	} else {
+		reservationSuccessRate.add(0);
+		unexpectedCounter.add(1);
+	}
 
-    // 응답 상태 검증
-    check(res, {
-        'response is expected': (r) =>
-            r.status === 201 ||
-            (r.status === 409 && [
-                'SEAT_ALREADY_HELD',
-                'QUEUE_TOKEN_ALREADY_USED',
-                'LOCK_FAILED',
-            ].includes(errorCode)),
-    });
+	// 응답 상태 검증
+	check(res, {
+		'response is expected': (r) =>
+				r.status === 201 ||
+				(r.status === 409 && [
+					'SEAT_ALREADY_HELD',
+					'QUEUE_TOKEN_ALREADY_USED',
+					'LOCK_FAILED',
+				].includes(errorCode)),
+	});
 }

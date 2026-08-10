@@ -26,8 +26,7 @@ public class OrderTest {
             mock(User.class),
             mock(Reservation.class),
             TOTAL_AMOUNT,
-            PAYMENT_DEADLINE
-        );
+            PAYMENT_DEADLINE);
     }
 
     @Test

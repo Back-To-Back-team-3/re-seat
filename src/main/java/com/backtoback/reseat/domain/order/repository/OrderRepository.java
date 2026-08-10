@@ -33,8 +33,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
         AND o.paymentDeadline <= :now
         """)
     int expireCreatedOrders(
-        @Param("now") LocalDateTime now,
-        @Param("created") OrderStatus created,
-        @Param("expired") OrderStatus expired
-    );
+        @Param("now")
+        LocalDateTime now,
+        @Param("created")
+        OrderStatus created,
+        @Param("expired")
+        OrderStatus expired);
 }

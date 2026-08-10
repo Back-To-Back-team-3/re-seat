@@ -42,9 +42,10 @@ public class OrderController implements OrderControllerDocs {
     @Override
     @PostMapping
     public ResponseEntity<ApiResponse<OrderResponse>> createOrder(
-        @Valid @RequestBody OrderCreateRequest request,
-        @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
+        @Valid @RequestBody
+        OrderCreateRequest request,
+        @AuthenticationPrincipal
+        CustomUserDetails userDetails) {
         Long userId = userDetails.getId();
         OrderResponse response = orderService.createOrder(userId, request.getReservationId());
 
@@ -63,9 +64,10 @@ public class OrderController implements OrderControllerDocs {
     @Override
     @GetMapping("/{orderId}")
     public ResponseEntity<ApiResponse<OrderResponse>> getOrder(
-        @PathVariable Long orderId,
-        @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
+        @PathVariable
+        Long orderId,
+        @AuthenticationPrincipal
+        CustomUserDetails userDetails) {
         Long userId = userDetails.getId();
         OrderResponse response = orderService.getOrder(userId, orderId);
 
@@ -84,9 +86,10 @@ public class OrderController implements OrderControllerDocs {
     @Override
     @PostMapping("/{orderId}/cancel")
     public ResponseEntity<ApiResponse<OrderCancelResponse>> cancelOrder(
-        @PathVariable Long orderId,
-        @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
+        @PathVariable
+        Long orderId,
+        @AuthenticationPrincipal
+        CustomUserDetails userDetails) {
 
         Long userId = userDetails.getId();
         OrderCancelResponse response = orderService.cancelOrder(userId, orderId);

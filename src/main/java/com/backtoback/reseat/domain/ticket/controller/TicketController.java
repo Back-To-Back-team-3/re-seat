@@ -54,19 +54,19 @@ public class TicketController {
      */
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<TicketListResponse>>> getMyTickets(
-        @AuthenticationPrincipal CustomUserDetails userDetails,
-        @RequestParam(required = false) TicketStatus status,
-        @PageableDefault(size = 20) Pageable pageable
-    ) {
+        @AuthenticationPrincipal
+        CustomUserDetails userDetails,
+        @RequestParam(required = false)
+        TicketStatus status,
+        @PageableDefault(size = 20)
+        Pageable pageable) {
         Page<TicketListResponse> response = ticketService.getMyTickets(
             userDetails.getId(),
             status,
-            pageable
-        );
+            pageable);
 
         return ResponseEntity.ok(
-            ApiResponse.success("내 티켓 목록 조회 완료", PageResponse.of(response))
-        );
+            ApiResponse.success("내 티켓 목록 조회 완료", PageResponse.of(response)));
     }
 
     /**
@@ -80,17 +80,16 @@ public class TicketController {
      */
     @GetMapping("/{ticketId}")
     public ResponseEntity<ApiResponse<TicketDetailResponse>> getTicket(
-        @AuthenticationPrincipal CustomUserDetails userDetails,
-        @PathVariable Long ticketId
-    ) {
+        @AuthenticationPrincipal
+        CustomUserDetails userDetails,
+        @PathVariable
+        Long ticketId) {
         TicketDetailResponse response = ticketService.getTicket(
             userDetails.getId(),
-            ticketId
-        );
+            ticketId);
 
         return ResponseEntity.ok(
-            ApiResponse.success("티켓 상세 조회 완료", response)
-        );
+            ApiResponse.success("티켓 상세 조회 완료", response));
     }
 
     /**
@@ -104,16 +103,15 @@ public class TicketController {
      */
     @PostMapping("/{ticketId}/cancel")
     public ResponseEntity<ApiResponse<TicketCancelResponse>> cancelTicket(
-        @AuthenticationPrincipal CustomUserDetails userDetails,
-        @PathVariable Long ticketId
-    ) {
+        @AuthenticationPrincipal
+        CustomUserDetails userDetails,
+        @PathVariable
+        Long ticketId) {
         TicketCancelResponse response = ticketService.cancelTicket(
             userDetails.getId(),
-            ticketId
-        );
+            ticketId);
 
         return ResponseEntity.ok(
-            ApiResponse.success("티켓 취소 완료", response)
-        );
+            ApiResponse.success("티켓 취소 완료", response));
     }
 }

@@ -27,8 +27,7 @@ public class AdmissionTokenTest {
             mock(User.class),
             TOKEN,
             ISSUED_AT,
-            EXPIRES_AT
-        );
+            EXPIRES_AT);
     }
 
     @Test

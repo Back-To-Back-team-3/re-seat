@@ -70,26 +70,21 @@ public class SecurityConfig {
 
                 //관리자 전용 API 인가 적용
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                .anyRequest().authenticated()
-            )
+                .anyRequest().authenticated())
             // OAuth2 로그인 설정 추가
             .oauth2Login(oauth2 -> oauth2
                 .userInfoEndpoint(userInfo -> userInfo
-                    .userService(customOAuth2UserService)
-                )
+                    .userService(customOAuth2UserService))
                 .successHandler(oAuth2AuthenticationSuccessHandler)
-                .failureHandler(oAuth2AuthenticationFailureHandler)
-            )
+                .failureHandler(oAuth2AuthenticationFailureHandler))
             //Spring Security 필터 단의 예외(401, 403)
             .exceptionHandling(exception -> exception
                 .authenticationEntryPoint(authenticationEntryPoint)
-                .accessDeniedHandler(accessDeniedHandler)
-            )
+                .accessDeniedHandler(accessDeniedHandler))
 
             // 4. H2 콘솔의 iframe 사용 허용을 위한 X-Frame-Options 설정
             .headers(headers -> headers
-                .frameOptions(frameOptions -> frameOptions.sameOrigin())
-            )
+                .frameOptions(frameOptions -> frameOptions.sameOrigin()))
 
             .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
                 UsernamePasswordAuthenticationFilter.class);
@@ -108,16 +103,16 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(List.of(
-            "http://localhost:3000",             // React 개발용 로컬 주소
-            "http://localhost:5173",             // Vite 개발용 로컬 주소
-            "https://re-seat.netlify.app",        // 프론트엔드 임시/배포 주소 예시
-            "https://your-frontend-domain.com"   // 실서버 프론트엔드 도메인 (필요시 추가)
+            "http://localhost:3000", // React 개발용 로컬 주소
+            "http://localhost:5173", // Vite 개발용 로컬 주소
+            "https://re-seat.netlify.app", // 프론트엔드 임시/배포 주소 예시
+            "https://your-frontend-domain.com" // 실서버 프론트엔드 도메인 (필요시 추가)
         ));
 
-        configuration.addAllowedMethod("*");      // GET, POST, PUT, DELETE 등 전체 허용
-        configuration.addAllowedHeader("*");      // Authorization, Queue-Token, Idempotency-Key 등 허용
+        configuration.addAllowedMethod("*"); // GET, POST, PUT, DELETE 등 전체 허용
+        configuration.addAllowedHeader("*"); // Authorization, Queue-Token, Idempotency-Key 등 허용
         configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L);           // Preflight 요청 캐싱 시간
+        configuration.setMaxAge(3600L); // Preflight 요청 캐싱 시간
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

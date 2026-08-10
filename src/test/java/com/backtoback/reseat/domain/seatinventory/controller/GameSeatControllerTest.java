@@ -109,8 +109,8 @@ class GameSeatControllerTest {
     // 헬퍼: N건만 SOLD로 변경 (기존 markAllSeatsSold와 구분)
     private void markSomeSeatsSold(Long gameId) {
         List<Long> targetIds = entityManager.createQuery(
-                "SELECT gs.id FROM GameSeat gs WHERE gs.game.id = :gameId ORDER BY gs.id ASC",
-                Long.class)
+            "SELECT gs.id FROM GameSeat gs WHERE gs.game.id = :gameId ORDER BY gs.id ASC",
+            Long.class)
             .setParameter("gameId", gameId)
             .setMaxResults(10)
             .getResultList();
@@ -204,8 +204,8 @@ class GameSeatControllerTest {
      */
     private Long findFirstGameIdOfStadium() {
         return entityManager.createQuery(
-                "SELECT g.id FROM Game g WHERE g.stadium.id = :stadiumId ORDER BY g.id ASC",
-                Long.class)
+            "SELECT g.id FROM Game g WHERE g.stadium.id = :stadiumId ORDER BY g.id ASC",
+            Long.class)
             .setParameter("stadiumId", SEEDED_STADIUM_ID)
             .setMaxResults(1)
             .getSingleResult();
@@ -217,22 +217,22 @@ class GameSeatControllerTest {
      */
     private Long findFirstGameIdOfDifferentStadium() {
         return entityManager.createQuery(
-                """
-                    SELECT g.id FROM Game g
-                    WHERE NOT EXISTS (
-                        SELECT 1 FROM GameSeat gs WHERE gs.game.id = g.id
-                    )
-                    ORDER BY g.id ASC
-                    """,
-                Long.class)
+            """
+                SELECT g.id FROM Game g
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM GameSeat gs WHERE gs.game.id = g.id
+                )
+                ORDER BY g.id ASC
+                """,
+            Long.class)
             .setMaxResults(1)
             .getSingleResult();
     }
 
     private Long findFirstZoneIdOfGame(Long gameId) {
         return entityManager.createQuery(
-                "SELECT gs.seat.zone.id FROM GameSeat gs WHERE gs.game.id = :gameId ORDER BY gs.id ASC",
-                Long.class)
+            "SELECT gs.seat.zone.id FROM GameSeat gs WHERE gs.game.id = :gameId ORDER BY gs.id ASC",
+            Long.class)
             .setParameter("gameId", gameId)
             .setMaxResults(1)
             .getSingleResult();

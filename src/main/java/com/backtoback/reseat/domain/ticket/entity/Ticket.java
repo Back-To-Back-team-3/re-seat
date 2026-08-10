@@ -32,19 +32,15 @@ import lombok.NoArgsConstructor;
 @Getter
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(
-    name = "tickets",
-    uniqueConstraints = {
-        @UniqueConstraint(name = "uk_tickets_no", columnNames = "ticket_no"),
-        @UniqueConstraint(name = "uk_tickets_order_item", columnNames = "order_item_id"),
-        @UniqueConstraint(name = "uk_tickets_game_seat", columnNames = "game_seat_id"),
-        @UniqueConstraint(name = "uk_tickets_qr_token", columnNames = "qr_token")
-    },
-    indexes = {
-        @Index(name = "idx_tickets_user_status", columnList = "user_id, status"),
-        @Index(name = "idx_tickets_game", columnList = "game_id")
-    }
-)
+@Table(name = "tickets", uniqueConstraints = {
+    @UniqueConstraint(name = "uk_tickets_no", columnNames = "ticket_no"),
+    @UniqueConstraint(name = "uk_tickets_order_item", columnNames = "order_item_id"),
+    @UniqueConstraint(name = "uk_tickets_game_seat", columnNames = "game_seat_id"),
+    @UniqueConstraint(name = "uk_tickets_qr_token", columnNames = "qr_token")
+}, indexes = {
+    @Index(name = "idx_tickets_user_status", columnList = "user_id, status"),
+    @Index(name = "idx_tickets_game", columnList = "game_id")
+})
 public class Ticket extends BaseEntity {
 
     @Id
@@ -57,38 +53,22 @@ public class Ticket extends BaseEntity {
 
     // 현재 티켓 소유자
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-        name = "user_id",
-        nullable = false,
-        foreignKey = @ForeignKey(name = "fk_tickets_user")
-    )
+    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_tickets_user"))
     private User user;
 
     // orderItem 1개당 1장의 티켓만 발급
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-        name = "order_item_id",
-        nullable = false,
-        foreignKey = @ForeignKey(name = "fk_tickets_order_item")
-    )
+    @JoinColumn(name = "order_item_id", nullable = false, foreignKey = @ForeignKey(name = "fk_tickets_order_item"))
     private OrderItem orderItem;
 
     // 경기
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-        name = "game_id",
-        nullable = false,
-        foreignKey = @ForeignKey(name = "fk_tickets_game")
-    )
+    @JoinColumn(name = "game_id", nullable = false, foreignKey = @ForeignKey(name = "fk_tickets_game"))
     private Game game;
 
     // 좌석
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-        name = "game_seat_id",
-        nullable = false,
-        foreignKey = @ForeignKey(name = "fk_tickets_game_seat")
-    )
+    @JoinColumn(name = "game_seat_id", nullable = false, foreignKey = @ForeignKey(name = "fk_tickets_game_seat"))
     private GameSeat gameSeat;
 
     // 티켓 상태
@@ -126,8 +106,7 @@ public class Ticket extends BaseEntity {
         User user,
         OrderItem orderItem,
         GameSeat gameSeat,
-        String qrToken
-    ) {
+        String qrToken) {
         validateIssueParams(ticketNo, user, orderItem, gameSeat, qrToken);
 
         Ticket ticket = new Ticket();
@@ -148,8 +127,7 @@ public class Ticket extends BaseEntity {
         User user,
         OrderItem orderItem,
         GameSeat gameSeat,
-        String qrToken
-    ) {
+        String qrToken) {
         if (ticketNo == null || ticketNo.isBlank()) {
             throw new IllegalArgumentException("ticketNo는 필수입니다.");
         }
@@ -222,8 +200,7 @@ public class Ticket extends BaseEntity {
         if (this.status != expected) {
             throw new BusinessException(
                 ErrorCode.INVALID_REQUEST,
-                "티켓 상태가 올바르지 않습니다. expected=" + expected + ", current=" + this.status
-            );
+                "티켓 상태가 올바르지 않습니다. expected=" + expected + ", current=" + this.status);
         }
     }
 }

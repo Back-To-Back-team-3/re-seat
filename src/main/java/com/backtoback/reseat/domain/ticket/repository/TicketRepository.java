@@ -56,7 +56,8 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
         "join fetch gs.seat s " +
         "join fetch s.zone z " +
         "where t.id = :id")
-    Optional<Ticket> findDetailById(@Param("id") Long id);
+    Optional<Ticket> findDetailById(@Param("id")
+    Long id);
 
     /**
      * 사용자 본인 티켓 단건 조회
@@ -79,13 +80,13 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
         "join fetch gs.seat s " +
         "join fetch s.zone z " +
         "where t.user.id = :userId " +
-        "and (:status is null or t.status = :status)",
-        countQuery = "select count(t) from Ticket t " +
+        "and (:status is null or t.status = :status)", countQuery = "select count(t) from Ticket t " +
             "where t.user.id = :userId " +
             "and (:status is null or t.status = :status)")
     Page<Ticket> findAllByUserIdAndStatusWithDetails(
-        @Param("userId") Long userId,
-        @Param("status") TicketStatus status,
-        Pageable pageable
-    );
+        @Param("userId")
+        Long userId,
+        @Param("status")
+        TicketStatus status,
+        Pageable pageable);
 }

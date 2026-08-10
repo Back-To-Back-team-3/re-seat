@@ -67,8 +67,7 @@ public class OrderExpiryService {
     public record OrderExpiryResult(
         int expiredOrders,
         int expiredReservations,
-        int releasedSeats
-    ) {
+        int releasedSeats) {
 
         public int total() {
             return expiredOrders + expiredReservations + releasedSeats;

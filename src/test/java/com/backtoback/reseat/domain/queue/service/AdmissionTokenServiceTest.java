@@ -79,8 +79,7 @@ public class AdmissionTokenServiceTest {
             user,
             TOKEN,
             issuedAt,
-            expiresAt
-        );
+            expiresAt);
     }
 
     @Test

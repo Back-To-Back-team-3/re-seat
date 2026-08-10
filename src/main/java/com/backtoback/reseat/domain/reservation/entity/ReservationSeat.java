@@ -26,12 +26,9 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
-@Table(
-    name = "reservation_seats",
-    indexes = {
-        @Index(name = "idx_reservation_seats_reservation", columnList = "reservation_id")
-    }
-)
+@Table(name = "reservation_seats", indexes = {
+    @Index(name = "idx_reservation_seats_reservation", columnList = "reservation_id")
+})
 @EntityListeners(AuditingEntityListener.class)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ReservationSeat {
@@ -41,12 +38,10 @@ public class ReservationSeat {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "reservation_id", nullable = false,
-        foreignKey = @ForeignKey(name = "fk_reservation_seats_reservation"))
+    @JoinColumn(name = "reservation_id", nullable = false, foreignKey = @ForeignKey(name = "fk_reservation_seats_reservation"))
     private Reservation reservation;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "game_seat_id", nullable = false,
-        foreignKey = @ForeignKey(name = "fk_reservation_seats_game_seat"))
+    @JoinColumn(name = "game_seat_id", nullable = false, foreignKey = @ForeignKey(name = "fk_reservation_seats_game_seat"))
     private GameSeat gameSeat;
     // 선점 시점 가격 스냅샷. GameSeat.price가 나중에 바뀌어도 예약 시점 가격 유지 (2차 재판매 대비).
     @Column(name = "price", nullable = false)

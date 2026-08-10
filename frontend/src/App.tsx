@@ -1174,7 +1174,7 @@ function ConfirmDialog({title, description, confirmLabel, cancelLabel = "계속 
                 <p>{description}</p>
                 <div className={cancelLabel ? "dialog-actions" : "dialog-actions single"}>
                     {cancelLabel && <button ref={cancelButtonRef} className="outline-button"
-                                            onClick={onCancel}>{cancelLabel}</button>}
+					                        onClick={onCancel}>{cancelLabel}</button>}
                     <button ref={confirmButtonRef} className="primary-button"
                             onClick={onConfirm}>{confirmLabel}</button>
                 </div>
@@ -1386,7 +1386,8 @@ function HomeScreen({
                         <strong>{selectedDate ? `${selectedDate.replace(/-/g, ".")} 경기` : "전체 경기"}</strong><span>{filteredGames.length}개 일정</span>
                     </div>
                     {selectedDate &&
-                        <button className="text-button" onClick={() => setSelectedDate(null)}>날짜 선택 해제</button>}</div>
+							<button className="text-button" onClick={() => setSelectedDate(null)}>날짜 선택 해제</button>}
+                </div>
                 {(gamesResult?.data.length ?? 0) === 0 ? (
                     <EmptyState title="표시할 경기가 없습니다." description="테스트 데이터 준비 스크립트를 실행한 뒤 일정을 새로고침해주세요."/>
                 ) : filteredGames.length === 0 ? (
@@ -1471,7 +1472,7 @@ function QueueScreen({game, queue, progress, busy, onRefresh, onCancel, onContin
                     </button>
                 </div>
                 {!admitted &&
-                    <button className="text-button danger" onClick={onCancel} disabled={busy}>예매 취소하고 돌아가기</button>}
+						<button className="text-button danger" onClick={onCancel} disabled={busy}>예매 취소하고 돌아가기</button>}
             </div>
             <div className="info-strip"><span>i</span><p><strong>대기 중에는 페이지를 닫지 마세요.</strong> 실시간 연결이 종료되더라도 상태 확인 버튼으로
                 현재 순번을 다시 조회할 수 있습니다.</p></div>
@@ -1619,8 +1620,9 @@ function SeatScreen({
                             <button className="primary-button full" onClick={onContinue}
                                     disabled={timerExpired || busy}>{order ? "주문 정보로 돌아가기 →" : "주문 정보 입력 →"}</button>
                             {!order &&
-                                <button className="outline-button full" onClick={onCancelReservation} disabled={busy}>선점
-                                    해제</button>}
+									<button className="outline-button full" onClick={onCancelReservation}
+									        disabled={busy}>선점
+										해제</button>}
                         </>
                     )}
                     <small
@@ -1698,9 +1700,9 @@ function CheckoutScreen({
                     </dl>
                     <div className="total-line"><span>최종 결제금액</span><strong>{formatPrice(amount)}</strong></div>
                     {deadlineTarget && <div className={deadlineExpired ? "deadline-line expired" : "deadline-line"}>
-                        <span>{order ? "결제 남은 시간" : "선점 남은 시간"}</span><Countdown target={deadlineTarget}
-                                                                                 onExpire={() => setDeadlineExpired(true)}/>
-                    </div>}
+						<span>{order ? "결제 남은 시간" : "선점 남은 시간"}</span><Countdown target={deadlineTarget}
+						                                                         onExpire={() => setDeadlineExpired(true)}/>
+					</div>}
                     {deadlineExpired && <p className="deadline-warning">제한시간이 만료되어 더 이상 진행할 수 없습니다.</p>}
                     {!order ? (
                         <button className="primary-button full" onClick={onCreateOrder}
@@ -1746,7 +1748,7 @@ function PaymentScreen({game, order, payment, busy, onOpenPayment, onRefreshOrde
         <section className="payment-page">
             <div className={approved ? "payment-result approved" : "payment-result"}>
                 {!approved &&
-                    <button className="step-back-button" onClick={onBack} disabled={busy}>← 주문으로 돌아가기</button>}
+						<button className="step-back-button" onClick={onBack} disabled={busy}>← 주문으로 돌아가기</button>}
                 <div className="result-symbol">{approved ? "✓" : "₩"}</div>
                 <span className="eyebrow">{approved ? "BOOKING COMPLETE" : "PAYMENT"}</span>
                 <h1>{approved ? "예매가 완료되었습니다!" : "결제를 완료해주세요."}</h1>
@@ -1758,7 +1760,7 @@ function PaymentScreen({game, order, payment, busy, onOpenPayment, onRefreshOrde
                     </div>
                 )}
                 {!approved && deadlineExpired &&
-                    <p className="deadline-warning centered">결제시간이 만료되었습니다. 주문 상태를 확인해주세요.</p>}
+						<p className="deadline-warning centered">결제시간이 만료되었습니다. 주문 상태를 확인해주세요.</p>}
                 <div className="payment-receipt">
                     <div><span>경기</span><strong>{game?.title ?? "-"}</strong></div>
                     <div><span>주문번호</span><strong>{order?.orderNo ?? "-"}</strong></div>

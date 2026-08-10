@@ -73,8 +73,7 @@ public class OrderExpiryServiceJpaTest {
         stadium = Stadium.of(
             "테스트 구장",
             "테스트시 테스트구",
-            10_000
-        );
+            10_000);
         entityManager.persist(stadium);
 
         Team homeTeam = Team.of("홈팀", stadium);
@@ -97,8 +96,7 @@ public class OrderExpiryServiceJpaTest {
         seatZone = SeatZone.of(
             stadium,
             "테스트 구역",
-            SeatGrade.INFIELD, PRICE
-        );
+            SeatGrade.INFIELD, PRICE);
         entityManager.persist(seatZone);
 
         user = User.builder()
@@ -131,8 +129,7 @@ public class OrderExpiryServiceJpaTest {
         LocalDateTime paymentDeadline,
         OrderStatus orderStatus,
         ReservationStatus reservationStatus,
-        GameSeatStatus... gameSeatStatus
-    ) {
+        GameSeatStatus... gameSeatStatus) {
 
         long sequence = ++fixtureSequence;
         String suffix = String.valueOf(sequence);
@@ -153,8 +150,7 @@ public class OrderExpiryServiceJpaTest {
             user,
             reservation,
             PRICE * gameSeatStatus.length,
-            paymentDeadline
-        );
+            paymentDeadline);
 
         changeOrderStatus(order, orderStatus);
         entityManager.persist(order);
@@ -167,8 +163,7 @@ public class OrderExpiryServiceJpaTest {
                 seatZone,
                 "A",
                 suffix,
-                String.valueOf(i + 1)
-            );
+                String.valueOf(i + 1));
             entityManager.persist(seat);
 
             GameSeat gameSeat = GameSeat.builder()
@@ -184,8 +179,7 @@ public class OrderExpiryServiceJpaTest {
             OrderItem orderItem = OrderItem.of(
                 order,
                 gameSeat,
-                PRICE
-            );
+                PRICE);
 
             entityManager.persist(orderItem);
 
@@ -195,8 +189,7 @@ public class OrderExpiryServiceJpaTest {
         return new OrderExpiryFixture(
             order.getId(),
             reservation.getId(),
-            List.copyOf(gameSeatIds)
-        );
+            List.copyOf(gameSeatIds));
     }
 
     @Test
@@ -208,8 +201,7 @@ public class OrderExpiryServiceJpaTest {
             EXPIRED_PAYMENT_DEADLINE,
             OrderStatus.CREATED,
             ReservationStatus.HOLDING,
-            GameSeatStatus.HELD, GameSeatStatus.HELD
-        );
+            GameSeatStatus.HELD, GameSeatStatus.HELD);
 
         entityManager.flush();
         entityManager.clear();
@@ -232,15 +224,13 @@ public class OrderExpiryServiceJpaTest {
 
         Order expiredOrder = entityManager.find(
             Order.class,
-            overdueCreatedOrderFixture.orderId()
-        );
+            overdueCreatedOrderFixture.orderId());
         assertThat(expiredOrder.getStatus())
             .isEqualTo(OrderStatus.EXPIRED);
 
         Reservation expiredReservation = entityManager.find(
             Reservation.class,
-            overdueCreatedOrderFixture.reservationId()
-        );
+            overdueCreatedOrderFixture.reservationId());
         assertThat(expiredReservation.getStatus())
             .isEqualTo(ReservationStatus.EXPIRED);
 
@@ -248,8 +238,8 @@ public class OrderExpiryServiceJpaTest {
             .stream()
             .map(gameSeatId -> entityManager.find(
                 GameSeat.class,
-                gameSeatId
-            )).toList();
+                gameSeatId))
+            .toList();
 
         assertThat(gameSeats)
             .allSatisfy(gameSeat -> {
@@ -269,8 +259,7 @@ public class OrderExpiryServiceJpaTest {
             NOW,
             OrderStatus.CREATED,
             ReservationStatus.HOLDING,
-            GameSeatStatus.HELD
-        );
+            GameSeatStatus.HELD);
 
         entityManager.flush();
         entityManager.clear();
@@ -293,15 +282,13 @@ public class OrderExpiryServiceJpaTest {
 
         Order expiredOrder = entityManager.find(
             Order.class,
-            deadlineBoundaryCreatedOrderFixture.orderId()
-        );
+            deadlineBoundaryCreatedOrderFixture.orderId());
         assertThat(expiredOrder.getStatus())
             .isEqualTo(OrderStatus.EXPIRED);
 
         Reservation expiredReservation = entityManager.find(
             Reservation.class,
-            deadlineBoundaryCreatedOrderFixture.reservationId()
-        );
+            deadlineBoundaryCreatedOrderFixture.reservationId());
         assertThat(expiredReservation.getStatus())
             .isEqualTo(ReservationStatus.EXPIRED);
 
@@ -309,8 +296,8 @@ public class OrderExpiryServiceJpaTest {
             .stream()
             .map(gameSeatId -> entityManager.find(
                 GameSeat.class,
-                gameSeatId
-            )).toList();
+                gameSeatId))
+            .toList();
 
         assertThat(gameSeats)
             .allSatisfy(gameSeat -> {
@@ -330,15 +317,13 @@ public class OrderExpiryServiceJpaTest {
             FUTURE_PAYMENT_DEADLINE,
             OrderStatus.CREATED,
             ReservationStatus.HOLDING,
-            GameSeatStatus.HELD
-        );
+            GameSeatStatus.HELD);
 
         OrderExpiryFixture overdueOrderFixture = createOrderExpiryFixture(
             EXPIRED_PAYMENT_DEADLINE,
             OrderStatus.PAID,
             ReservationStatus.CONFIRMED,
-            GameSeatStatus.SOLD
-        );
+            GameSeatStatus.SOLD);
 
         entityManager.flush();
         entityManager.clear();
@@ -361,12 +346,10 @@ public class OrderExpiryServiceJpaTest {
 
         Order fetureOrder = entityManager.find(
             Order.class,
-            futureCreatedOrderFixture.orderId()
-        );
+            futureCreatedOrderFixture.orderId());
         Order paidOrder = entityManager.find(
             Order.class,
-            overdueOrderFixture.orderId()
-        );
+            overdueOrderFixture.orderId());
         assertThat(fetureOrder.getStatus())
             .isEqualTo(OrderStatus.CREATED);
         assertThat(paidOrder.getStatus())
@@ -374,12 +357,10 @@ public class OrderExpiryServiceJpaTest {
 
         Reservation holdingReservation = entityManager.find(
             Reservation.class,
-            futureCreatedOrderFixture.reservationId()
-        );
+            futureCreatedOrderFixture.reservationId());
         Reservation confirmedReservation = entityManager.find(
             Reservation.class,
-            overdueOrderFixture.reservationId()
-        );
+            overdueOrderFixture.reservationId());
         assertThat(holdingReservation.getStatus())
             .isEqualTo(ReservationStatus.HOLDING);
         assertThat(confirmedReservation.getStatus())
@@ -387,12 +368,10 @@ public class OrderExpiryServiceJpaTest {
 
         GameSeat heldGameSeat = entityManager.find(
             GameSeat.class,
-            futureCreatedOrderFixture.gameSeatIds().get(0)
-        );
+            futureCreatedOrderFixture.gameSeatIds().get(0));
         GameSeat soldGameSeat = entityManager.find(
             GameSeat.class,
-            overdueOrderFixture.gameSeatIds().get(0)
-        );
+            overdueOrderFixture.gameSeatIds().get(0));
         assertThat(heldGameSeat.getStatus())
             .isEqualTo(GameSeatStatus.HELD);
         assertThat(soldGameSeat.getStatus())
@@ -412,8 +391,7 @@ public class OrderExpiryServiceJpaTest {
             EXPIRED_PAYMENT_DEADLINE,
             OrderStatus.CREATED,
             ReservationStatus.CANCELED,
-            GameSeatStatus.AVAILABLE
-        );
+            GameSeatStatus.AVAILABLE);
 
         entityManager.flush();
         entityManager.clear();
@@ -436,22 +414,19 @@ public class OrderExpiryServiceJpaTest {
 
         Order expiredOrder = entityManager.find(
             Order.class,
-            overdueOrderWithNonTargetResourcesFixture.orderId()
-        );
+            overdueOrderWithNonTargetResourcesFixture.orderId());
         assertThat(expiredOrder.getStatus())
             .isEqualTo(OrderStatus.EXPIRED);
 
         Reservation canceledReservation = entityManager.find(
             Reservation.class,
-            overdueOrderWithNonTargetResourcesFixture.reservationId()
-        );
+            overdueOrderWithNonTargetResourcesFixture.reservationId());
         assertThat(canceledReservation.getStatus())
             .isEqualTo(ReservationStatus.CANCELED);
 
         GameSeat availableGameSeat = entityManager.find(
             GameSeat.class,
-            overdueOrderWithNonTargetResourcesFixture.gameSeatIds().get(0)
-        );
+            overdueOrderWithNonTargetResourcesFixture.gameSeatIds().get(0));
         assertThat(availableGameSeat.getStatus())
             .isEqualTo(GameSeatStatus.AVAILABLE);
         assertThat(availableGameSeat.getHoldExpiresAt())
@@ -467,8 +442,7 @@ public class OrderExpiryServiceJpaTest {
             EXPIRED_PAYMENT_DEADLINE,
             OrderStatus.CREATED,
             ReservationStatus.HOLDING,
-            GameSeatStatus.HELD
-        );
+            GameSeatStatus.HELD);
 
         entityManager.flush();
         entityManager.clear();
@@ -505,22 +479,19 @@ public class OrderExpiryServiceJpaTest {
 
         Order expiredOrder = entityManager.find(
             Order.class,
-            overdueCreatedOrderFixture.orderId()
-        );
+            overdueCreatedOrderFixture.orderId());
         assertThat(expiredOrder.getStatus())
             .isEqualTo(OrderStatus.EXPIRED);
 
         Reservation expiredReservation = entityManager.find(
             Reservation.class,
-            overdueCreatedOrderFixture.reservationId()
-        );
+            overdueCreatedOrderFixture.reservationId());
         assertThat(expiredReservation.getStatus())
             .isEqualTo(ReservationStatus.EXPIRED);
 
         GameSeat availableGameSeat = entityManager.find(
             GameSeat.class,
-            overdueCreatedOrderFixture.gameSeatIds().get(0)
-        );
+            overdueCreatedOrderFixture.gameSeatIds().get(0));
         assertThat(availableGameSeat.getStatus())
             .isEqualTo(GameSeatStatus.AVAILABLE);
         assertThat(availableGameSeat.getHoldExpiresAt())
@@ -529,12 +500,10 @@ public class OrderExpiryServiceJpaTest {
 
     private void changeReservationStatus(
         Reservation reservation,
-        ReservationStatus reservationStatus
-    ) {
+        ReservationStatus reservationStatus) {
 
         switch (reservationStatus) {
-            case HOLDING -> {
-            }
+            case HOLDING -> {}
             case CONFIRMED -> reservation.confirm();
             case CANCELED -> reservation.cancel();
             case EXPIRED -> reservation.expire();
@@ -543,12 +512,10 @@ public class OrderExpiryServiceJpaTest {
 
     private void changeOrderStatus(
         Order order,
-        OrderStatus orderStatus
-    ) {
+        OrderStatus orderStatus) {
 
         switch (orderStatus) {
-            case CREATED -> {
-            }
+            case CREATED -> {}
             case PAID -> order.paid();
             case EXPIRED -> order.expired();
             case CANCELED -> order.cancel();
@@ -557,12 +524,10 @@ public class OrderExpiryServiceJpaTest {
 
     private void changeGameSeatStatus(
         GameSeat gameSeat,
-        GameSeatStatus gameSeatStatus
-    ) {
+        GameSeatStatus gameSeatStatus) {
 
         switch (gameSeatStatus) {
-            case AVAILABLE -> {
-            }
+            case AVAILABLE -> {}
             case HELD -> gameSeat.hold(HOLD_EXPIRES_AT);
             case SOLD -> {
                 gameSeat.hold(HOLD_EXPIRES_AT);
@@ -576,7 +541,6 @@ public class OrderExpiryServiceJpaTest {
     private record OrderExpiryFixture(
         Long orderId,
         Long reservationId,
-        List<Long> gameSeatIds
-    ) {
+        List<Long> gameSeatIds) {
     }
 }

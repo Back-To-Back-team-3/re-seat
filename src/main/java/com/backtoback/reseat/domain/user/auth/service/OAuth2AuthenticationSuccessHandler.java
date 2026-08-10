@@ -49,9 +49,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
                             .user(user)
                             .tokenValue(refreshToken)
                             .expiredAt(expiredAt)
-                            .build()
-                    )
-                );
+                            .build()));
         } catch (org.springframework.dao.DataIntegrityViolationException ex) {
             refreshTokenRepository.findByUser(user)
                 .ifPresent(token -> token.updateTokenValue(refreshToken, expiredAt));

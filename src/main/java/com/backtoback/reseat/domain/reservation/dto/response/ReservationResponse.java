@@ -41,8 +41,7 @@ public record ReservationResponse(
     LocalDateTime holdExpiresAt,
 
     @Schema(description = "경기 시각", example = "2026-07-11T18:30:00")
-    LocalDateTime gameAt
-) {
+    LocalDateTime gameAt) {
 
     public static ReservationResponse from(Reservation reservation) {
         List<SeatHoldInfo> seats = reservation.getReservationSeats().stream()
@@ -55,8 +54,7 @@ public record ReservationResponse(
             reservation.getStatus(),
             seats,
             reservation.getHoldExpiresAt(),
-            reservation.getGame().getGameAt()
-        );
+            reservation.getGame().getGameAt());
     }
 
     /**
@@ -72,8 +70,7 @@ public record ReservationResponse(
         GameSeatStatus status,
 
         @Schema(description = "선점 당시 가격 (price 스냅샷)", example = "18000")
-        int price
-    ) {
+        int price) {
         static SeatHoldInfo from(ReservationSeat rs) {
             GameSeat gs = rs.getGameSeat();
             return new SeatHoldInfo(gs.getId(), gs.getStatus(), rs.getPrice());

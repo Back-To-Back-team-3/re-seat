@@ -1,8 +1,5 @@
 package com.backtoback.reseat.domain.user.auth.dto.response;
 
-import lombok.AllArgsConstructor;
-
-@AllArgsConstructor
 public record UserLoginResponse(String accessToken, String refreshToken, String userRole, Long expiresIn) {
 
     public static UserLoginResponse of(String accessToken, String refreshToken, String userRole, long expiresIn) {

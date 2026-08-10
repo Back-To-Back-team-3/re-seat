@@ -26,9 +26,8 @@ public class PricePolicy {
      *
      * <P>여기에 없는 요일(금,토.일)에는 상승가를 적용한다.
      */
-    private static final Set<DayOfWeek> BASE_PRICE_DAYS =
-        Collections.unmodifiableSet(
-            EnumSet.of(DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY));
+    private static final Set<DayOfWeek> BASE_PRICE_DAYS = Collections.unmodifiableSet(
+        EnumSet.of(DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY));
 
     // 금~일(및 예외적 월요일) 성인 기본가
     private static final Map<SeatGrade, Integer> RAISED_BASE_PRICES;

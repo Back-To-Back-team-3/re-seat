@@ -27,7 +27,8 @@ public interface SeatRepository extends JpaRepository<Seat, Long> {
         order by s.id asc
         """)
     List<Seat> findAllByStadiumIdAndStatusWithZone(
-        @Param("stadiumId") Long stadiumId,
-        @Param("status") SeatStatus status
-    );
+        @Param("stadiumId")
+        Long stadiumId,
+        @Param("status")
+        SeatStatus status);
 }

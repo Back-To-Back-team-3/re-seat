@@ -56,11 +56,10 @@ public class TossPaymentClient {
             .bodyValue(new TossConfirmRequest(paymentKey, orderId, amount))
             .retrieve()
             // 토스 API 오류 응답은 에러 본문을 포함해 호출부로 전파한다.
-            .onStatus(HttpStatusCode::isError, response ->
-                response.bodyToMono(String.class)
-                    .defaultIfEmpty("응답 본문 없음")
-                    .flatMap(body -> Mono.error(new TossApiException(
-                        "승인", response.statusCode().value(), body))))
+            .onStatus(HttpStatusCode::isError, response -> response.bodyToMono(String.class)
+                .defaultIfEmpty("응답 본문 없음")
+                .flatMap(body -> Mono.error(new TossApiException(
+                    "승인", response.statusCode().value(), body))))
             .bodyToMono(TossPaymentResponse.class)
             // 외부 API 응답 지연으로 요청 스레드가 오래 묶이지 않게 최대 5초만 기다린다.
             .block(Duration.ofSeconds(5));
@@ -87,11 +86,10 @@ public class TossPaymentClient {
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue(new TossCancelRequest(cancelReason))
             .retrieve()
-            .onStatus(HttpStatusCode::isError, response ->
-                response.bodyToMono(String.class)
-                    .defaultIfEmpty("응답 본문 없음")
-                    .flatMap(body -> Mono.error(new TossApiException(
-                        "취소", response.statusCode().value(), body))))
+            .onStatus(HttpStatusCode::isError, response -> response.bodyToMono(String.class)
+                .defaultIfEmpty("응답 본문 없음")
+                .flatMap(body -> Mono.error(new TossApiException(
+                    "취소", response.statusCode().value(), body))))
             .bodyToMono(TossPaymentResponse.class)
             .block(Duration.ofSeconds(5));
     }
@@ -101,11 +99,10 @@ public class TossPaymentClient {
             .uri(baseUrl + PAYMENT_PATH, paymentKey)
             .header(HttpHeaders.AUTHORIZATION, authorizationHeader())
             .retrieve()
-            .onStatus(HttpStatusCode::isError, response ->
-                response.bodyToMono(String.class)
-                    .defaultIfEmpty("응답 본문 없음")
-                    .flatMap(body -> Mono.error(new TossApiException(
-                        "조회", response.statusCode().value(), body))))
+            .onStatus(HttpStatusCode::isError, response -> response.bodyToMono(String.class)
+                .defaultIfEmpty("응답 본문 없음")
+                .flatMap(body -> Mono.error(new TossApiException(
+                    "조회", response.statusCode().value(), body))))
             .bodyToMono(TossPaymentResponse.class)
             .block(Duration.ofSeconds(5));
     }

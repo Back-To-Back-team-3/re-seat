@@ -39,7 +39,8 @@ public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
         where gs.game.id = :gameId
         order by z.id asc, s.seatRow asc, s.seatNumber asc
         """)
-    List<GameSeat> findAllByGameIdWithSeatAndZone(@Param("gameId") Long gameId);
+    List<GameSeat> findAllByGameIdWithSeatAndZone(@Param("gameId")
+    Long gameId);
 
     /**
      * 경기의 좌석 현황을 구역·등급·상태 필터로 조회한다.
@@ -65,11 +66,14 @@ public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
         order by z.id asc, s.seatRow asc, s.seatNumber asc
         """)
     List<GameSeat> findAllByGameIdWithFilters(
-        @Param("gameId") Long gameId,
-        @Param("zoneId") Long zoneId,
-        @Param("grade") SeatGrade grade,
-        @Param("status") GameSeatStatus status
-    );
+        @Param("gameId")
+        Long gameId,
+        @Param("zoneId")
+        Long zoneId,
+        @Param("grade")
+        SeatGrade grade,
+        @Param("status")
+        GameSeatStatus status);
 
     /**
      * 경기의 구역별 잔여 좌석 수를 집계한다.
@@ -101,9 +105,10 @@ public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
         order by z.id asc
         """)
     List<ZoneSummaryResponse> findZoneSummariesByGameId(
-        @Param("gameId") Long gameId,
-        @Param("stadiumId") Long stadiumId
-    );
+        @Param("gameId")
+        Long gameId,
+        @Param("stadiumId")
+        Long stadiumId);
 
     // 이후에 추가 예정:
     //   findByIdWithPessimisticLock(Long id)  — @Lock(PESSIMISTIC_WRITE)
@@ -132,8 +137,10 @@ public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
            and gs.holdExpiresAt < :now
         """)
     int releaseExpiredSeats(
-        @Param("now") LocalDateTime now,
-        @Param("held") GameSeatStatus held,
-        @Param("available") GameSeatStatus available
-    );
+        @Param("now")
+        LocalDateTime now,
+        @Param("held")
+        GameSeatStatus held,
+        @Param("available")
+        GameSeatStatus available);
 }

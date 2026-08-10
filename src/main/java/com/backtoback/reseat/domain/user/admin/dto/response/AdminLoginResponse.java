@@ -13,8 +13,7 @@ public record AdminLoginResponse(
     Long userId,
     String email,
     String name,
-    UserRole role
-) {
+    UserRole role) {
     public static AdminLoginResponse of(String accessToken, String refreshToken, User user) {
         return AdminLoginResponse.builder()
             .grantType("Bearer")

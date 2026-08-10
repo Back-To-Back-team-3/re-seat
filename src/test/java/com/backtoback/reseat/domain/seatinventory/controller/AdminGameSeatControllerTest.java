@@ -42,7 +42,7 @@ class AdminGameSeatControllerTest {
     @BeforeEach
     void setUp() {
         gameIdWithSeats = entityManager.createQuery(
-                "select g.id from Game g where g.stadium.id = :stadiumId order by g.id asc", Long.class)
+            "select g.id from Game g where g.stadium.id = :stadiumId order by g.id asc", Long.class)
             .setParameter("stadiumId", SEEDED_STADIUM_ID)
             .setMaxResults(1)
             .getSingleResult();

@@ -32,16 +32,12 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
-@Table(
-    name = "reservations",
-    uniqueConstraints = {
-        @UniqueConstraint(name = "uk_reservations_no", columnNames = "reservation_no")
-    },
-    indexes = {
-        @Index(name = "idx_reservations_user_status", columnList = "user_id, status"),
-        @Index(name = "idx_reservations_status_expires", columnList = "status, hold_expires_at")
-    }
-)
+@Table(name = "reservations", uniqueConstraints = {
+    @UniqueConstraint(name = "uk_reservations_no", columnNames = "reservation_no")
+}, indexes = {
+    @Index(name = "idx_reservations_user_status", columnList = "user_id, status"),
+    @Index(name = "idx_reservations_status_expires", columnList = "status, hold_expires_at")
+})
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Reservation extends BaseEntity {
 
@@ -56,12 +52,10 @@ public class Reservation extends BaseEntity {
     @Column(name = "reservation_no", nullable = false, length = 50)
     private String reservationNo;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false,
-        foreignKey = @ForeignKey(name = "fk_reservations_user"))
+    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_reservations_user"))
     private User user;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "game_id", nullable = false,
-        foreignKey = @ForeignKey(name = "fk_reservations_game"))
+    @JoinColumn(name = "game_id", nullable = false, foreignKey = @ForeignKey(name = "fk_reservations_game"))
     private Game game;
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
@@ -133,6 +127,6 @@ public class Reservation extends BaseEntity {
      */
     public void addReservationSeat(ReservationSeat seat) {
         this.reservationSeats.add(seat);
-        seat.assignReservation(this);    // ReservationSeat 쪽 역방향 세팅
+        seat.assignReservation(this); // ReservationSeat 쪽 역방향 세팅
     }
 }

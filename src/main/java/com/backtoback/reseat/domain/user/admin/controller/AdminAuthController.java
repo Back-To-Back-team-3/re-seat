@@ -22,7 +22,8 @@ public class AdminAuthController {
     private final AdminAuthService adminAuthService;
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<AdminLoginResponse>> login(@Valid @RequestBody AdminLoginRequest request) {
+    public ResponseEntity<ApiResponse<AdminLoginResponse>> login(@Valid @RequestBody
+    AdminLoginRequest request) {
         AdminLoginResponse response = adminAuthService.login(request);
         return ResponseEntity.ok(ApiResponse.success("관리자 로그인 성공 완료", response));
     }

@@ -81,8 +81,7 @@ class PaymentRecoveryTaskTest {
             task.startProcessing(LocalDateTime.of(2026, 7, 25, 12, 0));
             task.scheduleRetry(
                 "토스 결제 조회 실패",
-                LocalDateTime.of(2026, 7, 25, 12, 1)
-            );
+                LocalDateTime.of(2026, 7, 25, 12, 1));
             LocalDateTime restartedAt = LocalDateTime.of(2026, 7, 25, 12, 1);
 
             task.startProcessing(restartedAt);
@@ -93,11 +92,7 @@ class PaymentRecoveryTaskTest {
         }
 
         @ParameterizedTest(name = "{0} 상태의 작업은 처리를 시작할 수 없다")
-        @EnumSource(
-            value = PaymentRecoveryStatus.class,
-            mode = EnumSource.Mode.EXCLUDE,
-            names = {"PENDING", "RETRY"}
-        )
+        @EnumSource(value = PaymentRecoveryStatus.class, mode = EnumSource.Mode.EXCLUDE, names = {"PENDING", "RETRY"})
         @DisplayName("대기 또는 재시도 상태가 아닌 작업을 시작하면 예외가 발생한다.")
         void rejectsUnavailableStatus(PaymentRecoveryStatus status) {
             PaymentRecoveryTask task = taskInStatus(status);
@@ -129,11 +124,7 @@ class PaymentRecoveryTaskTest {
         }
 
         @ParameterizedTest(name = "{0} 상태의 작업은 재시도를 예약할 수 없다")
-        @EnumSource(
-            value = PaymentRecoveryStatus.class,
-            mode = EnumSource.Mode.EXCLUDE,
-            names = "PROCESSING"
-        )
+        @EnumSource(value = PaymentRecoveryStatus.class, mode = EnumSource.Mode.EXCLUDE, names = "PROCESSING")
         @DisplayName("처리 중이 아닌 모든 작업은 예외가 발생한다.")
         void requiresProcessing(PaymentRecoveryStatus status) {
             PaymentRecoveryTask task = taskInStatus(status);
@@ -167,11 +158,7 @@ class PaymentRecoveryTaskTest {
         }
 
         @ParameterizedTest(name = "{0} 상태의 작업은 완료할 수 없다")
-        @EnumSource(
-            value = PaymentRecoveryStatus.class,
-            mode = EnumSource.Mode.EXCLUDE,
-            names = "PROCESSING"
-        )
+        @EnumSource(value = PaymentRecoveryStatus.class, mode = EnumSource.Mode.EXCLUDE, names = "PROCESSING")
         @DisplayName("처리 중이 아닌 모든 작업은 예외가 발생한다.")
         void requiresProcessing(PaymentRecoveryStatus status) {
             PaymentRecoveryTask task = taskInStatus(status);
@@ -201,11 +188,7 @@ class PaymentRecoveryTaskTest {
         }
 
         @ParameterizedTest(name = "{0} 상태의 작업은 최종 실패 처리할 수 없다")
-        @EnumSource(
-            value = PaymentRecoveryStatus.class,
-            mode = EnumSource.Mode.EXCLUDE,
-            names = "PROCESSING"
-        )
+        @EnumSource(value = PaymentRecoveryStatus.class, mode = EnumSource.Mode.EXCLUDE, names = "PROCESSING")
         @DisplayName("처리 중이 아닌 모든 작업은 예외가 발생한다.")
         void requiresProcessing(PaymentRecoveryStatus status) {
             PaymentRecoveryTask task = taskInStatus(status);

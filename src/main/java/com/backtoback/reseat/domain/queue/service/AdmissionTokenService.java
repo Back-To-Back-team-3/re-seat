@@ -87,8 +87,7 @@ public class AdmissionTokenService {
             // leaseTime을 지정하지 않았으므로 작업 중에는 Redisson Watchdog이 락 만료 시간을 자동으로 연장한다.
             locked = lock.tryLock(
                 ADMIT_LOCK_WAIT_SECONDS,
-                TimeUnit.SECONDS
-            );
+                TimeUnit.SECONDS);
 
             if (!locked) {
                 return 0;
@@ -147,8 +146,7 @@ public class AdmissionTokenService {
                         gameId,
                         userId,
                         AdmissionTokenStatus.ACTIVE,
-                        LocalDateTime.now()
-                    )
+                        LocalDateTime.now())
                     .orElse(null);
 
                 // 이전 처리에서 활성 토큰은 발급됐지만 DB 대기 이력이 WAITING으로 남은 경우 기존 토큰을 재사용한다.

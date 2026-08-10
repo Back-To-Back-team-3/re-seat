@@ -73,7 +73,7 @@ class GameSeatCreateServiceTest {
     void should_setAvailableStatusAndZeroVersion_when_openInventory() {
         // given
         gameSeatCreateService.openInventory(gameIdWithSeats);
-        entityManager.flush();  // INSERT를 DB로 밀어 version 채번을 확정한다
+        entityManager.flush(); // INSERT를 DB로 밀어 version 채번을 확정한다
 
         // when
         List<GameSeat> gameSeats = findGameSeats(gameIdWithSeats);
@@ -110,8 +110,7 @@ class GameSeatCreateServiceTest {
             int expectedPrice = pricePolicy.calculate(
                 game.getGameAt(),
                 gameSeat.getSeat().getZone().getGrade(),
-                gameSeat.getSeat().getZone().getBasePrice()
-            );
+                gameSeat.getSeat().getZone().getBasePrice());
             assertThat(gameSeat.getPrice()).isEqualTo(expectedPrice);
         });
     }
@@ -145,7 +144,7 @@ class GameSeatCreateServiceTest {
     void should_throwIllegalState_when_stadiumHasNoSeat() {
         // given
         Long gameIdWithoutSeats = entityManager.createQuery(
-                "select g.id from Game g where g.stadium.id <> :stadiumId order by g.id asc", Long.class)
+            "select g.id from Game g where g.stadium.id <> :stadiumId order by g.id asc", Long.class)
             .setParameter("stadiumId", SEEDED_STADIUM_ID)
             .setMaxResults(1)
             .getSingleResult();
@@ -158,7 +157,7 @@ class GameSeatCreateServiceTest {
 
     private Long findFirstGameIdOfStadium(Long stadiumId) {
         return entityManager.createQuery(
-                "select g.id from Game g where g.stadium.id = :stadiumId order by g.id asc", Long.class)
+            "select g.id from Game g where g.stadium.id = :stadiumId order by g.id asc", Long.class)
             .setParameter("stadiumId", stadiumId)
             .setMaxResults(1)
             .getSingleResult();
@@ -166,12 +165,12 @@ class GameSeatCreateServiceTest {
 
     private List<GameSeat> findGameSeats(Long gameId) {
         return entityManager.createQuery("""
-                select gs
-                from GameSeat gs
-                join fetch gs.seat s
-                join fetch s.zone
-                where gs.game.id = :gameId
-                """, GameSeat.class)
+            select gs
+            from GameSeat gs
+            join fetch gs.seat s
+            join fetch s.zone
+            where gs.game.id = :gameId
+            """, GameSeat.class)
             .setParameter("gameId", gameId)
             .getResultList();
     }

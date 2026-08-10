@@ -60,8 +60,7 @@ class SeatQueryServiceTest {
     @Test
     void should_notCauseNPlusOne_when_fetchJoinApplied() {
         // when
-        List<SeatStatusResponse> seats =
-            seatQueryService.getSeats(gameIdWithSeats, null, null, null);
+        List<SeatStatusResponse> seats = seatQueryService.getSeats(gameIdWithSeats, null, null, null);
 
         // then
         assertThat(seats).hasSize(500);
@@ -73,8 +72,8 @@ class SeatQueryServiceTest {
 
     private Long findFirstGameIdOfStadium() {
         return entityManager.createQuery(
-                "SELECT g.id FROM Game g WHERE g.stadium.id = :stadiumId ORDER BY g.id ASC",
-                Long.class)
+            "SELECT g.id FROM Game g WHERE g.stadium.id = :stadiumId ORDER BY g.id ASC",
+            Long.class)
             .setParameter("stadiumId", SEEDED_STADIUM_ID)
             .setMaxResults(1)
             .getSingleResult();

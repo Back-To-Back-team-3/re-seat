@@ -29,8 +29,7 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
 
         ApiResponse<Void> apiResponse = ApiResponse.failure(
             ErrorCode.UNAUTHORIZED.getCode(),
-            ErrorCode.UNAUTHORIZED.getMessage()
-        );
+            ErrorCode.UNAUTHORIZED.getMessage());
 
         response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
     }

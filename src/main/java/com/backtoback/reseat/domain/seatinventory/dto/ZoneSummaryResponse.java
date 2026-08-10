@@ -33,6 +33,5 @@ public record ZoneSummaryResponse(
     int totalCount,
 
     @Schema(description = "잔여 좌석 수 (AVAILABLE)", example = "42")
-    int availableCount
-) {
+    int availableCount) {
 }

@@ -141,8 +141,7 @@ class PaymentServiceTest {
             when(paymentCreationService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request))
                 .thenReturn(expected);
 
-            PaymentCreateResponse response =
-                paymentService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request);
+            PaymentCreateResponse response = paymentService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request);
 
             assertThat(response).isSameAs(expected);
             verify(paymentValidator).validateIdempotencyKey(IDEMPOTENCY_KEY);
@@ -158,8 +157,7 @@ class PaymentServiceTest {
             RLock lock = lock();
             when(lock.tryLock(3L, TimeUnit.SECONDS)).thenReturn(false);
 
-            assertThatThrownBy(() ->
-                paymentService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request))
+            assertThatThrownBy(() -> paymentService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request))
                 .isInstanceOf(PaymentLockFailedException.class);
 
             verifyNoInteractions(paymentCreationService);
@@ -178,8 +176,7 @@ class PaymentServiceTest {
                 .thenThrow(new DataIntegrityViolationException("order unique constraint"))
                 .thenReturn(expected);
 
-            PaymentCreateResponse response =
-                paymentService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request);
+            PaymentCreateResponse response = paymentService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request);
 
             assertThat(response).isSameAs(expected);
             verify(paymentCreationService, times(2))
@@ -195,8 +192,7 @@ class PaymentServiceTest {
             when(lock.tryLock(3L, TimeUnit.SECONDS)).thenThrow(new InterruptedException());
 
             try {
-                assertThatThrownBy(() ->
-                    paymentService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request))
+                assertThatThrownBy(() -> paymentService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request))
                     .isInstanceOf(PaymentLockFailedException.class);
 
                 assertThat(Thread.currentThread().isInterrupted()).isTrue();
@@ -218,8 +214,7 @@ class PaymentServiceTest {
             when(paymentCreationService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request))
                 .thenThrow(exception);
 
-            assertThatThrownBy(() ->
-                paymentService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request))
+            assertThatThrownBy(() -> paymentService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request))
                 .isSameAs(exception);
 
             verify(lock).unlock();
@@ -234,8 +229,7 @@ class PaymentServiceTest {
                 .when(paymentValidator)
                 .validateIdempotencyKey(invalidIdempotencyKey);
 
-            assertThatThrownBy(() ->
-                paymentService.requestPayment(USER_ID, invalidIdempotencyKey, request))
+            assertThatThrownBy(() -> paymentService.requestPayment(USER_ID, invalidIdempotencyKey, request))
                 .isInstanceOf(IdempotencyKeyRequiredException.class);
 
             verifyNoInteractions(redissonClient, paymentCreationService);
@@ -281,11 +275,7 @@ class PaymentServiceTest {
         }
 
         @ParameterizedTest(name = "{0} 결제의 기존 결과를 반환한다")
-        @EnumSource(
-            value = PaymentStatus.class,
-            mode = EnumSource.Mode.EXCLUDE,
-            names = "READY"
-        )
+        @EnumSource(value = PaymentStatus.class, mode = EnumSource.Mode.EXCLUDE, names = "READY")
         @DisplayName("이미 종결된 결제는 Toss를 호출하지 않고 기존 결과를 반환한다.")
         void returnsFinalizedPaymentWithoutConfirm(PaymentStatus status) {
             Payment payment = payment(status);
@@ -345,8 +335,7 @@ class PaymentServiceTest {
             assertThat(response.getStatus()).isEqualTo(PaymentStatus.FAILED);
             assertThat(payment.getPgPaymentKey()).isEqualTo(PAYMENT_KEY);
             assertThat(payment.getFailReason()).isEqualTo("토스 결제 승인 상태를 확인할 수 없습니다.");
-            ArgumentCaptor<PaymentRecoveryTask> taskCaptor =
-                ArgumentCaptor.forClass(PaymentRecoveryTask.class);
+            ArgumentCaptor<PaymentRecoveryTask> taskCaptor = ArgumentCaptor.forClass(PaymentRecoveryTask.class);
             verify(paymentRecoveryTaskRepository).save(taskCaptor.capture());
             assertThat(taskCaptor.getValue().getPayment()).isSameAs(payment);
             assertThat(taskCaptor.getValue().getStatus())
@@ -368,9 +357,8 @@ class PaymentServiceTest {
                 .when(paymentValidator)
                 .validateConfirmable(payment, PG_ORDER_ID, AMOUNT);
 
-            assertThatThrownBy(() ->
-                paymentService.completePayment(
-                    USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
+            assertThatThrownBy(() -> paymentService.completePayment(
+                USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
                 .isInstanceOf(PaymentCallbackMismatchException.class);
 
             verifyNoInteractions(paymentOrderPolicy, tossPaymentClient, orderService, paymentRecoveryTaskRepository);
@@ -390,9 +378,8 @@ class PaymentServiceTest {
                 .when(paymentOrderPolicy)
                 .ensurePayable(payment, payment.getOrder());
 
-            assertThatThrownBy(() ->
-                paymentService.completePayment(
-                    USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
+            assertThatThrownBy(() -> paymentService.completePayment(
+                USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
                 .isInstanceOf(OrderExpiredException.class);
 
             verifyNoInteractions(tossPaymentClient, orderService, paymentRecoveryTaskRepository);
@@ -432,11 +419,7 @@ class PaymentServiceTest {
         }
 
         @ParameterizedTest(name = "{0} 결제의 기존 결과를 반환한다")
-        @EnumSource(
-            value = PaymentStatus.class,
-            mode = EnumSource.Mode.EXCLUDE,
-            names = "READY"
-        )
+        @EnumSource(value = PaymentStatus.class, mode = EnumSource.Mode.EXCLUDE, names = "READY")
         @DisplayName("이미 종결된 결제는 상태를 변경하지 않고 기존 결과를 반환한다.")
         void returnsFinalizedPaymentWithoutFailingOrder(PaymentStatus status) {
             Payment payment = payment(status);
@@ -468,9 +451,8 @@ class PaymentServiceTest {
                 .when(paymentValidator)
                 .validatePgOrderId(payment, "different-order-id");
 
-            assertThatThrownBy(() ->
-                paymentService.failPayment(
-                    USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
+            assertThatThrownBy(() -> paymentService.failPayment(
+                USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
                 .isInstanceOf(PaymentCallbackMismatchException.class);
 
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.READY);
@@ -497,8 +479,7 @@ class PaymentServiceTest {
                 .thenReturn(tossResponse);
             when(tossResponse.isCancelCompleted()).thenReturn(true);
 
-            PaymentActionResponse response =
-                paymentService.cancelPayment(USER_ID, PAYMENT_ID, request);
+            PaymentActionResponse response = paymentService.cancelPayment(USER_ID, PAYMENT_ID, request);
 
             assertThat(response.getStatus()).isEqualTo(PaymentStatus.CANCELED);
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.CANCELED);
@@ -515,8 +496,7 @@ class PaymentServiceTest {
             when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID))
                 .thenReturn(Optional.of(payment));
 
-            PaymentActionResponse response =
-                paymentService.cancelPayment(USER_ID, PAYMENT_ID, request);
+            PaymentActionResponse response = paymentService.cancelPayment(USER_ID, PAYMENT_ID, request);
 
             assertThat(response.getStatus()).isEqualTo(PaymentStatus.CANCELED);
             verify(paymentValidator).validateOwner(payment, USER_ID);
@@ -536,8 +516,7 @@ class PaymentServiceTest {
                 .when(paymentValidator)
                 .validateCancelable(payment);
 
-            assertThatThrownBy(() ->
-                paymentService.cancelPayment(USER_ID, PAYMENT_ID, request))
+            assertThatThrownBy(() -> paymentService.cancelPayment(USER_ID, PAYMENT_ID, request))
                 .isInstanceOf(PaymentCancelNotAllowedException.class);
 
             assertThat(payment.getStatus()).isEqualTo(status);
@@ -556,8 +535,7 @@ class PaymentServiceTest {
                 .thenThrow(new TossPaymentStatusUnknownException(
                     "취소", new RuntimeException("Toss 응답 없음")));
 
-            assertThatThrownBy(() ->
-                paymentService.cancelPayment(USER_ID, PAYMENT_ID, request))
+            assertThatThrownBy(() -> paymentService.cancelPayment(USER_ID, PAYMENT_ID, request))
                 .isInstanceOf(PaymentCancelFailedException.class);
 
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED);
@@ -577,8 +555,7 @@ class PaymentServiceTest {
             when(tossResponse.isCancelCompleted()).thenReturn(false);
             when(tossResponse.getStatus()).thenReturn("DONE");
 
-            assertThatThrownBy(() ->
-                paymentService.cancelPayment(USER_ID, PAYMENT_ID, request))
+            assertThatThrownBy(() -> paymentService.cancelPayment(USER_ID, PAYMENT_ID, request))
                 .isInstanceOf(PaymentCancelFailedException.class);
 
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED);

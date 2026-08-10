@@ -76,8 +76,7 @@ public class QueueServiceTest {
             UUID.randomUUID(),
             GAME_ID,
             USER_ID,
-            Instant.now()
-        );
+            Instant.now());
     }
 
     @Test
@@ -93,9 +92,8 @@ public class QueueServiceTest {
                 eq(GAME_ID),
                 eq(USER_ID),
                 eq(AdmissionTokenStatus.ACTIVE),
-                any(LocalDateTime.class)
-            )
-        ).willReturn(Optional.empty());
+                any(LocalDateTime.class)))
+            .willReturn(Optional.empty());
         given(zSetOperations
             .rank("queue:game:1", "user:1"))
             .willReturn(20L);
@@ -129,16 +127,14 @@ public class QueueServiceTest {
             .existsByUser_IdAndStatusAndExpiresAtAfter(
                 eq(USER_ID),
                 eq(AdmissionTokenStatus.ACTIVE),
-                any(LocalDateTime.class)
-            )
-        ).willReturn(false);
+                any(LocalDateTime.class)))
+            .willReturn(false);
         given(queueEntryHistoryRepository
             .existsByUser_IdAndGame_IdNotAndStatus(
                 eq(USER_ID),
                 eq(GAME_ID),
-                eq(QueueEntryHistoryStatus.WAITING)
-            )
-        ).willReturn(true);
+                eq(QueueEntryHistoryStatus.WAITING)))
+            .willReturn(true);
 
         // when
         queueService.registerQueueEntry(event);
@@ -163,16 +159,14 @@ public class QueueServiceTest {
             .existsByUser_IdAndStatusAndExpiresAtAfter(
                 eq(USER_ID),
                 eq(AdmissionTokenStatus.ACTIVE),
-                any(LocalDateTime.class)
-            )
-        ).willReturn(true);
+                any(LocalDateTime.class)))
+            .willReturn(true);
         given(queueEntryHistoryRepository
             .existsByUser_IdAndGame_IdNotAndStatus(
                 eq(USER_ID),
                 eq(GAME_ID),
-                eq(QueueEntryHistoryStatus.WAITING)
-            )
-        ).willReturn(false);
+                eq(QueueEntryHistoryStatus.WAITING)))
+            .willReturn(false);
 
         // when
         queueService.registerQueueEntry(event);

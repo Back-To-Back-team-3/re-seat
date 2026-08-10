@@ -106,7 +106,7 @@ public class ReservationService {
                 .gameSeat(gs)
                 .price(gs.getPrice())
                 .build();
-            reservation.addReservationSeat(rs);   // 양방향 정합성 + cascade 저장
+            reservation.addReservationSeat(rs); // 양방향 정합성 + cascade 저장
         }
 
         // 8. GameSeat 상태 AVAILABLE → HELD (도메인 메서드: 전이 가드 + holdExpiresAt 원자 세팅)

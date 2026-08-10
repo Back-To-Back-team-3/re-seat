@@ -35,5 +35,6 @@ public interface QueueEntryHistoryRepository extends JpaRepository<QueueEntryHis
         FROM QueueEntryHistory qeh
         WHERE qeh.queueKey = :queueKey
         """)
-    Optional<QueueEntryHistory> findByQueueKeyWithPessimisticWriteLock(@Param("queueKey") String queueKey);
+    Optional<QueueEntryHistory> findByQueueKeyWithPessimisticWriteLock(@Param("queueKey")
+    String queueKey);
 }

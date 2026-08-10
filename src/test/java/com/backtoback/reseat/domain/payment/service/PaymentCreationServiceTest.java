@@ -88,8 +88,7 @@ class PaymentCreationServiceTest {
             when(paymentRepository.findByIdempotencyKeyWithPessimisticWriteLock(IDEMPOTENCY_KEY))
                 .thenReturn(Optional.of(payment));
 
-            PaymentCreateResponse response =
-                paymentCreationService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request);
+            PaymentCreateResponse response = paymentCreationService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request);
 
             assertThat(response.getStatus()).isEqualTo(PaymentStatus.READY);
             assertThat(response.getOrderId()).isEqualTo(ORDER_ID);
@@ -108,8 +107,7 @@ class PaymentCreationServiceTest {
             when(paymentRepository.findByIdempotencyKeyWithPessimisticWriteLock(IDEMPOTENCY_KEY))
                 .thenReturn(Optional.of(payment));
 
-            PaymentCreateResponse response =
-                paymentCreationService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request);
+            PaymentCreateResponse response = paymentCreationService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request);
 
             assertThat(response.getStatus()).isEqualTo(PaymentStatus.APPROVED);
             verify(paymentValidator).validateOwner(payment, USER_ID);
@@ -128,8 +126,7 @@ class PaymentCreationServiceTest {
                 .when(paymentValidator)
                 .validateIdempotencyRequest(payment, ORDER_ID);
 
-            assertThatThrownBy(() ->
-                paymentCreationService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request))
+            assertThatThrownBy(() -> paymentCreationService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request))
                 .isInstanceOf(IdempotencyKeyConflictException.class);
 
             verify(paymentOrderPolicy, never()).ensurePayable(any(), any());
@@ -148,8 +145,8 @@ class PaymentCreationServiceTest {
             when(paymentRepository.findByOrderIdWithPessimisticWriteLock(ORDER_ID))
                 .thenReturn(Optional.of(payment));
 
-            PaymentCreateResponse response =
-                paymentCreationService.requestPayment(USER_ID, NEW_IDEMPOTENCY_KEY, request);
+            PaymentCreateResponse response = paymentCreationService.requestPayment(USER_ID, NEW_IDEMPOTENCY_KEY,
+                request);
 
             assertThat(response.getStatus()).isEqualTo(PaymentStatus.READY);
             assertThat(payment.getIdempotencyKey()).isEqualTo(NEW_IDEMPOTENCY_KEY);
@@ -169,8 +166,8 @@ class PaymentCreationServiceTest {
             when(paymentRepository.findByOrderIdWithPessimisticWriteLock(ORDER_ID))
                 .thenReturn(Optional.of(payment));
 
-            PaymentCreateResponse response =
-                paymentCreationService.requestPayment(USER_ID, NEW_IDEMPOTENCY_KEY, request);
+            PaymentCreateResponse response = paymentCreationService.requestPayment(USER_ID, NEW_IDEMPOTENCY_KEY,
+                request);
 
             assertThat(response.getStatus()).isEqualTo(PaymentStatus.APPROVED);
             assertThat(payment.getIdempotencyKey()).isEqualTo(IDEMPOTENCY_KEY);
@@ -179,10 +176,7 @@ class PaymentCreationServiceTest {
         }
 
         @ParameterizedTest(name = "{0} 결제가 있는 주문에는 새 결제를 생성할 수 없다")
-        @EnumSource(
-            value = PaymentStatus.class,
-            names = {"FAILED", "CANCELED"}
-        )
+        @EnumSource(value = PaymentStatus.class, names = {"FAILED", "CANCELED"})
         @DisplayName("기존 결제가 실패 또는 취소 상태면 결제 불가 예외가 발생한다.")
         void rejectsOrderWithUnavailablePayment(PaymentStatus status) {
             PaymentRequest request = request();
@@ -194,8 +188,7 @@ class PaymentCreationServiceTest {
             when(paymentRepository.findByOrderIdWithPessimisticWriteLock(ORDER_ID))
                 .thenReturn(Optional.of(payment));
 
-            assertThatThrownBy(() ->
-                paymentCreationService.requestPayment(USER_ID, NEW_IDEMPOTENCY_KEY, request))
+            assertThatThrownBy(() -> paymentCreationService.requestPayment(USER_ID, NEW_IDEMPOTENCY_KEY, request))
                 .isInstanceOf(PaymentOrderNotPayableException.class);
 
             verify(paymentOrderPolicy, never()).ensurePayable(any(), any());
@@ -219,8 +212,7 @@ class PaymentCreationServiceTest {
             when(paymentRepository.save(any(Payment.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-            PaymentCreateResponse response =
-                paymentCreationService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request);
+            PaymentCreateResponse response = paymentCreationService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request);
 
             assertThat(response.getStatus()).isEqualTo(PaymentStatus.READY);
             assertThat(response.getOrderId()).isEqualTo(ORDER_ID);

@@ -33,8 +33,7 @@ public class OrderCancelResponse {
      * @return 주문 취소 응답 DTO
      */
     public static OrderCancelResponse from(
-        Order order
-    ) {
+        Order order) {
         return OrderCancelResponse.builder()
             .orderId(order.getId())
             .status(order.getStatus())

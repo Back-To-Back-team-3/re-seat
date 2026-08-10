@@ -50,8 +50,7 @@ public class GameRepositoryImpl implements GameRepositoryCustom {
                 awayTeamIdEq(condition.awayTeamId()),
                 gameAtGoe(condition.from()),
                 gameAtLt(condition.to()),
-                bookingStatusEq(condition.bookingStatus())
-            )
+                bookingStatusEq(condition.bookingStatus()))
             .orderBy(getOrderSpecifiers(pageable))
             .offset(pageable.getOffset())
             .limit(pageable.getPageSize())
@@ -65,8 +64,7 @@ public class GameRepositoryImpl implements GameRepositoryCustom {
                 awayTeamIdEq(condition.awayTeamId()),
                 gameAtGoe(condition.from()),
                 gameAtLt(condition.to()),
-                bookingStatusEq(condition.bookingStatus())
-            )
+                bookingStatusEq(condition.bookingStatus()))
             .fetchOne();
 
         return new PageImpl<>(content, pageable, total == null ? 0 : total);

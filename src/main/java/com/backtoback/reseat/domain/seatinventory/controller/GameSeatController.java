@@ -59,13 +59,18 @@ public class GameSeatController implements GameSeatControllerDocs {
     @Override
     @GetMapping("/{gameId}/seats")
     public ResponseEntity<ApiResponse<List<SeatStatusResponse>>> getSeats(
-        @PathVariable Long gameId,
-        @RequestParam(required = false) Long zoneId,
-        @RequestParam(required = false) SeatGrade grade,
-        @RequestParam(required = false) GameSeatStatus status,
-        @RequestHeader(value = "Queue-Token", required = false) String queueToken,
-        @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
+        @PathVariable
+        Long gameId,
+        @RequestParam(required = false)
+        Long zoneId,
+        @RequestParam(required = false)
+        SeatGrade grade,
+        @RequestParam(required = false)
+        GameSeatStatus status,
+        @RequestHeader(value = "Queue-Token", required = false)
+        String queueToken,
+        @AuthenticationPrincipal
+        CustomUserDetails userDetails) {
         // getSeats는 validateToken(조회)만 수행한다.
         // consumeToken(USED 전이)은 holdSeats 성공 후 호출한다.
         admissionTokenService.validateToken(userDetails.getId(), gameId, queueToken);
@@ -86,8 +91,8 @@ public class GameSeatController implements GameSeatControllerDocs {
     @Override
     @GetMapping("/{gameId}/zones")
     public ResponseEntity<ApiResponse<List<ZoneSummaryResponse>>> getZoneSummaries(
-        @PathVariable Long gameId
-    ) {
+        @PathVariable
+        Long gameId) {
         List<ZoneSummaryResponse> zones = seatQueryService.getZoneSummaries(gameId);
         return ResponseEntity
             .status(HttpStatus.OK)

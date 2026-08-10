@@ -84,16 +84,12 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
             Stadium.of(
                 "테스트 구장",
                 "테스트시 테스트구",
-                10_000
-            )
-        );
+                10_000));
 
         Team team = teamRepository.save(
             Team.of(
                 "테스트팀",
-                stadium
-            )
-        );
+                stadium));
 
         user = userRepository.save(
             User.builder()
@@ -104,8 +100,7 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
                 .isVerified(true)
                 .role(UserRole.USER)
                 .status(UserStatus.ACTIVE)
-                .build()
-        );
+                .build());
 
         game = gameRepository.save(
             Game.builder()
@@ -116,8 +111,7 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
                 .bookingOpenAt(LocalDateTime.now().minusHours(1))
                 .bookingCloseAt(LocalDateTime.now().plusHours(5))
                 .title("테스트 경기")
-                .build()
-        );
+                .build());
     }
 
     /**
@@ -141,8 +135,7 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
             UUID.randomUUID(),
             game.getId(),
             user.getId(),
-            requestedAt
-        );
+            requestedAt);
     }
 
     /**

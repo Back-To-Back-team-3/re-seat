@@ -34,8 +34,8 @@ public class AdminGameSeatController implements AdminGameSeatControllerDocs {
     @Override
     @PostMapping("/{gameId}/seats")
     public ResponseEntity<ApiResponse<GameSeatOpenResponse>> openSeatInventory(
-        @PathVariable Long gameId
-    ) {
+        @PathVariable
+        Long gameId) {
         GameSeatOpenResponse response = gameSeatCreateService.openInventory(gameId);
 
         // 리소스가 새로 생성됐으므로 201.

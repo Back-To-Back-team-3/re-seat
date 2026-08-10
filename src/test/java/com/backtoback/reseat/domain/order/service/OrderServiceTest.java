@@ -70,14 +70,12 @@ public class OrderServiceTest {
             mock(User.class),
             mock(Reservation.class),
             TOTAL_AMOUNT,
-            PAYMENT_DEADLINE
-        );
+            PAYMENT_DEADLINE);
     }
 
     private void givenLockedReservation(
         LocalDateTime createdAt,
-        LocalDateTime holdExpiresAt
-    ) {
+        LocalDateTime holdExpiresAt) {
 
         User user = User.builder()
             .id(USER_ID)
@@ -100,8 +98,7 @@ public class OrderServiceTest {
 
     private CreateOrderFixture givenValidCreateOrder(
         LocalDateTime createdAt,
-        LocalDateTime holdExpiresAt
-    ) {
+        LocalDateTime holdExpiresAt) {
 
         return givenValidCreateOrder(createdAt, holdExpiresAt, 1);
     }
@@ -109,8 +106,7 @@ public class OrderServiceTest {
     private CreateOrderFixture givenValidCreateOrder(
         LocalDateTime createdAt,
         LocalDateTime holdExpiresAt,
-        int seatCount
-    ) {
+        int seatCount) {
 
         givenLockedReservation(createdAt, holdExpiresAt);
 
@@ -303,10 +299,8 @@ public class OrderServiceTest {
         verify(orderReservationRepository).updateHoldExpiresAtById(RESERVATION_ID, response.getHoldExpiresAt());
 
         assertThat(gameSeats)
-            .allSatisfy(gameSeat ->
-                assertThat(gameSeat.getHoldExpiresAt())
-                    .isEqualTo(response.getHoldExpiresAt())
-            );
+            .allSatisfy(gameSeat -> assertThat(gameSeat.getHoldExpiresAt())
+                .isEqualTo(response.getHoldExpiresAt()));
     }
 
     @Test
@@ -331,8 +325,7 @@ public class OrderServiceTest {
     }
 
     private record CreateOrderFixture(
-        List<GameSeat> gameSeats
-    ) {
+        List<GameSeat> gameSeats) {
 
     }
 }

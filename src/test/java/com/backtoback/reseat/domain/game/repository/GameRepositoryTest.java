@@ -47,13 +47,11 @@ class GameRepositoryTest {
             null,
             null,
             null,
-            null
-        );
+            null);
 
         Page<Game> result = gameRepository.searchGames(
             condition,
-            PageRequest.of(0, 20)
-        );
+            PageRequest.of(0, 20));
 
         List<Game> games = result.getContent();
 
@@ -82,8 +80,7 @@ class GameRepositoryTest {
 
         Page<Game> result = gameRepository.searchGames(
             new GameSearchCondition(null, null, null, null, null),
-            PageRequest.of(0, 20)
-        );
+            PageRequest.of(0, 20));
 
         List<Game> content = result.getContent();
 

@@ -33,18 +33,14 @@ import lombok.NoArgsConstructor;
 
 // JPA 엔티티 + Lombok 기본 설정
 @Entity
-@Table(
-    name = "payments",
-    uniqueConstraints = {
-        @UniqueConstraint(name = "uk_payments_no", columnNames = "payment_no"),
-        @UniqueConstraint(name = "uk_payments_order", columnNames = "order_id"),
-        @UniqueConstraint(name = "uk_payments_idempotency_key", columnNames = "idempotency_key"),
-        @UniqueConstraint(name = "uk_payments_pg_payment_key", columnNames = "pg_payment_key")
-    },
-    indexes = {
-        @Index(name = "idx_payments_user_status", columnList = "user_id, status")
-    }
-)
+@Table(name = "payments", uniqueConstraints = {
+    @UniqueConstraint(name = "uk_payments_no", columnNames = "payment_no"),
+    @UniqueConstraint(name = "uk_payments_order", columnNames = "order_id"),
+    @UniqueConstraint(name = "uk_payments_idempotency_key", columnNames = "idempotency_key"),
+    @UniqueConstraint(name = "uk_payments_pg_payment_key", columnNames = "pg_payment_key")
+}, indexes = {
+    @Index(name = "idx_payments_user_status", columnList = "user_id, status")
+})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Payment extends BaseEntity {
@@ -59,11 +55,7 @@ public class Payment extends BaseEntity {
     private String paymentNo;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-        name = "order_id",
-        nullable = false,
-        foreignKey = @ForeignKey(name = "fk_payments_order")
-    )
+    @JoinColumn(name = "order_id", nullable = false, foreignKey = @ForeignKey(name = "fk_payments_order"))
     private Order order;
 
     // 결제 사용자

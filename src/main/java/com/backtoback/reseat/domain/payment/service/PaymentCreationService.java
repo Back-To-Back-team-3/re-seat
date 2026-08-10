@@ -60,8 +60,7 @@ public class PaymentCreationService {
     private PaymentCreateResponse requestWithNewIdempotencyKey(
         Long userId, String idempotencyKey, PaymentRequest request) {
         Order order = paymentOrderPolicy.getOwnedOrder(userId, request.getOrderId());
-        Optional<Payment> existingPayment =
-            paymentRepository.findByOrderIdWithPessimisticWriteLock(order.getId());
+        Optional<Payment> existingPayment = paymentRepository.findByOrderIdWithPessimisticWriteLock(order.getId());
 
         if (existingPayment.isPresent()) {
             Payment payment = existingPayment.get();

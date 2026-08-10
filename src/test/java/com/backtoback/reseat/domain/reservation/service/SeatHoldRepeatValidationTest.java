@@ -220,8 +220,7 @@ class SeatHoldRepeatValidationTest {
                 user,
                 "qt_repeat-r" + round + "-" + i,
                 LocalDateTime.now(),
-                LocalDateTime.now().plusMinutes(5)
-            ));
+                LocalDateTime.now().plusMinutes(5)));
         }
     }
 
@@ -288,8 +287,7 @@ class SeatHoldRepeatValidationTest {
                 .as(
                     "[회차 %d] %d초 내 모든 스레드가 종료되지 않았다 — 데드락 또는 타임아웃 의심",
                     currentRound,
-                    AWAIT_SECONDS
-                )
+                    AWAIT_SECONDS)
                 .isTrue();
 
             // 회차별 수치 로그

@@ -31,16 +31,12 @@ import lombok.NoArgsConstructor;
  * 대기열을 통과한 사용자에게 발급한 입장 토큰과 유효 기간을 저장하는 Entity
  */
 @Entity
-@Table(
-    name = "admission_tokens",
-    uniqueConstraints = {
-        @UniqueConstraint(name = "uk_admission_tokens_token", columnNames = "token")
-    },
-    indexes = {
-        @Index(name = "idx_admission_tokens_game_user", columnList = "game_id, user_id"),
-        @Index(name = "idx_admission_tokens_status_expires", columnList = "status, expires_at")
-    }
-)
+@Table(name = "admission_tokens", uniqueConstraints = {
+    @UniqueConstraint(name = "uk_admission_tokens_token", columnNames = "token")
+}, indexes = {
+    @Index(name = "idx_admission_tokens_game_user", columnList = "game_id, user_id"),
+    @Index(name = "idx_admission_tokens_status_expires", columnList = "status, expires_at")
+})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class AdmissionToken {
@@ -50,19 +46,11 @@ public class AdmissionToken {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-        name = "game_id",
-        nullable = false,
-        foreignKey = @ForeignKey(name = "fk_admission_tokens_game")
-    )
+    @JoinColumn(name = "game_id", nullable = false, foreignKey = @ForeignKey(name = "fk_admission_tokens_game"))
     private Game game;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-        name = "user_id",
-        nullable = false,
-        foreignKey = @ForeignKey(name = "fk_admission_tokens_user")
-    )
+    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_admission_tokens_user"))
     private User user;
 
     @Column(name = "token", nullable = false, length = 255)

@@ -18,8 +18,7 @@ public record ReservationCancelResponse(
     Long reservationId,
 
     @Schema(description = "예약 상태", example = "CANCELED")
-    ReservationStatus status
-) {
+    ReservationStatus status) {
     public static ReservationCancelResponse from(Reservation reservation) {
         return new ReservationCancelResponse(reservation.getId(), reservation.getStatus());
     }

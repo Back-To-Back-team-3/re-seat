@@ -44,10 +44,12 @@ public class ReservationController implements ReservationControllerDocs {
     @Override
     @PostMapping
     public ResponseEntity<ApiResponse<ReservationResponse>> holdSeats(
-        @RequestHeader(value = "Queue-Token", required = false) String queueToken,
-        @AuthenticationPrincipal CustomUserDetails userDetails,
-        @Valid @RequestBody SeatHoldRequest request
-    ) {
+        @RequestHeader(value = "Queue-Token", required = false)
+        String queueToken,
+        @AuthenticationPrincipal
+        CustomUserDetails userDetails,
+        @Valid @RequestBody
+        SeatHoldRequest request) {
         ReservationResponse response = seatHoldFacade.holdSeats(userDetails.getId(), queueToken, request);
 
         return ResponseEntity
@@ -61,9 +63,10 @@ public class ReservationController implements ReservationControllerDocs {
     @Override
     @GetMapping("/{reservationId}/hold-time")
     public ResponseEntity<ApiResponse<HoldTimeResponse>> getHoldTime(
-        @PathVariable Long reservationId,
-        @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
+        @PathVariable
+        Long reservationId,
+        @AuthenticationPrincipal
+        CustomUserDetails userDetails) {
         HoldTimeResponse response = reservationService.getHoldTime(reservationId, userDetails.getId());
 
         return ResponseEntity
@@ -77,9 +80,10 @@ public class ReservationController implements ReservationControllerDocs {
     @Override
     @DeleteMapping("/{reservationId}")
     public ResponseEntity<ApiResponse<ReservationCancelResponse>> releaseHold(
-        @PathVariable Long reservationId,
-        @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
+        @PathVariable
+        Long reservationId,
+        @AuthenticationPrincipal
+        CustomUserDetails userDetails) {
         ReservationCancelResponse response = reservationService.releaseHold(reservationId, userDetails.getId());
 
         return ResponseEntity

@@ -95,8 +95,7 @@ public class JwtTokenProvider {
         return new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
             userDetails,
             token,
-            userDetails.getAuthorities()
-        );
+            userDetails.getAuthorities());
     }
 
     public boolean validateToken(String token) {

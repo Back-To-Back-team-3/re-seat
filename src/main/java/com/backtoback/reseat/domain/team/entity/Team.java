@@ -22,15 +22,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(
-    name = "teams",
-    uniqueConstraints = {
-        @UniqueConstraint(name = "uk_teams_name", columnNames = "name") // 팀명 중복 방지
-    },
-    indexes = {
-        @Index(name = "idx_teams_home_stadium", columnList = "home_stadium_id")
-    }
-)
+@Table(name = "teams", uniqueConstraints = {
+    @UniqueConstraint(name = "uk_teams_name", columnNames = "name") // 팀명 중복 방지
+}, indexes = {
+    @Index(name = "idx_teams_home_stadium", columnList = "home_stadium_id")
+})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Team extends BaseEntity {
@@ -43,11 +39,7 @@ public class Team extends BaseEntity {
     private String name;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(
-        name = "home_stadium_id",
-        nullable = false,
-        foreignKey = @ForeignKey(name = "fk_teams_home_stadium")
-    )
+    @JoinColumn(name = "home_stadium_id", nullable = false, foreignKey = @ForeignKey(name = "fk_teams_home_stadium"))
     private Stadium homeStadium;
 
     @Enumerated(EnumType.STRING)

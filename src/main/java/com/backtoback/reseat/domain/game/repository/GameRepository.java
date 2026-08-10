@@ -33,5 +33,6 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
         join fetch g.stadium
         where g.id = :gameId
         """)
-    Optional<Game> findDetailById(@Param("gameId") Long gameId);
+    Optional<Game> findDetailById(@Param("gameId")
+    Long gameId);
 }

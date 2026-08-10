@@ -29,8 +29,7 @@ public class CustomAccessDeniedHandler implements AccessDeniedHandler {
 
         ApiResponse<Void> apiResponse = ApiResponse.failure(
             ErrorCode.FORBIDDEN.getCode(),
-            ErrorCode.FORBIDDEN.getMessage()
-        );
+            ErrorCode.FORBIDDEN.getMessage());
 
         response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
     }

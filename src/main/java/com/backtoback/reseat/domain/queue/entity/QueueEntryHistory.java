@@ -28,19 +28,15 @@ import lombok.NoArgsConstructor;
  * 경기별 사용자 대기열의 처리 상태와 상태 전환 시간을 저장하는 Entity
  */
 @Entity
-@Table(
-    name = "queue_entry_histories",
-    uniqueConstraints = {
-        // 동일 경기와 사용자의 DB 대기 이력 중복 생성 방지
-        @UniqueConstraint(name = "uk_queue_entry_histories_queue_key", columnNames = "queue_key")
-    },
-    indexes = {
-        // 경기와 사용자 기준 이력 조회
-        @Index(name = "idx_queue_entry_histories_game_user", columnList = "game_id, user_id"),
-        // 경기별 상태 기준 이력 조회
-        @Index(name = "idx_queue_entry_histories_game_status", columnList = "game_id, status")
-    }
-)
+@Table(name = "queue_entry_histories", uniqueConstraints = {
+    // 동일 경기와 사용자의 DB 대기 이력 중복 생성 방지
+    @UniqueConstraint(name = "uk_queue_entry_histories_queue_key", columnNames = "queue_key")
+}, indexes = {
+    // 경기와 사용자 기준 이력 조회
+    @Index(name = "idx_queue_entry_histories_game_user", columnList = "game_id, user_id"),
+    // 경기별 상태 기준 이력 조회
+    @Index(name = "idx_queue_entry_histories_game_status", columnList = "game_id, status")
+})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class QueueEntryHistory {
@@ -50,19 +46,11 @@ public class QueueEntryHistory {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-        name = "game_id",
-        nullable = false,
-        foreignKey = @ForeignKey(name = "fk_queue_entry_histories_game")
-    )
+    @JoinColumn(name = "game_id", nullable = false, foreignKey = @ForeignKey(name = "fk_queue_entry_histories_game"))
     private Game game;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-        name = "user_id",
-        nullable = false,
-        foreignKey = @ForeignKey(name = "fk_queue_entry_histories_user")
-    )
+    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_queue_entry_histories_user"))
     private User user;
 
     @Column(name = "queue_key", nullable = false, length = 100)

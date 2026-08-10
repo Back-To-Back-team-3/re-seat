@@ -63,9 +63,9 @@ class AdminUserControllerTest {
 
         // when & then
         mockMvc.perform(get("/api/v1/admin/users")
-                .param("email", "test@test.com")
-                .param("page", "0")
-                .param("size", "20"))
+            .param("email", "test@test.com")
+            .param("page", "0")
+            .param("size", "20"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.message").value("회원 목록 조회 완료"))
@@ -107,8 +107,8 @@ class AdminUserControllerTest {
 
         // when & then
         mockMvc.perform(patch("/api/v1/admin/users/{userId}/role", 1L)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.message").value("회원 권한 변경 완료"));
@@ -125,8 +125,8 @@ class AdminUserControllerTest {
 
         // when & then
         mockMvc.perform(patch("/api/v1/admin/users/{userId}/status", 1L)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.message").value("회원 상태 변경 완료"));

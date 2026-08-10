@@ -22,8 +22,7 @@ public record GameSearchCondition(
     Long awayTeamId,
     LocalDate from,
     LocalDate to,
-    BookingStatus bookingStatus
-) {
+    BookingStatus bookingStatus) {
 
     /**
      * 날짜 범위 조건이 올바른지 검증한다.
@@ -33,8 +32,7 @@ public record GameSearchCondition(
     public void validate() {
         if (from != null && to != null && from.isAfter(to)) {
             throw new InvalidGameSearchConditionException(
-                "검색 시작일(from)은 종료일(to)보다 늦을 수 없습니다."
-            );
+                "검색 시작일(from)은 종료일(to)보다 늦을 수 없습니다.");
         }
     }
 }

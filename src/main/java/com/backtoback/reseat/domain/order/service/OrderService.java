@@ -102,9 +102,8 @@ public class OrderService {
 
         // 예약 좌석을 기준으로 주문 목록을 생성한다.
         List<OrderItem> orderItems = reservationSeats.stream()
-            .map(reservationSeat ->
-                OrderItem.of(saveOrder, reservationSeat.getGameSeat(), reservationSeat.getPrice())
-            ).toList();
+            .map(reservationSeat -> OrderItem.of(saveOrder, reservationSeat.getGameSeat(), reservationSeat.getPrice()))
+            .toList();
 
         List<OrderItem> saveOrderItems = orderItemRepository.saveAll(orderItems);
 
@@ -114,8 +113,7 @@ public class OrderService {
         return OrderResponse.from(
             saveOrder,
             saveOrderItems,
-            extendedHoldExpiresAt
-        );
+            extendedHoldExpiresAt);
     }
 
     /**
@@ -319,8 +317,7 @@ public class OrderService {
     private void extendHoldExpiresAt(
         Long reservationId,
         List<ReservationSeat> reservationSeats,
-        LocalDateTime extendedHoldExpiresAt
-    ) {
+        LocalDateTime extendedHoldExpiresAt) {
 
         // 잠금 조회한 Reservation의 선점 만료 시간을 계산 결과로 갱신한다.
         orderReservationRepository.updateHoldExpiresAtById(reservationId, extendedHoldExpiresAt);

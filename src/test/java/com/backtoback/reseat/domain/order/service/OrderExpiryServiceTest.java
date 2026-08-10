@@ -47,22 +47,19 @@ public class OrderExpiryServiceTest {
         given(orderRepository.expireCreatedOrders(
             eq(now),
             eq(OrderStatus.CREATED),
-            eq(OrderStatus.EXPIRED)
-        )).willReturn(1);
+            eq(OrderStatus.EXPIRED))).willReturn(1);
 
         given(orderReservationRepository.expireReservationsByExpiredOrders(
             eq(now),
             eq(ReservationStatus.HOLDING),
             eq(OrderStatus.EXPIRED),
-            eq(ReservationStatus.EXPIRED)
-        )).willReturn(1);
+            eq(ReservationStatus.EXPIRED))).willReturn(1);
 
         given(orderGameSeatRepository.releaseGameSeatsByExpiredOrders(
             eq(now),
             eq(GameSeatStatus.HELD),
             eq(OrderStatus.EXPIRED),
-            eq(GameSeatStatus.AVAILABLE)
-        )).willReturn(2);
+            eq(GameSeatStatus.AVAILABLE))).willReturn(2);
 
         // when
         OrderExpiryService.OrderExpiryResult result = orderExpiryService.expireOrders(now);
@@ -93,20 +90,17 @@ public class OrderExpiryServiceTest {
         inOrder.verify(orderRepository).expireCreatedOrders(
             now,
             OrderStatus.CREATED,
-            OrderStatus.EXPIRED
-        );
+            OrderStatus.EXPIRED);
         inOrder.verify(orderReservationRepository).expireReservationsByExpiredOrders(
             now,
             ReservationStatus.HOLDING,
             OrderStatus.EXPIRED,
-            ReservationStatus.EXPIRED
-        );
+            ReservationStatus.EXPIRED);
         inOrder.verify(orderGameSeatRepository).releaseGameSeatsByExpiredOrders(
             now,
             GameSeatStatus.HELD,
             OrderStatus.EXPIRED,
-            GameSeatStatus.AVAILABLE
-        );
+            GameSeatStatus.AVAILABLE);
     }
 
     @Test
@@ -120,8 +114,7 @@ public class OrderExpiryServiceTest {
         given(orderRepository.expireCreatedOrders(
             eq(now),
             eq(OrderStatus.CREATED),
-            eq(OrderStatus.EXPIRED)
-        )).willThrow(exception);
+            eq(OrderStatus.EXPIRED))).willThrow(exception);
 
         // when & then
         assertThatThrownBy(() -> orderExpiryService.expireOrders(now))

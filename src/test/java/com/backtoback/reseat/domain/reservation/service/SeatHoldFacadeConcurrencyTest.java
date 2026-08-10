@@ -64,10 +64,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Disabled("테스트 제외")
 @Slf4j
-@EnabledIfEnvironmentVariable(
-    named = "RUN_CONCURRENCY_TESTS",
-    matches = "true"
-)
+@EnabledIfEnvironmentVariable(named = "RUN_CONCURRENCY_TESTS", matches = "true")
 @Tag("concurrency")
 @ActiveProfiles("test-concurrency")
 @SpringBootTest
@@ -170,8 +167,7 @@ class SeatHoldFacadeConcurrencyTest {
                 user,
                 "qt_test-token-" + i,
                 LocalDateTime.now(),
-                LocalDateTime.now().plusMinutes(5)
-            );
+                LocalDateTime.now().plusMinutes(5));
             admissionTokenRepository.save(token);
             tokenIds.add(token.getId());
         }

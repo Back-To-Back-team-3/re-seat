@@ -16,13 +16,13 @@ public record AdminTicketCancelResponse(
     String ticketNo,
     TicketStatus status,
     TicketCancelReason cancelReason, // ADMIN_FORCE_CANCEL
-    String cancelDetail,             // 상세 취소 사유 텍스트
+    String cancelDetail, // 상세 취소 사유 텍스트
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime canceledAt,
 
     Long gameSeatId,
-    GameSeatStatus seatStatus        // AVAILABLE
+    GameSeatStatus seatStatus // AVAILABLE
 ) {
     public static AdminTicketCancelResponse from(Ticket ticket) {
         var gameSeat = ticket.getGameSeat();

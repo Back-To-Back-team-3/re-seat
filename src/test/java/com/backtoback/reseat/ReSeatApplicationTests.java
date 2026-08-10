@@ -14,7 +14,6 @@ class ReSeatApplicationTests {
     private RedissonClient redissonClient;
 
     @Test
-    void contextLoads() {
-    }
+    void contextLoads() {}
 
 }

@@ -59,8 +59,7 @@ public class TicketService {
                     order.getUser(),
                     orderItem,
                     orderItem.getGameSeat(),
-                    qrToken
-                );
+                    qrToken);
 
                 return ticketRepository.save(ticket);
             })
@@ -106,8 +105,7 @@ public class TicketService {
         PaymentActionResponse paymentResponse = paymentService.cancelPayment(
             userId,
             payment.getId(),
-            new PaymentCancelRequest("사용자 티켓 취소")
-        );
+            new PaymentCancelRequest("사용자 티켓 취소"));
 
         boolean refunded = paymentResponse.getStatus() == PaymentStatus.CANCELED;
 

@@ -23,8 +23,7 @@ public record GameListResponse(
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime bookingCloseAt,
 
-    BookingStatus bookingStatus
-) {
+    BookingStatus bookingStatus) {
 
     /**
      * Game 엔티티를 경기 목록 응답 DTO로 변환한다.
@@ -42,8 +41,7 @@ public record GameListResponse(
             game.getGameAt(),
             game.getBookingOpenAt(),
             game.getBookingCloseAt(),
-            game.getBookingStatus()
-        );
+            game.getBookingStatus());
     }
 
     /**
@@ -51,8 +49,7 @@ public record GameListResponse(
      */
     public record TeamResponse(
         Long teamId,
-        String name
-    ) {
+        String name) {
 
         public static TeamResponse from(Long teamId, String name) {
             return new TeamResponse(teamId, name);
@@ -64,8 +61,7 @@ public record GameListResponse(
      */
     public record StadiumResponse(
         Long stadiumId,
-        String name
-    ) {
+        String name) {
 
         public static StadiumResponse from(Long stadiumId, String name) {
             return new StadiumResponse(stadiumId, name);

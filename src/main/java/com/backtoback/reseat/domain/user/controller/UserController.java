@@ -34,7 +34,8 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping("/auth/signup")
-    public ResponseEntity<ApiResponse<UserSignUpResponse>> signup(@Valid @RequestBody UserSignUpRequest request) {
+    public ResponseEntity<ApiResponse<UserSignUpResponse>> signup(@Valid @RequestBody
+    UserSignUpRequest request) {
         //비즈니스 로직 수행 후 가입된 유저의 PK ID 확보
         UserSignUpResponse response = userService.signUp(request);
 
@@ -47,7 +48,8 @@ public class UserController {
 
     @GetMapping("/users/me")
     public ResponseEntity<ApiResponse<UserProfileResponse>> getMyProfile(
-        @AuthenticationPrincipal CustomUserDetails customUser) {
+        @AuthenticationPrincipal
+        CustomUserDetails customUser) {
 
         UserProfileResponse response = userService.getMyProfile(customUser.getId());
         return ResponseEntity
@@ -57,8 +59,10 @@ public class UserController {
 
     @PutMapping("/users/me")
     public ResponseEntity<ApiResponse<Void>> updateMyProfile(
-        @AuthenticationPrincipal CustomUserDetails customUser,
-        @Valid @RequestBody UserUpdateRequest request) {
+        @AuthenticationPrincipal
+        CustomUserDetails customUser,
+        @Valid @RequestBody
+        UserUpdateRequest request) {
         userService.updateProfile(customUser.getId(), request);
         return ResponseEntity
             .status(HttpStatus.OK)
@@ -67,8 +71,10 @@ public class UserController {
 
     @PatchMapping("/users/me/password")
     public ResponseEntity<ApiResponse<Void>> changePassword(
-        @AuthenticationPrincipal CustomUserDetails customUser,
-        @Valid @RequestBody PasswordChangeRequest request) {
+        @AuthenticationPrincipal
+        CustomUserDetails customUser,
+        @Valid @RequestBody
+        PasswordChangeRequest request) {
 
         userService.changePassword(customUser.getId(), request);
         return ResponseEntity
@@ -78,8 +84,8 @@ public class UserController {
 
     @DeleteMapping("/users/me")
     public ResponseEntity<ApiResponse<Void>> withdraw(
-        @AuthenticationPrincipal CustomUserDetails customUser
-    ) {
+        @AuthenticationPrincipal
+        CustomUserDetails customUser) {
         userService.withdraw(customUser.getId());
 
         return ResponseEntity

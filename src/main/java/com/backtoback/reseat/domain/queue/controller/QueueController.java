@@ -46,9 +46,10 @@ public class QueueController implements QueueControllerDocs {
     @Override
     @PostMapping("/{gameId}/enter")
     public CompletionStage<ResponseEntity<ApiResponse<Void>>> requestQueueEntry(
-        @PathVariable Long gameId,
-        @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
+        @PathVariable
+        Long gameId,
+        @AuthenticationPrincipal
+        CustomUserDetails userDetails) {
 
         Long userId = userDetails.getId();
 
@@ -71,9 +72,10 @@ public class QueueController implements QueueControllerDocs {
     @Override
     @GetMapping("/{gameId}/me")
     public ResponseEntity<ApiResponse<QueueStatusResponse>> getMyQueueStatus(
-        @PathVariable Long gameId,
-        @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
+        @PathVariable
+        Long gameId,
+        @AuthenticationPrincipal
+        CustomUserDetails userDetails) {
 
         Long userId = userDetails.getId();
         QueueStatusResponse response = queueService.getMyQueueStatus(gameId, userId);
@@ -93,9 +95,10 @@ public class QueueController implements QueueControllerDocs {
     @Override
     @GetMapping(value = "/{gameId}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamMyQueue(
-        @PathVariable Long gameId,
-        @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
+        @PathVariable
+        Long gameId,
+        @AuthenticationPrincipal
+        CustomUserDetails userDetails) {
         Long userId = userDetails.getId();
         return sseService.streamMyQueue(gameId, userId);
     }
@@ -110,9 +113,10 @@ public class QueueController implements QueueControllerDocs {
     @Override
     @DeleteMapping("/{gameId}/me")
     public ResponseEntity<ApiResponse<QueueCancelResponse>> cancelMyQueue(
-        @PathVariable Long gameId,
-        @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
+        @PathVariable
+        Long gameId,
+        @AuthenticationPrincipal
+        CustomUserDetails userDetails) {
 
         Long userId = userDetails.getId();
         QueueCancelResponse response = queueService.cancelMyQueue(gameId, userId);

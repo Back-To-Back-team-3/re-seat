@@ -59,8 +59,7 @@ public class OrderResponse {
     public static OrderResponse from(
         Order order,
         List<OrderItem> orderItems,
-        LocalDateTime holdExpiresAt
-    ) {
+        LocalDateTime holdExpiresAt) {
         return OrderResponse.builder()
             .orderId(order.getId())
             .orderNo(order.getOrderNo())

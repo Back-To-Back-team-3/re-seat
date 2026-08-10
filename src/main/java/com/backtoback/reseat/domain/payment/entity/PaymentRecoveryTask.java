@@ -23,18 +23,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(
-    name = "payment_recovery_tasks",
-    uniqueConstraints = {
-        @UniqueConstraint(name = "uk_payment_recovery_tasks_payment", columnNames = "payment_id")
-    },
-    indexes = {
-        @Index(
-            name = "idx_payment_recovery_tasks_status_retry",
-            columnList = "status, next_retry_at"
-        )
-    }
-)
+@Table(name = "payment_recovery_tasks", uniqueConstraints = {
+    @UniqueConstraint(name = "uk_payment_recovery_tasks_payment", columnNames = "payment_id")
+}, indexes = {
+    @Index(name = "idx_payment_recovery_tasks_status_retry", columnList = "status, next_retry_at")
+})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PaymentRecoveryTask extends BaseEntity {
@@ -44,11 +37,7 @@ public class PaymentRecoveryTask extends BaseEntity {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-        name = "payment_id",
-        nullable = false,
-        foreignKey = @ForeignKey(name = "fk_payment_recovery_tasks_payment")
-    )
+    @JoinColumn(name = "payment_id", nullable = false, foreignKey = @ForeignKey(name = "fk_payment_recovery_tasks_payment"))
     private Payment payment;
 
     @Enumerated(EnumType.STRING)

@@ -48,14 +48,12 @@ public class HoldExpiryService {
         int expiredReservations = reservationRepository.expireHoldingReservations(
             now,
             ReservationStatus.HOLDING,
-            ReservationStatus.EXPIRED
-        );
+            ReservationStatus.EXPIRED);
 
         int releasedSeats = gameSeatRepository.releaseExpiredSeats(
             now,
             GameSeatStatus.HELD,
-            GameSeatStatus.AVAILABLE
-        );
+            GameSeatStatus.AVAILABLE);
 
         return new HoldExpiryResult(expiredReservations, releasedSeats);
     }

@@ -41,9 +41,12 @@ public interface OrderGameSeatRepository extends JpaRepository<GameSeat, Long> {
         )
         """)
     int releaseGameSeatsByExpiredOrders(
-        @Param("now") LocalDateTime now,
-        @Param("held") GameSeatStatus held,
-        @Param("orderExpired") OrderStatus orderExpired,
-        @Param("available") GameSeatStatus available
-    );
+        @Param("now")
+        LocalDateTime now,
+        @Param("held")
+        GameSeatStatus held,
+        @Param("orderExpired")
+        OrderStatus orderExpired,
+        @Param("available")
+        GameSeatStatus available);
 }

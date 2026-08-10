@@ -136,11 +136,7 @@ class PaymentOrderPolicyTest {
         }
 
         @ParameterizedTest(name = "{0} 주문은 결제할 수 없다")
-        @EnumSource(
-            value = OrderStatus.class,
-            mode = EnumSource.Mode.EXCLUDE,
-            names = "CREATED"
-        )
+        @EnumSource(value = OrderStatus.class, mode = EnumSource.Mode.EXCLUDE, names = "CREATED")
         @DisplayName("결제 기한이 남아도 CREATED가 아닌 주문은 결제할 수 없다.")
         void rejectsNonCreatedOrder(OrderStatus status) {
             Order order = mock(Order.class);

@@ -36,8 +36,7 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
                 nicknameContains(condition.nickname()),
                 phoneContains(condition.phone()),
                 roleEq(condition.role()),
-                statusEq(condition.status())
-            )
+                statusEq(condition.status()))
             .orderBy(getOrderSpecifiers(pageable))
             .offset(pageable.getOffset())
             .limit(pageable.getPageSize())
@@ -52,8 +51,7 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
                 nicknameContains(condition.nickname()),
                 phoneContains(condition.phone()),
                 roleEq(condition.role()),
-                statusEq(condition.status())
-            )
+                statusEq(condition.status()))
             .fetchOne();
 
         return new PageImpl<>(content, pageable, total == null ? 0 : total);
