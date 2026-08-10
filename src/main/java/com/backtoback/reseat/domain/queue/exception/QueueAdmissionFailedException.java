@@ -8,11 +8,11 @@ import com.backtoback.reseat.global.exception.ErrorCode;
  */
 public class QueueAdmissionFailedException extends BusinessException {
 
-	public QueueAdmissionFailedException() {
-		super(ErrorCode.QUEUE_ADMISSION_FAILED);
-	}
+    public QueueAdmissionFailedException() {
+        super(ErrorCode.QUEUE_ADMISSION_FAILED);
+    }
 
-	public QueueAdmissionFailedException(String message) {
-		super(ErrorCode.QUEUE_ADMISSION_FAILED, message);
-	}
+    public QueueAdmissionFailedException(String message) {
+        super(ErrorCode.QUEUE_ADMISSION_FAILED, message);
+    }
 }

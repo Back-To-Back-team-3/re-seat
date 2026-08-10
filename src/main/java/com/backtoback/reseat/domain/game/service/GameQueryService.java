@@ -24,32 +24,32 @@ import lombok.RequiredArgsConstructor;
 @Transactional(readOnly = true)
 public class GameQueryService {
 
-	private final GameRepository gameRepository;
+    private final GameRepository gameRepository;
 
-	/**
-	 * 경기 목록을 조회한다.
-	 *
-	 * @param condition 검색 조건
-	 * @param pageable  페이징 조건
-	 * @return 경기 목록 응답 페이지
-	 */
-	public Page<GameListResponse> getGames(GameSearchCondition condition, Pageable pageable) {
-		condition.validate();
+    /**
+     * 경기 목록을 조회한다.
+     *
+     * @param condition 검색 조건
+     * @param pageable  페이징 조건
+     * @return 경기 목록 응답 페이지
+     */
+    public Page<GameListResponse> getGames(GameSearchCondition condition, Pageable pageable) {
+        condition.validate();
 
-		return gameRepository.searchGames(condition, pageable)
-			.map(GameListResponse::from);
-	}
+        return gameRepository.searchGames(condition, pageable)
+            .map(GameListResponse::from);
+    }
 
-	/**
-	 * 경기 상세를 조회한다.
-	 *
-	 * @param gameId 경기 ID
-	 * @return 경기 상세 응답
-	 */
-	public GameDetailResponse getGame(Long gameId) {
-		Game game = gameRepository.findDetailById(gameId)
-			.orElseThrow(() -> new GameNotFoundException(gameId));
+    /**
+     * 경기 상세를 조회한다.
+     *
+     * @param gameId 경기 ID
+     * @return 경기 상세 응답
+     */
+    public GameDetailResponse getGame(Long gameId) {
+        Game game = gameRepository.findDetailById(gameId)
+            .orElseThrow(() -> new GameNotFoundException(gameId));
 
-		return GameDetailResponse.from(game);
-	}
+        return GameDetailResponse.from(game);
+    }
 }

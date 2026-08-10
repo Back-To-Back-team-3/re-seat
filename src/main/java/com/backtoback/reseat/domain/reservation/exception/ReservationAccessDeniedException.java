@@ -14,7 +14,7 @@ import com.backtoback.reseat.global.exception.ErrorCode;
  */
 public class ReservationAccessDeniedException extends BusinessException {
 
-	public ReservationAccessDeniedException() {
-		super(ErrorCode.RESERVATION_ACCESS_DENIED);
-	}
+    public ReservationAccessDeniedException() {
+        super(ErrorCode.RESERVATION_ACCESS_DENIED);
+    }
 }

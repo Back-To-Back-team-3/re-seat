@@ -4,7 +4,7 @@ import com.backtoback.reseat.global.exception.BusinessException;
 import com.backtoback.reseat.global.exception.ErrorCode;
 
 public class VerificationException extends BusinessException {
-	public VerificationException(ErrorCode errorCode) {
-		super(errorCode);
-	}
+    public VerificationException(ErrorCode errorCode) {
+        super(errorCode);
+    }
 }

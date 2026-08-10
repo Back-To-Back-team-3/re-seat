@@ -11,10 +11,10 @@ import lombok.Getter;
 @Getter
 public class SeatInventoryAlreadyOpenedException extends BusinessException {
 
-	private final Long gameId;
+    private final Long gameId;
 
-	public SeatInventoryAlreadyOpenedException(Long gameId) {
-		super(ErrorCode.SEAT_INVENTORY_ALREADY_OPENED);
-		this.gameId = gameId;
-	}
+    public SeatInventoryAlreadyOpenedException(Long gameId) {
+        super(ErrorCode.SEAT_INVENTORY_ALREADY_OPENED);
+        this.gameId = gameId;
+    }
 }

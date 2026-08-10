@@ -39,133 +39,133 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class TicketService {
 
-	private final TicketRepository ticketRepository;
-	private final OrderItemRepository orderItemRepository;
-	private final PaymentRepository paymentRepository;
-	private final PaymentService paymentService;
+    private final TicketRepository ticketRepository;
+    private final OrderItemRepository orderItemRepository;
+    private final PaymentRepository paymentRepository;
+    private final PaymentService paymentService;
 
-	@Transactional
-	public List<Ticket> issue(Order order) {
-		List<OrderItem> orderItems = orderItemRepository.findByOrder_Id(order.getId());
+    @Transactional
+    public List<Ticket> issue(Order order) {
+        List<OrderItem> orderItems = orderItemRepository.findByOrder_Id(order.getId());
 
-		return orderItems.stream()
-			.filter(orderItem -> !ticketRepository.existsByOrderItemId(orderItem.getId()))
-			.map(orderItem -> {
-				String ticketNo = generateTicketNo(order.getCreatedAt());
-				String qrToken = generateQrToken();
+        return orderItems.stream()
+            .filter(orderItem -> !ticketRepository.existsByOrderItemId(orderItem.getId()))
+            .map(orderItem -> {
+                String ticketNo = generateTicketNo(order.getCreatedAt());
+                String qrToken = generateQrToken();
 
-				Ticket ticket = Ticket.issue(
-					ticketNo,
-					order.getUser(),
-					orderItem,
-					orderItem.getGameSeat(),
-					qrToken);
+                Ticket ticket = Ticket.issue(
+                    ticketNo,
+                    order.getUser(),
+                    orderItem,
+                    orderItem.getGameSeat(),
+                    qrToken);
 
-				return ticketRepository.save(ticket);
-			})
-			.toList();
-	}
+                return ticketRepository.save(ticket);
+            })
+            .toList();
+    }
 
-	@Transactional(readOnly = true)
-	public Page<TicketListResponse> getMyTickets(Long userId, TicketStatus status, Pageable pageable) {
-		Page<Ticket> tickets = (status == null)
-			? ticketRepository.findByUserId(userId, pageable)
-			: ticketRepository.findByUserIdAndStatus(userId, status, pageable);
+    @Transactional(readOnly = true)
+    public Page<TicketListResponse> getMyTickets(Long userId, TicketStatus status, Pageable pageable) {
+        Page<Ticket> tickets = (status == null)
+            ? ticketRepository.findByUserId(userId, pageable)
+            : ticketRepository.findByUserIdAndStatus(userId, status, pageable);
 
-		return tickets.map(TicketListResponse::from);
-	}
+        return tickets.map(TicketListResponse::from);
+    }
 
-	@Transactional(readOnly = true)
-	public TicketDetailResponse getTicket(Long userId, Long ticketId) {
-		Ticket ticket = ticketRepository.findDetailById(ticketId)
-			.orElseThrow(TicketNotFoundException::new);
+    @Transactional(readOnly = true)
+    public TicketDetailResponse getTicket(Long userId, Long ticketId) {
+        Ticket ticket = ticketRepository.findDetailById(ticketId)
+            .orElseThrow(TicketNotFoundException::new);
 
-		if (!ticket.getUser().getId().equals(userId)) {
-			throw new TicketAccessDeniedException();
-		}
+        if (!ticket.getUser().getId().equals(userId)) {
+            throw new TicketAccessDeniedException();
+        }
 
-		return TicketDetailResponse.from(ticket);
-	}
+        return TicketDetailResponse.from(ticket);
+    }
 
-	@Transactional
-	public TicketCancelResponse cancelTicket(Long userId, Long ticketId) {
-		Ticket ticket = ticketRepository.findDetailById(ticketId)
-			.orElseThrow(TicketNotFoundException::new);
+    @Transactional
+    public TicketCancelResponse cancelTicket(Long userId, Long ticketId) {
+        Ticket ticket = ticketRepository.findDetailById(ticketId)
+            .orElseThrow(TicketNotFoundException::new);
 
-		if (!ticket.getUser().getId().equals(userId)) {
-			throw new TicketAccessDeniedException();
-		}
+        if (!ticket.getUser().getId().equals(userId)) {
+            throw new TicketAccessDeniedException();
+        }
 
-		validateUserCancelable(ticket);
+        validateUserCancelable(ticket);
 
-		ticket.cancel(TicketCancelReason.USER_REFUND);
+        ticket.cancel(TicketCancelReason.USER_REFUND);
 
-		Payment payment = getApprovedPaymentByOrderId(ticket.getOrderItem().getOrder().getId());
+        Payment payment = getApprovedPaymentByOrderId(ticket.getOrderItem().getOrder().getId());
 
-		PaymentActionResponse paymentResponse = paymentService.cancelPayment(
-			userId,
-			payment.getId(),
-			new PaymentCancelRequest("사용자 티켓 취소"));
+        PaymentActionResponse paymentResponse = paymentService.cancelPayment(
+            userId,
+            payment.getId(),
+            new PaymentCancelRequest("사용자 티켓 취소"));
 
-		boolean refunded = paymentResponse.getStatus() == PaymentStatus.CANCELED;
+        boolean refunded = paymentResponse.getStatus() == PaymentStatus.CANCELED;
 
-		GameSeat gameSeat = ticket.getGameSeat();
-		gameSeat.available();
+        GameSeat gameSeat = ticket.getGameSeat();
+        gameSeat.available();
 
-		return TicketCancelResponse.of(ticket, refunded, null);
-	}
+        return TicketCancelResponse.of(ticket, refunded, null);
+    }
 
-	@Transactional
-	public TicketVerifyResponse verify(Long gameId, String qrToken) {
-		Ticket ticket = ticketRepository.findByQrTokenAndGameId(qrToken, gameId)
-			.orElseThrow(TicketNotFoundException::new);
+    @Transactional
+    public TicketVerifyResponse verify(Long gameId, String qrToken) {
+        Ticket ticket = ticketRepository.findByQrTokenAndGameId(qrToken, gameId)
+            .orElseThrow(TicketNotFoundException::new);
 
-		ticket.markUsed();
+        ticket.markUsed();
 
-		return TicketVerifyResponse.from(ticket);
-	}
+        return TicketVerifyResponse.from(ticket);
+    }
 
-	private void validateUserCancelable(Ticket ticket) {
-		LocalDateTime cancelDeadline = ticket.getGame().getGameAt().minusHours(24);
-		if (LocalDateTime.now().isAfter(cancelDeadline)) {
-			throw new TicketCancelDeadlinePassedException();
-		}
-	}
+    private void validateUserCancelable(Ticket ticket) {
+        LocalDateTime cancelDeadline = ticket.getGame().getGameAt().minusHours(24);
+        if (LocalDateTime.now().isAfter(cancelDeadline)) {
+            throw new TicketCancelDeadlinePassedException();
+        }
+    }
 
-	private Payment getApprovedPaymentByOrderId(Long orderId) {
-		return paymentRepository.findByOrder_IdAndStatus(orderId, PaymentStatus.APPROVED)
-			.orElseGet(() -> paymentRepository.findByOrderIdWithPessimisticWriteLock(orderId)
-				.orElseThrow(PaymentNotFoundException::new));
-	}
+    private Payment getApprovedPaymentByOrderId(Long orderId) {
+        return paymentRepository.findByOrder_IdAndStatus(orderId, PaymentStatus.APPROVED)
+            .orElseGet(() -> paymentRepository.findByOrderIdWithPessimisticWriteLock(orderId)
+                .orElseThrow(PaymentNotFoundException::new));
+    }
 
-	private String generateTicketNo(LocalDateTime baseTime) {
-		String datePart = baseTime.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-		String ticketNo = "TKT-" + datePart + "-" + UUID.randomUUID().toString()
-			.replace("-", "")
-			.substring(0, 6)
-			.toUpperCase();
+    private String generateTicketNo(LocalDateTime baseTime) {
+        String datePart = baseTime.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String ticketNo = "TKT-" + datePart + "-" + UUID.randomUUID().toString()
+            .replace("-", "")
+            .substring(0, 6)
+            .toUpperCase();
 
-		int retry = 0;
-		while (ticketRepository.existsByTicketNo(ticketNo) && retry < 3) {
-			ticketNo = "TKT-" + datePart + "-" + UUID.randomUUID().toString()
-				.replace("-", "")
-				.substring(0, 6)
-				.toUpperCase();
-			retry++;
-		}
+        int retry = 0;
+        while (ticketRepository.existsByTicketNo(ticketNo) && retry < 3) {
+            ticketNo = "TKT-" + datePart + "-" + UUID.randomUUID().toString()
+                .replace("-", "")
+                .substring(0, 6)
+                .toUpperCase();
+            retry++;
+        }
 
-		return ticketNo;
-	}
+        return ticketNo;
+    }
 
-	private String generateQrToken() {
-		String qrToken = UUID.randomUUID().toString();
-		int retry = 0;
+    private String generateQrToken() {
+        String qrToken = UUID.randomUUID().toString();
+        int retry = 0;
 
-		while (ticketRepository.existsByQrToken(qrToken) && retry < 3) {
-			qrToken = UUID.randomUUID().toString();
-			retry++;
-		}
+        while (ticketRepository.existsByQrToken(qrToken) && retry < 3) {
+            qrToken = UUID.randomUUID().toString();
+            retry++;
+        }
 
-		return qrToken;
-	}
+        return qrToken;
+    }
 }

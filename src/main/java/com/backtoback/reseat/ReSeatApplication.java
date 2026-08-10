@@ -12,18 +12,14 @@ import jakarta.annotation.PostConstruct;
 @SpringBootApplication
 public class ReSeatApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(ReSeatApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(ReSeatApplication.class, args);
+    }
 
-	public static void main(String[] args) {
-		SpringApplication.run(ReSeatApplication.class, args);
-	}
+    @PostConstruct
+    public void init() {
 
-	@PostConstruct
-	public void init() {
-
-		TimeZone.setDefault(TimeZone.getTimeZone("Asia/Seoul"));
-	}
+        TimeZone.setDefault(TimeZone.getTimeZone("Asia/Seoul"));
+    }
 
 }

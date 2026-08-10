@@ -9,7 +9,7 @@ import com.backtoback.reseat.domain.team.entity.Team;
  */
 public record TeamSummaryResponse(Long teamId, String name) {
 
-	public static TeamSummaryResponse from(Team team) {
-		return new TeamSummaryResponse(team.getId(), team.getName());
-	}
+    public static TeamSummaryResponse from(Team team) {
+        return new TeamSummaryResponse(team.getId(), team.getName());
+    }
 }

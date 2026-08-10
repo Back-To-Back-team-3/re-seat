@@ -8,15 +8,15 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 public class VerificationResponse {
-	private int code;
-	private String message;
-	private ResponseData response;
+    private int code;
+    private String message;
+    private ResponseData response;
 
-	@Getter
-	@NoArgsConstructor
-	public static class ResponseData {
-		@JsonProperty("unique_key")
-		private String unique_key;
-		private String name;
-	}
+    @Getter
+    @NoArgsConstructor
+    public static class ResponseData {
+        @JsonProperty("unique_key")
+        private String unique_key;
+        private String name;
+    }
 }

@@ -17,21 +17,21 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @Schema(description = "구역 요약 응답")
 public record ZoneSummaryResponse(
 
-	@Schema(description = "구역 ID", example = "1")
-	Long zoneId,
+    @Schema(description = "구역 ID", example = "1")
+    Long zoneId,
 
-	@Schema(description = "구역명", example = "1루 101")
-	String zoneName,
+    @Schema(description = "구역명", example = "1루 101")
+    String zoneName,
 
-	@Schema(description = "좌석 등급", example = "INFIELD")
-	SeatGrade grade,
+    @Schema(description = "좌석 등급", example = "INFIELD")
+    SeatGrade grade,
 
-	@Schema(description = "구역 기본가 (화~목 기준, 원)", example = "18000")
-	int basePrice,
+    @Schema(description = "구역 기본가 (화~목 기준, 원)", example = "18000")
+    int basePrice,
 
-	@Schema(description = "구역 전체 좌석 수", example = "50")
-	int totalCount,
+    @Schema(description = "구역 전체 좌석 수", example = "50")
+    int totalCount,
 
-	@Schema(description = "잔여 좌석 수 (AVAILABLE)", example = "42")
-	int availableCount) {
+    @Schema(description = "잔여 좌석 수 (AVAILABLE)", example = "42")
+    int availableCount) {
 }

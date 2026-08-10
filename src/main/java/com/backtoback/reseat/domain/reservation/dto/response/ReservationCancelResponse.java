@@ -14,12 +14,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @Schema(description = "선점 해제 응답")
 public record ReservationCancelResponse(
 
-	@Schema(description = "예약 ID", example = "1001")
-	Long reservationId,
+    @Schema(description = "예약 ID", example = "1001")
+    Long reservationId,
 
-	@Schema(description = "예약 상태", example = "CANCELED")
-	ReservationStatus status) {
-	public static ReservationCancelResponse from(Reservation reservation) {
-		return new ReservationCancelResponse(reservation.getId(), reservation.getStatus());
-	}
+    @Schema(description = "예약 상태", example = "CANCELED")
+    ReservationStatus status) {
+    public static ReservationCancelResponse from(Reservation reservation) {
+        return new ReservationCancelResponse(reservation.getId(), reservation.getStatus());
+    }
 }

@@ -20,129 +20,129 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "users", uniqueConstraints = {
-	@UniqueConstraint(name = "uk_users_email", columnNames = "email"), // 이메일 중복 방지
-	// @UniqueConstraint(name = "uk_users_nickname", columnNames = "nickname"), // 닉네임 중복 방지
-	@UniqueConstraint(name = "uk_users_phone", columnNames = "phone"), // 전화번호 중복 방지
-	@UniqueConstraint(name = "uk_users_ci", columnNames = "ci")
+    @UniqueConstraint(name = "uk_users_email", columnNames = "email"), // 이메일 중복 방지
+    // @UniqueConstraint(name = "uk_users_nickname", columnNames = "nickname"), // 닉네임 중복 방지
+    @UniqueConstraint(name = "uk_users_phone", columnNames = "phone"), // 전화번호 중복 방지
+    @UniqueConstraint(name = "uk_users_ci", columnNames = "ci")
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 
 public class User extends BaseEntity {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-	@Column(nullable = false, length = 255)
-	private String email;
+    @Column(nullable = false, length = 255)
+    private String email;
 
-	@Column(nullable = true, length = 255)
-	private String password;
+    @Column(nullable = true, length = 255)
+    private String password;
 
-	@Column(nullable = false, length = 50)
-	private String name;
+    @Column(nullable = false, length = 50)
+    private String name;
 
-	@Column(nullable = true)
-	private String nickname;
+    @Column(nullable = true)
+    private String nickname;
 
-	@Column(nullable = true, length = 20)
-	private String phone;
+    @Column(nullable = true, length = 20)
+    private String phone;
 
-	@Enumerated(EnumType.STRING)
-	@Column(nullable = false, length = 20)
-	private UserRole role;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private UserRole role;
 
-	@Enumerated(EnumType.STRING)
-	@Column(nullable = false, length = 20)
-	private UserStatus status;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private UserStatus status;
 
-	@Column(name = "ci", nullable = true)
-	private String ci;
+    @Column(name = "ci", nullable = true)
+    private String ci;
 
-	@Column(name = "is_verified", nullable = false)
-	private boolean isVerified = false;
+    @Column(name = "is_verified", nullable = false)
+    private boolean isVerified = false;
 
-	@Column(name = "provider", nullable = true, length = 50)
-	private String provider;
+    @Column(name = "provider", nullable = true, length = 50)
+    private String provider;
 
-	@Column(name = "provider_id", nullable = true, length = 255)
-	private String providerId;
+    @Column(name = "provider_id", nullable = true, length = 255)
+    private String providerId;
 
-	@Builder
-	public User(Long id, String email, String password, String name, String phone,
-		String ci, boolean isVerified, UserRole role, UserStatus status,
-		String provider, String providerId) {
-		this.id = id;
-		this.email = email;
-		this.password = password;
-		this.name = name;
-		this.nickname = name;
-		this.phone = phone;
-		this.ci = ci;
-		this.isVerified = isVerified;
-		this.role = role != null ? role : UserRole.USER;
-		this.status = status != null ? status : UserStatus.ACTIVE;
-		this.provider = provider;
-		this.providerId = providerId;
-	}
+    @Builder
+    public User(Long id, String email, String password, String name, String phone,
+        String ci, boolean isVerified, UserRole role, UserStatus status,
+        String provider, String providerId) {
+        this.id = id;
+        this.email = email;
+        this.password = password;
+        this.name = name;
+        this.nickname = name;
+        this.phone = phone;
+        this.ci = ci;
+        this.isVerified = isVerified;
+        this.role = role != null ? role : UserRole.USER;
+        this.status = status != null ? status : UserStatus.ACTIVE;
+        this.provider = provider;
+        this.providerId = providerId;
+    }
 
-	public void completeVerification(String ci, String realName) {
-		if (this.isVerified) {
-			throw new IllegalStateException("이미 본인인증이 완료된 회원입니다.");
-		}
-		this.ci = ci;
-		this.name = realName;
-		this.isVerified = true;
-	}
+    public void completeVerification(String ci, String realName) {
+        if (this.isVerified) {
+            throw new IllegalStateException("이미 본인인증이 완료된 회원입니다.");
+        }
+        this.ci = ci;
+        this.name = realName;
+        this.isVerified = true;
+    }
 
-	public void updateProfile(String name, String phone) {
-		this.name = name;
-		this.phone = phone;
-	}
+    public void updateProfile(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
 
-	public void changePassword(String newEncodedPassword) {
-		this.password = newEncodedPassword;
-	}
+    public void changePassword(String newEncodedPassword) {
+        this.password = newEncodedPassword;
+    }
 
-	public void updateRole(UserRole role) {
-		this.role = role;
-	}
+    public void updateRole(UserRole role) {
+        this.role = role;
+    }
 
-	public void updateStatus(UserStatus status) {
-		this.status = status;
-	}
+    public void updateStatus(UserStatus status) {
+        this.status = status;
+    }
 
-	public void updateSocialInfo(String provider, String providerId) {
-		this.provider = provider;
-		this.providerId = providerId;
-	}
+    public void updateSocialInfo(String provider, String providerId) {
+        this.provider = provider;
+        this.providerId = providerId;
+    }
 
-	public void withdraw() {
-		//회원상태 DELETE로 변경
-		this.status = UserStatus.DELETED;
+    public void withdraw() {
+        //회원상태 DELETE로 변경
+        this.status = UserStatus.DELETED;
 
-		//이메일 중복 제약 조건을 우회, 개인 정보를 식별할 수 없게 처리
-		this.email = "deleted_" + this.id + "_" + this.email;
+        //이메일 중복 제약 조건을 우회, 개인 정보를 식별할 수 없게 처리
+        this.email = "deleted_" + this.id + "_" + this.email;
 
-		//이름 및 닉네임 비식별화
-		this.name = "탈퇴회원";
-		this.nickname = "탈퇴회원";
+        //이름 및 닉네임 비식별화
+        this.name = "탈퇴회원";
+        this.nickname = "탈퇴회원";
 
-		//전화번호 및 본인인증 정보 초기화
-		this.phone = "000-0000-0000";
-		this.ci = null;
-		this.isVerified = false;
-	}
+        //전화번호 및 본인인증 정보 초기화
+        this.phone = "000-0000-0000";
+        this.ci = null;
+        this.isVerified = false;
+    }
 
-	public void completeVerification(String ci, String name, String phone) {
-		if (this.isVerified) {
-			throw new IllegalStateException("이미 본인인증이 완료된 회원입니다.");
-		}
-		this.ci = ci;
-		this.name = name;
-		this.phone = phone;
-		this.isVerified = true;
+    public void completeVerification(String ci, String name, String phone) {
+        if (this.isVerified) {
+            throw new IllegalStateException("이미 본인인증이 완료된 회원입니다.");
+        }
+        this.ci = ci;
+        this.name = name;
+        this.phone = phone;
+        this.isVerified = true;
 
-	}
+    }
 }

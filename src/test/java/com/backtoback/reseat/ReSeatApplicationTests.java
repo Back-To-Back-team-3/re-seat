@@ -10,11 +10,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @SpringBootTest
 class ReSeatApplicationTests {
 
-	@MockitoBean
-	private RedissonClient redissonClient;
+    @MockitoBean
+    private RedissonClient redissonClient;
 
-	@Test
-	void contextLoads() {
-	}
+    @Test
+    void contextLoads() {}
 
 }

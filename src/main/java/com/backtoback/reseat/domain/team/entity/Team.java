@@ -23,34 +23,34 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "teams", uniqueConstraints = {
-	@UniqueConstraint(name = "uk_teams_name", columnNames = "name") // 팀명 중복 방지
+    @UniqueConstraint(name = "uk_teams_name", columnNames = "name") // 팀명 중복 방지
 }, indexes = {
-	@Index(name = "idx_teams_home_stadium", columnList = "home_stadium_id")
+    @Index(name = "idx_teams_home_stadium", columnList = "home_stadium_id")
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Team extends BaseEntity {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-	@Column(nullable = false, length = 100)
-	private String name;
+    @Column(nullable = false, length = 100)
+    private String name;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "home_stadium_id", nullable = false, foreignKey = @ForeignKey(name = "fk_teams_home_stadium"))
-	private Stadium homeStadium;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "home_stadium_id", nullable = false, foreignKey = @ForeignKey(name = "fk_teams_home_stadium"))
+    private Stadium homeStadium;
 
-	@Enumerated(EnumType.STRING)
-	@Column(nullable = false, length = 20)
-	private TeamStatus status;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private TeamStatus status;
 
-	public static Team of(String name, Stadium homeStadium) {
-		Team team = new Team();
-		team.name = name;
-		team.homeStadium = homeStadium;
-		team.status = TeamStatus.ACTIVE;
-		return team;
-	}
+    public static Team of(String name, Stadium homeStadium) {
+        Team team = new Team();
+        team.name = name;
+        team.homeStadium = homeStadium;
+        team.status = TeamStatus.ACTIVE;
+        return team;
+    }
 }

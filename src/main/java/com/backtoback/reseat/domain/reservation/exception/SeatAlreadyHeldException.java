@@ -10,8 +10,8 @@ import com.backtoback.reseat.global.exception.ErrorCode;
  */
 public class SeatAlreadyHeldException extends BusinessException {
 
-	public SeatAlreadyHeldException(Long gameSeatId) {
-		super(ErrorCode.SEAT_ALREADY_HELD,
-			"이미 선점된 좌석입니다. gameSeatId=" + gameSeatId);
-	}
+    public SeatAlreadyHeldException(Long gameSeatId) {
+        super(ErrorCode.SEAT_ALREADY_HELD,
+            "이미 선점된 좌석입니다. gameSeatId=" + gameSeatId);
+    }
 }

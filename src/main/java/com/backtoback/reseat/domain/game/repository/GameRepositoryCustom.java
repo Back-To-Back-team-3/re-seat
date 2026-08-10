@@ -14,12 +14,12 @@ import com.backtoback.reseat.domain.game.service.GameSearchCondition;
  */
 public interface GameRepositoryCustom {
 
-	/**
-	 * 경기 목록을 검색 조건과 페이징 조건에 따라 조회한다.
-	 *
-	 * @param condition 경기 검색 조건
-	 * @param pageable  페이징 조건
-	 * @return 경기 목록 페이지
-	 */
-	Page<Game> searchGames(GameSearchCondition condition, Pageable pageable);
+    /**
+     * 경기 목록을 검색 조건과 페이징 조건에 따라 조회한다.
+     *
+     * @param condition 경기 검색 조건
+     * @param pageable  페이징 조건
+     * @return 경기 목록 페이지
+     */
+    Page<Game> searchGames(GameSearchCondition condition, Pageable pageable);
 }

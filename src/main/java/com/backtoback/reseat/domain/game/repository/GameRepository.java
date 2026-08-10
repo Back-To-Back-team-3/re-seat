@@ -16,23 +16,23 @@ import com.backtoback.reseat.domain.game.entity.Game;
  */
 public interface GameRepository extends JpaRepository<Game, Long>, GameRepositoryCustom {
 
-	/**
-	 * 경기 상세 조회.
-	 *
-	 * <p>상세 화면에서 홈팀, 원정팀, 구장 정보를 함께 사용하므로
-	 * fetch join으로 한 번에 조회해 N+1 문제를 방지한다.</p>
-	 *
-	 * @param gameId 경기 ID
-	 * @return 팀/구장 정보가 함께 로딩된 경기
-	 */
-	@Query("""
-		select g
-		from Game g
-		join fetch g.homeTeam
-		join fetch g.awayTeam
-		join fetch g.stadium
-		where g.id = :gameId
-		""")
-	Optional<Game> findDetailById(@Param("gameId")
-	Long gameId);
+    /**
+     * 경기 상세 조회.
+     *
+     * <p>상세 화면에서 홈팀, 원정팀, 구장 정보를 함께 사용하므로
+     * fetch join으로 한 번에 조회해 N+1 문제를 방지한다.</p>
+     *
+     * @param gameId 경기 ID
+     * @return 팀/구장 정보가 함께 로딩된 경기
+     */
+    @Query("""
+        select g
+        from Game g
+        join fetch g.homeTeam
+        join fetch g.awayTeam
+        join fetch g.stadium
+        where g.id = :gameId
+        """)
+    Optional<Game> findDetailById(@Param("gameId")
+    Long gameId);
 }

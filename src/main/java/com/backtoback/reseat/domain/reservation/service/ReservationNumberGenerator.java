@@ -18,25 +18,25 @@ import org.springframework.stereotype.Component;
 @Component
 public class ReservationNumberGenerator {
 
-	private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
-	private static final String CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-	private static final int RANDOM_LENGTH = 6;
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final String CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    private static final int RANDOM_LENGTH = 6;
 
-	/**
-	 * return 예: RSV-20260711-A7B3C1}
-	 */
-	public String generate() {
-		String date = LocalDate.now().format(DATE_FORMATTER);
-		return "RSV-" + date + "-" + generateRandom();
-	}
+    /**
+     * return 예: RSV-20260711-A7B3C1}
+     */
+    public String generate() {
+        String date = LocalDate.now().format(DATE_FORMATTER);
+        return "RSV-" + date + "-" + generateRandom();
+    }
 
-	private String generateRandom() {
-		String uuid = UUID.randomUUID().toString().replace("-", "").toUpperCase();
-		StringBuilder sb = new StringBuilder(RANDOM_LENGTH);
-		for (int i = 0; i < RANDOM_LENGTH; i++) {
-			int idx = Integer.parseInt(uuid.substring(i * 2, i * 2 + 2), 16) % CHARS.length();
-			sb.append(CHARS.charAt(idx));
-		}
-		return sb.toString();
-	}
+    private String generateRandom() {
+        String uuid = UUID.randomUUID().toString().replace("-", "").toUpperCase();
+        StringBuilder sb = new StringBuilder(RANDOM_LENGTH);
+        for (int i = 0; i < RANDOM_LENGTH; i++) {
+            int idx = Integer.parseInt(uuid.substring(i * 2, i * 2 + 2), 16) % CHARS.length();
+            sb.append(CHARS.charAt(idx));
+        }
+        return sb.toString();
+    }
 }

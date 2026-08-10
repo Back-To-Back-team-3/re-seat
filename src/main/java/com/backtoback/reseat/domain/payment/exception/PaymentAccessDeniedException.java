@@ -10,10 +10,10 @@ import com.backtoback.reseat.global.exception.ErrorCode;
  */
 public class PaymentAccessDeniedException extends BusinessException {
 
-	/**
-	 * 결제 접근 거부 에러 코드로 예외를 생성한다.
-	 */
-	public PaymentAccessDeniedException() {
-		super(ErrorCode.PAYMENT_ACCESS_DENIED);
-	}
+    /**
+     * 결제 접근 거부 에러 코드로 예외를 생성한다.
+     */
+    public PaymentAccessDeniedException() {
+        super(ErrorCode.PAYMENT_ACCESS_DENIED);
+    }
 }

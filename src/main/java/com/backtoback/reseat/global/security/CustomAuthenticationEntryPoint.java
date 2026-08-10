@@ -18,19 +18,19 @@ import jakarta.servlet.http.HttpServletResponse;
 @Component
 public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
-	private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-	@Override
-	public void commence(HttpServletRequest request, HttpServletResponse response,
-		AuthenticationException authException) throws IOException, ServletException {
-		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-		response.setCharacterEncoding("UTF-8");
-		response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+    @Override
+    public void commence(HttpServletRequest request, HttpServletResponse response,
+        AuthenticationException authException) throws IOException, ServletException {
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding("UTF-8");
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 
-		ApiResponse<Void> apiResponse = ApiResponse.failure(
-			ErrorCode.UNAUTHORIZED.getCode(),
-			ErrorCode.UNAUTHORIZED.getMessage());
+        ApiResponse<Void> apiResponse = ApiResponse.failure(
+            ErrorCode.UNAUTHORIZED.getCode(),
+            ErrorCode.UNAUTHORIZED.getMessage());
 
-		response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
-	}
+        response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
+    }
 }

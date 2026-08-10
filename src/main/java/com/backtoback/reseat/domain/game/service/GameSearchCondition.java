@@ -18,21 +18,21 @@ import com.backtoback.reseat.domain.game.exception.InvalidGameSearchConditionExc
  * @param bookingStatus 예매 상태
  */
 public record GameSearchCondition(
-	Long homeTeamId,
-	Long awayTeamId,
-	LocalDate from,
-	LocalDate to,
-	BookingStatus bookingStatus) {
+    Long homeTeamId,
+    Long awayTeamId,
+    LocalDate from,
+    LocalDate to,
+    BookingStatus bookingStatus) {
 
-	/**
-	 * 날짜 범위 조건이 올바른지 검증한다.
-	 *
-	 * <p>from이 to보다 늦으면 잘못된 검색 조건이다.</p>
-	 */
-	public void validate() {
-		if (from != null && to != null && from.isAfter(to)) {
-			throw new InvalidGameSearchConditionException(
-				"검색 시작일(from)은 종료일(to)보다 늦을 수 없습니다.");
-		}
-	}
+    /**
+     * 날짜 범위 조건이 올바른지 검증한다.
+     *
+     * <p>from이 to보다 늦으면 잘못된 검색 조건이다.</p>
+     */
+    public void validate() {
+        if (from != null && to != null && from.isAfter(to)) {
+            throw new InvalidGameSearchConditionException(
+                "검색 시작일(from)은 종료일(to)보다 늦을 수 없습니다.");
+        }
+    }
 }

@@ -12,6 +12,6 @@ import lombok.Setter;
 @NoArgsConstructor
 public class AdminUserRoleUpdateRequest {
 
-	@NotNull(message = "권한은 필수값입니다.")
-	private UserRole role;
+    @NotNull(message = "권한은 필수값입니다.")
+    private UserRole role;
 }

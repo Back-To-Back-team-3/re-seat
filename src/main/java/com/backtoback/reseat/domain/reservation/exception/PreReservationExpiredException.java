@@ -5,7 +5,7 @@ import com.backtoback.reseat.global.exception.ErrorCode;
 
 public class PreReservationExpiredException extends BusinessException {
 
-	public PreReservationExpiredException() {
-		super(ErrorCode.PRE_RESERVATION_EXPIRED);
-	}
+    public PreReservationExpiredException() {
+        super(ErrorCode.PRE_RESERVATION_EXPIRED);
+    }
 }

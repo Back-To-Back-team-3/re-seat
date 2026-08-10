@@ -12,6 +12,6 @@ import lombok.Setter;
 @NoArgsConstructor
 public class AdminUserStatusUpdateRequest {
 
-	@NotNull(message = "상태는 필수값입니다.")
-	private UserStatus status;
+    @NotNull(message = "상태는 필수값입니다.")
+    private UserStatus status;
 }

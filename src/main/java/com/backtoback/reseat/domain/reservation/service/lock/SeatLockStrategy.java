@@ -15,16 +15,16 @@ import java.util.function.Supplier;
  */
 public interface SeatLockStrategy {
 
-	/**
-	 * 지정한 좌석 목록에 락을 걸고 {@code action}을 실행한 뒤 락을 해제한다.
-	 *
-	 * <p>구현체는 gameSeatIds를 오름차순 정렬 후 락을 순서대로 획득하고, action 완료(커밋) 후 역순으로 해제한다.</p>
-	 *
-	 * @param <T>         action의 반환 타입
-	 * @param gameSeatIds 락 대상 경기 좌석 ID 목록 (비어 있으면 락 없이 action 실행)
-	 * @param action      락 보호 구간에서 실행할 로직 — 내부에 @Transactional 메서드 호출 포함
-	 * @return action의 반환값
-	 * @throws com.backtoback.reseat.domain.reservation.exception.LockFailedException 락 획득 실패 시
-	 */
-	<T> T executeWithLocks(List<Long> gameSeatIds, Supplier<T> action);
+    /**
+     * 지정한 좌석 목록에 락을 걸고 {@code action}을 실행한 뒤 락을 해제한다.
+     *
+     * <p>구현체는 gameSeatIds를 오름차순 정렬 후 락을 순서대로 획득하고, action 완료(커밋) 후 역순으로 해제한다.</p>
+     *
+     * @param <T>         action의 반환 타입
+     * @param gameSeatIds 락 대상 경기 좌석 ID 목록 (비어 있으면 락 없이 action 실행)
+     * @param action      락 보호 구간에서 실행할 로직 — 내부에 @Transactional 메서드 호출 포함
+     * @return action의 반환값
+     * @throws com.backtoback.reseat.domain.reservation.exception.LockFailedException 락 획득 실패 시
+     */
+    <T> T executeWithLocks(List<Long> gameSeatIds, Supplier<T> action);
 }

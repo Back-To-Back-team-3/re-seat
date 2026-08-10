@@ -17,7 +17,7 @@ import com.backtoback.reseat.global.exception.ErrorCode;
  * ErrorCode: INVALID_STATE_TRANSITION (409)
  */
 public class InvalidStateTransitionException extends BusinessException {
-	public InvalidStateTransitionException() {
-		super(ErrorCode.INVALID_STATE_TRANSITION);
-	}
+    public InvalidStateTransitionException() {
+        super(ErrorCode.INVALID_STATE_TRANSITION);
+    }
 }
