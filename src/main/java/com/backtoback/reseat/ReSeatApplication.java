@@ -16,6 +16,10 @@ public class ReSeatApplication {
         SpringApplication.run(ReSeatApplication.class, args);
     }
 
+    public static void main(String[] args) {
+        SpringApplication.run(ReSeatApplication.class, args);
+    }
+
     @PostConstruct
     public void init() {
 
