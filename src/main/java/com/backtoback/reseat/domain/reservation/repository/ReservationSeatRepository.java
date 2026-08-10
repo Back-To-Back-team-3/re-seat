@@ -8,5 +8,5 @@ import com.backtoback.reseat.domain.reservation.entity.ReservationSeat;
 
 public interface ReservationSeatRepository extends JpaRepository<ReservationSeat, Long> {
 
-    List<ReservationSeat> findByReservation_Id(Long reservationId);
+	List<ReservationSeat> findByReservation_Id(Long reservationId);
 }

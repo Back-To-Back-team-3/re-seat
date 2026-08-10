@@ -19,15 +19,15 @@ import lombok.RequiredArgsConstructor;
 @Schema(description = "대기 상태 응답")
 public class QueueStatusResponse {
 
-    @Schema(description = "현재 대기 순번 (입장 허용 시 0)", example = "10")
-    private final Long rank;
+	@Schema(description = "현재 대기 순번 (입장 허용 시 0)", example = "10")
+	private final Long rank;
 
-    @Schema(description = "예상 대기시간(초)", example = "3")
-    private final Long estimatedWaitSeconds;
+	@Schema(description = "예상 대기시간(초)", example = "3")
+	private final Long estimatedWaitSeconds;
 
-    @Schema(description = "대기열 상태 (WAITING 또는 ADMITTED)", example = "WAITING")
-    private final QueueEntryHistoryStatus queueStatus;
+	@Schema(description = "대기열 상태 (WAITING 또는 ADMITTED)", example = "WAITING")
+	private final QueueEntryHistoryStatus queueStatus;
 
-    @Schema(description = "입장 허용 여부", example = "false")
-    private final boolean admitted;
+	@Schema(description = "입장 허용 여부", example = "false")
+	private final boolean admitted;
 }

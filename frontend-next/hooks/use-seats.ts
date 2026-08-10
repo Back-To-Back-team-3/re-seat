@@ -1,9 +1,9 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import {useQuery} from "@tanstack/react-query";
 
-import { gameKeys } from "@/api/query-keys/games";
-import { getGameSeats, getGameZones } from "@/api/seats";
+import {gameKeys} from "@/api/query-keys/games";
+import {getGameSeats, getGameZones} from "@/api/seats";
 
 /**
  * 구역 목록과 현재 구역의 좌석 현황을 함께 제공합니다.
@@ -16,21 +16,21 @@ import { getGameSeats, getGameZones } from "@/api/seats";
  * @returns 구역 목록과 좌석 목록, 그리고 실제로 표시 중인 구역 ID
  */
 export function useSeats(gameId: number, zoneId: number | null) {
-  const zones = useQuery({
-    queryKey: gameKeys.zones(gameId),
-    queryFn: () => getGameZones(gameId),
-    enabled: Number.isFinite(gameId),
-  });
+    const zones = useQuery({
+        queryKey: gameKeys.zones(gameId),
+        queryFn: () => getGameZones(gameId),
+        enabled: Number.isFinite(gameId),
+    });
 
-  const activeZoneId = zoneId ?? zones.data?.[0]?.zoneId ?? null;
+    const activeZoneId = zoneId ?? zones.data?.[0]?.zoneId ?? null;
 
-  const seats = useQuery({
-    queryKey: gameKeys.seats(gameId, activeZoneId ?? undefined),
-    queryFn: () => getGameSeats(gameId, activeZoneId as number),
-    // 구역을 지정하지 않고 조회하면 백엔드가 전 구역 좌석을 한 번에 돌려주고,
-    // 화면은 서로 다른 구역의 같은 열 번호를 한 줄에 섞어 보여준다.
-    enabled: Number.isFinite(gameId) && activeZoneId != null,
-  });
+    const seats = useQuery({
+        queryKey: gameKeys.seats(gameId, activeZoneId ?? undefined),
+        queryFn: () => getGameSeats(gameId, activeZoneId as number),
+        // 구역을 지정하지 않고 조회하면 백엔드가 전 구역 좌석을 한 번에 돌려주고,
+        // 화면은 서로 다른 구역의 같은 열 번호를 한 줄에 섞어 보여준다.
+        enabled: Number.isFinite(gameId) && activeZoneId != null,
+    });
 
-  return { zones, seats, activeZoneId };
+    return {zones, seats, activeZoneId};
 }

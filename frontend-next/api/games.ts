@@ -1,29 +1,29 @@
-import { apiRequest, unwrap } from "@/api/client";
-import type { ApiResponse, PageResponse } from "@/types/api";
-import type { GameSummary } from "@/types/game";
+import {apiRequest, unwrap} from "@/api/client";
+import type {ApiResponse, PageResponse} from "@/types/api";
+import type {GameSummary} from "@/types/game";
 
 const GAME_STATUSES: GameSummary["bookingStatus"][] = [
-  "SCHEDULED",
-  "OPEN",
-  "CLOSED",
-  "CANCELLED",
+    "SCHEDULED",
+    "OPEN",
+    "CLOSED",
+    "CANCELLED",
 ];
 
 async function getGamePage(
-  bookingStatus: GameSummary["bookingStatus"],
-  page: number,
+    bookingStatus: GameSummary["bookingStatus"],
+    page: number,
 ) {
-  const params = new URLSearchParams({
-    bookingStatus,
-    page: String(page),
-    size: "100",
-    sort: "gameAt,asc",
-  });
-  const response = await apiRequest<ApiResponse<PageResponse<GameSummary>>>(
-    `/games?${params}`,
-  );
+    const params = new URLSearchParams({
+        bookingStatus,
+        page: String(page),
+        size: "100",
+        sort: "gameAt,asc",
+    });
+    const response = await apiRequest<ApiResponse<PageResponse<GameSummary>>>(
+        `/games?${params}`,
+    );
 
-  return unwrap(response);
+    return unwrap(response);
 }
 
 /**
@@ -35,35 +35,35 @@ async function getGamePage(
  * gameId로 중복을 제거한 뒤 기존 Vite와 같은 gameAt, gameId 순서로 정렬합니다.
  */
 export async function getGames() {
-  const firstPages = await Promise.all(
-    GAME_STATUSES.map((status) => getGamePage(status, 0)),
-  );
-  const remainingPages = await Promise.all(
-    firstPages.flatMap((firstPage, statusIndex) =>
-      Array.from(
-        { length: Math.max(0, firstPage.totalPages - 1) },
-        (_, pageIndex) =>
-          getGamePage(GAME_STATUSES[statusIndex], pageIndex + 1),
-      ),
-    ),
-  );
-  const games = [...firstPages, ...remainingPages].flatMap(
-    (page) => page.content,
-  );
+    const firstPages = await Promise.all(
+        GAME_STATUSES.map((status) => getGamePage(status, 0)),
+    );
+    const remainingPages = await Promise.all(
+        firstPages.flatMap((firstPage, statusIndex) =>
+            Array.from(
+                {length: Math.max(0, firstPage.totalPages - 1)},
+                (_, pageIndex) =>
+                    getGamePage(GAME_STATUSES[statusIndex], pageIndex + 1),
+            ),
+        ),
+    );
+    const games = [...firstPages, ...remainingPages].flatMap(
+        (page) => page.content,
+    );
 
-  return Array.from(
-    new Map(games.map((game) => [game.gameId, game])).values(),
-  ).sort(
-    (left, right) =>
-      left.gameAt.localeCompare(right.gameAt) ||
-      left.gameId - right.gameId,
-  );
+    return Array.from(
+        new Map(games.map((game) => [game.gameId, game])).values(),
+    ).sort(
+        (left, right) =>
+            left.gameAt.localeCompare(right.gameAt) ||
+            left.gameId - right.gameId,
+    );
 }
 
 export async function getGame(gameId: number) {
-  const response = await apiRequest<ApiResponse<GameSummary>>(
-    `/games/${gameId}`,
-  );
+    const response = await apiRequest<ApiResponse<GameSummary>>(
+        `/games/${gameId}`,
+    );
 
-  return unwrap(response);
+    return unwrap(response);
 }

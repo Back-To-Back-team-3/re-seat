@@ -32,66 +32,66 @@ import lombok.RequiredArgsConstructor;
 @Transactional(readOnly = true)
 public class SeatQueryService {
 
-    private final GameRepository gameRepository;
-    private final GameSeatRepository gameSeatRepository;
+	private final GameRepository gameRepository;
+	private final GameSeatRepository gameSeatRepository;
 
-    /**
-     * 경기의 좌석 현황을 조회한다.
-     *
-     * @param gameId 경기 ID
-     * @param zoneId 구역 ID (null이면 전체)
-     * @param grade  좌석 등급 (null이면 전체)
-     * @param status 좌석 상태 (null이면 전체)
-     * @throws GameNotFoundException           경기가 없을 때 (404)
-     * @throws SeatInventoryNotOpenedException 재고가 아직 오픈되지 않았을 때 (409)
-     */
-    public List<SeatStatusResponse> getSeats(
-        Long gameId, Long zoneId, SeatGrade grade, GameSeatStatus status) {
+	/**
+	 * 경기의 좌석 현황을 조회한다.
+	 *
+	 * @param gameId 경기 ID
+	 * @param zoneId 구역 ID (null이면 전체)
+	 * @param grade  좌석 등급 (null이면 전체)
+	 * @param status 좌석 상태 (null이면 전체)
+	 * @throws GameNotFoundException           경기가 없을 때 (404)
+	 * @throws SeatInventoryNotOpenedException 재고가 아직 오픈되지 않았을 때 (409)
+	 */
+	public List<SeatStatusResponse> getSeats(
+		Long gameId, Long zoneId, SeatGrade grade, GameSeatStatus status) {
 
-        validateGame(gameId);
+		validateGame(gameId);
 
-        List<GameSeat> gameSeats = gameSeatRepository.findAllByGameIdWithFilters(
-            gameId, zoneId, grade, status);
+		List<GameSeat> gameSeats = gameSeatRepository.findAllByGameIdWithFilters(
+			gameId, zoneId, grade, status);
 
-        if (gameSeats.isEmpty()) {
-            // 필터 결과가 0건이면 두 가지 경우가 있다:
-            // 1. 재고 자체가 없는 경우
-            // 2. 필터 조건에 맞는 좌석만 없는 경우
-            // existsByGameId로 재고 유무를 다시 확인해 구분한다.
-            if (!gameSeatRepository.existsByGameId(gameId)) {
-                throw new SeatInventoryNotOpenedException(gameId);
-            }
-            // 재고는 있고 필터 조건만 안 맞는 경우 → 빈 리스트 반환 (404 아님)
-        }
+		if (gameSeats.isEmpty()) {
+			// 필터 결과가 0건이면 두 가지 경우가 있다:
+			// 1. 재고 자체가 없는 경우
+			// 2. 필터 조건에 맞는 좌석만 없는 경우
+			// existsByGameId로 재고 유무를 다시 확인해 구분한다.
+			if (!gameSeatRepository.existsByGameId(gameId)) {
+				throw new SeatInventoryNotOpenedException(gameId);
+			}
+			// 재고는 있고 필터 조건만 안 맞는 경우 → 빈 리스트 반환 (404 아님)
+		}
 
-        return gameSeats.stream()
-            .map(SeatStatusResponse::from)
-            .toList();
-    }
+		return gameSeats.stream()
+			.map(SeatStatusResponse::from)
+			.toList();
+	}
 
-    /**
-     * 경기의 구역별 잔여 좌석 수를 집계한다.
-     *
-     * @param gameId 경기 ID
-     * @throws GameNotFoundException           경기가 없을 때 (404)
-     * @throws SeatInventoryNotOpenedException 재고가 아직 오픈되지 않았을 때 (409)
-     */
-    public List<ZoneSummaryResponse> getZoneSummaries(Long gameId) {
+	/**
+	 * 경기의 구역별 잔여 좌석 수를 집계한다.
+	 *
+	 * @param gameId 경기 ID
+	 * @throws GameNotFoundException           경기가 없을 때 (404)
+	 * @throws SeatInventoryNotOpenedException 재고가 아직 오픈되지 않았을 때 (409)
+	 */
+	public List<ZoneSummaryResponse> getZoneSummaries(Long gameId) {
 
-        Game game = gameRepository.findDetailById(gameId)
-            .orElseThrow(() -> new GameNotFoundException(gameId));
+		Game game = gameRepository.findDetailById(gameId)
+			.orElseThrow(() -> new GameNotFoundException(gameId));
 
-        if (!gameSeatRepository.existsByGameId(gameId)) {
-            throw new SeatInventoryNotOpenedException(gameId);
-        }
+		if (!gameSeatRepository.existsByGameId(gameId)) {
+			throw new SeatInventoryNotOpenedException(gameId);
+		}
 
-        Long stadiumId = game.getStadium().getId();
-        return gameSeatRepository.findZoneSummariesByGameId(gameId, stadiumId);
-    }
+		Long stadiumId = game.getStadium().getId();
+		return gameSeatRepository.findZoneSummariesByGameId(gameId, stadiumId);
+	}
 
-    private void validateGame(Long gameId) {
-        if (!gameRepository.existsById(gameId)) {
-            throw new GameNotFoundException(gameId);
-        }
-    }
+	private void validateGame(Long gameId) {
+		if (!gameRepository.existsById(gameId)) {
+			throw new GameNotFoundException(gameId);
+		}
+	}
 }

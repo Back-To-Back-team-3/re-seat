@@ -1,3 +1,3 @@
 export function formatPrice(value: number) {
-  return `${new Intl.NumberFormat("ko-KR").format(value)}원`;
+    return `${new Intl.NumberFormat("ko-KR").format(value)}원`;
 }

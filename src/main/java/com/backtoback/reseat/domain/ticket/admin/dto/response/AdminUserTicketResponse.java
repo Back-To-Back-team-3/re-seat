@@ -10,72 +10,72 @@ import lombok.Builder;
 
 @Builder
 public record AdminUserTicketResponse(
-    Long ticketId,
-    String ticketNo,
-    TicketStatus status, // ISSUED, USED, CANCELED
-    String qrToken, // QR 토큰
+	Long ticketId,
+	String ticketNo,
+	TicketStatus status, // ISSUED, USED, CANCELED
+	String qrToken, // QR 토큰
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    LocalDateTime issuedAt,
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+	LocalDateTime issuedAt,
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    LocalDateTime usedAt,
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+	LocalDateTime usedAt,
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    LocalDateTime canceledAt,
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+	LocalDateTime canceledAt,
 
-    // 경기 정보
-    Long gameId,
-    String gameTitle,
-    String stadiumName,
-    String homeTeamName,
-    String awayTeamName,
+	// 경기 정보
+	Long gameId,
+	String gameTitle,
+	String stadiumName,
+	String homeTeamName,
+	String awayTeamName,
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    LocalDateTime gameAt,
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+	LocalDateTime gameAt,
 
-    // 좌석 정보 (명세서 통합 표기 format: "1루 블루석 A-3-12")
-    String seat,
+	// 좌석 정보 (명세서 통합 표기 format: "1루 블루석 A-3-12")
+	String seat,
 
-    // 좌석 세부 정보
-    Long gameSeatId,
-    String zoneName,
-    String seatBlock,
-    String seatRow,
-    String seatNumber) {
-    public static AdminUserTicketResponse from(Ticket ticket) {
-        var game = ticket.getGame();
-        var gameSeat = ticket.getGameSeat();
-        var seatEntity = gameSeat.getSeat();
-        var zone = seatEntity.getZone();
+	// 좌석 세부 정보
+	Long gameSeatId,
+	String zoneName,
+	String seatBlock,
+	String seatRow,
+	String seatNumber) {
+	public static AdminUserTicketResponse from(Ticket ticket) {
+		var game = ticket.getGame();
+		var gameSeat = ticket.getGameSeat();
+		var seatEntity = gameSeat.getSeat();
+		var zone = seatEntity.getZone();
 
-        // 명세서 표기용 좌석 문자열 조합 (예: "1루 블루석 A-3-12")
-        String formattedSeat = String.format("%s %s-%s-%s",
-            zone != null ? zone.getName() : "",
-            seatEntity.getSeatBlock(),
-            seatEntity.getSeatRow(),
-            seatEntity.getSeatNumber()).trim();
+		// 명세서 표기용 좌석 문자열 조합 (예: "1루 블루석 A-3-12")
+		String formattedSeat = String.format("%s %s-%s-%s",
+			zone != null ? zone.getName() : "",
+			seatEntity.getSeatBlock(),
+			seatEntity.getSeatRow(),
+			seatEntity.getSeatNumber()).trim();
 
-        return AdminUserTicketResponse.builder()
-            .ticketId(ticket.getId())
-            .ticketNo(ticket.getTicketNo())
-            .status(ticket.getStatus())
-            .qrToken(ticket.getQrToken())
-            .issuedAt(ticket.getIssuedAt())
-            .usedAt(ticket.getUsedAt())
-            .canceledAt(ticket.getCanceledAt())
-            .gameId(game.getId())
-            .gameTitle(game.getTitle())
-            .stadiumName(game.getStadium() != null ? game.getStadium().getName() : null)
-            .homeTeamName(game.getHomeTeam() != null ? game.getHomeTeam().getName() : null)
-            .awayTeamName(game.getAwayTeam() != null ? game.getAwayTeam().getName() : null)
-            .gameAt(game.getGameAt())
-            .seat(formattedSeat)
-            .gameSeatId(gameSeat.getId())
-            .zoneName(zone != null ? zone.getName() : null)
-            .seatBlock(seatEntity.getSeatBlock())
-            .seatRow(seatEntity.getSeatRow())
-            .seatNumber(seatEntity.getSeatNumber())
-            .build();
-    }
+		return AdminUserTicketResponse.builder()
+			.ticketId(ticket.getId())
+			.ticketNo(ticket.getTicketNo())
+			.status(ticket.getStatus())
+			.qrToken(ticket.getQrToken())
+			.issuedAt(ticket.getIssuedAt())
+			.usedAt(ticket.getUsedAt())
+			.canceledAt(ticket.getCanceledAt())
+			.gameId(game.getId())
+			.gameTitle(game.getTitle())
+			.stadiumName(game.getStadium() != null ? game.getStadium().getName() : null)
+			.homeTeamName(game.getHomeTeam() != null ? game.getHomeTeam().getName() : null)
+			.awayTeamName(game.getAwayTeam() != null ? game.getAwayTeam().getName() : null)
+			.gameAt(game.getGameAt())
+			.seat(formattedSeat)
+			.gameSeatId(gameSeat.getId())
+			.zoneName(zone != null ? zone.getName() : null)
+			.seatBlock(seatEntity.getSeatBlock())
+			.seatRow(seatEntity.getSeatRow())
+			.seatNumber(seatEntity.getSeatNumber())
+			.build();
+	}
 }

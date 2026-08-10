@@ -5,7 +5,7 @@ import com.backtoback.reseat.global.exception.ErrorCode;
 
 public class InvalidOrderStatusException extends BusinessException {
 
-    public InvalidOrderStatusException() {
-        super(ErrorCode.INVALID_ORDER_STATUS);
-    }
+	public InvalidOrderStatusException() {
+		super(ErrorCode.INVALID_ORDER_STATUS);
+	}
 }

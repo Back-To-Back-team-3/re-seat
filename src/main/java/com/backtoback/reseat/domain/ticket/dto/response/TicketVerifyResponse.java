@@ -21,44 +21,44 @@ import lombok.Getter;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class TicketVerifyResponse {
 
-    private Long ticketId;
+	private Long ticketId;
 
-    // 검표 후 티켓 상태 (보통 USED 상태)
-    private TicketStatus status;
+	// 검표 후 티켓 상태 (보통 USED 상태)
+	private TicketStatus status;
 
-    private LocalDateTime usedAt;
-    private String seat;
+	private LocalDateTime usedAt;
+	private String seat;
 
-    // 티켓 소유자 이름
-    private String holderName;
+	// 티켓 소유자 이름
+	private String holderName;
 
-    /**
-     * 티켓 엔티티를 검표 응답 DTO로 변환
-     *
-     * @param ticket 검표 완료된 티켓 엔티티
-     * @return 티켓 검표 응답 DTO
-     */
-    public static TicketVerifyResponse from(Ticket ticket) {
-        return TicketVerifyResponse.builder()
-            .ticketId(ticket.getId())
-            .status(ticket.getStatus())
-            .usedAt(ticket.getUsedAt())
-            .seat(buildSeatLabel(ticket))
-            .holderName(ticket.getUser().getName())
-            .build();
-    }
+	/**
+	 * 티켓 엔티티를 검표 응답 DTO로 변환
+	 *
+	 * @param ticket 검표 완료된 티켓 엔티티
+	 * @return 티켓 검표 응답 DTO
+	 */
+	public static TicketVerifyResponse from(Ticket ticket) {
+		return TicketVerifyResponse.builder()
+			.ticketId(ticket.getId())
+			.status(ticket.getStatus())
+			.usedAt(ticket.getUsedAt())
+			.seat(buildSeatLabel(ticket))
+			.holderName(ticket.getUser().getName())
+			.build();
+	}
 
-    /**
-     * 티켓의 좌석 정보를 사용자 표시용 문자열로 조합
-     * 예:"1루 A-3-12"
-     *
-     * @param ticket 티켓 엔티티
-     * @return 좌석 라벨 문자열
-     */
-    private static String buildSeatLabel(Ticket ticket) {
-        return ticket.getGameSeat().getSeat().getZone().getName() + " "
-            + ticket.getGameSeat().getSeat().getSeatBlock() + "-"
-            + ticket.getGameSeat().getSeat().getSeatRow() + "-"
-            + ticket.getGameSeat().getSeat().getSeatNumber();
-    }
+	/**
+	 * 티켓의 좌석 정보를 사용자 표시용 문자열로 조합
+	 * 예:"1루 A-3-12"
+	 *
+	 * @param ticket 티켓 엔티티
+	 * @return 좌석 라벨 문자열
+	 */
+	private static String buildSeatLabel(Ticket ticket) {
+		return ticket.getGameSeat().getSeat().getZone().getName() + " "
+			+ ticket.getGameSeat().getSeat().getSeatBlock() + "-"
+			+ ticket.getGameSeat().getSeat().getSeatRow() + "-"
+			+ ticket.getGameSeat().getSeat().getSeatNumber();
+	}
 }

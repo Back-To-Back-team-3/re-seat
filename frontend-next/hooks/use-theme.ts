@@ -1,14 +1,8 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import {useEffect, useSyncExternalStore} from "react";
 
-import {
-  getServerThemeSnapshot,
-  getThemeSnapshot,
-  setStoredTheme,
-  subscribeTheme,
-  type Theme,
-} from "@/lib/theme";
+import {getServerThemeSnapshot, getThemeSnapshot, setStoredTheme, subscribeTheme, type Theme,} from "@/lib/theme";
 
 /**
  * 문서 루트의 data-theme 속성과 localStorage를 하나의 상태로 묶는다.
@@ -21,20 +15,20 @@ import {
  * 탭에서의 변경도 즉시 화면에 반영되도록 기존 Vite 앱의 동작을 재현한다.
  */
 export function useTheme() {
-  const theme = useSyncExternalStore(
-    subscribeTheme,
-    getThemeSnapshot,
-    getServerThemeSnapshot,
-  );
+    const theme = useSyncExternalStore(
+        subscribeTheme,
+        getThemeSnapshot,
+        getServerThemeSnapshot,
+    );
 
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-  }, [theme]);
+    useEffect(() => {
+        document.documentElement.dataset.theme = theme;
+    }, [theme]);
 
-  function toggleTheme() {
-    const next: Theme = theme === "dark" ? "light" : "dark";
-    setStoredTheme(next);
-  }
+    function toggleTheme() {
+        const next: Theme = theme === "dark" ? "light" : "dark";
+        setStoredTheme(next);
+    }
 
-  return { theme, toggleTheme };
+    return {theme, toggleTheme};
 }

@@ -3,35 +3,34 @@
 @import "../styles/legacy.css";
 
 * {
-  box-sizing: border-box;
+    box-sizing: border-box;
 }
 
 html {
-  min-width: 320px;
-  min-height: 100%;
-  background: var(--background);
+    min-width: 320px;
+    min-height: 100%;
+    background: var(--background);
 }
 
 body {
-  min-height: 100vh;
-  margin: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-family:
-    "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    min-height: 100vh;
+    margin: 0;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
 }
 
 button,
 input,
 select,
 textarea {
-  font: inherit;
+    font: inherit;
 }
 
 a {
-  color: inherit;
-  text-decoration: none;
+    color: inherit;
+    text-decoration: none;
 }

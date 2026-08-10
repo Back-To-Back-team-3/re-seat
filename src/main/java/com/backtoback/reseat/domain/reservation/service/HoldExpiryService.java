@@ -31,43 +31,43 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class HoldExpiryService {
 
-    private final ReservationRepository reservationRepository;
-    private final GameSeatRepository gameSeatRepository;
+	private final ReservationRepository reservationRepository;
+	private final GameSeatRepository gameSeatRepository;
 
-    /**
-     * 만료된 선점을 회수한다.
-     * <p>
-     * 두 UPDATE가 같은 트랜잭션에 묶여 있어,
-     * 예약만 EXPIRED로 바뀌고 좌석은 HELD로 남는 부분 회수가 발생하지 않는다.
-     *
-     * @param now 만료 판정 기준 시각 (HoldExpiryScheduler가 주입)
-     * @return 회수된 예약/좌석 건수
-     */
-    @Transactional
-    public HoldExpiryResult releaseExpired(LocalDateTime now) {
-        int expiredReservations = reservationRepository.expireHoldingReservations(
-            now,
-            ReservationStatus.HOLDING,
-            ReservationStatus.EXPIRED);
+	/**
+	 * 만료된 선점을 회수한다.
+	 * <p>
+	 * 두 UPDATE가 같은 트랜잭션에 묶여 있어,
+	 * 예약만 EXPIRED로 바뀌고 좌석은 HELD로 남는 부분 회수가 발생하지 않는다.
+	 *
+	 * @param now 만료 판정 기준 시각 (HoldExpiryScheduler가 주입)
+	 * @return 회수된 예약/좌석 건수
+	 */
+	@Transactional
+	public HoldExpiryResult releaseExpired(LocalDateTime now) {
+		int expiredReservations = reservationRepository.expireHoldingReservations(
+			now,
+			ReservationStatus.HOLDING,
+			ReservationStatus.EXPIRED);
 
-        int releasedSeats = gameSeatRepository.releaseExpiredSeats(
-            now,
-            GameSeatStatus.HELD,
-            GameSeatStatus.AVAILABLE);
+		int releasedSeats = gameSeatRepository.releaseExpiredSeats(
+			now,
+			GameSeatStatus.HELD,
+			GameSeatStatus.AVAILABLE);
 
-        return new HoldExpiryResult(expiredReservations, releasedSeats);
-    }
+		return new HoldExpiryResult(expiredReservations, releasedSeats);
+	}
 
-    /**
-     * 만료 회수 결과 반환값.
-     *
-     * @param expiredReservations EXPIRED로 전이된 예약 행 수
-     * @param releasedSeats       AVAILABLE로 회수된 좌석 행 수
-     */
-    public record HoldExpiryResult(int expiredReservations, int releasedSeats) {
+	/**
+	 * 만료 회수 결과 반환값.
+	 *
+	 * @param expiredReservations EXPIRED로 전이된 예약 행 수
+	 * @param releasedSeats       AVAILABLE로 회수된 좌석 행 수
+	 */
+	public record HoldExpiryResult(int expiredReservations, int releasedSeats) {
 
-        public int total() {
-            return expiredReservations + releasedSeats;
-        }
-    }
+		public int total() {
+			return expiredReservations + releasedSeats;
+		}
+	}
 }

@@ -22,25 +22,25 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class HoldExpiryScheduler {
 
-    private final HoldExpiryService holdExpiryService;
+	private final HoldExpiryService holdExpiryService;
 
-    /**
-     * 만료된 선점을 주기적으로 회수한다.
-     *
-     * <p>fixedDelay = 10초 (데모 기준. 운영 환경에서는 application.yml로 외부화 권장).
-     * initialDelay = 30초로 두어 앱 기동 직후 다른 초기화 작업과의 경합을 회피한다.
-     */
-    @Scheduled(fixedDelay = 10_000, initialDelay = 30_000)
-    public void sweepExpiredHolds() {
-        LocalDateTime now = LocalDateTime.now();
-        HoldExpiryService.HoldExpiryResult result = holdExpiryService.releaseExpired(now);
+	/**
+	 * 만료된 선점을 주기적으로 회수한다.
+	 *
+	 * <p>fixedDelay = 10초 (데모 기준. 운영 환경에서는 application.yml로 외부화 권장).
+	 * initialDelay = 30초로 두어 앱 기동 직후 다른 초기화 작업과의 경합을 회피한다.
+	 */
+	@Scheduled(fixedDelay = 10_000, initialDelay = 30_000)
+	public void sweepExpiredHolds() {
+		LocalDateTime now = LocalDateTime.now();
+		HoldExpiryService.HoldExpiryResult result = holdExpiryService.releaseExpired(now);
 
-        // 회수 건수가 있을 때만 INFO — 0건 반복은 DEBUG로 억제 (Git 매뉴얼 로깅 정책)
-        if (result.total() > 0) {
-            log.info("[HoldExpiry] 만료 선점 회수 완료 — 예약 {}건 EXPIRED, 좌석 {}건 AVAILABLE",
-                result.expiredReservations(), result.releasedSeats());
-        } else {
-            log.debug("[HoldExpiry] 만료 선점 없음 (기준 시각: {})", now);
-        }
-    }
+		// 회수 건수가 있을 때만 INFO — 0건 반복은 DEBUG로 억제 (Git 매뉴얼 로깅 정책)
+		if (result.total() > 0) {
+			log.info("[HoldExpiry] 만료 선점 회수 완료 — 예약 {}건 EXPIRED, 좌석 {}건 AVAILABLE",
+				result.expiredReservations(), result.releasedSeats());
+		} else {
+			log.debug("[HoldExpiry] 만료 선점 없음 (기준 시각: {})", now);
+		}
+	}
 }

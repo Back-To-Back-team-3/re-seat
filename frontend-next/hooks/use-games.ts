@@ -1,9 +1,9 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import {useQuery} from "@tanstack/react-query";
 
-import { getGames } from "@/api/games";
-import { gameKeys } from "@/api/query-keys/games";
+import {getGames} from "@/api/games";
+import {gameKeys} from "@/api/query-keys/games";
 
 /**
  * 서버가 정본인 전체 경기 목록을 TanStack Query 캐시로 조회합니다.
@@ -12,8 +12,8 @@ import { gameKeys } from "@/api/query-keys/games";
  * 비교하는 동안 포커스 이동이나 네트워크 재연결이 목록을 임의로 바꾸지 않게 합니다.
  */
 export function useGames() {
-  return useQuery({
-    queryKey: gameKeys.lists(),
-    queryFn: getGames,
-  });
+    return useQuery({
+        queryKey: gameKeys.lists(),
+        queryFn: getGames,
+    });
 }

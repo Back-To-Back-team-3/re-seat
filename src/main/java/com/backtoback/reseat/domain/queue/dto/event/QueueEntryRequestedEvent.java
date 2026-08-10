@@ -12,8 +12,8 @@ import java.util.UUID;
  * @param requestedAt 최초 진입 요청 시간이며 Redis ZSet 대기 순서의 기준
  */
 public record QueueEntryRequestedEvent(
-    UUID eventId,
-    Long gameId,
-    Long userId,
-    Instant requestedAt) {
+	UUID eventId,
+	Long gameId,
+	Long userId,
+	Instant requestedAt) {
 }

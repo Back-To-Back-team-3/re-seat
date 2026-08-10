@@ -12,27 +12,27 @@ import org.springframework.context.annotation.Profile;
 @Profile("!test")
 public class RedissonConfig {
 
-    private static final String REDISSON_HOST_PREFIX = "redis://";
-    @Value("${spring.data.redis.host:localhost}")
-    private String host;
-    @Value("${spring.data.redis.port:6379}")
-    private int port;
-    //application.yml의 패스워드 읽기
-    @Value("${spring.data.redis.password:}")
-    private String password;
+	private static final String REDISSON_HOST_PREFIX = "redis://";
+	@Value("${spring.data.redis.host:localhost}")
+	private String host;
+	@Value("${spring.data.redis.port:6379}")
+	private int port;
+	//application.yml의 패스워드 읽기
+	@Value("${spring.data.redis.password:}")
+	private String password;
 
-    @Bean
-    public RedissonClient redissonClient() {
-        Config config = new Config();
+	@Bean
+	public RedissonClient redissonClient() {
+		Config config = new Config();
 
-        var singleServerConfig = config.useSingleServer()
-            .setAddress(REDISSON_HOST_PREFIX + host + ":" + port);
+		var singleServerConfig = config.useSingleServer()
+			.setAddress(REDISSON_HOST_PREFIX + host + ":" + port);
 
-        //비밀번호가 설정되어 있다면 Redisson에 주입합니다
-        if (password != null && !password.trim().isEmpty()) {
-            singleServerConfig.setPassword(password.trim());
-        }
+		//비밀번호가 설정되어 있다면 Redisson에 주입합니다
+		if (password != null && !password.trim().isEmpty()) {
+			singleServerConfig.setPassword(password.trim());
+		}
 
-        return Redisson.create(config);
-    }
+		return Redisson.create(config);
+	}
 }

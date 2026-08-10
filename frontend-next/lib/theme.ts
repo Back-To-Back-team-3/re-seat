@@ -1,4 +1,4 @@
-import { storage } from "@/lib/storage";
+import {storage} from "@/lib/storage";
 
 export type Theme = "light" | "dark";
 
@@ -7,7 +7,7 @@ const STORAGE_KEY = "theme";
 const listeners = new Set<() => void>();
 
 function emitThemeChange() {
-  listeners.forEach((listener) => listener());
+    listeners.forEach((listener) => listener());
 }
 
 /**
@@ -16,8 +16,8 @@ function emitThemeChange() {
  * 잘못된 문자열이 document root에 그대로 반영되지 않게 한다.
  */
 export function getStoredTheme(): Theme {
-  const stored = storage.local.get(STORAGE_KEY);
-  return stored === "dark" ? "dark" : "light";
+    const stored = storage.local.get(STORAGE_KEY);
+    return stored === "dark" ? "dark" : "light";
 }
 
 /**
@@ -27,8 +27,8 @@ export function getStoredTheme(): Theme {
  * 값을 직접 저장하는 대신 이 함수를 사용해야 useTheme의 상태도 함께 갱신됩니다.
  */
 export function setStoredTheme(theme: Theme): void {
-  storage.local.set(STORAGE_KEY, theme);
-  emitThemeChange();
+    storage.local.set(STORAGE_KEY, theme);
+    emitThemeChange();
 }
 
 /**
@@ -42,13 +42,13 @@ export function setStoredTheme(theme: Theme): void {
  * @returns 등록한 구독과 이벤트 리스너를 제거하는 함수
  */
 export function subscribeTheme(listener: () => void) {
-  listeners.add(listener);
-  window.addEventListener("storage", listener);
+    listeners.add(listener);
+    window.addEventListener("storage", listener);
 
-  return () => {
-    listeners.delete(listener);
-    window.removeEventListener("storage", listener);
-  };
+    return () => {
+        listeners.delete(listener);
+        window.removeEventListener("storage", listener);
+    };
 }
 
 /**
@@ -57,7 +57,7 @@ export function subscribeTheme(listener: () => void) {
  * 원시 문자열은 같은 내용일 때 참조가 바뀌지 않으므로 불필요한 재렌더링을 만들지 않는다.
  */
 export function getThemeSnapshot(): Theme {
-  return getStoredTheme();
+    return getStoredTheme();
 }
 
 /**
@@ -67,5 +67,5 @@ export function getThemeSnapshot(): Theme {
  * 않으며, Root Layout의 초기화 스크립트가 칠하는 기본값과도 일치한다.
  */
 export function getServerThemeSnapshot(): Theme {
-  return "light";
+    return "light";
 }

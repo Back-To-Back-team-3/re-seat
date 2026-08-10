@@ -20,29 +20,29 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Stadium extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    @Column(name = "name", nullable = false, length = 100, unique = true)
-    private String name;
+	@Column(name = "name", nullable = false, length = 100, unique = true)
+	private String name;
 
-    @Column(name = "address", nullable = false, length = 255)
-    private String address;
+	@Column(name = "address", nullable = false, length = 255)
+	private String address;
 
-    @Column(name = "total_capacity", nullable = false)
-    private int totalCapacity;
+	@Column(name = "total_capacity", nullable = false)
+	private int totalCapacity;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
-    private StadiumStatus status = StadiumStatus.ACTIVE;
+	@Enumerated(EnumType.STRING)
+	@Column(name = "status", nullable = false, length = 20)
+	private StadiumStatus status = StadiumStatus.ACTIVE;
 
-    public static Stadium of(String name, String address, int totalCapacity) {
-        Stadium s = new Stadium();
-        s.name = name;
-        s.address = address;
-        s.totalCapacity = totalCapacity;
-        s.status = StadiumStatus.ACTIVE;
-        return s;
-    }
+	public static Stadium of(String name, String address, int totalCapacity) {
+		Stadium s = new Stadium();
+		s.name = name;
+		s.address = address;
+		s.totalCapacity = totalCapacity;
+		s.status = StadiumStatus.ACTIVE;
+		return s;
+	}
 }

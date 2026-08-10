@@ -11,5 +11,5 @@ import com.backtoback.reseat.domain.user.entity.User;
 @Repository
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
 
-    Optional<RefreshToken> findByUser(User user);
+	Optional<RefreshToken> findByUser(User user);
 }

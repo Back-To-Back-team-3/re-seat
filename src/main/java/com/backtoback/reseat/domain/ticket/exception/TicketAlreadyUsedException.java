@@ -5,7 +5,7 @@ import com.backtoback.reseat.global.exception.ErrorCode;
 
 public class TicketAlreadyUsedException extends BusinessException {
 
-    public TicketAlreadyUsedException() {
-        super(ErrorCode.TICKET_ALREADY_USED);
-    }
+	public TicketAlreadyUsedException() {
+		super(ErrorCode.TICKET_ALREADY_USED);
+	}
 }

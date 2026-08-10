@@ -11,7 +11,7 @@ import com.backtoback.reseat.global.exception.ErrorCode;
  */
 public class InvalidGameSearchConditionException extends BusinessException {
 
-    public InvalidGameSearchConditionException(String message) {
-        super(ErrorCode.INVALID_REQUEST, message);
-    }
+	public InvalidGameSearchConditionException(String message) {
+		super(ErrorCode.INVALID_REQUEST, message);
+	}
 }

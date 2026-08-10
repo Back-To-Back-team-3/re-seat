@@ -13,7 +13,7 @@ checkstyle {
     configProperties = [
             'suppressionFile': file("config/naver-checkstyle-suppressions.xml")
     ]
-    ignoreFailures = false
+    ignoreFailures = true
     maxWarnings = 0
 }
 

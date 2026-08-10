@@ -5,7 +5,7 @@ import com.backtoback.reseat.global.exception.ErrorCode;
 
 public class TicketNotFoundException extends BusinessException {
 
-    public TicketNotFoundException() {
-        super(ErrorCode.TICKET_NOT_FOUND);
-    }
+	public TicketNotFoundException() {
+		super(ErrorCode.TICKET_NOT_FOUND);
+	}
 }

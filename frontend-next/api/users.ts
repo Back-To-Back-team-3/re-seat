@@ -1,6 +1,6 @@
-import { apiRequest, unwrap } from "@/api/client";
-import type { ApiResponse } from "@/types/api";
-import type { UserProfile } from "@/types/auth";
+import {apiRequest, unwrap} from "@/api/client";
+import type {ApiResponse} from "@/types/api";
+import type {UserProfile} from "@/types/auth";
 
 /**
  * 백엔드의 사용자 프로필 응답을 API 경계에서 수용하기 위한 타입입니다.
@@ -11,8 +11,8 @@ import type { UserProfile } from "@/types/auth";
  * 두 응답 이름을 허용하고 `UserProfile.isVerified` 하나로 정규화합니다.
  */
 type UserProfilePayload = Omit<UserProfile, "isVerified"> & {
-  isVerified?: boolean;
-  verified?: boolean;
+    isVerified?: boolean;
+    verified?: boolean;
 };
 
 /**
@@ -26,15 +26,15 @@ type UserProfilePayload = Omit<UserProfile, "isVerified"> & {
  * @throws API 요청이 실패하거나 응답에 `data`가 없으면 `AppError`
  */
 export async function getMyProfile() {
-  const response =
-    await apiRequest<ApiResponse<UserProfilePayload>>("/users/me");
-  const { isVerified, verified, ...profile } = unwrap(response);
+    const response =
+        await apiRequest<ApiResponse<UserProfilePayload>>("/users/me");
+    const {isVerified, verified, ...profile} = unwrap(response);
 
-  return {
-    ...profile,
-    // 배포된 백엔드 응답의 구버전 필드도 기존 Vite와 동일하게 허용한다.
-    isVerified: isVerified ?? verified ?? false,
-  } satisfies UserProfile;
+    return {
+        ...profile,
+        // 배포된 백엔드 응답의 구버전 필드도 기존 Vite와 동일하게 허용한다.
+        isVerified: isVerified ?? verified ?? false,
+    } satisfies UserProfile;
 }
 
 /**
@@ -49,8 +49,8 @@ export async function getMyProfile() {
  * @throws 인증 검증 또는 API 요청이 실패하면 `AppError`
  */
 export async function verifyIdentity(impUid: string) {
-  await apiRequest<ApiResponse<void>>("/users/verification", {
-    method: "POST",
-    body: JSON.stringify({ impUid }),
-  });
+    await apiRequest<ApiResponse<void>>("/users/verification", {
+        method: "POST",
+        body: JSON.stringify({impUid}),
+    });
 }

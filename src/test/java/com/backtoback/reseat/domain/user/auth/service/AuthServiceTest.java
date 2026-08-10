@@ -27,125 +27,125 @@ import com.backtoback.reseat.global.security.JwtTokenProvider;
 
 class AuthServiceTest extends BaseUnitTest {
 
-    @Mock
-    private UserRepository userRepository;
+	@Mock
+	private UserRepository userRepository;
 
-    @Mock
-    private PasswordEncoder passwordEncoder;
+	@Mock
+	private PasswordEncoder passwordEncoder;
 
-    @Mock
-    private JwtTokenProvider jwtTokenProvider;
+	@Mock
+	private JwtTokenProvider jwtTokenProvider;
 
-    @Mock
-    private RefreshTokenRepository refreshTokenRepository;
+	@Mock
+	private RefreshTokenRepository refreshTokenRepository;
 
-    @InjectMocks
-    private AuthService authService;
+	@InjectMocks
+	private AuthService authService;
 
-    @Test
-    @DisplayName("올바른 이메일과 비밀번호로 로그인하면 토큰을 발급한다")
-    void login_Success() {
-        // given
-        UserLoginRequest request = new UserLoginRequest("user@test.com", "password123!");
-        User user = User.builder()
-            .id(1L)
-            .email("user@test.com")
-            .password("encodedPassword")
-            .role(UserRole.USER)
-            .status(UserStatus.ACTIVE)
-            .build();
+	@Test
+	@DisplayName("올바른 이메일과 비밀번호로 로그인하면 토큰을 발급한다")
+	void login_Success() {
+		// given
+		UserLoginRequest request = new UserLoginRequest("user@test.com", "password123!");
+		User user = User.builder()
+			.id(1L)
+			.email("user@test.com")
+			.password("encodedPassword")
+			.role(UserRole.USER)
+			.status(UserStatus.ACTIVE)
+			.build();
 
-        when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("password123!", "encodedPassword")).thenReturn(true);
-        when(jwtTokenProvider.createAccessToken(1L, "user@test.com", "USER")).thenReturn("mock-access-token");
-        when(jwtTokenProvider.createRefreshToken(1L)).thenReturn("mock-refresh-token");
-        when(refreshTokenRepository.findByUser(user)).thenReturn(Optional.empty());
+		when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
+		when(passwordEncoder.matches("password123!", "encodedPassword")).thenReturn(true);
+		when(jwtTokenProvider.createAccessToken(1L, "user@test.com", "USER")).thenReturn("mock-access-token");
+		when(jwtTokenProvider.createRefreshToken(1L)).thenReturn("mock-refresh-token");
+		when(refreshTokenRepository.findByUser(user)).thenReturn(Optional.empty());
 
-        // when
-        TokenResponse response = authService.login(request);
+		// when
+		TokenResponse response = authService.login(request);
 
-        // then
-        assertThat(response).isNotNull();
-        assertThat(response.getAccessToken()).isEqualTo("mock-access-token");
-        assertThat(response.getRefreshToken()).isEqualTo("mock-refresh-token");
-    }
+		// then
+		assertThat(response).isNotNull();
+		assertThat(response.getAccessToken()).isEqualTo("mock-access-token");
+		assertThat(response.getRefreshToken()).isEqualTo("mock-refresh-token");
+	}
 
-    @Test
-    @DisplayName("존재하지 않는 회원 이메일로 로그인 시 예외가 발생한다")
-    void login_UserNotFound() {
-        // given
-        UserLoginRequest request = new UserLoginRequest("none@test.com", "password123!");
-        when(userRepository.findByEmail("none@test.com")).thenReturn(Optional.empty());
+	@Test
+	@DisplayName("존재하지 않는 회원 이메일로 로그인 시 예외가 발생한다")
+	void login_UserNotFound() {
+		// given
+		UserLoginRequest request = new UserLoginRequest("none@test.com", "password123!");
+		when(userRepository.findByEmail("none@test.com")).thenReturn(Optional.empty());
 
-        // when & then
-        assertThatThrownBy(() -> authService.login(request))
-            .isInstanceOf(UserNotFoundException.class)
-            .hasMessage("존재하지 않는 회원입니다.");
-    }
+		// when & then
+		assertThatThrownBy(() -> authService.login(request))
+			.isInstanceOf(UserNotFoundException.class)
+			.hasMessage("존재하지 않는 회원입니다.");
+	}
 
-    @Test
-    @DisplayName("비밀번호가 일치하지 않으면 예외가 발생한다")
-    void login_InvalidPassword() {
-        // given
-        UserLoginRequest request = new UserLoginRequest("user@test.com", "wrongPassword");
-        User user = User.builder()
-            .id(1L)
-            .email("user@test.com")
-            .password("encodedPassword")
-            .role(UserRole.USER)
-            .status(UserStatus.ACTIVE)
-            .build();
+	@Test
+	@DisplayName("비밀번호가 일치하지 않으면 예외가 발생한다")
+	void login_InvalidPassword() {
+		// given
+		UserLoginRequest request = new UserLoginRequest("user@test.com", "wrongPassword");
+		User user = User.builder()
+			.id(1L)
+			.email("user@test.com")
+			.password("encodedPassword")
+			.role(UserRole.USER)
+			.status(UserStatus.ACTIVE)
+			.build();
 
-        when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("wrongPassword", "encodedPassword")).thenReturn(false);
+		when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
+		when(passwordEncoder.matches("wrongPassword", "encodedPassword")).thenReturn(false);
 
-        // when & then
-        assertThatThrownBy(() -> authService.login(request))
-            .isInstanceOf(InvalidPasswordException.class)
-            .hasMessage("비밀번호가 올바르지 않습니다.");
-    }
+		// when & then
+		assertThatThrownBy(() -> authService.login(request))
+			.isInstanceOf(InvalidPasswordException.class)
+			.hasMessage("비밀번호가 올바르지 않습니다.");
+	}
 
-    @Test
-    @DisplayName("정지된 계정으로 로그인 시 SuspendedUserException이 발생한다")
-    void login_SuspendedUser() {
-        // given
-        UserLoginRequest request = new UserLoginRequest("user@test.com", "password123!");
-        User user = User.builder()
-            .id(1L)
-            .email("user@test.com")
-            .password("encodedPassword")
-            .role(UserRole.USER)
-            .status(UserStatus.SUSPENDED)
-            .build();
+	@Test
+	@DisplayName("정지된 계정으로 로그인 시 SuspendedUserException이 발생한다")
+	void login_SuspendedUser() {
+		// given
+		UserLoginRequest request = new UserLoginRequest("user@test.com", "password123!");
+		User user = User.builder()
+			.id(1L)
+			.email("user@test.com")
+			.password("encodedPassword")
+			.role(UserRole.USER)
+			.status(UserStatus.SUSPENDED)
+			.build();
 
-        when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("password123!", "encodedPassword")).thenReturn(true);
+		when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
+		when(passwordEncoder.matches("password123!", "encodedPassword")).thenReturn(true);
 
-        // when & then
-        assertThatThrownBy(() -> authService.login(request))
-            .isInstanceOf(SuspendedUserException.class)
-            .hasMessage("이용이 정지된 계정입니다.");
-    }
+		// when & then
+		assertThatThrownBy(() -> authService.login(request))
+			.isInstanceOf(SuspendedUserException.class)
+			.hasMessage("이용이 정지된 계정입니다.");
+	}
 
-    @Test
-    @DisplayName("탈퇴된 계정으로 로그인 시 DeleteUserException이 발생한다")
-    void login_DeletedUser() {
-        // given
-        UserLoginRequest request = new UserLoginRequest("user@test.com", "password123!");
-        User user = User.builder()
-            .id(1L)
-            .email("user@test.com")
-            .password("encodedPassword")
-            .role(UserRole.USER)
-            .status(UserStatus.DELETED)
-            .build();
+	@Test
+	@DisplayName("탈퇴된 계정으로 로그인 시 DeleteUserException이 발생한다")
+	void login_DeletedUser() {
+		// given
+		UserLoginRequest request = new UserLoginRequest("user@test.com", "password123!");
+		User user = User.builder()
+			.id(1L)
+			.email("user@test.com")
+			.password("encodedPassword")
+			.role(UserRole.USER)
+			.status(UserStatus.DELETED)
+			.build();
 
-        when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("password123!", "encodedPassword")).thenReturn(true);
+		when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
+		when(passwordEncoder.matches("password123!", "encodedPassword")).thenReturn(true);
 
-        // when & then
-        assertThatThrownBy(() -> authService.login(request))
-            .isInstanceOf(DeleteUserException.class)
-            .hasMessage("탈퇴 처리된 계정입니다.");
-    }
+		// when & then
+		assertThatThrownBy(() -> authService.login(request))
+			.isInstanceOf(DeleteUserException.class)
+			.hasMessage("탈퇴 처리된 계정입니다.");
+	}
 }
