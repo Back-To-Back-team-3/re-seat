@@ -1,16 +1,16 @@
 package com.backtoback.reseat.domain.order.entity;
 
-import com.backtoback.reseat.domain.order.exception.InvalidOrderStatusException;
-import com.backtoback.reseat.domain.reservation.entity.Reservation;
-import com.backtoback.reseat.domain.user.entity.User;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 import java.time.LocalDateTime;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import com.backtoback.reseat.domain.order.exception.InvalidOrderStatusException;
+import com.backtoback.reseat.domain.reservation.entity.Reservation;
+import com.backtoback.reseat.domain.user.entity.User;
 
 @DisplayName("Order 상태 전이")
 public class OrderTest {
@@ -22,12 +22,11 @@ public class OrderTest {
 
     private Order createdOrder() {
         return Order.of(
-                ORDER_NO,
-                mock(User.class),
-                mock(Reservation.class),
-                TOTAL_AMOUNT,
-                PAYMENT_DEADLINE
-        );
+            ORDER_NO,
+            mock(User.class),
+            mock(Reservation.class),
+            TOTAL_AMOUNT,
+            PAYMENT_DEADLINE);
     }
 
     @Test
@@ -39,7 +38,7 @@ public class OrderTest {
         order.paid();
 
         assertThat(order.getStatus())
-                .isEqualTo(OrderStatus.PAID);
+            .isEqualTo(OrderStatus.PAID);
     }
 
     @Test
@@ -51,7 +50,7 @@ public class OrderTest {
         order.expired();
 
         assertThat(order.getStatus())
-                .isEqualTo(OrderStatus.EXPIRED);
+            .isEqualTo(OrderStatus.EXPIRED);
     }
 
     @Test
@@ -63,7 +62,7 @@ public class OrderTest {
         order.cancel();
 
         assertThat(order.getStatus())
-                .isEqualTo(OrderStatus.CANCELED);
+            .isEqualTo(OrderStatus.CANCELED);
     }
 
     @Test
@@ -74,9 +73,9 @@ public class OrderTest {
         order.cancel();
 
         assertThatThrownBy(order::paid)
-                .isInstanceOf(InvalidOrderStatusException.class);
+            .isInstanceOf(InvalidOrderStatusException.class);
         assertThat(order.getStatus())
-                .isEqualTo(OrderStatus.CANCELED);
+            .isEqualTo(OrderStatus.CANCELED);
     }
 
     @Test
@@ -87,9 +86,9 @@ public class OrderTest {
         order.paid();
 
         assertThatThrownBy(order::expired)
-                .isInstanceOf(InvalidOrderStatusException.class);
+            .isInstanceOf(InvalidOrderStatusException.class);
         assertThat(order.getStatus())
-                .isEqualTo(OrderStatus.PAID);
+            .isEqualTo(OrderStatus.PAID);
     }
 
     @Test
@@ -100,8 +99,8 @@ public class OrderTest {
         order.expired();
 
         assertThatThrownBy(order::cancel)
-                .isInstanceOf(InvalidOrderStatusException.class);
+            .isInstanceOf(InvalidOrderStatusException.class);
         assertThat(order.getStatus())
-                .isEqualTo(OrderStatus.EXPIRED);
+            .isEqualTo(OrderStatus.EXPIRED);
     }
 }

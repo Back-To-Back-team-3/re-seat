@@ -15,6 +15,5 @@ public record QueueEntryRequestedEvent(
     UUID eventId,
     Long gameId,
     Long userId,
-    Instant requestedAt
-) {
+    Instant requestedAt) {
 }

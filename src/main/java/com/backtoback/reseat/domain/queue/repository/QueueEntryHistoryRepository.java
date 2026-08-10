@@ -1,14 +1,16 @@
 package com.backtoback.reseat.domain.queue.repository;
 
-import com.backtoback.reseat.domain.queue.entity.QueueEntryHistory;
-import com.backtoback.reseat.domain.queue.entity.QueueEntryHistoryStatus;
-import jakarta.persistence.LockModeType;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.Optional;
+import com.backtoback.reseat.domain.queue.entity.QueueEntryHistory;
+import com.backtoback.reseat.domain.queue.entity.QueueEntryHistoryStatus;
+
+import jakarta.persistence.LockModeType;
 
 /**
  * 경기별 사용자 대기열 진입 이력의 저장과 조회를 담당하는 Repository
@@ -33,5 +35,6 @@ public interface QueueEntryHistoryRepository extends JpaRepository<QueueEntryHis
         FROM QueueEntryHistory qeh
         WHERE qeh.queueKey = :queueKey
         """)
-    Optional<QueueEntryHistory> findByQueueKeyWithPessimisticWriteLock(@Param("queueKey") String queueKey);
+    Optional<QueueEntryHistory> findByQueueKeyWithPessimisticWriteLock(@Param("queueKey")
+    String queueKey);
 }

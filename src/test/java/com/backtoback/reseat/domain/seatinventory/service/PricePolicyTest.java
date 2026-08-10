@@ -1,13 +1,15 @@
 package com.backtoback.reseat.domain.seatinventory.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.*;
 
-import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
 import java.time.LocalDateTime;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+
+import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
 
 /**
  * PricePolicy 단위 테스트.
@@ -30,33 +32,32 @@ class PricePolicyTest {
     @ParameterizedTest(name = "[{index}] {0} / {1} / base={2} -> {3}원")
     @CsvSource({
         // --- 화~목 기본가, 시기 배수 없음(7월 × 1.0) ---
-        "2026-07-01T18:30:00, INFIELD,  18000, 18000",   // 수
-        "2026-07-01T18:30:00, OUTFIELD, 16000, 16000",   // 수
-        "2026-07-07T18:30:00, INFIELD,  18000, 18000",   // 화
+        "2026-07-01T18:30:00, INFIELD,  18000, 18000", // 수
+        "2026-07-01T18:30:00, OUTFIELD, 16000, 16000", // 수
+        "2026-07-07T18:30:00, INFIELD,  18000, 18000", // 화
 
         // --- 금~일 상승가, 3~8월 (× 1.0) ---
         // 코드 상수(INFIELD 25000, OUTFIELD 23000)
-        "2026-07-03T18:30:00, INFIELD,  18000, 25000",   // 금
-        "2026-07-04T18:30:00, INFIELD,  18000, 25000",   // 토
-        "2026-07-04T18:30:00, OUTFIELD, 16000, 23000",   // 토
-        "2026-07-05T18:30:00, OUTFIELD, 16000, 23000",   // 일
+        "2026-07-03T18:30:00, INFIELD,  18000, 25000", // 금
+        "2026-07-04T18:30:00, INFIELD,  18000, 25000", // 토
+        "2026-07-04T18:30:00, OUTFIELD, 16000, 23000", // 토
+        "2026-07-05T18:30:00, OUTFIELD, 16000, 23000", // 일
 
         // --- 월요일: KBO 정규 시즌 미편성. 공휴일 대체·잔여 경기 대비 방어 케이스.
         //     코드가 의도대로 동작한다는 사실만 확인한다.
-        "2026-07-06T18:30:00, INFIELD,  18000, 25000",   // 월
+        "2026-07-06T18:30:00, INFIELD,  18000, 25000", // 월
 
         // --- 9월 이후 시기 배수 (× 1.2). ---
         // games 시드가 7월뿐이라 통합 테스트로는 이 경로를 밟을 수 없다.
         // 공백을 메우기 위한 행.
         // 계산식: 화~목이면 basePrice × 1.2, 금~일이면 코드 상수 × 1.2
-        "2026-09-03T18:30:00, INFIELD,  18000, 21600",   // 목: 18000 × 1.2
-        "2026-09-01T18:30:00, OUTFIELD, 16000, 19200",   // 화: 16000 × 1.2
-        "2026-09-05T18:30:00, OUTFIELD, 16000, 27600",   // 토: 23000 × 1.2
-        "2026-09-05T18:30:00, INFIELD,  18000, 30000"    // 토: 25000 × 1.2
+        "2026-09-03T18:30:00, INFIELD,  18000, 21600", // 목: 18000 × 1.2
+        "2026-09-01T18:30:00, OUTFIELD, 16000, 19200", // 화: 16000 × 1.2
+        "2026-09-05T18:30:00, OUTFIELD, 16000, 27600", // 토: 23000 × 1.2
+        "2026-09-05T18:30:00, INFIELD,  18000, 30000" // 토: 25000 × 1.2
     })
     void should_returnPolicyPrice_when_dayOfWeekAndSeasonGiven(
-        LocalDateTime gameAt, SeatGrade grade, int basePrice, int expectedPrice
-    ) {
+        LocalDateTime gameAt, SeatGrade grade, int basePrice, int expectedPrice) {
         // when
         int actualPrice = pricePolicy.calculate(gameAt, grade, basePrice);
 

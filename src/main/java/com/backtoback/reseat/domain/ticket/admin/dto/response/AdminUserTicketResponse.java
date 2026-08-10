@@ -1,18 +1,19 @@
 package com.backtoback.reseat.domain.ticket.admin.dto.response;
 
+import java.time.LocalDateTime;
+
 import com.backtoback.reseat.domain.ticket.entity.Ticket;
 import com.backtoback.reseat.domain.ticket.entity.TicketStatus;
 import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.Builder;
 
-import java.time.LocalDateTime;
+import lombok.Builder;
 
 @Builder
 public record AdminUserTicketResponse(
     Long ticketId,
     String ticketNo,
-    TicketStatus status,     // ISSUED, USED, CANCELED
-    String qrToken,          // QR 토큰
+    TicketStatus status, // ISSUED, USED, CANCELED
+    String qrToken, // QR 토큰
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime issuedAt,
@@ -41,8 +42,7 @@ public record AdminUserTicketResponse(
     String zoneName,
     String seatBlock,
     String seatRow,
-    String seatNumber
-) {
+    String seatNumber) {
     public static AdminUserTicketResponse from(Ticket ticket) {
         var game = ticket.getGame();
         var gameSeat = ticket.getGameSeat();
@@ -54,8 +54,7 @@ public record AdminUserTicketResponse(
             zone != null ? zone.getName() : "",
             seatEntity.getSeatBlock(),
             seatEntity.getSeatRow(),
-            seatEntity.getSeatNumber()
-        ).trim();
+            seatEntity.getSeatNumber()).trim();
 
         return AdminUserTicketResponse.builder()
             .ticketId(ticket.getId())

@@ -1,5 +1,26 @@
 package com.backtoback.reseat.domain.reservation.service;
 
+import static org.assertj.core.api.Assertions.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
@@ -24,22 +45,8 @@ import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserRole;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
+
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * [이슈 #174] 교차 순서 다좌석 요청 데드락 방지 회귀 테스트.
@@ -56,26 +63,34 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @Disabled("테스트 제외")
 @Slf4j
-@EnabledIfEnvironmentVariable(
-    named = "RUN_CONCURRENCY_TESTS",
-    matches = "true"
-)
+@EnabledIfEnvironmentVariable(named = "RUN_CONCURRENCY_TESTS", matches = "true")
 @Tag("concurrency")
 @ActiveProfiles("test-concurrency")
 @SpringBootTest
 class SeatHoldDeadlockTest {
 
-    @Autowired private SeatHoldFacade seatHoldFacade;
-    @Autowired private ReservationRepository reservationRepository;
-    @Autowired private ReservationSeatRepository reservationSeatRepository;
-    @Autowired private GameSeatRepository gameSeatRepository;
-    @Autowired private GameRepository gameRepository;
-    @Autowired private SeatRepository seatRepository;
-    @Autowired private SeatZoneRepository seatZoneRepository;
-    @Autowired private StadiumRepository stadiumRepository;
-    @Autowired private TeamRepository teamRepository;
-    @Autowired private UserRepository userRepository;
-    @Autowired private AdmissionTokenRepository admissionTokenRepository;
+    @Autowired
+    private SeatHoldFacade seatHoldFacade;
+    @Autowired
+    private ReservationRepository reservationRepository;
+    @Autowired
+    private ReservationSeatRepository reservationSeatRepository;
+    @Autowired
+    private GameSeatRepository gameSeatRepository;
+    @Autowired
+    private GameRepository gameRepository;
+    @Autowired
+    private SeatRepository seatRepository;
+    @Autowired
+    private SeatZoneRepository seatZoneRepository;
+    @Autowired
+    private StadiumRepository stadiumRepository;
+    @Autowired
+    private TeamRepository teamRepository;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private AdmissionTokenRepository admissionTokenRepository;
 
     private Long gameId;
     private Long seat1Id;
@@ -177,18 +192,27 @@ class SeatHoldDeadlockTest {
         reservationRepository.deleteAll();
 
         // gameSeat → seat 순서로 ID 기준 삭제
-        if (seat1Id != null) gameSeatRepository.deleteById(seat1Id);
-        if (seat2Id != null) gameSeatRepository.deleteById(seat2Id);
+        if (seat1Id != null)
+            gameSeatRepository.deleteById(seat1Id);
+        if (seat2Id != null)
+            gameSeatRepository.deleteById(seat2Id);
 
-        if (gameId != null) gameRepository.deleteById(gameId);
+        if (gameId != null)
+            gameRepository.deleteById(gameId);
 
-        if (physicalSeat1Id != null) seatRepository.deleteById(physicalSeat1Id);
-        if (physicalSeat2Id != null) seatRepository.deleteById(physicalSeat2Id);
+        if (physicalSeat1Id != null)
+            seatRepository.deleteById(physicalSeat1Id);
+        if (physicalSeat2Id != null)
+            seatRepository.deleteById(physicalSeat2Id);
 
-        if (seatZoneId != null) seatZoneRepository.deleteById(seatZoneId);
-        if (homeTeamId != null) teamRepository.deleteById(homeTeamId);
-        if (awayTeamId != null) teamRepository.deleteById(awayTeamId);
-        if (stadiumId != null) stadiumRepository.deleteById(stadiumId);
+        if (seatZoneId != null)
+            seatZoneRepository.deleteById(seatZoneId);
+        if (homeTeamId != null)
+            teamRepository.deleteById(homeTeamId);
+        if (awayTeamId != null)
+            teamRepository.deleteById(awayTeamId);
+        if (stadiumId != null)
+            stadiumRepository.deleteById(stadiumId);
 
         userRepository.deleteAllById(List.of(userId1, userId2));
     }
@@ -220,7 +244,7 @@ class SeatHoldDeadlockTest {
                 seatHoldFacade.holdSeats(userId1, "qt_deadlock-token-1", request1);
                 successCount.incrementAndGet();
             } catch (com.backtoback.reseat.domain.reservation.exception.SeatAlreadyHeldException e) {
-            // 락 획득 후 좌석 재검증에서 실패 — 동일 좌석 경합 시 정상 동작
+                // 락 획득 후 좌석 재검증에서 실패 — 동일 좌석 경합 시 정상 동작
                 lockFailedCount.incrementAndGet();
             } catch (com.backtoback.reseat.domain.reservation.exception.LockFailedException e) {
                 // 경합으로 인한 LOCK_FAILED — 데드락이 아닌 정상 실패

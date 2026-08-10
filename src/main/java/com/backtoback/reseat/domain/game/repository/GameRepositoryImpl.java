@@ -1,5 +1,17 @@
 package com.backtoback.reseat.domain.game.repository;
 
+import static com.backtoback.reseat.domain.game.entity.QGame.*;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.service.GameSearchCondition;
@@ -9,18 +21,8 @@ import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-
-import static com.backtoback.reseat.domain.game.entity.QGame.game;
 
 /**
  * 경기 조회 QueryDSL 구현체.
@@ -48,8 +50,7 @@ public class GameRepositoryImpl implements GameRepositoryCustom {
                 awayTeamIdEq(condition.awayTeamId()),
                 gameAtGoe(condition.from()),
                 gameAtLt(condition.to()),
-                bookingStatusEq(condition.bookingStatus())
-            )
+                bookingStatusEq(condition.bookingStatus()))
             .orderBy(getOrderSpecifiers(pageable))
             .offset(pageable.getOffset())
             .limit(pageable.getPageSize())
@@ -63,8 +64,7 @@ public class GameRepositoryImpl implements GameRepositoryCustom {
                 awayTeamIdEq(condition.awayTeamId()),
                 gameAtGoe(condition.from()),
                 gameAtLt(condition.to()),
-                bookingStatusEq(condition.bookingStatus())
-            )
+                bookingStatusEq(condition.bookingStatus()))
             .fetchOne();
 
         return new PageImpl<>(content, pageable, total == null ? 0 : total);

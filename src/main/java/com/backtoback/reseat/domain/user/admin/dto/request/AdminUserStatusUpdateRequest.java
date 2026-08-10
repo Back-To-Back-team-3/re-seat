@@ -1,6 +1,7 @@
 package com.backtoback.reseat.domain.user.admin.dto.request;
 
 import com.backtoback.reseat.domain.user.entity.UserStatus;
+
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

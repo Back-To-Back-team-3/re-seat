@@ -1,22 +1,24 @@
 package com.backtoback.reseat.domain.user.auth.service;
 
-import com.backtoback.reseat.domain.user.auth.dto.CustomOAuth2User;
-import com.backtoback.reseat.domain.user.entity.RefreshToken;
-import com.backtoback.reseat.domain.user.entity.User;
-import com.backtoback.reseat.domain.user.repository.RefreshTokenRepository;
-import com.backtoback.reseat.global.security.JwtTokenProvider;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
+import java.io.IOException;
+import java.time.LocalDateTime;
+
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.io.IOException;
-import java.time.LocalDateTime;
+import com.backtoback.reseat.domain.user.auth.dto.CustomOAuth2User;
+import com.backtoback.reseat.domain.user.entity.RefreshToken;
+import com.backtoback.reseat.domain.user.entity.User;
+import com.backtoback.reseat.domain.user.repository.RefreshTokenRepository;
+import com.backtoback.reseat.global.security.JwtTokenProvider;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
@@ -28,8 +30,8 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     @Override
     @Transactional
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
-                                        Authentication authentication) throws IOException, ServletException {
-        CustomOAuth2User oAuth2User = (CustomOAuth2User) authentication.getPrincipal();
+        Authentication authentication) throws IOException, ServletException {
+        CustomOAuth2User oAuth2User = (CustomOAuth2User)authentication.getPrincipal();
         User user = oAuth2User.getUser();
 
         // Access Token & Refresh Token 생성
@@ -47,9 +49,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
                             .user(user)
                             .tokenValue(refreshToken)
                             .expiredAt(expiredAt)
-                            .build()
-                    )
-                );
+                            .build()));
         } catch (org.springframework.dao.DataIntegrityViolationException ex) {
             refreshTokenRepository.findByUser(user)
                 .ifPresent(token -> token.updateTokenValue(refreshToken, expiredAt));

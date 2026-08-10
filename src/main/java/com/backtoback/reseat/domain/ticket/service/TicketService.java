@@ -1,5 +1,15 @@
 package com.backtoback.reseat.domain.ticket.service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.entity.OrderItem;
 import com.backtoback.reseat.domain.order.repository.OrderItemRepository;
@@ -22,16 +32,8 @@ import com.backtoback.reseat.domain.ticket.exception.TicketAccessDeniedException
 import com.backtoback.reseat.domain.ticket.exception.TicketCancelDeadlinePassedException;
 import com.backtoback.reseat.domain.ticket.exception.TicketNotFoundException;
 import com.backtoback.reseat.domain.ticket.repository.TicketRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -57,8 +59,7 @@ public class TicketService {
                     order.getUser(),
                     orderItem,
                     orderItem.getGameSeat(),
-                    qrToken
-                );
+                    qrToken);
 
                 return ticketRepository.save(ticket);
             })
@@ -104,8 +105,7 @@ public class TicketService {
         PaymentActionResponse paymentResponse = paymentService.cancelPayment(
             userId,
             payment.getId(),
-            new PaymentCancelRequest("사용자 티켓 취소")
-        );
+            new PaymentCancelRequest("사용자 티켓 취소"));
 
         boolean refunded = paymentResponse.getStatus() == PaymentStatus.CANCELED;
 

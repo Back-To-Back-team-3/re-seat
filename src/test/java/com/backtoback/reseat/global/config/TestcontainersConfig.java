@@ -1,8 +1,7 @@
 package com.backtoback.reseat.global.config;
 
-
- //Testcontainers 기반 독립 테스트 환경
- //MySQL/PostgreSQL, Redis, Kafka 컨테이너 자동 구동 및 Spring DynamicPropertyRegistry 연동
+//Testcontainers 기반 독립 테스트 환경
+//MySQL/PostgreSQL, Redis, Kafka 컨테이너 자동 구동 및 Spring DynamicPropertyRegistry 연동
 
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -21,8 +20,8 @@ public class TestcontainersConfig {
         .withPassword("test");
 
     // Redis 컨테이너 선언
-    private static final GenericContainer<?> REDIS_CONTAINER = new
-        GenericContainer<>(DockerImageName.parse("redis:7.0-alpine"))
+    private static final GenericContainer<?> REDIS_CONTAINER = new GenericContainer<>(
+        DockerImageName.parse("redis:7.0-alpine"))
         .withExposedPorts(6379);
 
     static {

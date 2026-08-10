@@ -1,6 +1,7 @@
 package com.backtoback.reseat.domain.queue.dto.response;
 
 import com.backtoback.reseat.domain.queue.entity.QueueEntryHistoryStatus;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AccessLevel;
 import lombok.Builder;

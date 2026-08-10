@@ -1,13 +1,14 @@
 package com.backtoback.reseat.domain.seatinventory.entity;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.*;
 
-import com.backtoback.reseat.domain.seatinventory.exception.InvalidStateTransitionException;
 import java.time.LocalDateTime;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+
+import com.backtoback.reseat.domain.seatinventory.exception.InvalidStateTransitionException;
 
 @DisplayName("GameSeat 상태 전이")
 class GameSeatTest {

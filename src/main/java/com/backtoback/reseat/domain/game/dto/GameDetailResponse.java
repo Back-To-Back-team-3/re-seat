@@ -1,11 +1,11 @@
 package com.backtoback.reseat.domain.game.dto;
 
+import java.time.LocalDateTime;
+
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.stadium.entity.Stadium;
 import com.fasterxml.jackson.annotation.JsonFormat;
-
-import java.time.LocalDateTime;
 
 /**
  * 경기 상세 조회 응답 DTO.
@@ -29,8 +29,7 @@ public record GameDetailResponse(
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime bookingCloseAt,
 
-    BookingStatus bookingStatus
-) {
+    BookingStatus bookingStatus) {
 
     /**
      * Game 엔티티를 경기 상세 응답 DTO로 변환한다.
@@ -48,8 +47,7 @@ public record GameDetailResponse(
             game.getGameAt(),
             game.getBookingOpenAt(),
             game.getBookingCloseAt(),
-            game.getBookingStatus()
-        );
+            game.getBookingStatus());
     }
 
     /**
@@ -59,15 +57,13 @@ public record GameDetailResponse(
         Long stadiumId,
         String name,
         String address,
-        int totalCapacity
-    ) {
+        int totalCapacity) {
         public static StadiumResponse from(Stadium stadium) {
             return new StadiumResponse(
                 stadium.getId(),
                 stadium.getName(),
                 stadium.getAddress(),
-                stadium.getTotalCapacity()
-            );
+                stadium.getTotalCapacity());
         }
     }
 }

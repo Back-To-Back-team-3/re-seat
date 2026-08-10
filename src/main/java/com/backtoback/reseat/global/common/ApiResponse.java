@@ -8,10 +8,10 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class ApiResponse<T> {
 
-    private final boolean success;   // 명세서 규격: true / false
-    private final String errorCode;  // 명세서 규격: "errorCode"
-    private final String message;    // 명세서 규격: "message"
-    private final T data;            // 명세서 규격: "data"
+    private final boolean success; // 명세서 규격: true / false
+    private final String errorCode; // 명세서 규격: "errorCode"
+    private final String message; // 명세서 규격: "message"
+    private final T data; // 명세서 규격: "data"
 
     // 1. 성공 응답 (데이터만 보낼 때)
     public static <T> ApiResponse<T> success(T data) {

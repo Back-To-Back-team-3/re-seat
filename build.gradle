@@ -3,6 +3,18 @@ plugins {
     id 'org.springframework.boot' version '3.5.16'
     id 'io.spring.dependency-management' version '1.1.7'
     id 'com.diffplug.spotless' version '8.8.0'
+    id 'checkstyle'
+
+}
+
+checkstyle {
+    toolVersion = '10.12.5'
+    configFile = file("config/naver-checkstyle-rules.xml")
+    configProperties = [
+            'suppressionFile': file("config/naver-checkstyle-suppressions.xml")
+    ]
+    ignoreFailures = true
+    maxWarnings = 0
 }
 
 group = 'com.backtoback'
@@ -85,14 +97,16 @@ dependencies {
     implementation 'io.micrometer:micrometer-registry-prometheus'
 
 
-
-
-
 }
 
 tasks.named('test') {
     useJUnitPlatform()
     systemProperty 'spring.profiles.active', 'test'
+    systemProperty 'file.encoding', 'UTF-8'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
 }
 
 bootJar {
@@ -102,6 +116,9 @@ bootJar {
 spotless {
     java {
         target 'src/**/*.java'
+        lineEndings 'UNIX'
+        eclipse().configFile("config/naver-eclipse-formatter.xml")
+        leadingTabsToSpaces(4)
         removeUnusedImports()
         trimTrailingWhitespace()
         endWithNewline()
@@ -118,4 +135,8 @@ spotless {
         targetExclude '**/node_modules/**'
         endWithNewline()
     }
+}
+
+tasks.named('compileJava') {
+    dependsOn 'spotlessApply'
 }

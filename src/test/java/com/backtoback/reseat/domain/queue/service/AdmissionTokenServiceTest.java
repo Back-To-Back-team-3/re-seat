@@ -1,5 +1,22 @@
 package com.backtoback.reseat.domain.queue.service;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatCode;
+import static org.mockito.Mockito.*;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.redisson.api.RedissonClient;
+import org.springframework.data.redis.core.RedisTemplate;
+
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
 import com.backtoback.reseat.domain.queue.entity.AdmissionToken;
@@ -11,29 +28,9 @@ import com.backtoback.reseat.domain.queue.repository.AdmissionTokenRepository;
 import com.backtoback.reseat.domain.queue.repository.QueueEntryHistoryRepository;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.redisson.api.RedissonClient;
-import org.springframework.data.redis.core.RedisTemplate;
-
-import java.time.LocalDateTime;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatCode;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName( "AdmissionTokenService 토큰 검증 및 소비")
+@DisplayName("AdmissionTokenService 토큰 검증 및 소비")
 public class AdmissionTokenServiceTest {
 
     private static final Long USER_ID = 1L;
@@ -78,12 +75,11 @@ public class AdmissionTokenServiceTest {
         when(user.getId()).thenReturn(USER_ID);
 
         return AdmissionToken.of(
-                game,
-                user,
-                TOKEN,
-                issuedAt,
-                expiresAt
-        );
+            game,
+            user,
+            TOKEN,
+            issuedAt,
+            expiresAt);
     }
 
     @Test
@@ -93,12 +89,12 @@ public class AdmissionTokenServiceTest {
         AdmissionToken admissionToken = activeToken();
 
         when(admissionTokenRepository.findByToken(TOKEN))
-                .thenReturn(Optional.of(admissionToken));
+            .thenReturn(Optional.of(admissionToken));
 
         assertThatCode(() -> admissionTokenService.validateToken(USER_ID, GAME_ID, TOKEN))
-                .doesNotThrowAnyException();
+            .doesNotThrowAnyException();
         assertThat(admissionToken.getStatus())
-                .isEqualTo(AdmissionTokenStatus.ACTIVE);
+            .isEqualTo(AdmissionTokenStatus.ACTIVE);
 
         verify(admissionTokenRepository).findByToken(TOKEN);
     }
@@ -108,7 +104,7 @@ public class AdmissionTokenServiceTest {
     void validateToken_withNullToken_throwsRequired() {
 
         assertThatThrownBy(() -> admissionTokenService.validateToken(USER_ID, GAME_ID, null))
-                .isInstanceOf(QueueTokenRequiredException.class);
+            .isInstanceOf(QueueTokenRequiredException.class);
 
         verifyNoInteractions(admissionTokenRepository);
     }
@@ -118,10 +114,10 @@ public class AdmissionTokenServiceTest {
     void validateToken_whenTokenNotFound_throwsInvalid() {
 
         when(admissionTokenRepository.findByToken(TOKEN))
-                .thenReturn(Optional.empty());
+            .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> admissionTokenService.validateToken(USER_ID, GAME_ID, TOKEN))
-                .isInstanceOf(QueueTokenInvalidException.class);
+            .isInstanceOf(QueueTokenInvalidException.class);
 
         verify(admissionTokenRepository).findByToken(TOKEN);
     }
@@ -138,12 +134,12 @@ public class AdmissionTokenServiceTest {
         AdmissionToken admissionToken = activeToken(issuedAt, expiredAt);
 
         when(admissionTokenRepository.findByToken(TOKEN))
-                .thenReturn(Optional.of(admissionToken));
+            .thenReturn(Optional.of(admissionToken));
 
         assertThatThrownBy(() -> admissionTokenService.validateToken(USER_ID, GAME_ID, TOKEN))
-                .isInstanceOf(QueueTokenExpiredException.class);
+            .isInstanceOf(QueueTokenExpiredException.class);
         assertThat(admissionToken.getStatus())
-                .isEqualTo(AdmissionTokenStatus.EXPIRED);
+            .isEqualTo(AdmissionTokenStatus.EXPIRED);
 
         verify(admissionTokenRepository).findByToken(TOKEN);
         verify(admissionTokenRepository, never()).findByTokenWithPessimisticWriteLock(TOKEN);
@@ -156,14 +152,14 @@ public class AdmissionTokenServiceTest {
         AdmissionToken admissionToken = activeToken();
 
         when(admissionTokenRepository.findByTokenWithPessimisticWriteLock(TOKEN))
-                .thenReturn(Optional.of(admissionToken));
+            .thenReturn(Optional.of(admissionToken));
 
         assertThatCode(() -> admissionTokenService.consumeToken(USER_ID, GAME_ID, TOKEN))
-                .doesNotThrowAnyException();
+            .doesNotThrowAnyException();
         assertThat(admissionToken.getStatus())
-                .isEqualTo(AdmissionTokenStatus.USED);
+            .isEqualTo(AdmissionTokenStatus.USED);
         assertThat(admissionToken.getUsedAt())
-                .isNotNull();
+            .isNotNull();
 
         verify(admissionTokenRepository).findByTokenWithPessimisticWriteLock(TOKEN);
         verify(admissionTokenRepository, never()).findByToken(TOKEN);

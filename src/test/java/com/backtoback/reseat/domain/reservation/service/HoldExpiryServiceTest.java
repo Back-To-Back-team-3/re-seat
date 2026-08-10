@@ -1,9 +1,11 @@
 package com.backtoback.reseat.domain.reservation.service;
 
-import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
-import com.backtoback.reseat.domain.reservation.repository.ReservationRepository;
-import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
-import com.backtoback.reseat.domain.seatinventory.repository.GameSeatRepository;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.BDDMockito.*;
+
+import java.time.LocalDateTime;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,13 +13,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.then;
-import static org.mockito.Mockito.inOrder;
+import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
+import com.backtoback.reseat.domain.reservation.repository.ReservationRepository;
+import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
+import com.backtoback.reseat.domain.seatinventory.repository.GameSeatRepository;
 
 /**
  * HoldExpiryService 단위 테스트.
@@ -39,7 +38,9 @@ class HoldExpiryServiceTest {
     @InjectMocks
     private HoldExpiryService holdExpiryService;
 
-    /** 시나리오 1: 만료 회수 정상 동작 **/
+    /**
+     * 시나리오 1: 만료 회수 정상 동작
+     **/
     @Test
     @DisplayName("만료된 선점이 있을 때 예약은 EXPIRED로, 좌석은 AVAILABLE로 회수된다")
     void should_returnExpiredCountAndReleasedCount_when_expiredHoldsExist() {
@@ -49,14 +50,12 @@ class HoldExpiryServiceTest {
         given(reservationRepository.expireHoldingReservations(
             eq(now),
             eq(ReservationStatus.HOLDING),
-            eq(ReservationStatus.EXPIRED)
-        )).willReturn(3);
+            eq(ReservationStatus.EXPIRED))).willReturn(3);
 
         given(gameSeatRepository.releaseExpiredSeats(
             eq(now),
             eq(GameSeatStatus.HELD),
-            eq(GameSeatStatus.AVAILABLE)
-        )).willReturn(3);
+            eq(GameSeatStatus.AVAILABLE))).willReturn(3);
 
         // when
         HoldExpiryService.HoldExpiryResult result = holdExpiryService.releaseExpired(now);
@@ -67,7 +66,9 @@ class HoldExpiryServiceTest {
         assertThat(result.total()).isEqualTo(6);
     }
 
-    /** 시나리오 2: 경합 회귀 — 연장된 좌석은 회수되지 않는다 (B5 오회수 방지) **/
+    /**
+     * 시나리오 2: 경합 회귀 — 연장된 좌석은 회수되지 않는다 (B5 오회수 방지)
+     **/
     @Test
     @DisplayName("주문 생성으로 hold_expires_at이 연장된 좌석은 회수 대상에 포함되지 않는다")
     void should_notReleaseExtendedSeats_when_holdExpiresAtIsExtendedByOrderCreation() {
@@ -79,14 +80,12 @@ class HoldExpiryServiceTest {
         given(reservationRepository.expireHoldingReservations(
             eq(now),
             eq(ReservationStatus.HOLDING),
-            eq(ReservationStatus.EXPIRED)
-        )).willReturn(0); // 연장으로 조건 불충족 → 회수 0건
+            eq(ReservationStatus.EXPIRED))).willReturn(0); // 연장으로 조건 불충족 → 회수 0건
 
         given(gameSeatRepository.releaseExpiredSeats(
             eq(now),
             eq(GameSeatStatus.HELD),
-            eq(GameSeatStatus.AVAILABLE)
-        )).willReturn(0); // 연장으로 조건 불충족 → 회수 0건
+            eq(GameSeatStatus.AVAILABLE))).willReturn(0); // 연장으로 조건 불충족 → 회수 0건
 
         // when
         HoldExpiryService.HoldExpiryResult result = holdExpiryService.releaseExpired(now);
@@ -97,7 +96,9 @@ class HoldExpiryServiceTest {
         assertThat(result.total()).isZero();
     }
 
-    /** 시나리오 3: 부분 회수 없음 — 예약·좌석이 항상 같은 트랜잭션에서 함께 전이된다 **/
+    /**
+     * 시나리오 3: 부분 회수 없음 — 예약·좌석이 항상 같은 트랜잭션에서 함께 전이된다
+     **/
     @Test
     @DisplayName("예약 UPDATE와 좌석 UPDATE가 항상 함께 호출된다 — 부분 회수 없음")
     void should_callBothUpdatesAlways_when_releaseExpiredIsCalled() {
@@ -107,14 +108,12 @@ class HoldExpiryServiceTest {
         given(reservationRepository.expireHoldingReservations(
             eq(now),
             eq(ReservationStatus.HOLDING),
-            eq(ReservationStatus.EXPIRED)
-        )).willReturn(2);
+            eq(ReservationStatus.EXPIRED))).willReturn(2);
 
         given(gameSeatRepository.releaseExpiredSeats(
             eq(now),
             eq(GameSeatStatus.HELD),
-            eq(GameSeatStatus.AVAILABLE)
-        )).willReturn(2);
+            eq(GameSeatStatus.AVAILABLE))).willReturn(2);
 
         // when
         holdExpiryService.releaseExpired(now);
@@ -123,16 +122,16 @@ class HoldExpiryServiceTest {
         then(reservationRepository).should().expireHoldingReservations(
             eq(now),
             eq(ReservationStatus.HOLDING),
-            eq(ReservationStatus.EXPIRED)
-        );
+            eq(ReservationStatus.EXPIRED));
         then(gameSeatRepository).should().releaseExpiredSeats(
             eq(now),
             eq(GameSeatStatus.HELD),
-            eq(GameSeatStatus.AVAILABLE)
-        );
+            eq(GameSeatStatus.AVAILABLE));
     }
 
-    /** 시나리오 4: UPDATE 순서 — reservations 먼저, game_seats 나중 (데드락 방지) **/
+    /**
+     * 시나리오 4: UPDATE 순서 — reservations 먼저, game_seats 나중 (데드락 방지)
+     **/
     @Test
     @DisplayName("예약 UPDATE가 좌석 UPDATE보다 먼저 호출된다 — 주문 생성 락 순서와 일치")
     void should_expireReservationsBeforeReleasingSeats_when_releaseExpiredIsCalled() {
@@ -145,14 +144,12 @@ class HoldExpiryServiceTest {
         given(reservationRepository.expireHoldingReservations(
             eq(now),
             eq(ReservationStatus.HOLDING),
-            eq(ReservationStatus.EXPIRED)
-        )).willReturn(1);
+            eq(ReservationStatus.EXPIRED))).willReturn(1);
 
         given(gameSeatRepository.releaseExpiredSeats(
             eq(now),
             eq(GameSeatStatus.HELD),
-            eq(GameSeatStatus.AVAILABLE)
-        )).willReturn(1);
+            eq(GameSeatStatus.AVAILABLE))).willReturn(1);
 
         // when
         holdExpiryService.releaseExpired(now);
@@ -161,12 +158,10 @@ class HoldExpiryServiceTest {
         inOrder.verify(reservationRepository).expireHoldingReservations(
             eq(now),
             eq(ReservationStatus.HOLDING),
-            eq(ReservationStatus.EXPIRED)
-        );
+            eq(ReservationStatus.EXPIRED));
         inOrder.verify(gameSeatRepository).releaseExpiredSeats(
             eq(now),
             eq(GameSeatStatus.HELD),
-            eq(GameSeatStatus.AVAILABLE)
-        );
+            eq(GameSeatStatus.AVAILABLE));
     }
 }

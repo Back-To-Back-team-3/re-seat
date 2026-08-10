@@ -1,5 +1,7 @@
 package com.backtoback.reseat.domain.payment.service;
 
+import org.springframework.stereotype.Component;
+
 import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
 import com.backtoback.reseat.domain.payment.exception.IdempotencyKeyConflictException;
@@ -9,7 +11,6 @@ import com.backtoback.reseat.domain.payment.exception.PaymentAccessDeniedExcepti
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCallbackMismatchException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelNotAllowedException;
-import org.springframework.stereotype.Component;
 
 @Component
 public class PaymentServiceValidator {

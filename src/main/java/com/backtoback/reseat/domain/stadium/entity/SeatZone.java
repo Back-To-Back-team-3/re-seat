@@ -1,6 +1,7 @@
 package com.backtoback.reseat.domain.stadium.entity;
 
 import com.backtoback.reseat.global.common.BaseEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -20,13 +21,8 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@Table(
-    name = "seat_zones",
-    uniqueConstraints = @UniqueConstraint(
-        name = "uk_seat_zones_stadium_name",
-        columnNames = {"stadium_id", "name"}
-    )
-)
+@Table(name = "seat_zones", uniqueConstraints = @UniqueConstraint(name = "uk_seat_zones_stadium_name", columnNames = {
+    "stadium_id", "name"}))
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class SeatZone extends BaseEntity {
 
@@ -35,8 +31,7 @@ public class SeatZone extends BaseEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "stadium_id", nullable = false,
-        foreignKey = @ForeignKey(name = "fk_seat_zones_stadium"))
+    @JoinColumn(name = "stadium_id", nullable = false, foreignKey = @ForeignKey(name = "fk_seat_zones_stadium"))
     private Stadium stadium;
 
     @Column(name = "name", nullable = false, length = 100)

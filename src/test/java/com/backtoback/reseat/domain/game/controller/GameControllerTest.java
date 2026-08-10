@@ -1,18 +1,12 @@
 package com.backtoback.reseat.domain.game.controller;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import com.backtoback.reseat.domain.game.dto.GameListResponse;
-import com.backtoback.reseat.domain.game.entity.BookingStatus;
-import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
-import com.backtoback.reseat.domain.game.exception.InvalidGameSearchConditionException;
-import com.backtoback.reseat.domain.game.service.GameQueryService;
-import com.backtoback.reseat.global.exception.GlobalExceptionHandler;
 import java.util.List;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +17,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
+import com.backtoback.reseat.domain.game.dto.GameListResponse;
+import com.backtoback.reseat.domain.game.entity.BookingStatus;
+import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
+import com.backtoback.reseat.domain.game.exception.InvalidGameSearchConditionException;
+import com.backtoback.reseat.domain.game.service.GameQueryService;
+import com.backtoback.reseat.global.exception.GlobalExceptionHandler;
 
 /**
  * 경기 조회 Controller 테스트.
@@ -50,8 +51,8 @@ class GameControllerTest {
             .thenReturn(page);
 
         mockMvc.perform(get("/api/v1/games")
-                .param("page", "0")
-                .param("size", "20"))
+            .param("page", "0")
+            .param("size", "20"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.message").value("경기 목록 조회 성공"));
@@ -66,9 +67,9 @@ class GameControllerTest {
             .thenReturn(page);
 
         mockMvc.perform(get("/api/v1/games")
-                .param("bookingStatus", BookingStatus.OPEN.name())
-                .param("page", "0")
-                .param("size", "20"))
+            .param("bookingStatus", BookingStatus.OPEN.name())
+            .param("page", "0")
+            .param("size", "20"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.message").value("경기 목록 조회 성공"));
@@ -83,10 +84,10 @@ class GameControllerTest {
             .thenReturn(page);
 
         mockMvc.perform(get("/api/v1/games")
-                .param("from", "2026-07-01")
-                .param("to", "2026-07-31")
-                .param("page", "0")
-                .param("size", "20"))
+            .param("from", "2026-07-01")
+            .param("to", "2026-07-31")
+            .param("page", "0")
+            .param("size", "20"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.message").value("경기 목록 조회 성공"));
@@ -113,8 +114,8 @@ class GameControllerTest {
             .thenThrow(new InvalidGameSearchConditionException("검색 시작일(from)은 종료일(to)보다 늦을 수 없습니다."));
 
         mockMvc.perform(get("/api/v1/games")
-                .param("from", "2026-08-01")
-                .param("to", "2026-07-01"))
+            .param("from", "2026-08-01")
+            .param("to", "2026-07-01"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"));

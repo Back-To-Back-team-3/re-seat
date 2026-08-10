@@ -1,12 +1,5 @@
 package com.backtoback.reseat.domain.queue.service;
 
-import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
-import com.backtoback.reseat.domain.queue.dto.event.QueueEntryRequestedEvent;
-import com.backtoback.reseat.domain.queue.exception.QueueInvalidEventException;
-import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
-import com.backtoback.reseat.global.config.KafkaConfig;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -16,6 +9,15 @@ import org.springframework.kafka.retrytopic.TopicSuffixingStrategy;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Service;
+
+import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
+import com.backtoback.reseat.domain.queue.dto.event.QueueEntryRequestedEvent;
+import com.backtoback.reseat.domain.queue.exception.QueueInvalidEventException;
+import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
+import com.backtoback.reseat.global.config.KafkaConfig;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Kafka 대기열 진입 요청 이벤트를 소비하여 실제 대기열 등록을 처리한다.
@@ -36,31 +38,19 @@ public class QueueEntryEventConsumer {
      * @param record         Kafka Consumer Record
      * @param acknowledgment 수동 Offset 커밋 객체
      */
-    @RetryableTopic(
-        attempts = "4",             // 최초 실행을 포함한 총 시도 횟수
-        backoff = @Backoff(         // 다음 재시도 까지 기다릴 시간
-            delay = 2000,
-            multiplier = 2.0
-        ),
-        numPartitions = "3",        // 자동 생성되는 재시도 토픽과 DLT의 파티션 수
-        replicationFactor = "1",    // 단일 Kafka 브로커 환경에 맞춘 재시도 토픽과 DLT 복제본 수
+    @RetryableTopic(attempts = "4", // 최초 실행을 포함한 총 시도 횟수
+        backoff = @Backoff( // 다음 재시도 까지 기다릴 시간
+            delay = 2000, multiplier = 2.0), numPartitions = "3", // 자동 생성되는 재시도 토픽과 DLT의 파티션 수
+        replicationFactor = "1", // 단일 Kafka 브로커 환경에 맞춘 재시도 토픽과 DLT 복제본 수
         exclude = {
             QueueInvalidEventException.class,
             GameNotFoundException.class,
             UserNotFoundException.class
-        },
-        topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE,
-        dltStrategy = DltStrategy.FAIL_ON_ERROR
-    )
-    @KafkaListener(
-        topics = KafkaConfig.QUEUE_ENTRY_REQUESTED_TOPIC,
-        groupId = KafkaConfig.QUEUE_ENTRY_CONSUMER_GROUP,
-        concurrency = "3"
-    )
+        }, topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE, dltStrategy = DltStrategy.FAIL_ON_ERROR)
+    @KafkaListener(topics = KafkaConfig.QUEUE_ENTRY_REQUESTED_TOPIC, groupId = KafkaConfig.QUEUE_ENTRY_CONSUMER_GROUP, concurrency = "3")
     public void consume(
         ConsumerRecord<String, QueueEntryRequestedEvent> record,
-        Acknowledgment acknowledgment
-    ) {
+        Acknowledgment acknowledgment) {
 
         QueueEntryRequestedEvent event = record.value();
 
@@ -74,13 +64,11 @@ public class QueueEntryEventConsumer {
 
             log.info(
                 "대기열 진입 이벤트 처리 완료: eventId={}, partition={}, offset={}",
-                eventId, record.partition(), record.offset()
-            );
+                eventId, record.partition(), record.offset());
         } catch (RuntimeException exception) {
             log.error(
                 "대기열 진입 이벤트 처리 실패: eventId={}, partition={}, offset={}",
-                eventId, record.partition(), record.offset(), exception
-            );
+                eventId, record.partition(), record.offset(), exception);
 
             // 예외를 다시 전달해야 Spring Kafka의 재시도 및 DLT 처리가 동작한다.
             throw exception;
@@ -104,7 +92,6 @@ public class QueueEntryEventConsumer {
 
         log.error(
             "대기열 진입 이벤트 DLT 도착: eventId={}, gameId={}, userId={}",
-            event.eventId(), event.gameId(), event.userId()
-        );
+            event.eventId(), event.gameId(), event.userId());
     }
 }

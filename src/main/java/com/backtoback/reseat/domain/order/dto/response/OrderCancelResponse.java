@@ -2,6 +2,7 @@ package com.backtoback.reseat.domain.order.dto.response;
 
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.entity.OrderStatus;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -32,8 +33,7 @@ public class OrderCancelResponse {
      * @return 주문 취소 응답 DTO
      */
     public static OrderCancelResponse from(
-        Order order
-    ) {
+        Order order) {
         return OrderCancelResponse.builder()
             .orderId(order.getId())
             .status(order.getStatus())

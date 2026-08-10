@@ -1,5 +1,19 @@
 package com.backtoback.reseat.domain.queue.service;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
@@ -23,20 +37,8 @@ import com.backtoback.reseat.domain.queue.repository.QueueUserRepository;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ZSetOperations;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 대기열 진입, 상태 조회, 취소, 입장 허용 이벤트 조회를 담당하는 서비스
@@ -163,18 +165,17 @@ public class QueueService {
             .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
 
         // 대기 취소와 입장 허용이 동시에 상태를 변경하지 않도록 대기 이력을 비관적 락으로 조회한다.
-        QueueEntryHistory queueEntryHistory =
-            queueEntryHistoryRepository
-                .findByQueueKeyWithPessimisticWriteLock(queueKey)
-                .orElseThrow(QueueEntryNotFoundException::new);
+        QueueEntryHistory queueEntryHistory = queueEntryHistoryRepository
+            .findByQueueKeyWithPessimisticWriteLock(queueKey)
+            .orElseThrow(QueueEntryNotFoundException::new);
 
         // 토큰 소비와 취소가 동시에 상태를 변경하지 않도록 활성 입장 토큰을 비관적 락으로 조회한다.
         AdmissionToken activeToken = admissionTokenRepository
             .findByGame_IdAndUser_IdAndStatusWithPessimisticWriteLock(
                 gameId,
                 userId,
-                AdmissionTokenStatus.ACTIVE
-            ).orElse(null);
+                AdmissionTokenStatus.ACTIVE)
+            .orElse(null);
 
         // ADMITTED 이력은 함께 회수할 ACTIVE 토큰이 있을 때만 취소한다.
         if (queueEntryHistory.getStatus() == QueueEntryHistoryStatus.ADMITTED &&
@@ -229,14 +230,12 @@ public class QueueService {
             UUID.randomUUID(),
             gameId,
             userId,
-            Instant.now()
-        );
+            Instant.now());
 
         // Kafka 발행 실패는 대기열 진입 요청 실패로 변환하여 비동기 작업을 예외 상태로 완료한다.
         return queueEntryEventPublisher
             .publish(event)
-            .thenAccept(result -> {
-            })
+            .thenAccept(result -> {})
             .exceptionally(exception -> {
                 throw new QueueEventPublishFailedException(exception);
             });
@@ -268,14 +267,12 @@ public class QueueService {
             .existsByUser_IdAndStatusAndExpiresAtAfter(
                 user.getId(),
                 AdmissionTokenStatus.ACTIVE,
-                now
-            );
+                now);
         boolean hasWaitingEntryInAnotherGame = queueEntryHistoryRepository
             .existsByUser_IdAndGame_IdNotAndStatus(
                 user.getId(),
                 game.getId(),
-                QueueEntryHistoryStatus.WAITING
-            );
+                QueueEntryHistoryStatus.WAITING);
 
         // 다른 경기에서 대기 중이거나 유효한 입장 토큰이 있다면 새 대기열에 등록하지 않는다.
         if (hasActiveToken || hasWaitingEntryInAnotherGame) {
@@ -322,9 +319,7 @@ public class QueueService {
         // Redis에 등록하기 전에 DB 이력을 즉시 반영하여 queueKey 중복 여부를 먼저 확인한다.
         queueEntryHistoryRepository.saveAndFlush(
             QueueEntryHistory.of(
-                game, user, queueKey, now
-            )
-        );
+                game, user, queueKey, now));
 
         addRedisQueueEntryIfAbsent(queueZSet, redisKey, redisMember, score);
     }
@@ -388,8 +383,7 @@ public class QueueService {
         ZSetOperations<String, String> queueZSet,
         String redisKey,
         String redisMember,
-        long score
-    ) {
+        long score) {
 
         // 이미 등록된 사용자는 기존 점수를 유지하고 등록되지 않은 사용자만 전달받은 요청 시간으로 추가한다.
         Boolean registered = queueZSet.addIfAbsent(redisKey, redisMember, score);
@@ -412,8 +406,7 @@ public class QueueService {
         ZSetOperations<String, String> queueZSet,
         String redisKey,
         String redisMember,
-        long score
-    ) {
+        long score) {
 
         // 등록 여부와 관계없이 새 요청 시간으로 점수를 반영해 대기 순서를 갱신한다.
         Boolean registered = queueZSet.add(redisKey, redisMember, score);

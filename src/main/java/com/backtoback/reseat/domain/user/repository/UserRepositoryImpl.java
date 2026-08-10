@@ -1,5 +1,15 @@
 package com.backtoback.reseat.domain.user.repository;
 
+import static com.backtoback.reseat.domain.user.entity.QUser.*;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+
 import com.backtoback.reseat.domain.user.admin.dto.request.UserSearchCondition;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserRole;
@@ -8,16 +18,8 @@ import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import static com.backtoback.reseat.domain.user.entity.QUser.user;
 
 @RequiredArgsConstructor
 public class UserRepositoryImpl implements UserRepositoryCustom {
@@ -34,8 +36,7 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
                 nicknameContains(condition.nickname()),
                 phoneContains(condition.phone()),
                 roleEq(condition.role()),
-                statusEq(condition.status())
-            )
+                statusEq(condition.status()))
             .orderBy(getOrderSpecifiers(pageable))
             .offset(pageable.getOffset())
             .limit(pageable.getPageSize())
@@ -50,8 +51,7 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
                 nicknameContains(condition.nickname()),
                 phoneContains(condition.phone()),
                 roleEq(condition.role()),
-                statusEq(condition.status())
-            )
+                statusEq(condition.status()))
             .fetchOne();
 
         return new PageImpl<>(content, pageable, total == null ? 0 : total);

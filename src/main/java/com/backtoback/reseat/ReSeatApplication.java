@@ -1,16 +1,16 @@
 package com.backtoback.reseat;
 
-import jakarta.annotation.PostConstruct;
+import java.util.TimeZone;
+
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-import java.util.TimeZone;
+import jakarta.annotation.PostConstruct;
 
 @EnableScheduling
 @SpringBootApplication
 public class ReSeatApplication {
-
 
     public static void main(String[] args) {
         SpringApplication.run(ReSeatApplication.class, args);

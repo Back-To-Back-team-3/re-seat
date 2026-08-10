@@ -1,20 +1,21 @@
 package com.backtoback.reseat.domain.payment.entity;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import java.time.LocalDateTime;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCallbackMismatchException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelNotAllowedException;
 import com.backtoback.reseat.domain.user.entity.User;
-import java.time.LocalDateTime;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
 
 @DisplayName("Payment 상태 전이")
 class PaymentTest {
@@ -26,15 +27,15 @@ class PaymentTest {
 
     private Payment payment(PaymentStatus status) {
         return Payment.builder()
-                .paymentNo(PAYMENT_NO)
-                .order(mock(Order.class))
-                .user(mock(User.class))
-                .amount(AMOUNT)
-                .idempotencyKey(IDEMPOTENCY_KEY)
-                .status(status)
-                .pgProvider(PgProvider.TOSS)
-                .pgOrderId(PG_ORDER_ID)
-                .build();
+            .paymentNo(PAYMENT_NO)
+            .order(mock(Order.class))
+            .user(mock(User.class))
+            .amount(AMOUNT)
+            .idempotencyKey(IDEMPOTENCY_KEY)
+            .status(status)
+            .pgProvider(PgProvider.TOSS)
+            .pgOrderId(PG_ORDER_ID)
+            .build();
     }
 
     private Payment readyPayment() {
@@ -87,7 +88,7 @@ class PaymentTest {
             payment.assignPgPaymentKey("payment-key");
 
             assertThatThrownBy(() -> payment.assignPgPaymentKey("different-payment-key"))
-                    .isInstanceOf(PaymentCallbackMismatchException.class);
+                .isInstanceOf(PaymentCallbackMismatchException.class);
             assertThat(payment.getPgPaymentKey()).isEqualTo("payment-key");
         }
     }
@@ -146,17 +147,13 @@ class PaymentTest {
         }
 
         @ParameterizedTest(name = "{0} 상태의 결제는 취소할 수 없다")
-        @EnumSource(
-                value = PaymentStatus.class,
-                mode = EnumSource.Mode.EXCLUDE,
-                names = "APPROVED"
-        )
+        @EnumSource(value = PaymentStatus.class, mode = EnumSource.Mode.EXCLUDE, names = "APPROVED")
         @DisplayName("APPROVED가 아닌 모든 결제는 취소 불가 예외가 발생한다.")
         void rejectsUnapprovedPayment(PaymentStatus status) {
             Payment payment = payment(status);
 
             assertThatThrownBy(payment::cancel)
-                    .isInstanceOf(PaymentCancelNotAllowedException.class);
+                .isInstanceOf(PaymentCancelNotAllowedException.class);
             assertThat(payment.getStatus()).isEqualTo(status);
         }
     }
@@ -176,17 +173,13 @@ class PaymentTest {
         }
 
         @ParameterizedTest(name = "{0} 상태의 결제는 멱등키를 교체할 수 없다")
-        @EnumSource(
-                value = PaymentStatus.class,
-                mode = EnumSource.Mode.EXCLUDE,
-                names = "READY"
-        )
+        @EnumSource(value = PaymentStatus.class, mode = EnumSource.Mode.EXCLUDE, names = "READY")
         @DisplayName("READY가 아닌 모든 결제는 이미 처리된 결제 예외가 발생한다.")
         void rejectsFinalizedPayment(PaymentStatus status) {
             Payment payment = payment(status);
 
             assertThatThrownBy(() -> payment.changeIdempotencyKey("new-idempotency-key"))
-                    .isInstanceOf(PaymentAlreadyFinalizedException.class);
+                .isInstanceOf(PaymentAlreadyFinalizedException.class);
             assertThat(payment.getIdempotencyKey()).isEqualTo(IDEMPOTENCY_KEY);
         }
     }

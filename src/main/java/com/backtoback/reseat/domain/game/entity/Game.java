@@ -1,8 +1,11 @@
 package com.backtoback.reseat.domain.game.entity;
 
+import java.time.LocalDateTime;
+
 import com.backtoback.reseat.domain.stadium.entity.Stadium;
 import com.backtoback.reseat.domain.team.entity.Team;
 import com.backtoback.reseat.global.common.BaseEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -21,19 +24,14 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Getter
 @Entity
-@Table(
-    name = "games",
-    indexes = {
-        @Index(name = "idx_games_game_at", columnList = "game_at"),
-        @Index(name = "idx_games_home_team_game_at", columnList = "home_team_id, game_at"),
-        @Index(name = "idx_games_away_team_game_at", columnList = "away_team_id, game_at"),
-        @Index(name = "idx_games_stadium_game_at", columnList = "stadium_id, game_at")
-    }
-)
+@Table(name = "games", indexes = {
+    @Index(name = "idx_games_game_at", columnList = "game_at"),
+    @Index(name = "idx_games_home_team_game_at", columnList = "home_team_id, game_at"),
+    @Index(name = "idx_games_away_team_game_at", columnList = "away_team_id, game_at"),
+    @Index(name = "idx_games_stadium_game_at", columnList = "stadium_id, game_at")
+})
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Game extends BaseEntity {
 
@@ -43,18 +41,15 @@ public class Game extends BaseEntity {
 
     // home_team_id / away_team_id 둘 다 Team 참조 → JoinColumn name 명시 필수 (안 하면 컬럼명 충돌)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "home_team_id", nullable = false,
-        foreignKey = @ForeignKey(name = "fk_games_home_team"))
+    @JoinColumn(name = "home_team_id", nullable = false, foreignKey = @ForeignKey(name = "fk_games_home_team"))
     private Team homeTeam;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "away_team_id", nullable = false,
-        foreignKey = @ForeignKey(name = "fk_games_away_team"))
+    @JoinColumn(name = "away_team_id", nullable = false, foreignKey = @ForeignKey(name = "fk_games_away_team"))
     private Team awayTeam;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "stadium_id", nullable = false,
-        foreignKey = @ForeignKey(name = "fk_games_stadium"))
+    @JoinColumn(name = "stadium_id", nullable = false, foreignKey = @ForeignKey(name = "fk_games_stadium"))
     private Stadium stadium;
 
     @Column(name = "game_at", nullable = false)
@@ -76,8 +71,8 @@ public class Game extends BaseEntity {
 
     @Builder
     private Game(Team homeTeam, Team awayTeam, Stadium stadium,
-                 LocalDateTime gameAt, LocalDateTime bookingOpenAt, LocalDateTime bookingCloseAt,
-                 BookingStatus bookingStatus, String title) {
+        LocalDateTime gameAt, LocalDateTime bookingOpenAt, LocalDateTime bookingCloseAt,
+        BookingStatus bookingStatus, String title) {
         this.homeTeam = homeTeam;
         this.awayTeam = awayTeam;
         this.stadium = stadium;

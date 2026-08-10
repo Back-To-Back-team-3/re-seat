@@ -1,18 +1,21 @@
 package com.backtoback.reseat.global.security;
 
+import java.util.Date;
+
+import javax.crypto.SecretKey;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Component;
+
 import com.backtoback.reseat.domain.verification.service.CustomUserDetailsService;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.stereotype.Component;
-
-import javax.crypto.SecretKey;
-import java.util.Date;
 
 @Component
 @RequiredArgsConstructor
@@ -92,8 +95,7 @@ public class JwtTokenProvider {
         return new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
             userDetails,
             token,
-            userDetails.getAuthorities()
-        );
+            userDetails.getAuthorities());
     }
 
     public boolean validateToken(String token) {

@@ -1,17 +1,19 @@
 package com.backtoback.reseat.domain.payment.repository;
 
-import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
-import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
-import jakarta.persistence.LockModeType;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
+import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
+import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
+
+import jakarta.persistence.LockModeType;
 
 public interface PaymentRecoveryTaskRepository extends JpaRepository<PaymentRecoveryTask, Long> {
 
@@ -25,9 +27,12 @@ public interface PaymentRecoveryTaskRepository extends JpaRepository<PaymentReco
         order by task.createdAt asc
         """)
     List<Long> findRecoverableTaskIds(
-        @Param("pending") PaymentRecoveryStatus pending,
-        @Param("retry") PaymentRecoveryStatus retry,
-        @Param("now") LocalDateTime now,
+        @Param("pending")
+        PaymentRecoveryStatus pending,
+        @Param("retry")
+        PaymentRecoveryStatus retry,
+        @Param("now")
+        LocalDateTime now,
         Pageable pageable);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -37,5 +42,6 @@ public interface PaymentRecoveryTaskRepository extends JpaRepository<PaymentReco
         join fetch task.payment
         where task.id = :taskId
         """)
-    Optional<PaymentRecoveryTask> findByIdWithPessimisticWriteLock(@Param("taskId") Long taskId);
+    Optional<PaymentRecoveryTask> findByIdWithPessimisticWriteLock(@Param("taskId")
+    Long taskId);
 }

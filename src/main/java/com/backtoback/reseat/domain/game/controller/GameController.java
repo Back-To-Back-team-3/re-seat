@@ -1,13 +1,7 @@
 package com.backtoback.reseat.domain.game.controller;
 
-import com.backtoback.reseat.domain.game.dto.GameDetailResponse;
-import com.backtoback.reseat.domain.game.dto.GameListResponse;
-import com.backtoback.reseat.domain.game.entity.BookingStatus;
-import com.backtoback.reseat.domain.game.service.GameQueryService;
-import com.backtoback.reseat.domain.game.service.GameSearchCondition;
-import com.backtoback.reseat.global.common.ApiResponse;
-import com.backtoback.reseat.global.common.PageResponse;
-import lombok.RequiredArgsConstructor;
+import java.time.LocalDate;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -21,7 +15,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDate;
+import com.backtoback.reseat.domain.game.dto.GameDetailResponse;
+import com.backtoback.reseat.domain.game.dto.GameListResponse;
+import com.backtoback.reseat.domain.game.entity.BookingStatus;
+import com.backtoback.reseat.domain.game.service.GameQueryService;
+import com.backtoback.reseat.domain.game.service.GameSearchCondition;
+import com.backtoback.reseat.global.common.ApiResponse;
+import com.backtoback.reseat.global.common.PageResponse;
+
+import lombok.RequiredArgsConstructor;
 
 /**
  * 경기 조회 API Controller.
@@ -50,22 +52,24 @@ public class GameController implements GameControllerDocs {
     @Override
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<GameListResponse>>> getGames(
-        @RequestParam(required = false) Long homeTeamId,
-        @RequestParam(required = false) Long awayTeamId,
         @RequestParam(required = false)
-        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+        Long homeTeamId,
         @RequestParam(required = false)
-        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
-        @RequestParam(required = false) BookingStatus bookingStatus,
-        @PageableDefault(size = 20, sort = "gameAt", direction = Sort.Direction.ASC) Pageable pageable
-    ) {
+        Long awayTeamId,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+        LocalDate from,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+        LocalDate to,
+        @RequestParam(required = false)
+        BookingStatus bookingStatus,
+        @PageableDefault(size = 20, sort = "gameAt", direction = Sort.Direction.ASC)
+        Pageable pageable) {
         GameSearchCondition condition = new GameSearchCondition(
             homeTeamId,
             awayTeamId,
             from,
             to,
-            bookingStatus
-        );
+            bookingStatus);
         Page<GameListResponse> response = gameQueryService.getGames(condition, pageable);
         return ResponseEntity
             .status(HttpStatus.OK)
@@ -81,8 +85,8 @@ public class GameController implements GameControllerDocs {
     @Override
     @GetMapping("/{gameId}")
     public ResponseEntity<ApiResponse<GameDetailResponse>> getGame(
-        @PathVariable Long gameId
-    ) {
+        @PathVariable
+        Long gameId) {
         GameDetailResponse response = gameQueryService.getGame(gameId);
         return ResponseEntity
             .status(HttpStatus.OK)

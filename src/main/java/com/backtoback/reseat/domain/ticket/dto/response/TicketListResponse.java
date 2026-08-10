@@ -1,13 +1,14 @@
 package com.backtoback.reseat.domain.ticket.dto.response;
 
+import java.time.LocalDateTime;
+
 import com.backtoback.reseat.domain.ticket.entity.Ticket;
 import com.backtoback.reseat.domain.ticket.entity.TicketStatus;
+
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
-
-import java.time.LocalDateTime;
 
 /**
  * 티켓 목록 조회 응답 DTO

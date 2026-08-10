@@ -1,25 +1,25 @@
 package com.backtoback.reseat.global.config;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
 import jakarta.annotation.PostConstruct;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Table;
 import jakarta.persistence.metamodel.EntityType;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.ArrayList;
-import java.util.List;
 
 // 통합 테스트 실행 후 DB 상태 자동 격리(Table Truncate)
 @Component
 public class DatabaseCleaner {
 
+    private final List<String> tableNames = new ArrayList<>();
     @PersistenceContext
     private EntityManager entityManager;
-
-    private final List<String> tableNames = new ArrayList<>();
 
     @PostConstruct
     public void findTableNames() {
@@ -29,7 +29,7 @@ public class DatabaseCleaner {
                 Table tableAnnotation = javaType.getAnnotation(Table.class);
                 String tableName;
 
-               //테이블 어노테이션이 존재하면 해당 이름을 우선 사용
+                //테이블 어노테이션이 존재하면 해당 이름을 우선 사용
                 if (tableAnnotation != null && !tableAnnotation.name().isBlank()) {
                     tableName = tableAnnotation.name();
                 } else {
@@ -57,6 +57,7 @@ public class DatabaseCleaner {
             entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS = 1").executeUpdate();
         }
     }
+
     private String convertToSnakeCase(String camelCase) {
         return camelCase.replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
     }

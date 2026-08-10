@@ -1,9 +1,13 @@
 package com.backtoback.reseat.domain.payment.service;
 
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.payment.entity.Payment;
@@ -17,11 +21,6 @@ import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedExc
 import com.backtoback.reseat.domain.payment.exception.PaymentCallbackMismatchException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelNotAllowedException;
 import com.backtoback.reseat.domain.user.entity.User;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
 
 @DisplayName("PaymentServiceValidator 결제 검증")
 class PaymentServiceValidatorTest {
@@ -43,16 +42,16 @@ class PaymentServiceValidatorTest {
         when(user.getId()).thenReturn(USER_ID);
 
         return Payment.builder()
-                .paymentNo("PAY-20260727010000-000001")
-                .order(order)
-                .user(user)
-                .amount(AMOUNT)
-                .idempotencyKey(IDEMPOTENCY_KEY)
-                .status(status)
-                .pgProvider(PgProvider.TOSS)
-                .pgOrderId(PG_ORDER_ID)
-                .pgPaymentKey(pgPaymentKey)
-                .build();
+            .paymentNo("PAY-20260727010000-000001")
+            .order(order)
+            .user(user)
+            .amount(AMOUNT)
+            .idempotencyKey(IDEMPOTENCY_KEY)
+            .status(status)
+            .pgProvider(PgProvider.TOSS)
+            .pgOrderId(PG_ORDER_ID)
+            .pgPaymentKey(pgPaymentKey)
+            .build();
     }
 
     private Payment readyPayment() {
@@ -67,16 +66,16 @@ class PaymentServiceValidatorTest {
         @DisplayName("값이 있는 멱등키는 사용할 수 있다.")
         void acceptsPresentKey() {
             assertThatCode(() -> validator.validateIdempotencyKey(IDEMPOTENCY_KEY))
-                    .doesNotThrowAnyException();
+                .doesNotThrowAnyException();
         }
 
         @Test
         @DisplayName("null 또는 공백 멱등키는 필수 값 예외가 발생한다.")
         void rejectsMissingKey() {
             assertThatThrownBy(() -> validator.validateIdempotencyKey(null))
-                    .isInstanceOf(IdempotencyKeyRequiredException.class);
+                .isInstanceOf(IdempotencyKeyRequiredException.class);
             assertThatThrownBy(() -> validator.validateIdempotencyKey(" "))
-                    .isInstanceOf(IdempotencyKeyRequiredException.class);
+                .isInstanceOf(IdempotencyKeyRequiredException.class);
         }
     }
 
@@ -90,7 +89,7 @@ class PaymentServiceValidatorTest {
             Payment payment = readyPayment();
 
             assertThatCode(() -> validator.validateIdempotencyRequest(payment, ORDER_ID))
-                    .doesNotThrowAnyException();
+                .doesNotThrowAnyException();
         }
 
         @Test
@@ -99,7 +98,7 @@ class PaymentServiceValidatorTest {
             Payment payment = readyPayment();
 
             assertThatThrownBy(() -> validator.validateIdempotencyRequest(payment, 999L))
-                    .isInstanceOf(IdempotencyKeyConflictException.class);
+                .isInstanceOf(IdempotencyKeyConflictException.class);
         }
     }
 
@@ -113,7 +112,7 @@ class PaymentServiceValidatorTest {
             Payment payment = readyPayment();
 
             assertThatCode(() -> validator.validateActiveIdempotencyKey(payment, IDEMPOTENCY_KEY))
-                    .doesNotThrowAnyException();
+                .doesNotThrowAnyException();
         }
 
         @Test
@@ -122,7 +121,7 @@ class PaymentServiceValidatorTest {
             Payment payment = readyPayment();
 
             assertThatThrownBy(() -> validator.validateActiveIdempotencyKey(payment, "inactive-key"))
-                    .isInstanceOf(IdempotencyKeyUnavailableException.class);
+                .isInstanceOf(IdempotencyKeyUnavailableException.class);
         }
     }
 
@@ -136,7 +135,7 @@ class PaymentServiceValidatorTest {
             Payment payment = readyPayment();
 
             assertThatCode(() -> validator.validateOwner(payment, USER_ID))
-                    .doesNotThrowAnyException();
+                .doesNotThrowAnyException();
         }
 
         @Test
@@ -145,7 +144,7 @@ class PaymentServiceValidatorTest {
             Payment payment = readyPayment();
 
             assertThatThrownBy(() -> validator.validateOwner(payment, 999L))
-                    .isInstanceOf(PaymentAccessDeniedException.class);
+                .isInstanceOf(PaymentAccessDeniedException.class);
         }
     }
 
@@ -159,21 +158,17 @@ class PaymentServiceValidatorTest {
             Payment payment = readyPayment();
 
             assertThatCode(() -> validator.validateConfirmable(payment, PG_ORDER_ID, AMOUNT))
-                    .doesNotThrowAnyException();
+                .doesNotThrowAnyException();
         }
 
         @ParameterizedTest(name = "{0} 상태의 결제는 승인할 수 없다")
-        @EnumSource(
-                value = PaymentStatus.class,
-                mode = EnumSource.Mode.EXCLUDE,
-                names = "READY"
-        )
+        @EnumSource(value = PaymentStatus.class, mode = EnumSource.Mode.EXCLUDE, names = "READY")
         @DisplayName("READY가 아닌 모든 결제는 이미 처리된 결제 예외가 발생한다.")
         void rejectsFinalizedPayment(PaymentStatus status) {
             Payment payment = payment(status, PG_PAYMENT_KEY);
 
             assertThatThrownBy(() -> validator.validateConfirmable(payment, PG_ORDER_ID, AMOUNT))
-                    .isInstanceOf(PaymentAlreadyFinalizedException.class);
+                .isInstanceOf(PaymentAlreadyFinalizedException.class);
         }
     }
 
@@ -187,21 +182,17 @@ class PaymentServiceValidatorTest {
             Payment payment = readyPayment();
 
             assertThatCode(() -> validator.validateFailable(payment))
-                    .doesNotThrowAnyException();
+                .doesNotThrowAnyException();
         }
 
         @ParameterizedTest(name = "{0} 상태의 결제는 실패 처리할 수 없다")
-        @EnumSource(
-                value = PaymentStatus.class,
-                mode = EnumSource.Mode.EXCLUDE,
-                names = "READY"
-        )
+        @EnumSource(value = PaymentStatus.class, mode = EnumSource.Mode.EXCLUDE, names = "READY")
         @DisplayName("READY가 아닌 모든 결제는 이미 처리된 결제 예외가 발생한다.")
         void rejectsFinalizedPayment(PaymentStatus status) {
             Payment payment = payment(status, PG_PAYMENT_KEY);
 
             assertThatThrownBy(() -> validator.validateFailable(payment))
-                    .isInstanceOf(PaymentAlreadyFinalizedException.class);
+                .isInstanceOf(PaymentAlreadyFinalizedException.class);
         }
     }
 
@@ -215,21 +206,17 @@ class PaymentServiceValidatorTest {
             Payment payment = payment(PaymentStatus.APPROVED, PG_PAYMENT_KEY);
 
             assertThatCode(() -> validator.validateCancelable(payment))
-                    .doesNotThrowAnyException();
+                .doesNotThrowAnyException();
         }
 
         @ParameterizedTest(name = "{0} 상태의 결제는 취소할 수 없다")
-        @EnumSource(
-                value = PaymentStatus.class,
-                mode = EnumSource.Mode.EXCLUDE,
-                names = "APPROVED"
-        )
+        @EnumSource(value = PaymentStatus.class, mode = EnumSource.Mode.EXCLUDE, names = "APPROVED")
         @DisplayName("APPROVED가 아닌 모든 결제는 취소할 수 없다.")
         void rejectsUnapprovedPayment(PaymentStatus status) {
             Payment payment = payment(status, PG_PAYMENT_KEY);
 
             assertThatThrownBy(() -> validator.validateCancelable(payment))
-                    .isInstanceOf(PaymentCancelNotAllowedException.class);
+                .isInstanceOf(PaymentCancelNotAllowedException.class);
         }
 
         @Test
@@ -238,8 +225,8 @@ class PaymentServiceValidatorTest {
             Payment payment = payment(PaymentStatus.APPROVED, null);
 
             assertThatThrownBy(() -> validator.validateCancelable(payment))
-                    .isInstanceOf(PaymentCancelNotAllowedException.class)
-                    .hasMessage("PG 결제 키가 없어 결제를 취소할 수 없습니다.");
+                .isInstanceOf(PaymentCancelNotAllowedException.class)
+                .hasMessage("PG 결제 키가 없어 결제를 취소할 수 없습니다.");
         }
     }
 
@@ -253,7 +240,7 @@ class PaymentServiceValidatorTest {
             Payment payment = readyPayment();
 
             assertThatCode(() -> validator.validatePgOrderId(payment, PG_ORDER_ID))
-                    .doesNotThrowAnyException();
+                .doesNotThrowAnyException();
         }
 
         @Test
@@ -262,7 +249,7 @@ class PaymentServiceValidatorTest {
             Payment payment = readyPayment();
 
             assertThatThrownBy(() -> validator.validatePgOrderId(payment, "different-order"))
-                    .isInstanceOf(PaymentCallbackMismatchException.class);
+                .isInstanceOf(PaymentCallbackMismatchException.class);
         }
     }
 
@@ -276,7 +263,7 @@ class PaymentServiceValidatorTest {
             Payment payment = readyPayment();
 
             assertThatCode(() -> validator.validateAmount(payment, AMOUNT))
-                    .doesNotThrowAnyException();
+                .doesNotThrowAnyException();
         }
 
         @Test
@@ -285,7 +272,7 @@ class PaymentServiceValidatorTest {
             Payment payment = readyPayment();
 
             assertThatThrownBy(() -> validator.validateAmount(payment, AMOUNT + 1))
-                    .isInstanceOf(PaymentCallbackMismatchException.class);
+                .isInstanceOf(PaymentCallbackMismatchException.class);
         }
     }
 }

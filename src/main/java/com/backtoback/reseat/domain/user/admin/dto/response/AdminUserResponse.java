@@ -1,11 +1,12 @@
 package com.backtoback.reseat.domain.user.admin.dto.response;
 
+import java.time.LocalDateTime;
+
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserRole;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
-import lombok.Getter;
 
-import java.time.LocalDateTime;
+import lombok.Getter;
 
 @Getter
 public class AdminUserResponse {

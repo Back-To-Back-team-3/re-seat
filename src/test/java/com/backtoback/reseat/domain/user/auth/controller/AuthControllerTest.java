@@ -1,10 +1,10 @@
 package com.backtoback.reseat.domain.user.auth.controller;
 
-import com.backtoback.reseat.domain.user.auth.dto.request.UserLoginRequest;
-import com.backtoback.reseat.domain.user.auth.dto.response.TokenResponse;
-import com.backtoback.reseat.domain.user.auth.service.AuthService;
-import com.backtoback.reseat.global.exception.GlobalExceptionHandler;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,11 +15,11 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.backtoback.reseat.domain.user.auth.dto.request.UserLoginRequest;
+import com.backtoback.reseat.domain.user.auth.dto.response.TokenResponse;
+import com.backtoback.reseat.domain.user.auth.service.AuthService;
+import com.backtoback.reseat.global.exception.GlobalExceptionHandler;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @WebMvcTest(AuthController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -41,21 +41,21 @@ class AuthControllerTest {
         // given
         UserLoginRequest request = new UserLoginRequest("user@test.com", "Password123!");
         TokenResponse response = TokenResponse.builder()
-                .accessToken("mock-access-token")
-                .refreshToken("mock-refresh-token")
-                .build();
+            .accessToken("mock-access-token")
+            .refreshToken("mock-refresh-token")
+            .build();
 
         when(authService.login(any(UserLoginRequest.class))).thenReturn(response);
 
         // when & then
         mockMvc.perform(post("/api/v1/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("로그인 성공 완료"))
-                .andExpect(jsonPath("$.data.accessToken").value("mock-access-token"))
-                .andExpect(jsonPath("$.data.refreshToken").value("mock-refresh-token"));
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.message").value("로그인 성공 완료"))
+            .andExpect(jsonPath("$.data.accessToken").value("mock-access-token"))
+            .andExpect(jsonPath("$.data.refreshToken").value("mock-refresh-token"));
     }
 
     @Test
@@ -66,8 +66,8 @@ class AuthControllerTest {
 
         // when & then
         mockMvc.perform(post("/api/v1/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest());
     }
 }

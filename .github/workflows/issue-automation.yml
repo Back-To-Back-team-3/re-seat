@@ -2,7 +2,7 @@ name: Issue Automation
 
 on:
   issues:
-    types: [opened, edited]
+    types: [ opened, edited ]
 
 permissions:
   contents: read
@@ -58,7 +58,7 @@ jobs:
               printf "%s" "f0f913a0"
             fi
           }
-          
+
           priority_option_id="$(get_priority_option_id "$body")"
 
           get_size_option_id() {

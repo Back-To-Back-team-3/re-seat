@@ -1,13 +1,13 @@
 package com.backtoback.reseat.domain.reservation.entity;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.*;
 
-import com.backtoback.reseat.domain.reservation.exception.InvalidReservationStatusException;
+import java.time.LocalDateTime;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDateTime;
+import com.backtoback.reseat.domain.reservation.exception.InvalidReservationStatusException;
 
 @DisplayName("Reservation 상태 전이")
 class ReservationTest {

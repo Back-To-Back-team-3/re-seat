@@ -1,5 +1,19 @@
 package com.backtoback.reseat.domain.queue.service;
 
+import java.time.LocalDateTime;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
@@ -16,20 +30,8 @@ import com.backtoback.reseat.domain.queue.repository.QueueEntryHistoryRepository
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import org.redisson.api.RLock;
-import org.redisson.api.RedissonClient;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ZSetOperations;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import java.time.LocalDateTime;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 대기열 통과 대상자에게 입장 토큰을 발급하는 서비스
@@ -85,8 +87,7 @@ public class AdmissionTokenService {
             // leaseTime을 지정하지 않았으므로 작업 중에는 Redisson Watchdog이 락 만료 시간을 자동으로 연장한다.
             locked = lock.tryLock(
                 ADMIT_LOCK_WAIT_SECONDS,
-                TimeUnit.SECONDS
-            );
+                TimeUnit.SECONDS);
 
             if (!locked) {
                 return 0;
@@ -145,8 +146,7 @@ public class AdmissionTokenService {
                         gameId,
                         userId,
                         AdmissionTokenStatus.ACTIVE,
-                        LocalDateTime.now()
-                    )
+                        LocalDateTime.now())
                     .orElse(null);
 
                 // 이전 처리에서 활성 토큰은 발급됐지만 DB 대기 이력이 WAITING으로 남은 경우 기존 토큰을 재사용한다.
@@ -260,7 +260,6 @@ public class AdmissionTokenService {
             .orElseThrow(QueueTokenInvalidException::new);
 
         validateTokenContext(admissionToken, userId, gameId);
-
 
         admissionToken.reactivate(now);
     }

@@ -1,5 +1,27 @@
 package com.backtoback.reseat.domain.reservation.service;
 
+import static org.assertj.core.api.Assertions.*;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
@@ -26,60 +48,53 @@ import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserRole;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
+
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * [이슈 #173] Redisson 분산락 Facade 경로 동시성 회귀 테스트.
  *
  * <p> 이 테스트는 SeatHoldFacade를 통해 실제 락 경로를 검증한다.</p>
  * <p> 핵심 검증:
- *     - 동일 좌석 N 요청 → 성공 1건, 나머지 409
- *     - reservation_seats 행 1건
- *     - DB 유니크 위반 0건
- *     - 예상 외 예외 0건
+ * - 동일 좌석 N 요청 → 성공 1건, 나머지 409
+ * - reservation_seats 행 1건
+ * - DB 유니크 위반 0건
+ * - 예상 외 예외 0건
  * </p>
  */
 @Disabled("테스트 제외")
 @Slf4j
-@EnabledIfEnvironmentVariable(
-    named = "RUN_CONCURRENCY_TESTS",
-    matches = "true"
-)
+@EnabledIfEnvironmentVariable(named = "RUN_CONCURRENCY_TESTS", matches = "true")
 @Tag("concurrency")
 @ActiveProfiles("test-concurrency")
 @SpringBootTest
 class SeatHoldFacadeConcurrencyTest {
 
     private static final int THREAD_COUNT = 10;
-
-    @Autowired private SeatHoldFacade seatHoldFacade;
-    @Autowired private ReservationRepository reservationRepository;
-    @Autowired private ReservationSeatRepository reservationSeatRepository;
-    @Autowired private GameSeatRepository gameSeatRepository;
-    @Autowired private GameRepository gameRepository;
-    @Autowired private SeatRepository seatRepository;
-    @Autowired private SeatZoneRepository seatZoneRepository;
-    @Autowired private StadiumRepository stadiumRepository;
-    @Autowired private TeamRepository teamRepository;
-    @Autowired private UserRepository userRepository;
-    @Autowired private AdmissionTokenRepository admissionTokenRepository;
-
+    private final List<Long> userIds = new ArrayList<>();
+    private final List<Long> tokenIds = new ArrayList<>();
+    @Autowired
+    private SeatHoldFacade seatHoldFacade;
+    @Autowired
+    private ReservationRepository reservationRepository;
+    @Autowired
+    private ReservationSeatRepository reservationSeatRepository;
+    @Autowired
+    private GameSeatRepository gameSeatRepository;
+    @Autowired
+    private GameRepository gameRepository;
+    @Autowired
+    private SeatRepository seatRepository;
+    @Autowired
+    private SeatZoneRepository seatZoneRepository;
+    @Autowired
+    private StadiumRepository stadiumRepository;
+    @Autowired
+    private TeamRepository teamRepository;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private AdmissionTokenRepository admissionTokenRepository;
     private Long targetGameSeatId;
     private Long gameId;
     private Long seatId;
@@ -87,8 +102,6 @@ class SeatHoldFacadeConcurrencyTest {
     private Long stadiumId;
     private Long homeTeamId;
     private Long awayTeamId;
-    private final List<Long> userIds = new ArrayList<>();
-    private final List<Long> tokenIds = new ArrayList<>();
 
     // @Transactional 금지 → @AfterEach 수동 정리
     @BeforeEach
@@ -154,8 +167,7 @@ class SeatHoldFacadeConcurrencyTest {
                 user,
                 "qt_test-token-" + i,
                 LocalDateTime.now(),
-                LocalDateTime.now().plusMinutes(5)
-            );
+                LocalDateTime.now().plusMinutes(5));
             admissionTokenRepository.save(token);
             tokenIds.add(token.getId());
         }
@@ -170,12 +182,18 @@ class SeatHoldFacadeConcurrencyTest {
         reservationRepository.deleteAll();
 
         gameSeatRepository.deleteAll();
-        if (gameId != null) gameRepository.deleteById(gameId);
-        if (seatId != null) seatRepository.deleteById(seatId);
-        if (seatZoneId != null) seatZoneRepository.deleteById(seatZoneId);
-        if (homeTeamId != null) teamRepository.deleteById(homeTeamId);
-        if (awayTeamId != null) teamRepository.deleteById(awayTeamId);
-        if (stadiumId != null) stadiumRepository.deleteById(stadiumId);
+        if (gameId != null)
+            gameRepository.deleteById(gameId);
+        if (seatId != null)
+            seatRepository.deleteById(seatId);
+        if (seatZoneId != null)
+            seatZoneRepository.deleteById(seatZoneId);
+        if (homeTeamId != null)
+            teamRepository.deleteById(homeTeamId);
+        if (awayTeamId != null)
+            teamRepository.deleteById(awayTeamId);
+        if (stadiumId != null)
+            stadiumRepository.deleteById(stadiumId);
 
         if (!userIds.isEmpty()) {
             userRepository.deleteAllById(userIds);

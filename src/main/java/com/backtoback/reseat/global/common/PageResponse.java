@@ -1,9 +1,10 @@
 package com.backtoback.reseat.global.common;
 
-import lombok.Getter;
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 
-import java.util.List;
+import lombok.Getter;
 
 @Getter
 public class PageResponse<T> {

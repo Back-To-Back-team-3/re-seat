@@ -2,10 +2,10 @@ name: Discord Notification
 
 on:
   pull_request:
-    types: [opened, ready_for_review, reopened, closed]
+    types: [ opened, ready_for_review, reopened, closed ]
   workflow_run:
-    workflows: ["CI"]
-    types: [completed]
+    workflows: [ "CI" ]
+    types: [ completed ]
 
 permissions:
   contents: read

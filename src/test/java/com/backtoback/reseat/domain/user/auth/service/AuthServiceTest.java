@@ -1,5 +1,16 @@
 package com.backtoback.reseat.domain.user.auth.service;
 
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import java.util.Optional;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
 import com.backtoback.reseat.domain.user.auth.dto.request.UserLoginRequest;
 import com.backtoback.reseat.domain.user.auth.dto.response.TokenResponse;
 import com.backtoback.reseat.domain.user.entity.User;
@@ -13,17 +24,6 @@ import com.backtoback.reseat.domain.user.repository.RefreshTokenRepository;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
 import com.backtoback.reseat.global.common.BaseUnitTest;
 import com.backtoback.reseat.global.security.JwtTokenProvider;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.springframework.security.crypto.password.PasswordEncoder;
-
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.when;
 
 class AuthServiceTest extends BaseUnitTest {
 
@@ -48,12 +48,12 @@ class AuthServiceTest extends BaseUnitTest {
         // given
         UserLoginRequest request = new UserLoginRequest("user@test.com", "password123!");
         User user = User.builder()
-                .id(1L)
-                .email("user@test.com")
-                .password("encodedPassword")
-                .role(UserRole.USER)
-                .status(UserStatus.ACTIVE)
-                .build();
+            .id(1L)
+            .email("user@test.com")
+            .password("encodedPassword")
+            .role(UserRole.USER)
+            .status(UserStatus.ACTIVE)
+            .build();
 
         when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("password123!", "encodedPassword")).thenReturn(true);
@@ -79,8 +79,8 @@ class AuthServiceTest extends BaseUnitTest {
 
         // when & then
         assertThatThrownBy(() -> authService.login(request))
-                .isInstanceOf(UserNotFoundException.class)
-                .hasMessage("존재하지 않는 회원입니다.");
+            .isInstanceOf(UserNotFoundException.class)
+            .hasMessage("존재하지 않는 회원입니다.");
     }
 
     @Test
@@ -89,20 +89,20 @@ class AuthServiceTest extends BaseUnitTest {
         // given
         UserLoginRequest request = new UserLoginRequest("user@test.com", "wrongPassword");
         User user = User.builder()
-                .id(1L)
-                .email("user@test.com")
-                .password("encodedPassword")
-                .role(UserRole.USER)
-                .status(UserStatus.ACTIVE)
-                .build();
+            .id(1L)
+            .email("user@test.com")
+            .password("encodedPassword")
+            .role(UserRole.USER)
+            .status(UserStatus.ACTIVE)
+            .build();
 
         when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("wrongPassword", "encodedPassword")).thenReturn(false);
 
         // when & then
         assertThatThrownBy(() -> authService.login(request))
-                .isInstanceOf(InvalidPasswordException.class)
-                .hasMessage("비밀번호가 올바르지 않습니다.");
+            .isInstanceOf(InvalidPasswordException.class)
+            .hasMessage("비밀번호가 올바르지 않습니다.");
     }
 
     @Test
@@ -111,20 +111,20 @@ class AuthServiceTest extends BaseUnitTest {
         // given
         UserLoginRequest request = new UserLoginRequest("user@test.com", "password123!");
         User user = User.builder()
-                .id(1L)
-                .email("user@test.com")
-                .password("encodedPassword")
-                .role(UserRole.USER)
-                .status(UserStatus.SUSPENDED)
-                .build();
+            .id(1L)
+            .email("user@test.com")
+            .password("encodedPassword")
+            .role(UserRole.USER)
+            .status(UserStatus.SUSPENDED)
+            .build();
 
         when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("password123!", "encodedPassword")).thenReturn(true);
 
         // when & then
         assertThatThrownBy(() -> authService.login(request))
-                .isInstanceOf(SuspendedUserException.class)
-                .hasMessage("이용이 정지된 계정입니다.");
+            .isInstanceOf(SuspendedUserException.class)
+            .hasMessage("이용이 정지된 계정입니다.");
     }
 
     @Test
@@ -133,19 +133,19 @@ class AuthServiceTest extends BaseUnitTest {
         // given
         UserLoginRequest request = new UserLoginRequest("user@test.com", "password123!");
         User user = User.builder()
-                .id(1L)
-                .email("user@test.com")
-                .password("encodedPassword")
-                .role(UserRole.USER)
-                .status(UserStatus.DELETED)
-                .build();
+            .id(1L)
+            .email("user@test.com")
+            .password("encodedPassword")
+            .role(UserRole.USER)
+            .status(UserStatus.DELETED)
+            .build();
 
         when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("password123!", "encodedPassword")).thenReturn(true);
 
         // when & then
         assertThatThrownBy(() -> authService.login(request))
-                .isInstanceOf(DeleteUserException.class)
-                .hasMessage("탈퇴 처리된 계정입니다.");
+            .isInstanceOf(DeleteUserException.class)
+            .hasMessage("탈퇴 처리된 계정입니다.");
     }
 }

@@ -1,14 +1,5 @@
 package com.backtoback.reseat.domain.ticket.controller;
 
-import com.backtoback.reseat.domain.ticket.dto.response.TicketCancelResponse;
-import com.backtoback.reseat.domain.ticket.dto.response.TicketDetailResponse;
-import com.backtoback.reseat.domain.ticket.dto.response.TicketListResponse;
-import com.backtoback.reseat.domain.ticket.entity.TicketStatus;
-import com.backtoback.reseat.domain.ticket.service.TicketService;
-import com.backtoback.reseat.global.common.ApiResponse;
-import com.backtoback.reseat.global.common.PageResponse;
-import com.backtoback.reseat.global.security.CustomUserDetails;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -20,6 +11,17 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.backtoback.reseat.domain.ticket.dto.response.TicketCancelResponse;
+import com.backtoback.reseat.domain.ticket.dto.response.TicketDetailResponse;
+import com.backtoback.reseat.domain.ticket.dto.response.TicketListResponse;
+import com.backtoback.reseat.domain.ticket.entity.TicketStatus;
+import com.backtoback.reseat.domain.ticket.service.TicketService;
+import com.backtoback.reseat.global.common.ApiResponse;
+import com.backtoback.reseat.global.common.PageResponse;
+import com.backtoback.reseat.global.security.CustomUserDetails;
+
+import lombok.RequiredArgsConstructor;
 
 /**
  * 사용자 티켓 API 컨트롤러
@@ -52,19 +54,19 @@ public class TicketController {
      */
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<TicketListResponse>>> getMyTickets(
-        @AuthenticationPrincipal CustomUserDetails userDetails,
-        @RequestParam(required = false) TicketStatus status,
-        @PageableDefault(size = 20) Pageable pageable
-    ) {
+        @AuthenticationPrincipal
+        CustomUserDetails userDetails,
+        @RequestParam(required = false)
+        TicketStatus status,
+        @PageableDefault(size = 20)
+        Pageable pageable) {
         Page<TicketListResponse> response = ticketService.getMyTickets(
             userDetails.getId(),
             status,
-            pageable
-        );
+            pageable);
 
         return ResponseEntity.ok(
-            ApiResponse.success("내 티켓 목록 조회 완료", PageResponse.of(response))
-        );
+            ApiResponse.success("내 티켓 목록 조회 완료", PageResponse.of(response)));
     }
 
     /**
@@ -78,17 +80,16 @@ public class TicketController {
      */
     @GetMapping("/{ticketId}")
     public ResponseEntity<ApiResponse<TicketDetailResponse>> getTicket(
-        @AuthenticationPrincipal CustomUserDetails userDetails,
-        @PathVariable Long ticketId
-    ) {
+        @AuthenticationPrincipal
+        CustomUserDetails userDetails,
+        @PathVariable
+        Long ticketId) {
         TicketDetailResponse response = ticketService.getTicket(
             userDetails.getId(),
-            ticketId
-        );
+            ticketId);
 
         return ResponseEntity.ok(
-            ApiResponse.success("티켓 상세 조회 완료", response)
-        );
+            ApiResponse.success("티켓 상세 조회 완료", response));
     }
 
     /**
@@ -102,16 +103,15 @@ public class TicketController {
      */
     @PostMapping("/{ticketId}/cancel")
     public ResponseEntity<ApiResponse<TicketCancelResponse>> cancelTicket(
-        @AuthenticationPrincipal CustomUserDetails userDetails,
-        @PathVariable Long ticketId
-    ) {
+        @AuthenticationPrincipal
+        CustomUserDetails userDetails,
+        @PathVariable
+        Long ticketId) {
         TicketCancelResponse response = ticketService.cancelTicket(
             userDetails.getId(),
-            ticketId
-        );
+            ticketId);
 
         return ResponseEntity.ok(
-            ApiResponse.success("티켓 취소 완료", response)
-        );
+            ApiResponse.success("티켓 취소 완료", response));
     }
 }

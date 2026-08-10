@@ -1,13 +1,14 @@
 package com.backtoback.reseat.domain.order.repository;
 
-import com.backtoback.reseat.domain.order.entity.Order;
-import com.backtoback.reseat.domain.order.entity.OrderStatus;
+import java.time.LocalDateTime;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
+import com.backtoback.reseat.domain.order.entity.Order;
+import com.backtoback.reseat.domain.order.entity.OrderStatus;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
@@ -32,8 +33,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
         AND o.paymentDeadline <= :now
         """)
     int expireCreatedOrders(
-        @Param("now") LocalDateTime now,
-        @Param("created") OrderStatus created,
-        @Param("expired") OrderStatus expired
-    );
+        @Param("now")
+        LocalDateTime now,
+        @Param("created")
+        OrderStatus created,
+        @Param("expired")
+        OrderStatus expired);
 }

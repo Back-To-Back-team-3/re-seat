@@ -2,12 +2,15 @@
 
 package com.backtoback.reseat.domain.payment.entity;
 
+import java.time.LocalDateTime;
+
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCallbackMismatchException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelNotAllowedException;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.global.common.BaseEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -28,22 +31,16 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 // JPA 엔티티 + Lombok 기본 설정
 @Entity
-@Table(
-    name = "payments",
-    uniqueConstraints = {
-        @UniqueConstraint(name = "uk_payments_no", columnNames = "payment_no"),
-        @UniqueConstraint(name = "uk_payments_order", columnNames = "order_id"),
-        @UniqueConstraint(name = "uk_payments_idempotency_key", columnNames = "idempotency_key"),
-        @UniqueConstraint(name = "uk_payments_pg_payment_key", columnNames = "pg_payment_key")
-    },
-    indexes = {
-        @Index(name = "idx_payments_user_status", columnList = "user_id, status")
-    }
-)
+@Table(name = "payments", uniqueConstraints = {
+    @UniqueConstraint(name = "uk_payments_no", columnNames = "payment_no"),
+    @UniqueConstraint(name = "uk_payments_order", columnNames = "order_id"),
+    @UniqueConstraint(name = "uk_payments_idempotency_key", columnNames = "idempotency_key"),
+    @UniqueConstraint(name = "uk_payments_pg_payment_key", columnNames = "pg_payment_key")
+}, indexes = {
+    @Index(name = "idx_payments_user_status", columnList = "user_id, status")
+})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Payment extends BaseEntity {
@@ -58,11 +55,7 @@ public class Payment extends BaseEntity {
     private String paymentNo;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-        name = "order_id",
-        nullable = false,
-        foreignKey = @ForeignKey(name = "fk_payments_order")
-    )
+    @JoinColumn(name = "order_id", nullable = false, foreignKey = @ForeignKey(name = "fk_payments_order"))
     private Order order;
 
     // 결제 사용자
@@ -115,9 +108,9 @@ public class Payment extends BaseEntity {
     // 빌더 생성자
     @Builder
     public Payment(String paymentNo, Order order, User user, Integer amount,
-                   String method, PaymentStatus status, String idempotencyKey,
-                   PgProvider pgProvider, String pgOrderId, String pgPaymentKey,
-                   String failReason, LocalDateTime approvedAt, LocalDateTime failedAt) {
+        String method, PaymentStatus status, String idempotencyKey,
+        PgProvider pgProvider, String pgOrderId, String pgPaymentKey,
+        String failReason, LocalDateTime approvedAt, LocalDateTime failedAt) {
         this.paymentNo = paymentNo;
         this.order = order;
         this.user = user;

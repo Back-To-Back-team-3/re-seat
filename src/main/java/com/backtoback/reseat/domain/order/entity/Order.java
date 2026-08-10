@@ -1,9 +1,12 @@
 package com.backtoback.reseat.domain.order.entity;
 
+import java.time.LocalDateTime;
+
 import com.backtoback.reseat.domain.order.exception.InvalidOrderStatusException;
 import com.backtoback.reseat.domain.reservation.entity.Reservation;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.global.common.BaseEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -23,19 +26,13 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Entity
-@Table(
-    name = "orders",
-    uniqueConstraints = {
-        @UniqueConstraint(name = "uk_orders_no", columnNames = "order_no"),
-        @UniqueConstraint(name = "uk_orders_reservation", columnNames = "reservation_id")
-    },
-    indexes = {
-        @Index(name = "idx_orders_user_status", columnList = "user_id, status")
-    }
-)
+@Table(name = "orders", uniqueConstraints = {
+    @UniqueConstraint(name = "uk_orders_no", columnNames = "order_no"),
+    @UniqueConstraint(name = "uk_orders_reservation", columnNames = "reservation_id")
+}, indexes = {
+    @Index(name = "idx_orders_user_status", columnList = "user_id, status")
+})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Order extends BaseEntity {
@@ -48,19 +45,11 @@ public class Order extends BaseEntity {
     private String orderNo;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-        name = "user_id",
-        nullable = false,
-        foreignKey = @ForeignKey(name = "fk_orders_user")
-    )
+    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_orders_user"))
     private User user;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-        name = "reservation_id",
-        nullable = false,
-        foreignKey = @ForeignKey(name = "fk_orders_reservation")
-    )
+    @JoinColumn(name = "reservation_id", nullable = false, foreignKey = @ForeignKey(name = "fk_orders_reservation"))
     private Reservation reservation;
 
     @Column(name = "total_amount", nullable = false)
@@ -87,8 +76,7 @@ public class Order extends BaseEntity {
         User user,
         Reservation reservation,
         int totalAmount,
-        LocalDateTime paymentDeadline
-    ) {
+        LocalDateTime paymentDeadline) {
         Order order = new Order();
         order.orderNo = orderNo;
         order.user = user;

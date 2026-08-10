@@ -1,6 +1,7 @@
 package com.backtoback.reseat.domain.seatinventory.dto;
 
 import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
@@ -32,6 +33,5 @@ public record ZoneSummaryResponse(
     int totalCount,
 
     @Schema(description = "잔여 좌석 수 (AVAILABLE)", example = "42")
-    int availableCount
-) {
+    int availableCount) {
 }

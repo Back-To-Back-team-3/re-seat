@@ -1,14 +1,5 @@
 package com.backtoback.reseat.domain.user.admin.controller;
 
-import com.backtoback.reseat.domain.user.admin.dto.request.AdminUserRoleUpdateRequest;
-import com.backtoback.reseat.domain.user.admin.dto.request.AdminUserStatusUpdateRequest;
-import com.backtoback.reseat.domain.user.admin.dto.request.UserSearchCondition;
-import com.backtoback.reseat.domain.user.admin.dto.response.AdminUserResponse;
-import com.backtoback.reseat.domain.user.admin.service.AdminUserService;
-import com.backtoback.reseat.global.common.ApiResponse;
-import com.backtoback.reseat.global.common.PageResponse;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -22,6 +13,17 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.backtoback.reseat.domain.user.admin.dto.request.AdminUserRoleUpdateRequest;
+import com.backtoback.reseat.domain.user.admin.dto.request.AdminUserStatusUpdateRequest;
+import com.backtoback.reseat.domain.user.admin.dto.request.UserSearchCondition;
+import com.backtoback.reseat.domain.user.admin.dto.response.AdminUserResponse;
+import com.backtoback.reseat.domain.user.admin.service.AdminUserService;
+import com.backtoback.reseat.global.common.ApiResponse;
+import com.backtoback.reseat.global.common.PageResponse;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
 @RestController
 @RequestMapping("/api/v1/admin/users")
 @RequiredArgsConstructor
@@ -33,10 +35,10 @@ public class AdminUserController {
     //반환 타입을 PageResponse<AdminUserResponse> 로 격리 수용 변경
     public ResponseEntity<ApiResponse<PageResponse<AdminUserResponse>>> searchUsers(
         UserSearchCondition condition,
-        @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+        Pageable pageable) {
 
         Page<AdminUserResponse> pageResult = adminUserService.searchUsers(condition, pageable);
-
 
         return ResponseEntity
             .status(HttpStatus.OK)
@@ -44,7 +46,8 @@ public class AdminUserController {
     }
 
     @GetMapping("/{userId}")
-    public ResponseEntity<ApiResponse<AdminUserResponse>> getUserDetail(@PathVariable Long userId) {
+    public ResponseEntity<ApiResponse<AdminUserResponse>> getUserDetail(@PathVariable
+    Long userId) {
         AdminUserResponse response = adminUserService.getUserDetail(userId);
         return ResponseEntity
             .status(HttpStatus.OK)
@@ -53,8 +56,10 @@ public class AdminUserController {
 
     @PatchMapping("/{userId}/role")
     public ResponseEntity<ApiResponse<Void>> updateUserRole(
-        @PathVariable Long userId,
-        @Valid @RequestBody AdminUserRoleUpdateRequest request) {
+        @PathVariable
+        Long userId,
+        @Valid @RequestBody
+        AdminUserRoleUpdateRequest request) {
 
         adminUserService.updateUserRole(userId, request.getRole());
         return ResponseEntity
@@ -64,8 +69,10 @@ public class AdminUserController {
 
     @PatchMapping("/{userId}/status")
     public ResponseEntity<ApiResponse<Void>> updateUserStatus(
-        @PathVariable Long userId,
-        @Valid @RequestBody AdminUserStatusUpdateRequest request) {
+        @PathVariable
+        Long userId,
+        @Valid @RequestBody
+        AdminUserStatusUpdateRequest request) {
 
         adminUserService.updateUserStatus(userId, request.getStatus());
         return ResponseEntity

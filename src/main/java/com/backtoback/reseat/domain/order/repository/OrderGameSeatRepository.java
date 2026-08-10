@@ -1,14 +1,15 @@
 package com.backtoback.reseat.domain.order.repository;
 
-import com.backtoback.reseat.domain.order.entity.OrderStatus;
-import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
-import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
+import java.time.LocalDateTime;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
+import com.backtoback.reseat.domain.order.entity.OrderStatus;
+import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
+import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
 
 /**
  * 주문 만료 처리 과정에서 GameSeat 선점 해제를 담당하는 Repository
@@ -40,9 +41,12 @@ public interface OrderGameSeatRepository extends JpaRepository<GameSeat, Long> {
         )
         """)
     int releaseGameSeatsByExpiredOrders(
-        @Param("now") LocalDateTime now,
-        @Param("held") GameSeatStatus held,
-        @Param("orderExpired") OrderStatus orderExpired,
-        @Param("available") GameSeatStatus available
-    );
+        @Param("now")
+        LocalDateTime now,
+        @Param("held")
+        GameSeatStatus held,
+        @Param("orderExpired")
+        OrderStatus orderExpired,
+        @Param("available")
+        GameSeatStatus available);
 }

@@ -1,5 +1,23 @@
 package com.backtoback.reseat.domain.queue.service;
 
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.BDDMockito.*;
+
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
 import com.backtoback.reseat.domain.queue.dto.event.QueueEntryRequestedEvent;
@@ -18,24 +36,6 @@ import com.backtoback.reseat.domain.user.entity.UserStatus;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
 import com.backtoback.reseat.global.common.BaseIntegrationTest;
 import com.backtoback.reseat.global.service.TestDatabaseCleanUpService;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.redisson.api.RLock;
-import org.redisson.api.RedissonClient;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
 
 /**
  * Queue의 DB 대기 이력, Queue-Token과 Redis 대기열 간 정합성을 검증한다.
@@ -44,21 +44,32 @@ import static org.mockito.Mockito.mock;
 public class QueueConsistencyTest extends BaseIntegrationTest {
 
     // test 프로파일에는 RedissonClient Bean이 없으므로 분산 락만 Mock으로 대체한다.
-    @MockitoBean private RedissonClient redissonClient;
+    @MockitoBean
+    private RedissonClient redissonClient;
 
-    @Autowired private RedisTemplate<String, String> redisTemplate;
-    @Autowired private QueueEntryHistoryRepository queueEntryHistoryRepository;
-    @Autowired private AdmissionTokenRepository admissionTokenRepository;
+    @Autowired
+    private RedisTemplate<String, String> redisTemplate;
+    @Autowired
+    private QueueEntryHistoryRepository queueEntryHistoryRepository;
+    @Autowired
+    private AdmissionTokenRepository admissionTokenRepository;
 
-    @Autowired private GameRepository gameRepository;
-    @Autowired private UserRepository userRepository;
-    @Autowired private TeamRepository teamRepository;
-    @Autowired private StadiumRepository stadiumRepository;
+    @Autowired
+    private GameRepository gameRepository;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private TeamRepository teamRepository;
+    @Autowired
+    private StadiumRepository stadiumRepository;
 
-    @Autowired private QueueService queueService;
-    @Autowired private AdmissionTokenService admissionTokenService;
+    @Autowired
+    private QueueService queueService;
+    @Autowired
+    private AdmissionTokenService admissionTokenService;
 
-    @Autowired private TestDatabaseCleanUpService testDatabaseCleanUpService;
+    @Autowired
+    private TestDatabaseCleanUpService testDatabaseCleanUpService;
 
     private User user;
     private Game game;
@@ -70,43 +81,37 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
     void setUp() {
 
         Stadium stadium = stadiumRepository.save(
-                Stadium.of(
-                        "테스트 구장",
-                        "테스트시 테스트구",
-                        10_000
-                )
-        );
+            Stadium.of(
+                "테스트 구장",
+                "테스트시 테스트구",
+                10_000));
 
         Team team = teamRepository.save(
-                Team.of(
-                        "테스트팀",
-                        stadium
-                )
-        );
+            Team.of(
+                "테스트팀",
+                stadium));
 
         user = userRepository.save(
-                User.builder()
-                        .email("test-user@test.com")
-                        .password("test")
-                        .name("테스트 사용자")
-                        .phone("010-1234-5678")
-                        .isVerified(true)
-                        .role(UserRole.USER)
-                        .status(UserStatus.ACTIVE)
-                        .build()
-        );
+            User.builder()
+                .email("test-user@test.com")
+                .password("test")
+                .name("테스트 사용자")
+                .phone("010-1234-5678")
+                .isVerified(true)
+                .role(UserRole.USER)
+                .status(UserStatus.ACTIVE)
+                .build());
 
         game = gameRepository.save(
-                Game.builder()
-                        .homeTeam(team)
-                        .awayTeam(team)
-                        .stadium(stadium)
-                        .gameAt(LocalDateTime.now().plusDays(1))
-                        .bookingOpenAt(LocalDateTime.now().minusHours(1))
-                        .bookingCloseAt(LocalDateTime.now().plusHours(5))
-                        .title("테스트 경기")
-                        .build()
-        );
+            Game.builder()
+                .homeTeam(team)
+                .awayTeam(team)
+                .stadium(stadium)
+                .gameAt(LocalDateTime.now().plusDays(1))
+                .bookingOpenAt(LocalDateTime.now().minusHours(1))
+                .bookingCloseAt(LocalDateTime.now().plusHours(5))
+                .title("테스트 경기")
+                .build());
     }
 
     /**
@@ -127,11 +132,10 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
     private QueueEntryRequestedEvent queueEntryEvent(Instant requestedAt) {
 
         return new QueueEntryRequestedEvent(
-                UUID.randomUUID(),
-                game.getId(),
-                user.getId(),
-                requestedAt
-        );
+            UUID.randomUUID(),
+            game.getId(),
+            user.getId(),
+            requestedAt);
     }
 
     /**
@@ -143,22 +147,22 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
     private QueueEntryHistory findQueueEntryHistory(String queueKey) {
 
         return queueEntryHistoryRepository
-                .findByQueueKey(queueKey)
-                .orElseThrow();
+            .findByQueueKey(queueKey)
+            .orElseThrow();
     }
 
     /**
      * Redis 대기열에서 사용자의 점수를 조회한다.
      *
-     * @param redisKey 경기별 Redis 대기열 Key
+     * @param redisKey    경기별 Redis 대기열 Key
      * @param redisMember 사용자 Redis Member
      * @return Redis 대기열 점수, 등록되지 않은 경우 null
      */
     private Double queueScore(String redisKey, String redisMember) {
 
         return redisTemplate
-                .opsForZSet()
-                .score(redisKey, redisMember);
+            .opsForZSet()
+            .score(redisKey, redisMember);
     }
 
     @Test
@@ -171,11 +175,11 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
 
         RLock lock = mock(RLock.class);
         given(redissonClient.getLock(lockKey))
-                .willReturn(lock);
+            .willReturn(lock);
         given(lock.tryLock(1L, TimeUnit.SECONDS))
-                .willReturn(true);
+            .willReturn(true);
         given(lock.isHeldByCurrentThread())
-                .willReturn(true);
+            .willReturn(true);
 
         String redisKey = "queue:game:" + game.getId();
         String redisMember = "user:" + user.getId();
@@ -190,19 +194,19 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
         // then
         // 자동 입장은 DB 이력과 Queue-Token을 커밋한 뒤 Redis 대기열에서 사용자를 제거한다.
         assertThat(admittedCount)
-                .isEqualTo(1);
+            .isEqualTo(1);
         QueueEntryHistory admittedHistory = findQueueEntryHistory(queueKey);
         assertThat(admittedHistory.getStatus())
-                .isEqualTo(QueueEntryHistoryStatus.ADMITTED);
+            .isEqualTo(QueueEntryHistoryStatus.ADMITTED);
         assertThat(admissionTokenRepository
-                .findByGame_IdAndUser_IdAndStatusAndExpiresAtAfter(
-                        game.getId(),
-                        user.getId(),
-                        AdmissionTokenStatus.ACTIVE,
-                        LocalDateTime.now()))
-                .isPresent();
+            .findByGame_IdAndUser_IdAndStatusAndExpiresAtAfter(
+                game.getId(),
+                user.getId(),
+                AdmissionTokenStatus.ACTIVE,
+                LocalDateTime.now()))
+            .isPresent();
         assertThat(queueScore(redisKey, redisMember))
-                .isNull();
+            .isNull();
     }
 
     @Test
@@ -232,19 +236,19 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
         // then
         // 재진입은 기존 이력을 WAITING으로 되돌리고 Redis 대기열에 사용자를 다시 등록한다.
         assertThat(statusAfterCancel)
-                .isEqualTo(QueueEntryHistoryStatus.CANCELED);
+            .isEqualTo(QueueEntryHistoryStatus.CANCELED);
         assertThat(scoreAfterCancel)
-                .isNull();
+            .isNull();
 
         QueueEntryHistory reenteredHistory = findQueueEntryHistory(queueKey);
         assertThat(reenteredHistory.getStatus())
-                .isEqualTo(QueueEntryHistoryStatus.WAITING);
+            .isEqualTo(QueueEntryHistoryStatus.WAITING);
         assertThat(reenteredHistory.getCanceledAt())
-                .isNull();
+            .isNull();
 
         assertThat(queueEntryHistoryRepository.count())
-                .isEqualTo(1);
+            .isEqualTo(1);
         assertThat(queueScore(redisKey, redisMember))
-                .isEqualTo(reentryRequestedAt.toEpochMilli());
+            .isEqualTo(reentryRequestedAt.toEpochMilli());
     }
 }

@@ -7,4 +7,4 @@ WHERE qr_token IS NULL;
 -- 2) qr_token 컬럼을 NOT NULL 로 변경
 --    (MySQL 기준. 사용하는 DB에 맞춰 MODIFY/MALTER 문법만 맞춰주면 된다.)
 ALTER TABLE tickets
-    MODIFY COLUMN qr_token VARCHAR(255) NOT NULL;
+    MODIFY COLUMN qr_token VARCHAR (255) NOT NULL;

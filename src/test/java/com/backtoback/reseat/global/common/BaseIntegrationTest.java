@@ -1,15 +1,16 @@
 package com.backtoback.reseat.global.common;
 
-import com.backtoback.reseat.global.config.TestcontainersConfig;
-import com.backtoback.reseat.global.service.TestDatabaseCleanUpService;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
+import com.backtoback.reseat.global.config.TestcontainersConfig;
+import com.backtoback.reseat.global.service.TestDatabaseCleanUpService;
+
 //통합 테스트
- //SpringBootTest, TestProfile, Testcontainers, DB Cleaner 격리 연동
+//SpringBootTest, TestProfile, Testcontainers, DB Cleaner 격리 연동
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Import(TestcontainersConfig.class)

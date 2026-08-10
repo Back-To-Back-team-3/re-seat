@@ -1,9 +1,12 @@
 package com.backtoback.reseat.domain.seatinventory.entity;
 
+import java.time.LocalDateTime;
+
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.seatinventory.exception.InvalidStateTransitionException;
 import com.backtoback.reseat.domain.stadium.entity.Seat;
 import com.backtoback.reseat.global.common.BaseEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -24,21 +27,15 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Getter
 @Entity
-@Table(
-    name = "game_seats",
-    uniqueConstraints = {
-        // over-booking 최후 물리 방어선: 한 경기에 같은 좌석 재고는 하나만
-        @UniqueConstraint(name = "uk_game_seats_game_seat", columnNames = {"game_id", "seat_id"})
-    },
-    indexes = {
-        @Index(name = "idx_game_seats_game_status_expires", columnList = "game_id, status, hold_expires_at"),
-        @Index(name = "idx_game_seats_hold_expires", columnList = "status, hold_expires_at")
-    }
-)
+@Table(name = "game_seats", uniqueConstraints = {
+    // over-booking 최후 물리 방어선: 한 경기에 같은 좌석 재고는 하나만
+    @UniqueConstraint(name = "uk_game_seats_game_seat", columnNames = {"game_id", "seat_id"})
+}, indexes = {
+    @Index(name = "idx_game_seats_game_status_expires", columnList = "game_id, status, hold_expires_at"),
+    @Index(name = "idx_game_seats_hold_expires", columnList = "status, hold_expires_at")
+})
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class GameSeat extends BaseEntity {
 
@@ -47,13 +44,11 @@ public class GameSeat extends BaseEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "game_id", nullable = false,
-        foreignKey = @ForeignKey(name = "fk_game_seats_game"))
+    @JoinColumn(name = "game_id", nullable = false, foreignKey = @ForeignKey(name = "fk_game_seats_game"))
     private Game game;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "seat_id", nullable = false,
-        foreignKey = @ForeignKey(name = "fk_game_seats_seat"))
+    @JoinColumn(name = "seat_id", nullable = false, foreignKey = @ForeignKey(name = "fk_game_seats_seat"))
     private Seat seat;
 
     /**
@@ -121,7 +116,6 @@ public class GameSeat extends BaseEntity {
         this.status = GameSeatStatus.HELD;
         this.holdExpiresAt = holdExpiresAt;
     }
-
 
     /**
      * HELD → AVAILABLE (선점 해제 / TTL 만료).

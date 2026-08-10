@@ -1,9 +1,10 @@
 package com.backtoback.reseat.domain.game.repository;
 
-import com.backtoback.reseat.domain.game.entity.Game;
-import com.backtoback.reseat.domain.game.service.GameSearchCondition;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+
+import com.backtoback.reseat.domain.game.entity.Game;
+import com.backtoback.reseat.domain.game.service.GameSearchCondition;
 
 /**
  * 경기 조회용 커스텀 Repository.

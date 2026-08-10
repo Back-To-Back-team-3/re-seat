@@ -1,5 +1,9 @@
 package com.backtoback.reseat.domain.user.service;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.backtoback.reseat.domain.user.dto.request.PasswordChangeRequest;
 import com.backtoback.reseat.domain.user.dto.request.UserSignUpRequest;
 import com.backtoback.reseat.domain.user.dto.request.UserUpdateRequest;
@@ -15,10 +19,8 @@ import com.backtoback.reseat.domain.user.repository.RefreshTokenRepository;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
 import com.backtoback.reseat.global.exception.BusinessException;
 import com.backtoback.reseat.global.exception.ErrorCode;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -55,7 +57,6 @@ public class UserService {
         //4.데이터베이스 저장 및 고유 식별자 반환
         User savedUser = userRepository.save(user);
         return UserSignUpResponse.from(savedUser);
-
 
     }
 

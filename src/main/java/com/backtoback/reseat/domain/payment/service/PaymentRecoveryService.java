@@ -1,16 +1,18 @@
 package com.backtoback.reseat.domain.payment.service;
 
+import java.time.LocalDateTime;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
 import com.backtoback.reseat.domain.payment.repository.PaymentRecoveryTaskRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
 
 @Slf4j
 @Service
@@ -56,8 +58,7 @@ public class PaymentRecoveryService {
 
             // 로컬은 실패했지만 Toss에서 승인됐다면 실제 결제 금액이 남아 있으므로 전액 취소한다.
             if (paymentResponse.isApproved()) {
-                TossPaymentResponse cancelResponse =
-                    tossPaymentClient.cancel(paymentKey, RECOVERY_CANCEL_REASON);
+                TossPaymentResponse cancelResponse = tossPaymentClient.cancel(paymentKey, RECOVERY_CANCEL_REASON);
                 // 취소 완료를 확인하지 못하면 복구를 끝내지 않고 다시 조회할 수 있도록 재시도한다.
                 if (!cancelResponse.isCancelCompleted()) {
                     retryOrFail(task, "토스 결제 자동 환불 상태를 확인할 수 없습니다.", now);

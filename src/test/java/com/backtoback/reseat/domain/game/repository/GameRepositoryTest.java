@@ -1,11 +1,7 @@
 package com.backtoback.reseat.domain.game.repository;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.*;
 
-import com.backtoback.reseat.domain.game.entity.Game;
-import com.backtoback.reseat.domain.game.service.GameSearchCondition;
-import com.querydsl.jpa.impl.JPAQueryFactory;
-import jakarta.persistence.EntityManager;
 import java.util.List;
 
 import org.hibernate.SessionFactory;
@@ -19,6 +15,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+
+import com.backtoback.reseat.domain.game.entity.Game;
+import com.backtoback.reseat.domain.game.service.GameSearchCondition;
+import com.querydsl.jpa.impl.JPAQueryFactory;
+
+import jakarta.persistence.EntityManager;
 
 /**
  * 경기 Repository 조회 테스트.
@@ -45,13 +47,11 @@ class GameRepositoryTest {
             null,
             null,
             null,
-            null
-        );
+            null);
 
         Page<Game> result = gameRepository.searchGames(
             condition,
-            PageRequest.of(0, 20)
-        );
+            PageRequest.of(0, 20));
 
         List<Game> games = result.getContent();
 
@@ -63,21 +63,6 @@ class GameRepositoryTest {
             assertThat(game.getHomeTeam()).isNotNull();
             assertThat(game.getAwayTeam()).isNotNull();
             assertThat(game.getStadium()).isNotNull();
-        }
-    }
-
-    /**
-     * Repository 테스트용 QueryDSL 설정.
-     *
-     * <p>@DataJpaTest는 전체 애플리케이션 설정을 띄우지 않으므로
-     * JPAQueryFactory Bean을 테스트에서 직접 등록한다.</p>
-     */
-    @TestConfiguration
-    static class QuerydslTestConfig {
-
-        @Bean
-        JPAQueryFactory jpaQueryFactory(EntityManager entityManager) {
-            return new JPAQueryFactory(entityManager);
         }
     }
 
@@ -95,20 +80,37 @@ class GameRepositoryTest {
 
         Page<Game> result = gameRepository.searchGames(
             new GameSearchCondition(null, null, null, null, null),
-            PageRequest.of(0, 20)
-        );
+            PageRequest.of(0, 20));
 
         List<Game> content = result.getContent();
 
         if (!content.isEmpty()) {
             content.forEach(game -> {
-                if (game.getHomeTeam() != null) game.getHomeTeam().getName();
-                if (game.getAwayTeam() != null) game.getAwayTeam().getName();
-                if (game.getStadium() != null) game.getStadium().getName();
+                if (game.getHomeTeam() != null)
+                    game.getHomeTeam().getName();
+                if (game.getAwayTeam() != null)
+                    game.getAwayTeam().getName();
+                if (game.getStadium() != null)
+                    game.getStadium().getName();
             });
 
             // content 1번 쿼리 + count 1번 쿼리 도합 2번으로 제어되는지 확인
             assertThat(statistics.getPrepareStatementCount()).isEqualTo(2);
+        }
+    }
+
+    /**
+     * Repository 테스트용 QueryDSL 설정.
+     *
+     * <p>@DataJpaTest는 전체 애플리케이션 설정을 띄우지 않으므로
+     * JPAQueryFactory Bean을 테스트에서 직접 등록한다.</p>
+     */
+    @TestConfiguration
+    static class QuerydslTestConfig {
+
+        @Bean
+        JPAQueryFactory jpaQueryFactory(EntityManager entityManager) {
+            return new JPAQueryFactory(entityManager);
         }
     }
 }

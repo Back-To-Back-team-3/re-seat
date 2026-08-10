@@ -1,20 +1,11 @@
 package com.backtoback.reseat.domain.payment.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-import com.backtoback.reseat.domain.payment.entity.Payment;
-import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
-import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
-import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
-import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
-import com.backtoback.reseat.domain.payment.repository.PaymentRecoveryTaskRepository;
 import java.time.LocalDateTime;
 import java.util.Optional;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -22,6 +13,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import com.backtoback.reseat.domain.payment.entity.Payment;
+import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
+import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
+import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
+import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
+import com.backtoback.reseat.domain.payment.repository.PaymentRecoveryTaskRepository;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PaymentRecoveryService 결제 승인 복구")
@@ -55,7 +53,7 @@ class PaymentRecoveryServiceTest {
         @DisplayName("복구 작업이 존재하지 않으면 Toss를 호출하지 않는다.")
         void ignoresMissingTask() {
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID))
-                    .thenReturn(Optional.empty());
+                .thenReturn(Optional.empty());
 
             paymentRecoveryService.recover(TASK_ID, NOW);
 
@@ -69,7 +67,7 @@ class PaymentRecoveryServiceTest {
             task.startProcessing(NOW.minusMinutes(2));
             task.complete(NOW.minusMinutes(1));
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID))
-                    .thenReturn(Optional.of(task));
+                .thenReturn(Optional.of(task));
 
             paymentRecoveryService.recover(TASK_ID, NOW);
 
@@ -84,7 +82,7 @@ class PaymentRecoveryServiceTest {
             task.startProcessing(NOW.minusMinutes(1));
             task.scheduleRetry("토스 조회 실패", NOW.plusMinutes(1));
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID))
-                    .thenReturn(Optional.of(task));
+                .thenReturn(Optional.of(task));
 
             paymentRecoveryService.recover(TASK_ID, NOW);
 
@@ -100,11 +98,11 @@ class PaymentRecoveryServiceTest {
             TossPaymentResponse paymentResponse = mock(TossPaymentResponse.class);
             TossPaymentResponse cancelResponse = mock(TossPaymentResponse.class);
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID))
-                    .thenReturn(Optional.of(task));
+                .thenReturn(Optional.of(task));
             when(tossPaymentClient.getPayment(PAYMENT_KEY)).thenReturn(paymentResponse);
             when(paymentResponse.isApproved()).thenReturn(true);
             when(tossPaymentClient.cancel(PAYMENT_KEY, RECOVERY_CANCEL_REASON))
-                    .thenReturn(cancelResponse);
+                .thenReturn(cancelResponse);
             when(cancelResponse.isCancelCompleted()).thenReturn(true);
 
             paymentRecoveryService.recover(TASK_ID, NOW);
@@ -121,7 +119,7 @@ class PaymentRecoveryServiceTest {
             PaymentRecoveryTask task = pendingTask();
             TossPaymentResponse paymentResponse = mock(TossPaymentResponse.class);
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID))
-                    .thenReturn(Optional.of(task));
+                .thenReturn(Optional.of(task));
             when(tossPaymentClient.getPayment(PAYMENT_KEY)).thenReturn(paymentResponse);
             when(paymentResponse.isApproved()).thenReturn(false);
             when(paymentResponse.isConfirmFailureStatus()).thenReturn(true);
@@ -139,7 +137,7 @@ class PaymentRecoveryServiceTest {
             PaymentRecoveryTask task = pendingTask();
             TossPaymentResponse paymentResponse = mock(TossPaymentResponse.class);
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID))
-                    .thenReturn(Optional.of(task));
+                .thenReturn(Optional.of(task));
             when(tossPaymentClient.getPayment(PAYMENT_KEY)).thenReturn(paymentResponse);
             when(paymentResponse.isApproved()).thenReturn(false);
             when(paymentResponse.isConfirmFailureStatus()).thenReturn(false);
@@ -161,11 +159,11 @@ class PaymentRecoveryServiceTest {
             TossPaymentResponse paymentResponse = mock(TossPaymentResponse.class);
             TossPaymentResponse cancelResponse = mock(TossPaymentResponse.class);
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID))
-                    .thenReturn(Optional.of(task));
+                .thenReturn(Optional.of(task));
             when(tossPaymentClient.getPayment(PAYMENT_KEY)).thenReturn(paymentResponse);
             when(paymentResponse.isApproved()).thenReturn(true);
             when(tossPaymentClient.cancel(PAYMENT_KEY, RECOVERY_CANCEL_REASON))
-                    .thenReturn(cancelResponse);
+                .thenReturn(cancelResponse);
             when(cancelResponse.isCancelCompleted()).thenReturn(false);
 
             paymentRecoveryService.recover(TASK_ID, NOW);
@@ -174,7 +172,7 @@ class PaymentRecoveryServiceTest {
             assertThat(task.getAttemptCount()).isEqualTo(1);
             assertThat(task.getNextRetryAt()).isEqualTo(NOW.plusMinutes(1));
             assertThat(task.getLastError())
-                    .isEqualTo("토스 결제 자동 환불 상태를 확인할 수 없습니다.");
+                .isEqualTo("토스 결제 자동 환불 상태를 확인할 수 없습니다.");
         }
 
         @Test
@@ -182,9 +180,9 @@ class PaymentRecoveryServiceTest {
         void schedulesRetryWhenTossRequestFails() {
             PaymentRecoveryTask task = pendingTask();
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID))
-                    .thenReturn(Optional.of(task));
+                .thenReturn(Optional.of(task));
             when(tossPaymentClient.getPayment(PAYMENT_KEY))
-                    .thenThrow(new RuntimeException("Toss 조회 실패"));
+                .thenThrow(new RuntimeException("Toss 조회 실패"));
 
             paymentRecoveryService.recover(TASK_ID, NOW);
 
@@ -192,7 +190,7 @@ class PaymentRecoveryServiceTest {
             assertThat(task.getAttemptCount()).isEqualTo(1);
             assertThat(task.getNextRetryAt()).isEqualTo(NOW.plusMinutes(1));
             assertThat(task.getLastError())
-                    .isEqualTo("토스 결제 조회 또는 자동 환불 요청에 실패했습니다.");
+                .isEqualTo("토스 결제 조회 또는 자동 환불 요청에 실패했습니다.");
         }
 
         @Test
@@ -204,9 +202,9 @@ class PaymentRecoveryServiceTest {
                 task.scheduleRetry("토스 조회 실패", NOW.minusMinutes(1));
             }
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID))
-                    .thenReturn(Optional.of(task));
+                .thenReturn(Optional.of(task));
             when(tossPaymentClient.getPayment(PAYMENT_KEY))
-                    .thenThrow(new RuntimeException("Toss 조회 실패"));
+                .thenThrow(new RuntimeException("Toss 조회 실패"));
 
             paymentRecoveryService.recover(TASK_ID, NOW);
 
@@ -214,7 +212,7 @@ class PaymentRecoveryServiceTest {
             assertThat(task.getAttemptCount()).isEqualTo(5);
             assertThat(task.getNextRetryAt()).isNull();
             assertThat(task.getLastError())
-                    .isEqualTo("토스 결제 조회 또는 자동 환불 요청에 실패했습니다.");
+                .isEqualTo("토스 결제 조회 또는 자동 환불 요청에 실패했습니다.");
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.backtoback.reseat.domain.stadium.entity;
 
 import com.backtoback.reseat.global.common.BaseEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -21,14 +22,9 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@Table(
-    name = "seats",
-    uniqueConstraints = @UniqueConstraint(
-        name = "uk_seats_location",
-        columnNames = {"stadium_id", "zone_id", "seat_block", "seat_row", "seat_number"}
-    ),
-    indexes = @Index(name = "idx_seats_zone_status", columnList = "zone_id, status")
-)
+@Table(name = "seats", uniqueConstraints = @UniqueConstraint(name = "uk_seats_location", columnNames = {"stadium_id",
+    "zone_id", "seat_block", "seat_row",
+    "seat_number"}), indexes = @Index(name = "idx_seats_zone_status", columnList = "zone_id, status"))
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Seat extends BaseEntity {
 
@@ -37,13 +33,11 @@ public class Seat extends BaseEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "stadium_id", nullable = false,
-        foreignKey = @ForeignKey(name = "fk_seats_stadium"))
+    @JoinColumn(name = "stadium_id", nullable = false, foreignKey = @ForeignKey(name = "fk_seats_stadium"))
     private Stadium stadium;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "zone_id", nullable = false,
-        foreignKey = @ForeignKey(name = "fk_seats_zone"))
+    @JoinColumn(name = "zone_id", nullable = false, foreignKey = @ForeignKey(name = "fk_seats_zone"))
     private SeatZone zone;
 
     @Column(name = "seat_block", nullable = false, length = 20)

@@ -1,12 +1,14 @@
 package com.backtoback.reseat.domain.reservation.service;
 
+import org.springframework.stereotype.Component;
+
 import com.backtoback.reseat.domain.queue.service.AdmissionTokenService;
 import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
 import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse;
 import com.backtoback.reseat.domain.reservation.service.lock.SeatLockStrategy;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
 /**
  * 좌석 선점 흐름을 조율하는 Facade.
@@ -47,8 +49,7 @@ public class SeatHoldFacade {
         // 2단계: 좌석 단위 분산 락 획득 → 선점 트랜잭션 실행(커밋) → 락 해제
         ReservationResponse response = seatLockStrategy.executeWithLocks(
             request.gameSeatIds(),
-            () -> reservationService.holdSeats(userId, request)
-        );
+            () -> reservationService.holdSeats(userId, request));
 
         // 3단계: 선점 성공 후 토큰 소비 — 동일 토큰으로 재진입 방지
         try {

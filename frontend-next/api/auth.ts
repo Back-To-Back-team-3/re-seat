@@ -1,8 +1,8 @@
-import { storage } from "@/lib/storage";
-import type { UserRole } from "@/types/auth";
+import {storage} from "@/lib/storage";
+import type {UserRole} from "@/types/auth";
 
 const BACKEND_ORIGIN =
-  process.env.NEXT_PUBLIC_BACKEND_ORIGIN ?? "http://localhost:8080";
+    process.env.NEXT_PUBLIC_BACKEND_ORIGIN ?? "http://localhost:8080";
 
 const EMPTY_SNAPSHOT = JSON.stringify([null, null, null, null]);
 
@@ -10,19 +10,19 @@ let notice: string | null = null;
 const listeners = new Set<() => void>();
 
 function storeAuthTokens(accessToken: string, refreshToken: string) {
-  storage.local.set("accessToken", accessToken);
-  storage.local.set("refreshToken", refreshToken);
+    storage.local.set("accessToken", accessToken);
+    storage.local.set("refreshToken", refreshToken);
 }
 
 function removeAuthValues() {
-  storage.local.remove("accessToken");
-  storage.local.remove("refreshToken");
-  storage.local.remove("queueToken");
-  storage.local.remove("isVerified");
+    storage.local.remove("accessToken");
+    storage.local.remove("refreshToken");
+    storage.local.remove("queueToken");
+    storage.local.remove("isVerified");
 }
 
 function emitAuthChange() {
-  listeners.forEach((listener) => listener());
+    listeners.forEach((listener) => listener());
 }
 
 /**
@@ -36,13 +36,13 @@ function emitAuthChange() {
  * @returns 등록한 구독과 이벤트 리스너를 제거하는 함수
  */
 export function subscribeAuth(listener: () => void) {
-  listeners.add(listener);
-  window.addEventListener("storage", listener);
+    listeners.add(listener);
+    window.addEventListener("storage", listener);
 
-  return () => {
-    listeners.delete(listener);
-    window.removeEventListener("storage", listener);
-  };
+    return () => {
+        listeners.delete(listener);
+        window.removeEventListener("storage", listener);
+    };
 }
 
 /**
@@ -51,12 +51,12 @@ export function subscribeAuth(listener: () => void) {
  * 원시 문자열은 같은 내용일 때 참조가 바뀌지 않으므로 불필요한 재렌더링을 만들지 않는다.
  */
 export function getAuthSnapshot() {
-  return JSON.stringify([
-    storage.local.get("accessToken"),
-    storage.local.get("isVerified"),
-    notice,
-    getAccessTokenRole(),
-  ]);
+    return JSON.stringify([
+        storage.local.get("accessToken"),
+        storage.local.get("isVerified"),
+        notice,
+        getAccessTokenRole(),
+    ]);
 }
 
 /**
@@ -65,7 +65,7 @@ export function getAuthSnapshot() {
  * 서버 모듈에 사용자 토큰을 저장하지 않으므로 서로 다른 요청의 인증 정보가 섞이지 않는다.
  */
 export function getServerAuthSnapshot() {
-  return EMPTY_SNAPSHOT;
+    return EMPTY_SNAPSHOT;
 }
 
 /**
@@ -79,19 +79,19 @@ export function getServerAuthSnapshot() {
  * @returns 로그인·본인인증·알림·역할을 포함한 인증 상태
  */
 export function parseAuthSnapshot(snapshot: string) {
-  const [accessToken, verified, currentNotice, role] = JSON.parse(snapshot) as [
-    string | null,
-    string | null,
-    string | null,
-    UserRole | null,
-  ];
+    const [accessToken, verified, currentNotice, role] = JSON.parse(snapshot) as [
+            string | null,
+            string | null,
+            string | null,
+            UserRole | null,
+    ];
 
-  return {
-    isAuthed: Boolean(accessToken),
-    isVerified: verified === "true",
-    notice: currentNotice,
-    role,
-  };
+    return {
+        isAuthed: Boolean(accessToken),
+        isVerified: verified === "true",
+        notice: currentNotice,
+        role,
+    };
 }
 
 /**
@@ -103,26 +103,26 @@ export function parseAuthSnapshot(snapshot: string) {
  * @returns 완전한 OAuth 토큰 쌍을 저장했으면 `true`, 아니면 `false`
  */
 export function consumeAuthCallback() {
-  const params = new URLSearchParams(window.location.search);
-  const accessToken = params.get("accessToken");
-  const refreshToken = params.get("refreshToken");
+    const params = new URLSearchParams(window.location.search);
+    const accessToken = params.get("accessToken");
+    const refreshToken = params.get("refreshToken");
 
-  if (!accessToken || !refreshToken) return false;
+    if (!accessToken || !refreshToken) return false;
 
-  storeAuthTokens(accessToken, refreshToken);
-  storage.local.set(
-    "isVerified",
-    String(params.get("isVerified") === "true"),
-  );
-  notice = "카카오 로그인에 성공했습니다.";
+    storeAuthTokens(accessToken, refreshToken);
+    storage.local.set(
+        "isVerified",
+        String(params.get("isVerified") === "true"),
+    );
+    notice = "카카오 로그인에 성공했습니다.";
 
-  window.history.replaceState(
-    {},
-    "",
-    window.location.origin + window.location.pathname,
-  );
-  emitAuthChange();
-  return true;
+    window.history.replaceState(
+        {},
+        "",
+        window.location.origin + window.location.pathname,
+    );
+    emitAuthChange();
+    return true;
 }
 
 /**
@@ -132,9 +132,9 @@ export function consumeAuthCallback() {
  * 상태가 이어지지 않도록 인증 토큰과 함께 `queueToken`, `isVerified`도 지웁니다.
  */
 export function clearAuth() {
-  removeAuthValues();
-  notice = "로그아웃했습니다.";
-  emitAuthChange();
+    removeAuthValues();
+    notice = "로그아웃했습니다.";
+    emitAuthChange();
 }
 
 /**
@@ -147,8 +147,8 @@ export function clearAuth() {
  * @param refreshToken 함께 교체할 refresh token
  */
 export function setAuthTokens(accessToken: string, refreshToken: string) {
-  storeAuthTokens(accessToken, refreshToken);
-  emitAuthChange();
+    storeAuthTokens(accessToken, refreshToken);
+    emitAuthChange();
 }
 
 /**
@@ -158,9 +158,9 @@ export function setAuthTokens(accessToken: string, refreshToken: string) {
  * 구분해 화면에는 별도의 안내 메시지를 제공합니다.
  */
 export function expireAuth() {
-  removeAuthValues();
-  notice = "로그인이 만료되었습니다.";
-  emitAuthChange();
+    removeAuthValues();
+    notice = "로그인이 만료되었습니다.";
+    emitAuthChange();
 }
 
 /**
@@ -171,10 +171,10 @@ export function expireAuth() {
  * @param isVerified 서버 프로필이 반환한 본인인증 완료 여부
  */
 export function setVerified(isVerified: boolean) {
-  if (storage.local.get("isVerified") === String(isVerified)) return;
+    if (storage.local.get("isVerified") === String(isVerified)) return;
 
-  storage.local.set("isVerified", String(isVerified));
-  emitAuthChange();
+    storage.local.set("isVerified", String(isVerified));
+    emitAuthChange();
 }
 
 /**
@@ -185,16 +185,16 @@ export function setVerified(isVerified: boolean) {
  * @param message 화면에 표시할 인증 관련 알림
  */
 export function setAuthNotice(message: string) {
-  notice = message;
-  emitAuthChange();
+    notice = message;
+    emitAuthChange();
 }
 
 /**
  * 현재 인증 알림을 제거하고 화면에 변경을 알립니다.
  */
 export function clearAuthNotice() {
-  notice = null;
-  emitAuthChange();
+    notice = null;
+    emitAuthChange();
 }
 
 /**
@@ -204,7 +204,7 @@ export function clearAuthNotice() {
  * 백엔드 origin을 사용합니다.
  */
 export function getLoginUrl() {
-  return `${BACKEND_ORIGIN}/oauth2/authorization/kakao`;
+    return `${BACKEND_ORIGIN}/oauth2/authorization/kakao`;
 }
 
 /**
@@ -218,16 +218,16 @@ export function getLoginUrl() {
  * @returns 토큰에 명시된 역할 또는 역할을 확인할 수 없을 때 `null`
  */
 export function getAccessTokenRole(): UserRole | null {
-  const accessToken = storage.local.get("accessToken");
-  if (!accessToken) return null;
+    const accessToken = storage.local.get("accessToken");
+    if (!accessToken) return null;
 
-  try {
-    const payload = accessToken.split(".")[1];
-    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
-    const claims = JSON.parse(atob(padded)) as { userRole?: string };
-    return claims.userRole === "ADMIN" ? "ADMIN" : "USER";
-  } catch {
-    return null;
-  }
+    try {
+        const payload = accessToken.split(".")[1];
+        const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+        const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+        const claims = JSON.parse(atob(padded)) as { userRole?: string };
+        return claims.userRole === "ADMIN" ? "ADMIN" : "USER";
+    } catch {
+        return null;
+    }
 }

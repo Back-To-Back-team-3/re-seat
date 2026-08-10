@@ -12,8 +12,7 @@ public final class QueueAdmissionPolicy {
     public static final long ADMISSION_INTERVAL_MILLIS = 3000L;
 
     // 상수와 정적 계산 메서드만 제공하므로 외부 생성을 막는다.
-    private QueueAdmissionPolicy() {
-    }
+    private QueueAdmissionPolicy() {}
 
     /**
      * 현재 대기 순번을 기준으로 입장까지 필요한 예상 시간을 초 단위로 계산한다.

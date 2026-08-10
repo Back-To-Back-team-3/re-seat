@@ -1,8 +1,5 @@
 package com.backtoback.reseat.domain.seatinventory.service;
 
-import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
-import org.springframework.stereotype.Component;
-
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -10,6 +7,10 @@ import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
+
+import org.springframework.stereotype.Component;
+
+import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
 
 /**
  * 경기 좌석 재고(game_seats)의 판매 가격을 산정하는 정책 클래스.
@@ -25,9 +26,8 @@ public class PricePolicy {
      *
      * <P>여기에 없는 요일(금,토.일)에는 상승가를 적용한다.
      */
-    private static final Set<DayOfWeek> BASE_PRICE_DAYS =
-        Collections.unmodifiableSet(
-            EnumSet.of(DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY));
+    private static final Set<DayOfWeek> BASE_PRICE_DAYS = Collections.unmodifiableSet(
+        EnumSet.of(DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY));
 
     // 금~일(및 예외적 월요일) 성인 기본가
     private static final Map<SeatGrade, Integer> RAISED_BASE_PRICES;

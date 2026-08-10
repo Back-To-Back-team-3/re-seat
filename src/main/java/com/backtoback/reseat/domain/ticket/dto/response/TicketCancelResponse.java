@@ -3,6 +3,7 @@ package com.backtoback.reseat.domain.ticket.dto.response;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
 import com.backtoback.reseat.domain.ticket.entity.Ticket;
 import com.backtoback.reseat.domain.ticket.entity.TicketStatus;
+
 import lombok.Builder;
 import lombok.Getter;
 
@@ -21,8 +22,7 @@ public class TicketCancelResponse {
     public static TicketCancelResponse of(
         Ticket ticket,
         boolean refunded,
-        Integer refundAmount
-    ) {
+        Integer refundAmount) {
         return TicketCancelResponse.builder()
             .ticketId(ticket.getId())
             .status(ticket.getStatus())

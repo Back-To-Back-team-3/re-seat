@@ -1,12 +1,13 @@
 package com.backtoback.reseat.domain.queue.service;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Redis 경기별 대기열의 사용자를 주기적으로 입장 허용 처리하는 스케줄러
@@ -28,10 +29,7 @@ public class QueueAdmissionScheduler {
      * <p>fixedDelay는 이전 작업이 시작된 시점이 아니라 완전히 종료된 시점부터 다음 실행 간격을 계산한다.
      * 최초 실행도 애플리케이션이 시작 직후가 아니라 동일한 시간만큼 기다린 후 시작한다.</p>
      */
-    @Scheduled(
-        fixedDelay = QueueAdmissionPolicy.ADMISSION_INTERVAL_MILLIS,
-        initialDelay = QueueAdmissionPolicy.ADMISSION_INTERVAL_MILLIS
-    )
+    @Scheduled(fixedDelay = QueueAdmissionPolicy.ADMISSION_INTERVAL_MILLIS, initialDelay = QueueAdmissionPolicy.ADMISSION_INTERVAL_MILLIS)
     public void admitWaitingUsers() {
 
         // Redis 전체 키를 한 번에 조회하는 KEYS 대신 SCAN을 사용하여 서버 부하를 줄인다.
@@ -81,8 +79,7 @@ public class QueueAdmissionScheduler {
             }
             log.error(
                 "대기열 자동 입장 처리 실패. redisKey={}",
-                redisKey, e
-            );
+                redisKey, e);
         }
     }
 }

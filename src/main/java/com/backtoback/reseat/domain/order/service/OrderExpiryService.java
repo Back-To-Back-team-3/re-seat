@@ -1,16 +1,18 @@
 package com.backtoback.reseat.domain.order.service;
 
+import java.time.LocalDateTime;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.backtoback.reseat.domain.order.entity.OrderStatus;
 import com.backtoback.reseat.domain.order.repository.OrderGameSeatRepository;
 import com.backtoback.reseat.domain.order.repository.OrderRepository;
 import com.backtoback.reseat.domain.order.repository.OrderReservationRepository;
 import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 결제 기한이 지난 주문과 연결된 예약 · 좌석 만료 처리 서비스.
@@ -65,8 +67,7 @@ public class OrderExpiryService {
     public record OrderExpiryResult(
         int expiredOrders,
         int expiredReservations,
-        int releasedSeats
-    ) {
+        int releasedSeats) {
 
         public int total() {
             return expiredOrders + expiredReservations + releasedSeats;

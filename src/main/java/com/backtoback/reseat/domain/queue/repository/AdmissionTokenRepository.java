@@ -1,15 +1,17 @@
 package com.backtoback.reseat.domain.queue.repository;
 
-import com.backtoback.reseat.domain.queue.entity.AdmissionToken;
-import com.backtoback.reseat.domain.queue.entity.AdmissionTokenStatus;
-import jakarta.persistence.LockModeType;
+import java.time.LocalDateTime;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
-import java.util.Optional;
+import com.backtoback.reseat.domain.queue.entity.AdmissionToken;
+import com.backtoback.reseat.domain.queue.entity.AdmissionTokenStatus;
+
+import jakarta.persistence.LockModeType;
 
 /**
  * 입장 토큰의 저장과 조회를 담당하는 Repository
@@ -21,8 +23,7 @@ public interface AdmissionTokenRepository extends JpaRepository<AdmissionToken, 
         Long gameId,
         Long userId,
         AdmissionTokenStatus status,
-        LocalDateTime now
-    );
+        LocalDateTime now);
 
     // 토큰 값으로 상태와 만료 여부에 관계없이 입장 토큰을 조회한다.
     Optional<AdmissionToken> findByToken(String token);
@@ -31,8 +32,8 @@ public interface AdmissionTokenRepository extends JpaRepository<AdmissionToken, 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from AdmissionToken a where a.token = :token")
     Optional<AdmissionToken> findByTokenWithPessimisticWriteLock(
-        @Param("token") String token
-    );
+        @Param("token")
+        String token);
 
     // 사용자의 만료되지 않은 활성 입장 토큰이 있는지 확인한다.
     boolean existsByUser_IdAndStatusAndExpiresAtAfter(Long userId, AdmissionTokenStatus status, LocalDateTime now);
@@ -54,8 +55,10 @@ public interface AdmissionTokenRepository extends JpaRepository<AdmissionToken, 
         AND at.status = :status
         """)
     Optional<AdmissionToken> findByGame_IdAndUser_IdAndStatusWithPessimisticWriteLock(
-        @Param("gameId") Long gameId,
-        @Param("userId") Long userId,
-        @Param("status") AdmissionTokenStatus status
-    );
+        @Param("gameId")
+        Long gameId,
+        @Param("userId")
+        Long userId,
+        @Param("status")
+        AdmissionTokenStatus status);
 }

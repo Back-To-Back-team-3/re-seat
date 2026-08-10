@@ -1,9 +1,10 @@
 package com.backtoback.reseat.domain.team.repository;
 
-import com.backtoback.reseat.domain.team.entity.Team;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.Optional;
+import com.backtoback.reseat.domain.team.entity.Team;
 
 public interface TeamRepository extends JpaRepository<Team, Long> {
 

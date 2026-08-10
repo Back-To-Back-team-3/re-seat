@@ -2,6 +2,7 @@ package com.backtoback.reseat.domain.reservation.dto.response;
 
 import com.backtoback.reseat.domain.reservation.entity.Reservation;
 import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
@@ -17,8 +18,7 @@ public record ReservationCancelResponse(
     Long reservationId,
 
     @Schema(description = "예약 상태", example = "CANCELED")
-    ReservationStatus status
-) {
+    ReservationStatus status) {
     public static ReservationCancelResponse from(Reservation reservation) {
         return new ReservationCancelResponse(reservation.getId(), reservation.getStatus());
     }

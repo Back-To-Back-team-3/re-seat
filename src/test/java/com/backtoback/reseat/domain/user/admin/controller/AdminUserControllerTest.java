@@ -1,23 +1,12 @@
 package com.backtoback.reseat.domain.user.admin.controller;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import com.backtoback.reseat.domain.user.admin.dto.request.AdminUserRoleUpdateRequest;
-import com.backtoback.reseat.domain.user.admin.dto.request.AdminUserStatusUpdateRequest;
-import com.backtoback.reseat.domain.user.admin.dto.response.AdminUserResponse;
-import com.backtoback.reseat.domain.user.entity.User;
-import com.backtoback.reseat.domain.user.entity.UserRole;
-import com.backtoback.reseat.domain.user.entity.UserStatus;
-import com.backtoback.reseat.domain.user.admin.service.AdminUserService;
-import com.backtoback.reseat.global.exception.GlobalExceptionHandler;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +18,16 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
+import com.backtoback.reseat.domain.user.admin.dto.request.AdminUserRoleUpdateRequest;
+import com.backtoback.reseat.domain.user.admin.dto.request.AdminUserStatusUpdateRequest;
+import com.backtoback.reseat.domain.user.admin.dto.response.AdminUserResponse;
+import com.backtoback.reseat.domain.user.admin.service.AdminUserService;
+import com.backtoback.reseat.domain.user.entity.User;
+import com.backtoback.reseat.domain.user.entity.UserRole;
+import com.backtoback.reseat.domain.user.entity.UserStatus;
+import com.backtoback.reseat.global.exception.GlobalExceptionHandler;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @WebMvcTest(AdminUserController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -49,13 +48,13 @@ class AdminUserControllerTest {
     void searchUsers() throws Exception {
         // given
         User user = User.builder()
-                .id(1L)
-                .email("test@test.com")
-                .name("test")
-                .phone("010-1234-5678")
-                .role(UserRole.USER)
-                .status(UserStatus.ACTIVE)
-                .build();
+            .id(1L)
+            .email("test@test.com")
+            .name("test")
+            .phone("010-1234-5678")
+            .role(UserRole.USER)
+            .status(UserStatus.ACTIVE)
+            .build();
 
         AdminUserResponse response = AdminUserResponse.from(user);
         Page<AdminUserResponse> page = new PageImpl<>(List.of(response));
@@ -64,13 +63,13 @@ class AdminUserControllerTest {
 
         // when & then
         mockMvc.perform(get("/api/v1/admin/users")
-                        .param("email", "test@test.com")
-                        .param("page", "0")
-                        .param("size", "20"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("회원 목록 조회 완료"))
-                .andExpect(jsonPath("$.data.content[0].email").value("test@test.com"));
+            .param("email", "test@test.com")
+            .param("page", "0")
+            .param("size", "20"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.message").value("회원 목록 조회 완료"))
+            .andExpect(jsonPath("$.data.content[0].email").value("test@test.com"));
     }
 
     @Test
@@ -78,23 +77,23 @@ class AdminUserControllerTest {
     void getUserDetail() throws Exception {
         // given
         User user = User.builder()
-                .id(1L)
-                .email("test@test.com")
-                .name("test")
-                .phone("010-1234-5678")
-                .role(UserRole.USER)
-                .status(UserStatus.ACTIVE)
-                .build();
+            .id(1L)
+            .email("test@test.com")
+            .name("test")
+            .phone("010-1234-5678")
+            .role(UserRole.USER)
+            .status(UserStatus.ACTIVE)
+            .build();
 
         AdminUserResponse response = AdminUserResponse.from(user);
         when(adminUserService.getUserDetail(1L)).thenReturn(response);
 
         // when & then
         mockMvc.perform(get("/api/v1/admin/users/{userId}", 1L))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("회원 상세 조회 완료"))
-                .andExpect(jsonPath("$.data.email").value("test@test.com"));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.message").value("회원 상세 조회 완료"))
+            .andExpect(jsonPath("$.data.email").value("test@test.com"));
     }
 
     @Test
@@ -108,11 +107,11 @@ class AdminUserControllerTest {
 
         // when & then
         mockMvc.perform(patch("/api/v1/admin/users/{userId}/role", 1L)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("회원 권한 변경 완료"));
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.message").value("회원 권한 변경 완료"));
     }
 
     @Test
@@ -126,10 +125,10 @@ class AdminUserControllerTest {
 
         // when & then
         mockMvc.perform(patch("/api/v1/admin/users/{userId}/status", 1L)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("회원 상태 변경 완료"));
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.message").value("회원 상태 변경 완료"));
     }
 }

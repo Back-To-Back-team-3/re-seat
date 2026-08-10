@@ -8,5 +8,5 @@ scrape_configs:
     scrape_interval: 5s
     static_configs:
       # EC2에서 web-app 컨테이너를 함께 구동할 때
-        - targets: [ 'web-app:8080' ]
+      - targets: [ 'web-app:8080' ]
 

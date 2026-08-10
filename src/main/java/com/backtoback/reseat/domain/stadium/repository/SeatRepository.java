@@ -1,12 +1,13 @@
 package com.backtoback.reseat.domain.stadium.repository;
 
-import com.backtoback.reseat.domain.stadium.entity.Seat;
-import com.backtoback.reseat.domain.stadium.entity.SeatStatus;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.List;
+import com.backtoback.reseat.domain.stadium.entity.Seat;
+import com.backtoback.reseat.domain.stadium.entity.SeatStatus;
 
 public interface SeatRepository extends JpaRepository<Seat, Long> {
 
@@ -26,7 +27,8 @@ public interface SeatRepository extends JpaRepository<Seat, Long> {
         order by s.id asc
         """)
     List<Seat> findAllByStadiumIdAndStatusWithZone(
-        @Param("stadiumId") Long stadiumId,
-        @Param("status") SeatStatus status
-    );
+        @Param("stadiumId")
+        Long stadiumId,
+        @Param("status")
+        SeatStatus status);
 }

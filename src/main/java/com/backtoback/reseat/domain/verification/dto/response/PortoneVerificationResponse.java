@@ -1,6 +1,7 @@
 package com.backtoback.reseat.domain.verification.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 

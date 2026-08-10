@@ -1,13 +1,14 @@
 package com.backtoback.reseat.domain.user.auth.dto;
 
-import com.backtoback.reseat.domain.user.entity.User;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
+
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
+import com.backtoback.reseat.domain.user.entity.User;
 
 public class CustomOAuth2User implements OAuth2User {
 
