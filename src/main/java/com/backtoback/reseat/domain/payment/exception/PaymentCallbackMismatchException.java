@@ -10,10 +10,10 @@ import com.backtoback.reseat.global.exception.ErrorCode;
  */
 public class PaymentCallbackMismatchException extends BusinessException {
 
-    /**
-     * 결제 콜백 정보 불일치 에러 코드로 예외를 생성한다.
-     */
-    public PaymentCallbackMismatchException() {
-        super(ErrorCode.PAYMENT_CALLBACK_MISMATCH);
-    }
+	/**
+	 * 결제 콜백 정보 불일치 에러 코드로 예외를 생성한다.
+	 */
+	public PaymentCallbackMismatchException() {
+		super(ErrorCode.PAYMENT_CALLBACK_MISMATCH);
+	}
 }
