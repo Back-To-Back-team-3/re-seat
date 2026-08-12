@@ -15,11 +15,11 @@ import com.backtoback.reseat.global.service.TestDatabaseCleanUpService;
 @ActiveProfiles("test")
 @Import(TestcontainersConfig.class)
 public abstract class BaseIntegrationTest {
-	@Autowired
-	private TestDatabaseCleanUpService testDatabaseCleanUpService;
+    @Autowired
+    private TestDatabaseCleanUpService testDatabaseCleanUpService;
 
-	@BeforeEach
-	void setUpDatabase() {
-		testDatabaseCleanUpService.cleanUpAll();
-	}
+    @BeforeEach
+    void setUpDatabase() {
+        testDatabaseCleanUpService.cleanUpAll();
+    }
 }

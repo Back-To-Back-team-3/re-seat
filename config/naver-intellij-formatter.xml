@@ -94,8 +94,8 @@
         <option name="WRAP_ON_TYPING" value="0"/>
         <indentOptions>
             <option name="CONTINUATION_INDENT_SIZE" value="4"/>
-            <option name="USE_TAB_CHARACTER" value="true"/>
-            <option name="SMART_TABS" value="true"/>
+            <option name="USE_TAB_CHARACTER" value="false"/>
+            <option name="SMART_TABS" value="false"/>
         </indentOptions>
     </codeStyleSettings>
 </code_scheme>

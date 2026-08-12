@@ -45,238 +45,238 @@ import lombok.extern.slf4j.Slf4j;
 @ActiveProfiles("test")
 class HoldExpiryConsistencyTest {
 
-	// test 프로파일에 Redisson 설정이 없으므로 MockitoBean으로 대체한다.
-	// PaymentService가 RedissonClient를 주입받아 컨텍스트 로드 실패하는 것을 방지한다.
-	@MockitoBean
-	private RedissonClient redissonClient;
+    // test 프로파일에 Redisson 설정이 없으므로 MockitoBean으로 대체한다.
+    // PaymentService가 RedissonClient를 주입받아 컨텍스트 로드 실패하는 것을 방지한다.
+    @MockitoBean
+    private RedissonClient redissonClient;
 
-	@Autowired
-	private HoldExpiryService holdExpiryService;
+    @Autowired
+    private HoldExpiryService holdExpiryService;
 
-	@Autowired
-	private ReservationRepository reservationRepository;
-	@Autowired
-	private GameSeatRepository gameSeatRepository;
+    @Autowired
+    private ReservationRepository reservationRepository;
+    @Autowired
+    private GameSeatRepository gameSeatRepository;
 
-	// 픽스처 구성에 필요한 연관 엔티티 저장소
-	@Autowired
-	private UserRepository userRepository;
-	@Autowired
-	private TeamRepository teamRepository;
-	@Autowired
-	private StadiumRepository stadiumRepository;
-	@Autowired
-	private SeatZoneRepository seatZoneRepository;
-	@Autowired
-	private SeatRepository seatRepository;
-	@Autowired
-	private GameRepository gameRepository;
+    // 픽스처 구성에 필요한 연관 엔티티 저장소
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private TeamRepository teamRepository;
+    @Autowired
+    private StadiumRepository stadiumRepository;
+    @Autowired
+    private SeatZoneRepository seatZoneRepository;
+    @Autowired
+    private SeatRepository seatRepository;
+    @Autowired
+    private GameRepository gameRepository;
 
-	// @AfterEach 수동 정리용 ID 추적
-	private Long savedReservationId;
-	private Long savedGameSeatId;
-	private Long savedUserId;
-	private Long savedGameId;
-	private Long savedSeatId;
-	private Long savedZoneId;
-	private Long savedStadiumId;
-	private Long savedTeamId;
+    // @AfterEach 수동 정리용 ID 추적
+    private Long savedReservationId;
+    private Long savedGameSeatId;
+    private Long savedUserId;
+    private Long savedGameId;
+    private Long savedSeatId;
+    private Long savedZoneId;
+    private Long savedStadiumId;
+    private Long savedTeamId;
 
-	/**
-	 * 각 테스트 전: Game, User, Seat, GameSeat, Reservation 픽스처를 순서대로 저장한다.
-	 * 상태와 hold_expires_at은 각 테스트에서 설정한다.
-	 */
-	@BeforeEach
-	void setUp() {
-		// Stadium → SeatZone → Team 순서 (Team이 homeStadium 참조하므로 Stadium 먼저)
-		Stadium stadium = stadiumRepository.save(Stadium.of("테스트구장", "서울시 테스트구", 100));
-		savedStadiumId = stadium.getId();
+    /**
+     * 각 테스트 전: Game, User, Seat, GameSeat, Reservation 픽스처를 순서대로 저장한다.
+     * 상태와 hold_expires_at은 각 테스트에서 설정한다.
+     */
+    @BeforeEach
+    void setUp() {
+        // Stadium → SeatZone → Team 순서 (Team이 homeStadium 참조하므로 Stadium 먼저)
+        Stadium stadium = stadiumRepository.save(Stadium.of("테스트구장", "서울시 테스트구", 100));
+        savedStadiumId = stadium.getId();
 
-		// SeatZone: grade·basePrice 필수
-		SeatZone zone = seatZoneRepository.save(SeatZone.of(stadium, "1루존", SeatGrade.INFIELD, 18000));
-		savedZoneId = zone.getId();
+        // SeatZone: grade·basePrice 필수
+        SeatZone zone = seatZoneRepository.save(SeatZone.of(stadium, "1루존", SeatGrade.INFIELD, 18000));
+        savedZoneId = zone.getId();
 
-		// Team: homeStadium 필수
-		Team team = teamRepository.save(Team.of("테스트팀", stadium));
-		savedTeamId = team.getId();
+        // Team: homeStadium 필수
+        Team team = teamRepository.save(Team.of("테스트팀", stadium));
+        savedTeamId = team.getId();
 
-		// Seat: stadium·zone·seatBlock·seatRow·seatNumber(String) 필수
-		Seat seat = seatRepository.save(Seat.of(stadium, zone, "1", "A", "1"));
-		savedSeatId = seat.getId();
+        // Seat: stadium·zone·seatBlock·seatRow·seatNumber(String) 필수
+        Seat seat = seatRepository.save(Seat.of(stadium, zone, "1", "A", "1"));
+        savedSeatId = seat.getId();
 
-		// User: @Builder — email·name 외 나머지는 기본값 적용
-		User user = userRepository.save(User.builder().email("b4-test@test.com").name("B4테스터").build());
-		savedUserId = user.getId();
+        // User: @Builder — email·name 외 나머지는 기본값 적용
+        User user = userRepository.save(User.builder().email("b4-test@test.com").name("B4테스터").build());
+        savedUserId = user.getId();
 
-		// Game: @Builder — bookingStatus 미지정 시 SCHEDULED 기본값 적용
-		Game game
-		    = gameRepository
-		        .save(
-		            Game
-		                .builder()
-		                .homeTeam(team)
-		                .awayTeam(team)
-		                .stadium(stadium)
-		                .gameAt(LocalDateTime.now().plusDays(1))
-		                .bookingOpenAt(LocalDateTime.now().minusHours(1))
-		                .bookingCloseAt(LocalDateTime.now().plusHours(5))
-		                .build()
-		        );
-		savedGameId = game.getId();
+        // Game: @Builder — bookingStatus 미지정 시 SCHEDULED 기본값 적용
+        Game game
+            = gameRepository
+                .save(
+                    Game
+                        .builder()
+                        .homeTeam(team)
+                        .awayTeam(team)
+                        .stadium(stadium)
+                        .gameAt(LocalDateTime.now().plusDays(1))
+                        .bookingOpenAt(LocalDateTime.now().minusHours(1))
+                        .bookingCloseAt(LocalDateTime.now().plusHours(5))
+                        .build()
+                );
+        savedGameId = game.getId();
 
-		// GameSeat: 상태·hold_expires_at은 각 테스트에서 hold()로 직접 세팅
-		GameSeat gameSeat = gameSeatRepository.save(GameSeat.builder().game(game).seat(seat).price(18000).build());
-		savedGameSeatId = gameSeat.getId();
-	}
+        // GameSeat: 상태·hold_expires_at은 각 테스트에서 hold()로 직접 세팅
+        GameSeat gameSeat = gameSeatRepository.save(GameSeat.builder().game(game).seat(seat).price(18000).build());
+        savedGameSeatId = gameSeat.getId();
+    }
 
-	/**
-	 * 각 테스트 후: reservation → game_seat → 연관 엔티티 순서로 수동 삭제한다.
-	 * FK 제약 위반 방지를 위해 자식 먼저 삭제한다.
-	 */
-	@AfterEach
-	void tearDown() {
-		if (savedReservationId != null) {
-			reservationRepository.deleteById(savedReservationId);
-			savedReservationId = null;
-		}
-		if (savedGameSeatId != null) {
-			gameSeatRepository.deleteById(savedGameSeatId);
-			savedGameSeatId = null;
-		}
-		// FK 역순 삭제: game → team → seat → zone → user → stadium
-		// Team이 stadium을 참조하므로 team을 stadium보다 먼저 삭제해야 한다
-		if (savedGameId != null)
-			gameRepository.deleteById(savedGameId);
-		if (savedTeamId != null)
-			teamRepository.deleteById(savedTeamId);
-		if (savedSeatId != null)
-			seatRepository.deleteById(savedSeatId);
-		if (savedZoneId != null)
-			seatZoneRepository.deleteById(savedZoneId);
-		if (savedUserId != null)
-			userRepository.deleteById(savedUserId);
-		if (savedStadiumId != null)
-			stadiumRepository.deleteById(savedStadiumId);
-	}
+    /**
+     * 각 테스트 후: reservation → game_seat → 연관 엔티티 순서로 수동 삭제한다.
+     * FK 제약 위반 방지를 위해 자식 먼저 삭제한다.
+     */
+    @AfterEach
+    void tearDown() {
+        if (savedReservationId != null) {
+            reservationRepository.deleteById(savedReservationId);
+            savedReservationId = null;
+        }
+        if (savedGameSeatId != null) {
+            gameSeatRepository.deleteById(savedGameSeatId);
+            savedGameSeatId = null;
+        }
+        // FK 역순 삭제: game → team → seat → zone → user → stadium
+        // Team이 stadium을 참조하므로 team을 stadium보다 먼저 삭제해야 한다
+        if (savedGameId != null)
+            gameRepository.deleteById(savedGameId);
+        if (savedTeamId != null)
+            teamRepository.deleteById(savedTeamId);
+        if (savedSeatId != null)
+            seatRepository.deleteById(savedSeatId);
+        if (savedZoneId != null)
+            seatZoneRepository.deleteById(savedZoneId);
+        if (savedUserId != null)
+            userRepository.deleteById(savedUserId);
+        if (savedStadiumId != null)
+            stadiumRepository.deleteById(savedStadiumId);
+    }
 
-	// =============================================================================
-	// 시나리오 1: TTL 만료 후 game_seats HELD→AVAILABLE, reservations HOLDING→EXPIRED
-	// =============================================================================
+    // =============================================================================
+    // 시나리오 1: TTL 만료 후 game_seats HELD→AVAILABLE, reservations HOLDING→EXPIRED
+    // =============================================================================
 
-	/**
-	 * B4 정합성 회귀 — TTL 만료 후 두 테이블이 동시에 올바른 상태로 전이되는지 검증한다.
-	 */
-	@Test
-	@DisplayName("TTL 만료 후 game_seats HELD→AVAILABLE, reservations HOLDING→EXPIRED 정합성 검증")
-	void scenario1_ttlExpired_bothTablesTransitionCorrectly() {
-		// given
-		LocalDateTime expiredAt = LocalDateTime.now().minusMinutes(1); // 이미 만료된 시각
+    /**
+     * B4 정합성 회귀 — TTL 만료 후 두 테이블이 동시에 올바른 상태로 전이되는지 검증한다.
+     */
+    @Test
+    @DisplayName("TTL 만료 후 game_seats HELD→AVAILABLE, reservations HOLDING→EXPIRED 정합성 검증")
+    void scenario1_ttlExpired_bothTablesTransitionCorrectly() {
+        // given
+        LocalDateTime expiredAt = LocalDateTime.now().minusMinutes(1); // 이미 만료된 시각
 
-		// GameSeat: AVAILABLE → HELD 전이 (hold_expires_at 과거로 세팅)
-		GameSeat gameSeat = gameSeatRepository.findById(savedGameSeatId).orElseThrow();
-		gameSeat.hold(expiredAt);
-		gameSeatRepository.save(gameSeat);
+        // GameSeat: AVAILABLE → HELD 전이 (hold_expires_at 과거로 세팅)
+        GameSeat gameSeat = gameSeatRepository.findById(savedGameSeatId).orElseThrow();
+        gameSeat.hold(expiredAt);
+        gameSeatRepository.save(gameSeat);
 
-		// Reservation: HOLDING 상태, hold_expires_at 과거로 세팅
-		Game game = gameRepository.findById(savedGameId).orElseThrow();
-		User user = userRepository.findById(savedUserId).orElseThrow();
-		Reservation reservation
-		    = reservationRepository
-		        .save(
-		            Reservation
-		                .builder()
-		                .reservationNo("RSV-TEST-000001")
-		                .user(user)
-		                .game(game)
-		                .status(ReservationStatus.HOLDING)
-		                .holdExpiresAt(expiredAt)
-		                .build()
-		        );
-		savedReservationId = reservation.getId();
+        // Reservation: HOLDING 상태, hold_expires_at 과거로 세팅
+        Game game = gameRepository.findById(savedGameId).orElseThrow();
+        User user = userRepository.findById(savedUserId).orElseThrow();
+        Reservation reservation
+            = reservationRepository
+                .save(
+                    Reservation
+                        .builder()
+                        .reservationNo("RSV-TEST-000001")
+                        .user(user)
+                        .game(game)
+                        .status(ReservationStatus.HOLDING)
+                        .holdExpiresAt(expiredAt)
+                        .build()
+                );
+        savedReservationId = reservation.getId();
 
-		// when
-		LocalDateTime now = LocalDateTime.now();
-		HoldExpiryService.HoldExpiryResult result = holdExpiryService.releaseExpired(now);
+        // when
+        LocalDateTime now = LocalDateTime.now();
+        HoldExpiryService.HoldExpiryResult result = holdExpiryService.releaseExpired(now);
 
-		// then — 결과 카운트 검증
-		assertThat(result.expiredReservations()).as("만료된 예약 1건이 EXPIRED로 전이되어야 한다").isGreaterThanOrEqualTo(1);
-		assertThat(result.releasedSeats()).as("만료된 좌석 1건이 AVAILABLE로 회수되어야 한다").isGreaterThanOrEqualTo(1);
+        // then — 결과 카운트 검증
+        assertThat(result.expiredReservations()).as("만료된 예약 1건이 EXPIRED로 전이되어야 한다").isGreaterThanOrEqualTo(1);
+        assertThat(result.releasedSeats()).as("만료된 좌석 1건이 AVAILABLE로 회수되어야 한다").isGreaterThanOrEqualTo(1);
 
-		// then — 실제 DB 상태 재조회 검증 (B4 핵심: 양쪽 테이블 모두 확인)
-		Reservation updatedReservation = reservationRepository.findById(savedReservationId).orElseThrow();
-		assertThat(updatedReservation.getStatus())
-		    .as("reservations.status가 EXPIRED로 전이되어야 한다")
-		    .isEqualTo(ReservationStatus.EXPIRED);
+        // then — 실제 DB 상태 재조회 검증 (B4 핵심: 양쪽 테이블 모두 확인)
+        Reservation updatedReservation = reservationRepository.findById(savedReservationId).orElseThrow();
+        assertThat(updatedReservation.getStatus())
+            .as("reservations.status가 EXPIRED로 전이되어야 한다")
+            .isEqualTo(ReservationStatus.EXPIRED);
 
-		GameSeat updatedGameSeat = gameSeatRepository.findById(savedGameSeatId).orElseThrow();
-		assertThat(updatedGameSeat.getStatus())
-		    .as("game_seats.status가 AVAILABLE로 회수되어야 한다")
-		    .isEqualTo(GameSeatStatus.AVAILABLE);
-		assertThat(updatedGameSeat.getHoldExpiresAt()).as("회수된 좌석의 hold_expires_at은 null이어야 한다").isNull();
-	}
+        GameSeat updatedGameSeat = gameSeatRepository.findById(savedGameSeatId).orElseThrow();
+        assertThat(updatedGameSeat.getStatus())
+            .as("game_seats.status가 AVAILABLE로 회수되어야 한다")
+            .isEqualTo(GameSeatStatus.AVAILABLE);
+        assertThat(updatedGameSeat.getHoldExpiresAt()).as("회수된 좌석의 hold_expires_at은 null이어야 한다").isNull();
+    }
 
-	// =============================================================================
-	// 시나리오 2: 선점 연장 후 스케줄러 오회수 방지
-	// =============================================================================
+    // =============================================================================
+    // 시나리오 2: 선점 연장 후 스케줄러 오회수 방지
+    // =============================================================================
 
-	/**
-	 * B4 정합성 회귀 — 주문 생성으로 hold_expires_at이 연장된 선점을 스케줄러가 오회수하지 않는지 검증한다.
-	 */
-	@Test
-	@DisplayName("선점 연장 후 스케줄러 실행 시 정상 선점 오회수 없음 검증 (B4 경합 회귀)")
-	void scenario2_extendedHold_notReleasedByScheduler() {
-		// given — hold_expires_at을 미래로 세팅 (주문 생성으로 연장된 상태 시뮬레이션)
-		LocalDateTime extendedAt = LocalDateTime.now().plusMinutes(8).withNano(0);
+    /**
+     * B4 정합성 회귀 — 주문 생성으로 hold_expires_at이 연장된 선점을 스케줄러가 오회수하지 않는지 검증한다.
+     */
+    @Test
+    @DisplayName("선점 연장 후 스케줄러 실행 시 정상 선점 오회수 없음 검증 (B4 경합 회귀)")
+    void scenario2_extendedHold_notReleasedByScheduler() {
+        // given — hold_expires_at을 미래로 세팅 (주문 생성으로 연장된 상태 시뮬레이션)
+        LocalDateTime extendedAt = LocalDateTime.now().plusMinutes(8).withNano(0);
 
-		GameSeat gameSeat = gameSeatRepository.findById(savedGameSeatId).orElseThrow();
-		gameSeat.hold(extendedAt);
-		gameSeatRepository.save(gameSeat);
+        GameSeat gameSeat = gameSeatRepository.findById(savedGameSeatId).orElseThrow();
+        gameSeat.hold(extendedAt);
+        gameSeatRepository.save(gameSeat);
 
-		Game game = gameRepository.findById(savedGameId).orElseThrow();
-		User user = userRepository.findById(savedUserId).orElseThrow();
-		Reservation reservation
-		    = reservationRepository
-		        .save(
-		            Reservation
-		                .builder()
-		                .reservationNo("RSV-TEST-000002")
-		                .user(user)
-		                .game(game)
-		                .status(ReservationStatus.HOLDING)
-		                .holdExpiresAt(extendedAt) // reservations·game_seats 동일 값 — B↔C 계약 준수
-		                .build()
-		        );
-		savedReservationId = reservation.getId();
+        Game game = gameRepository.findById(savedGameId).orElseThrow();
+        User user = userRepository.findById(savedUserId).orElseThrow();
+        Reservation reservation
+            = reservationRepository
+                .save(
+                    Reservation
+                        .builder()
+                        .reservationNo("RSV-TEST-000002")
+                        .user(user)
+                        .game(game)
+                        .status(ReservationStatus.HOLDING)
+                        .holdExpiresAt(extendedAt) // reservations·game_seats 동일 값 — B↔C 계약 준수
+                        .build()
+                );
+        savedReservationId = reservation.getId();
 
-		// when — 스케줄러 실행 (WHERE hold_expires_at < now() 조건 → 미래값이므로 대상 아님)
-		LocalDateTime now = LocalDateTime.now();
-		HoldExpiryService.HoldExpiryResult result = holdExpiryService.releaseExpired(now);
+        // when — 스케줄러 실행 (WHERE hold_expires_at < now() 조건 → 미래값이므로 대상 아님)
+        LocalDateTime now = LocalDateTime.now();
+        HoldExpiryService.HoldExpiryResult result = holdExpiryService.releaseExpired(now);
 
-		// then — 실제 DB 상태 재조회
-		Reservation updatedReservation = reservationRepository.findById(savedReservationId).orElseThrow();
-		GameSeat updatedGameSeat = gameSeatRepository.findById(savedGameSeatId).orElseThrow();
+        // then — 실제 DB 상태 재조회
+        Reservation updatedReservation = reservationRepository.findById(savedReservationId).orElseThrow();
+        GameSeat updatedGameSeat = gameSeatRepository.findById(savedGameSeatId).orElseThrow();
 
-		log.info("[B4 시나리오2] 선점 연장 후 오회수 방지 결과");
-		log
-		    .info(
-		        "  expiredReservations={}, releasedSeats={} (expected=0, 0)",
-		        result.expiredReservations(),
-		        result.releasedSeats()
-		    );
-		log.info("  reservation.status={} (expected=HOLDING)", updatedReservation.getStatus());
-		log
-		    .info(
-		        "  gameSeat.status={}, holdExpiresAt={} (expected=HELD, {})",
-		        updatedGameSeat.getStatus(),
-		        updatedGameSeat.getHoldExpiresAt(),
-		        extendedAt
-		    );
+        log.info("[B4 시나리오2] 선점 연장 후 오회수 방지 결과");
+        log
+            .info(
+                "  expiredReservations={}, releasedSeats={} (expected=0, 0)",
+                result.expiredReservations(),
+                result.releasedSeats()
+            );
+        log.info("  reservation.status={} (expected=HOLDING)", updatedReservation.getStatus());
+        log
+            .info(
+                "  gameSeat.status={}, holdExpiresAt={} (expected=HELD, {})",
+                updatedGameSeat.getStatus(),
+                updatedGameSeat.getHoldExpiresAt(),
+                extendedAt
+            );
 
-		// 오회수 없음 — 양쪽 테이블 상태 유지 (B4 핵심 검증)
-		assertThat(updatedReservation.getStatus())
-		    .as("연장된 예약은 HOLDING 상태를 유지해야 한다")
-		    .isEqualTo(ReservationStatus.HOLDING);
-		assertThat(updatedGameSeat.getStatus()).as("연장된 좌석은 HELD 상태를 유지해야 한다").isEqualTo(GameSeatStatus.HELD);
-		assertThat(updatedGameSeat.getHoldExpiresAt()).as("연장된 hold_expires_at이 변경되지 않아야 한다").isEqualTo(extendedAt);
-	}
+        // 오회수 없음 — 양쪽 테이블 상태 유지 (B4 핵심 검증)
+        assertThat(updatedReservation.getStatus())
+            .as("연장된 예약은 HOLDING 상태를 유지해야 한다")
+            .isEqualTo(ReservationStatus.HOLDING);
+        assertThat(updatedGameSeat.getStatus()).as("연장된 좌석은 HELD 상태를 유지해야 한다").isEqualTo(GameSeatStatus.HELD);
+        assertThat(updatedGameSeat.getHoldExpiresAt()).as("연장된 hold_expires_at이 변경되지 않아야 한다").isEqualTo(extendedAt);
+    }
 }

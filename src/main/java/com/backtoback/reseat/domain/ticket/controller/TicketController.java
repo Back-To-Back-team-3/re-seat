@@ -40,64 +40,64 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class TicketController {
 
-	private final TicketService ticketService;
+    private final TicketService ticketService;
 
-	/**
-	 * 내 티켓 목록 조회
-	 * <p>
-	 * GET /api/v1/tickets
-	 *
-	 * @param userDetails 현재 로그인 사용자 정보
-	 * @param status 티켓 상태 필터(선택)
-	 * @param pageable 페이지 정보
-	 * @return 페이지 형태의 내 티켓 목록
-	 */
-	@GetMapping
-	public ResponseEntity<ApiResponse<PageResponse<TicketListResponse>>> getMyTickets(
-	    @AuthenticationPrincipal CustomUserDetails userDetails,
-	    @RequestParam(required = false) TicketStatus status,
-	    @PageableDefault(size = 20) Pageable pageable
-	) {
-		Page<TicketListResponse> response = ticketService.getMyTickets(userDetails.getId(), status, pageable);
+    /**
+     * 내 티켓 목록 조회
+     * <p>
+     * GET /api/v1/tickets
+     *
+     * @param userDetails 현재 로그인 사용자 정보
+     * @param status 티켓 상태 필터(선택)
+     * @param pageable 페이지 정보
+     * @return 페이지 형태의 내 티켓 목록
+     */
+    @GetMapping
+    public ResponseEntity<ApiResponse<PageResponse<TicketListResponse>>> getMyTickets(
+        @AuthenticationPrincipal CustomUserDetails userDetails,
+        @RequestParam(required = false) TicketStatus status,
+        @PageableDefault(size = 20) Pageable pageable
+    ) {
+        Page<TicketListResponse> response = ticketService.getMyTickets(userDetails.getId(), status, pageable);
 
-		return ResponseEntity.ok(ApiResponse.success("내 티켓 목록 조회 완료", PageResponse.of(response)));
-	}
+        return ResponseEntity.ok(ApiResponse.success("내 티켓 목록 조회 완료", PageResponse.of(response)));
+    }
 
-	/**
-	 * 내 티켓 상세 조회
-	 * <p>
-	 * GET /api/v1/tickets/{ticketId}
-	 *
-	 * @param userDetails 현재 로그인 사용자 정보
-	 * @param ticketId 티켓 ID
-	 * @return 티켓 상세 응답
-	 */
-	@GetMapping("/{ticketId}")
-	public ResponseEntity<ApiResponse<TicketDetailResponse>> getTicket(
-	    @AuthenticationPrincipal CustomUserDetails userDetails,
-	    @PathVariable Long ticketId
-	) {
-		TicketDetailResponse response = ticketService.getTicket(userDetails.getId(), ticketId);
+    /**
+     * 내 티켓 상세 조회
+     * <p>
+     * GET /api/v1/tickets/{ticketId}
+     *
+     * @param userDetails 현재 로그인 사용자 정보
+     * @param ticketId 티켓 ID
+     * @return 티켓 상세 응답
+     */
+    @GetMapping("/{ticketId}")
+    public ResponseEntity<ApiResponse<TicketDetailResponse>> getTicket(
+        @AuthenticationPrincipal CustomUserDetails userDetails,
+        @PathVariable Long ticketId
+    ) {
+        TicketDetailResponse response = ticketService.getTicket(userDetails.getId(), ticketId);
 
-		return ResponseEntity.ok(ApiResponse.success("티켓 상세 조회 완료", response));
-	}
+        return ResponseEntity.ok(ApiResponse.success("티켓 상세 조회 완료", response));
+    }
 
-	/**
-	 * 내 티켓 취소
-	 * <p>
-	 * POST /api/v1/tickets/{ticketId}/cancel
-	 *
-	 * @param userDetails 현재 로그인 사용자 정보
-	 * @param ticketId 취소할 티켓 ID
-	 * @return 티켓 취소 응답
-	 */
-	@PostMapping("/{ticketId}/cancel")
-	public ResponseEntity<ApiResponse<TicketCancelResponse>> cancelTicket(
-	    @AuthenticationPrincipal CustomUserDetails userDetails,
-	    @PathVariable Long ticketId
-	) {
-		TicketCancelResponse response = ticketService.cancelTicket(userDetails.getId(), ticketId);
+    /**
+     * 내 티켓 취소
+     * <p>
+     * POST /api/v1/tickets/{ticketId}/cancel
+     *
+     * @param userDetails 현재 로그인 사용자 정보
+     * @param ticketId 취소할 티켓 ID
+     * @return 티켓 취소 응답
+     */
+    @PostMapping("/{ticketId}/cancel")
+    public ResponseEntity<ApiResponse<TicketCancelResponse>> cancelTicket(
+        @AuthenticationPrincipal CustomUserDetails userDetails,
+        @PathVariable Long ticketId
+    ) {
+        TicketCancelResponse response = ticketService.cancelTicket(userDetails.getId(), ticketId);
 
-		return ResponseEntity.ok(ApiResponse.success("티켓 취소 완료", response));
-	}
+        return ResponseEntity.ok(ApiResponse.success("티켓 취소 완료", response));
+    }
 }

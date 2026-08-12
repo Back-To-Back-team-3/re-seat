@@ -60,25 +60,25 @@ public record SeatStatusResponse(
     ) GameSeatStatus status
 ) {
 
-	/**
-	 * GameSeat 엔티티로부터 응답을 만든다.
-	 * <p>seat·zone이 fetch join으로 로딩되어 있어야 한다.
-	 * LAZY 상태에서 호출하면 N+1이 발생한다.
-	 */
-	public static SeatStatusResponse from(GameSeat gameSeat) {
-		var seat = gameSeat.getSeat();
-		var zone = seat.getZone();
+    /**
+     * GameSeat 엔티티로부터 응답을 만든다.
+     * <p>seat·zone이 fetch join으로 로딩되어 있어야 한다.
+     * LAZY 상태에서 호출하면 N+1이 발생한다.
+     */
+    public static SeatStatusResponse from(GameSeat gameSeat) {
+        var seat = gameSeat.getSeat();
+        var zone = seat.getZone();
 
-		return new SeatStatusResponse(
-		    gameSeat.getId(),
-		    zone.getId(),
-		    zone.getName(),
-		    zone.getGrade(),
-		    seat.getSeatBlock(),
-		    seat.getSeatRow(),
-		    seat.getSeatNumber(),
-		    gameSeat.getPrice(),
-		    gameSeat.getStatus()
-		);
-	}
+        return new SeatStatusResponse(
+            gameSeat.getId(),
+            zone.getId(),
+            zone.getName(),
+            zone.getGrade(),
+            seat.getSeatBlock(),
+            seat.getSeatRow(),
+            seat.getSeatNumber(),
+            gameSeat.getPrice(),
+            gameSeat.getStatus()
+        );
+    }
 }

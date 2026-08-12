@@ -29,83 +29,83 @@ import jakarta.persistence.EntityManager;
 @DataJpaTest(
     properties = {
         "spring.jpa.properties.hibernate.generate_statistics=true"
-	}
+    }
 )
 @Import(
     {
         GameRepositoryImpl.class,
         GameRepositoryTest.QuerydslTestConfig.class
-	}
+    }
 )
 class GameRepositoryTest {
 
-	@Autowired
-	private GameRepository gameRepository;
+    @Autowired
+    private GameRepository gameRepository;
 
-	@Autowired
-	private EntityManager entityManager;
+    @Autowired
+    private EntityManager entityManager;
 
-	@Test
-	@DisplayName("경기 목록 조회 시 팀과 구장 정보를 함께 조회한다")
-	void should_fetchTeamsAndStadium_when_searchGames() {
-		GameSearchCondition condition = new GameSearchCondition(null, null, null, null, null);
+    @Test
+    @DisplayName("경기 목록 조회 시 팀과 구장 정보를 함께 조회한다")
+    void should_fetchTeamsAndStadium_when_searchGames() {
+        GameSearchCondition condition = new GameSearchCondition(null, null, null, null, null);
 
-		Page<Game> result = gameRepository.searchGames(condition, PageRequest.of(0, 20));
+        Page<Game> result = gameRepository.searchGames(condition, PageRequest.of(0, 20));
 
-		List<Game> games = result.getContent();
+        List<Game> games = result.getContent();
 
-		assertThat(games).isNotNull();
+        assertThat(games).isNotNull();
 
-		if (!games.isEmpty()) {
-			Game game = games.get(0);
+        if (!games.isEmpty()) {
+            Game game = games.get(0);
 
-			assertThat(game.getHomeTeam()).isNotNull();
-			assertThat(game.getAwayTeam()).isNotNull();
-			assertThat(game.getStadium()).isNotNull();
-		}
-	}
+            assertThat(game.getHomeTeam()).isNotNull();
+            assertThat(game.getAwayTeam()).isNotNull();
+            assertThat(game.getStadium()).isNotNull();
+        }
+    }
 
-	@Test
-	@DisplayName("경기 목록 조회 시 팀·구장을 fetch join하여 추가 쿼리가 발생하지 않는다")
-	void should_notCauseNPlusOne_when_fetchJoinApplied() {
+    @Test
+    @DisplayName("경기 목록 조회 시 팀·구장을 fetch join하여 추가 쿼리가 발생하지 않는다")
+    void should_notCauseNPlusOne_when_fetchJoinApplied() {
 
-		entityManager.flush();
-		entityManager.clear();
+        entityManager.flush();
+        entityManager.clear();
 
-		Statistics statistics = entityManager.getEntityManagerFactory().unwrap(SessionFactory.class).getStatistics();
-		statistics.clear();
+        Statistics statistics = entityManager.getEntityManagerFactory().unwrap(SessionFactory.class).getStatistics();
+        statistics.clear();
 
-		Page<Game> result
-		    = gameRepository.searchGames(new GameSearchCondition(null, null, null, null, null), PageRequest.of(0, 20));
+        Page<Game> result
+            = gameRepository.searchGames(new GameSearchCondition(null, null, null, null, null), PageRequest.of(0, 20));
 
-		List<Game> content = result.getContent();
+        List<Game> content = result.getContent();
 
-		if (!content.isEmpty()) {
-			content.forEach(game -> {
-				if (game.getHomeTeam() != null)
-					game.getHomeTeam().getName();
-				if (game.getAwayTeam() != null)
-					game.getAwayTeam().getName();
-				if (game.getStadium() != null)
-					game.getStadium().getName();
-			});
+        if (!content.isEmpty()) {
+            content.forEach(game -> {
+                if (game.getHomeTeam() != null)
+                    game.getHomeTeam().getName();
+                if (game.getAwayTeam() != null)
+                    game.getAwayTeam().getName();
+                if (game.getStadium() != null)
+                    game.getStadium().getName();
+            });
 
-			// content 1번 쿼리 + count 1번 쿼리 도합 2번으로 제어되는지 확인
-			assertThat(statistics.getPrepareStatementCount()).isEqualTo(2);
-		}
-	}
+            // content 1번 쿼리 + count 1번 쿼리 도합 2번으로 제어되는지 확인
+            assertThat(statistics.getPrepareStatementCount()).isEqualTo(2);
+        }
+    }
 
-	/**
-	 * Repository 테스트용 QueryDSL 설정.
-	 * <p>@DataJpaTest는 전체 애플리케이션 설정을 띄우지 않으므로
-	 * JPAQueryFactory Bean을 테스트에서 직접 등록한다.</p>
-	 */
-	@TestConfiguration
-	static class QuerydslTestConfig {
+    /**
+     * Repository 테스트용 QueryDSL 설정.
+     * <p>@DataJpaTest는 전체 애플리케이션 설정을 띄우지 않으므로
+     * JPAQueryFactory Bean을 테스트에서 직접 등록한다.</p>
+     */
+    @TestConfiguration
+    static class QuerydslTestConfig {
 
-		@Bean
-		JPAQueryFactory jpaQueryFactory(EntityManager entityManager) {
-			return new JPAQueryFactory(entityManager);
-		}
-	}
+        @Bean
+        JPAQueryFactory jpaQueryFactory(EntityManager entityManager) {
+            return new JPAQueryFactory(entityManager);
+        }
+    }
 }

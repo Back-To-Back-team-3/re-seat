@@ -38,53 +38,53 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/games")
 public class GameSeatController implements GameSeatControllerDocs {
 
-	private final SeatQueryService seatQueryService;
-	private final AdmissionTokenService admissionTokenService;
+    private final SeatQueryService seatQueryService;
+    private final AdmissionTokenService admissionTokenService;
 
-	/**
-	 * 경기의 좌석 현황을 조회한다.
-	 * <p>필터를 지정하지 않으면 전체 500건을 반환한다.
-	 * 좌석 배치도 렌더링 시 zoneId 필터로 구역 단위 조회를 권장한다.
-	 *
-	 * @param gameId 경기 ID
-	 * @param zoneId 구역 ID (선택)
-	 * @param grade 좌석 등급 (선택, INFIELD/OUTFIELD)
-	 * @param status 좌석 상태 (선택, AVAILABLE/HELD/SOLD/BLOCKED)
-	 * @return 좌석 현황 목록
-	 */
-	// getSeats: 200 응답 래핑
-	@Override
-	@GetMapping("/{gameId}/seats")
-	public ResponseEntity<ApiResponse<List<SeatStatusResponse>>> getSeats(
-	    @PathVariable Long gameId,
-	    @RequestParam(required = false) Long zoneId,
-	    @RequestParam(required = false) SeatGrade grade,
-	    @RequestParam(required = false) GameSeatStatus status,
-	    @RequestHeader(
-	        value = "Queue-Token",
-	        required = false
-	    ) String queueToken,
-	    @AuthenticationPrincipal CustomUserDetails userDetails
-	) {
-		// getSeats는 validateToken(조회)만 수행한다.
-		// consumeToken(USED 전이)은 holdSeats 성공 후 호출한다.
-		admissionTokenService.validateToken(userDetails.getId(), gameId, queueToken);
+    /**
+     * 경기의 좌석 현황을 조회한다.
+     * <p>필터를 지정하지 않으면 전체 500건을 반환한다.
+     * 좌석 배치도 렌더링 시 zoneId 필터로 구역 단위 조회를 권장한다.
+     *
+     * @param gameId 경기 ID
+     * @param zoneId 구역 ID (선택)
+     * @param grade 좌석 등급 (선택, INFIELD/OUTFIELD)
+     * @param status 좌석 상태 (선택, AVAILABLE/HELD/SOLD/BLOCKED)
+     * @return 좌석 현황 목록
+     */
+    // getSeats: 200 응답 래핑
+    @Override
+    @GetMapping("/{gameId}/seats")
+    public ResponseEntity<ApiResponse<List<SeatStatusResponse>>> getSeats(
+        @PathVariable Long gameId,
+        @RequestParam(required = false) Long zoneId,
+        @RequestParam(required = false) SeatGrade grade,
+        @RequestParam(required = false) GameSeatStatus status,
+        @RequestHeader(
+            value = "Queue-Token",
+            required = false
+        ) String queueToken,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        // getSeats는 validateToken(조회)만 수행한다.
+        // consumeToken(USED 전이)은 holdSeats 성공 후 호출한다.
+        admissionTokenService.validateToken(userDetails.getId(), gameId, queueToken);
 
-		List<SeatStatusResponse> seats = seatQueryService.getSeats(gameId, zoneId, grade, status);
-		return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success("좌석 현황 조회 성공", seats));
-	}
+        List<SeatStatusResponse> seats = seatQueryService.getSeats(gameId, zoneId, grade, status);
+        return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success("좌석 현황 조회 성공", seats));
+    }
 
-	/**
-	 * 경기의 구역별 잔여 좌석 수를 조회합니다.
-	 *
-	 * @param gameId 경기 ID
-	 * @return 구역 요약 목록 (잔여수 0인 구역 포함)
-	 */
-	// getZoneSummaries: 200 응답 래핑
-	@Override
-	@GetMapping("/{gameId}/zones")
-	public ResponseEntity<ApiResponse<List<ZoneSummaryResponse>>> getZoneSummaries(@PathVariable Long gameId) {
-		List<ZoneSummaryResponse> zones = seatQueryService.getZoneSummaries(gameId);
-		return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success("구역 요약 조회 성공", zones));
-	}
+    /**
+     * 경기의 구역별 잔여 좌석 수를 조회합니다.
+     *
+     * @param gameId 경기 ID
+     * @return 구역 요약 목록 (잔여수 0인 구역 포함)
+     */
+    // getZoneSummaries: 200 응답 래핑
+    @Override
+    @GetMapping("/{gameId}/zones")
+    public ResponseEntity<ApiResponse<List<ZoneSummaryResponse>>> getZoneSummaries(@PathVariable Long gameId) {
+        List<ZoneSummaryResponse> zones = seatQueryService.getZoneSummaries(gameId);
+        return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success("구역 요약 조회 성공", zones));
+    }
 }

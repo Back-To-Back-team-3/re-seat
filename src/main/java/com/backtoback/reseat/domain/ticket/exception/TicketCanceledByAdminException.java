@@ -5,7 +5,7 @@ import com.backtoback.reseat.global.exception.ErrorCode;
 
 public class TicketCanceledByAdminException extends BusinessException {
 
-	public TicketCanceledByAdminException() {
-		super(ErrorCode.TICKET_ALREADY_CANCELED);
-	}
+    public TicketCanceledByAdminException() {
+        super(ErrorCode.TICKET_ALREADY_CANCELED);
+    }
 }

@@ -9,17 +9,17 @@ import com.backtoback.reseat.global.exception.ErrorCode;
  */
 public class PaymentCancelFailedException extends BusinessException {
 
-	/**
-	 * 결제 취소 실패 에러 코드로 예외를 생성한다.
-	 */
-	public PaymentCancelFailedException() {
-		super(ErrorCode.PAYMENT_CANCEL_FAILED);
-	}
+    /**
+     * 결제 취소 실패 에러 코드로 예외를 생성한다.
+     */
+    public PaymentCancelFailedException() {
+        super(ErrorCode.PAYMENT_CANCEL_FAILED);
+    }
 
-	/**
-	 * 결제 취소 실패 에러 코드와 상세 메시지로 예외를 생성한다.
-	 */
-	public PaymentCancelFailedException(String message) {
-		super(ErrorCode.PAYMENT_CANCEL_FAILED, message);
-	}
+    /**
+     * 결제 취소 실패 에러 코드와 상세 메시지로 예외를 생성한다.
+     */
+    public PaymentCancelFailedException(String message) {
+        super(ErrorCode.PAYMENT_CANCEL_FAILED, message);
+    }
 }

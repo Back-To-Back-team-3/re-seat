@@ -40,45 +40,45 @@ public record AdminUserTicketResponse(
     String seatRow,
     String seatNumber
 ) {
-	public static AdminUserTicketResponse from(Ticket ticket) {
-		var game = ticket.getGame();
-		var gameSeat = ticket.getGameSeat();
-		var seatEntity = gameSeat.getSeat();
-		var zone = seatEntity.getZone();
+    public static AdminUserTicketResponse from(Ticket ticket) {
+        var game = ticket.getGame();
+        var gameSeat = ticket.getGameSeat();
+        var seatEntity = gameSeat.getSeat();
+        var zone = seatEntity.getZone();
 
-		// 명세서 표기용 좌석 문자열 조합 (예: "1루 블루석 A-3-12")
-		String formattedSeat
-		    = String
-		        .format(
-		            "%s %s-%s-%s",
-		            zone != null ? zone.getName() : "",
-		            seatEntity.getSeatBlock(),
-		            seatEntity.getSeatRow(),
-		            seatEntity.getSeatNumber()
-		        )
-		        .trim();
+        // 명세서 표기용 좌석 문자열 조합 (예: "1루 블루석 A-3-12")
+        String formattedSeat
+            = String
+                .format(
+                    "%s %s-%s-%s",
+                    zone != null ? zone.getName() : "",
+                    seatEntity.getSeatBlock(),
+                    seatEntity.getSeatRow(),
+                    seatEntity.getSeatNumber()
+                )
+                .trim();
 
-		return AdminUserTicketResponse
-		    .builder()
-		    .ticketId(ticket.getId())
-		    .ticketNo(ticket.getTicketNo())
-		    .status(ticket.getStatus())
-		    .qrToken(ticket.getQrToken())
-		    .issuedAt(ticket.getIssuedAt())
-		    .usedAt(ticket.getUsedAt())
-		    .canceledAt(ticket.getCanceledAt())
-		    .gameId(game.getId())
-		    .gameTitle(game.getTitle())
-		    .stadiumName(game.getStadium() != null ? game.getStadium().getName() : null)
-		    .homeTeamName(game.getHomeTeam() != null ? game.getHomeTeam().getName() : null)
-		    .awayTeamName(game.getAwayTeam() != null ? game.getAwayTeam().getName() : null)
-		    .gameAt(game.getGameAt())
-		    .seat(formattedSeat)
-		    .gameSeatId(gameSeat.getId())
-		    .zoneName(zone != null ? zone.getName() : null)
-		    .seatBlock(seatEntity.getSeatBlock())
-		    .seatRow(seatEntity.getSeatRow())
-		    .seatNumber(seatEntity.getSeatNumber())
-		    .build();
-	}
+        return AdminUserTicketResponse
+            .builder()
+            .ticketId(ticket.getId())
+            .ticketNo(ticket.getTicketNo())
+            .status(ticket.getStatus())
+            .qrToken(ticket.getQrToken())
+            .issuedAt(ticket.getIssuedAt())
+            .usedAt(ticket.getUsedAt())
+            .canceledAt(ticket.getCanceledAt())
+            .gameId(game.getId())
+            .gameTitle(game.getTitle())
+            .stadiumName(game.getStadium() != null ? game.getStadium().getName() : null)
+            .homeTeamName(game.getHomeTeam() != null ? game.getHomeTeam().getName() : null)
+            .awayTeamName(game.getAwayTeam() != null ? game.getAwayTeam().getName() : null)
+            .gameAt(game.getGameAt())
+            .seat(formattedSeat)
+            .gameSeatId(gameSeat.getId())
+            .zoneName(zone != null ? zone.getName() : null)
+            .seatBlock(seatEntity.getSeatBlock())
+            .seatRow(seatEntity.getSeatRow())
+            .seatNumber(seatEntity.getSeatNumber())
+            .build();
+    }
 }

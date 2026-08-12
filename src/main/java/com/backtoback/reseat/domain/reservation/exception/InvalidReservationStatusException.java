@@ -17,7 +17,7 @@ import com.backtoback.reseat.global.exception.ErrorCode;
  */
 public class InvalidReservationStatusException extends BusinessException {
 
-	public InvalidReservationStatusException() {
-		super(ErrorCode.INVALID_RESERVATION_STATUS);
-	}
+    public InvalidReservationStatusException() {
+        super(ErrorCode.INVALID_RESERVATION_STATUS);
+    }
 }

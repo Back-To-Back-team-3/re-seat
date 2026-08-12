@@ -11,40 +11,40 @@ import java.util.function.Consumer;
 
 public abstract class BaseConcurrencyTest extends BaseIntegrationTest {
 
-	// 지정한 횟수만큼 동시 요청 실행하는 헬퍼메서드
-	// @Param ThreadCount 동시 실행 스레드 수
-	// @Param task 각 스레드에서 수행할 작업
-	// @return 성공한 작업 횟수
-	protected int executeConcurrentTasks(int threadCount, Consumer<Integer> task) throws InterruptedException {
+    // 지정한 횟수만큼 동시 요청 실행하는 헬퍼메서드
+    // @Param ThreadCount 동시 실행 스레드 수
+    // @Param task 각 스레드에서 수행할 작업
+    // @return 성공한 작업 횟수
+    protected int executeConcurrentTasks(int threadCount, Consumer<Integer> task) throws InterruptedException {
 
-		ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
-		CountDownLatch startLatch = new CountDownLatch(1);
-		CountDownLatch endLatch = new CountDownLatch(threadCount);
-		AtomicInteger successCount = new AtomicInteger();
+        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch endLatch = new CountDownLatch(threadCount);
+        AtomicInteger successCount = new AtomicInteger();
 
-		for (int i = 0; i < threadCount; i++) {
-			final int threadIndex = i;
-			executorService.submit(() -> {
-				try {
-					startLatch.await(); // 모든 스레드가 준비될 때까지 대기 후 동시 시작
-					task.accept(threadIndex);
-					successCount.incrementAndGet();
-				} catch (Exception e) {
-					// 예외 발생 시 로그 출력 후 실패 처리
-					System.err.println("동시성 테스트 스레드 예외 발생: " + e.getMessage());
-				} finally {
-					endLatch.countDown();
-				}
-			});
-		}
+        for (int i = 0; i < threadCount; i++) {
+            final int threadIndex = i;
+            executorService.submit(() -> {
+                try {
+                    startLatch.await(); // 모든 스레드가 준비될 때까지 대기 후 동시 시작
+                    task.accept(threadIndex);
+                    successCount.incrementAndGet();
+                } catch (Exception e) {
+                    // 예외 발생 시 로그 출력 후 실패 처리
+                    System.err.println("동시성 테스트 스레드 예외 발생: " + e.getMessage());
+                } finally {
+                    endLatch.countDown();
+                }
+            });
+        }
 
-		try {
-			startLatch.countDown(); // 동시에 모든 스레드 시작 신호
-			endLatch.await(); // 모든 스레드가 끝날 때까지 대기
-		} finally {
-			executorService.shutdown();
-		}
+        try {
+            startLatch.countDown(); // 동시에 모든 스레드 시작 신호
+            endLatch.await(); // 모든 스레드가 끝날 때까지 대기
+        } finally {
+            executorService.shutdown();
+        }
 
-		return successCount.get();
-	}
+        return successCount.get();
+    }
 }

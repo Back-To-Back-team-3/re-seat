@@ -13,23 +13,23 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class TokenResponse {
 
-	@Schema(
-	    description = "인증 타입",
-	    example = "Bearer"
-	)
-	@Builder.Default
-	private String grantType = "Bearer";
+    @Schema(
+        description = "인증 타입",
+        example = "Bearer"
+    )
+    @Builder.Default
+    private String grantType = "Bearer";
 
-	@Schema(
-	    description = "Access Token",
-	    example = "eyJhbGciOiJIUzI1NiJ9..."
-	)
-	private String accessToken;
+    @Schema(
+        description = "Access Token",
+        example = "eyJhbGciOiJIUzI1NiJ9..."
+    )
+    private String accessToken;
 
-	@Schema(
-	    description = "Refresh Token",
-	    example = "dGhpcy1pcy1hLXJlZnJlc2gtdG9rZW4..."
-	)
-	private String refreshToken;
+    @Schema(
+        description = "Refresh Token",
+        example = "dGhpcy1pcy1hLXJlZnJlc2gtdG9rZW4..."
+    )
+    private String refreshToken;
 
 }

@@ -8,7 +8,7 @@ import com.backtoback.reseat.domain.stadium.entity.Stadium;
  */
 public record StadiumSummaryResponse(Long stadiumId, String name) {
 
-	public static StadiumSummaryResponse from(Stadium stadium) {
-		return new StadiumSummaryResponse(stadium.getId(), stadium.getName());
-	}
+    public static StadiumSummaryResponse from(Stadium stadium) {
+        return new StadiumSummaryResponse(stadium.getId(), stadium.getName());
+    }
 }

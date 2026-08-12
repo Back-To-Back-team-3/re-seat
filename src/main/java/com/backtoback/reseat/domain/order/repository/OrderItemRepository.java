@@ -8,5 +8,5 @@ import com.backtoback.reseat.domain.order.entity.OrderItem;
 
 public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
 
-	List<OrderItem> findByOrder_Id(Long orderId);
+    List<OrderItem> findByOrder_Id(Long orderId);
 }

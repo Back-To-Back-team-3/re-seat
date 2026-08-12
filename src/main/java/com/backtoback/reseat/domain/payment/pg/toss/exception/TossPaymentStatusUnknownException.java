@@ -7,10 +7,10 @@ package com.backtoback.reseat.domain.payment.pg.toss.exception;
  */
 public class TossPaymentStatusUnknownException extends RuntimeException {
 
-	/**
-	 * 실패한 작업과 최초 API 호출 실패 원인을 포함해 예외를 생성한다.
-	 */
-	public TossPaymentStatusUnknownException(String operation, Throwable cause) {
-		super("토스 결제 " + operation + " 후 상태를 확인할 수 없습니다.", cause);
-	}
+    /**
+     * 실패한 작업과 최초 API 호출 실패 원인을 포함해 예외를 생성한다.
+     */
+    public TossPaymentStatusUnknownException(String operation, Throwable cause) {
+        super("토스 결제 " + operation + " 후 상태를 확인할 수 없습니다.", cause);
+    }
 }

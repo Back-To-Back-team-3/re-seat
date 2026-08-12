@@ -8,10 +8,10 @@ import com.backtoback.reseat.global.exception.ErrorCode;
  */
 public class IdempotencyKeyUnavailableException extends BusinessException {
 
-	/**
-	 * 사용할 수 없는 멱등키 에러 코드로 예외를 생성한다.
-	 */
-	public IdempotencyKeyUnavailableException() {
-		super(ErrorCode.IDEMPOTENCY_KEY_UNAVAILABLE);
-	}
+    /**
+     * 사용할 수 없는 멱등키 에러 코드로 예외를 생성한다.
+     */
+    public IdempotencyKeyUnavailableException() {
+        super(ErrorCode.IDEMPOTENCY_KEY_UNAVAILABLE);
+    }
 }

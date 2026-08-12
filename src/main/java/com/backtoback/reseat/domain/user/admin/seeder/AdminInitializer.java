@@ -18,34 +18,34 @@ import lombok.extern.slf4j.Slf4j;
     {
         "local",
         "default"
-	}
+    }
 )
 @RequiredArgsConstructor
 @Slf4j
 public class AdminInitializer implements CommandLineRunner {
 
-	private final UserRepository userRepository;
-	private final PasswordEncoder passwordEncoder;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-	@Override
-	public void run(String... args) {
-		String adminEmail = "admin@reseat.com";
+    @Override
+    public void run(String... args) {
+        String adminEmail = "admin@reseat.com";
 
-		if (!userRepository.existsByEmail(adminEmail)) {
-			User admin
-			    = User
-			        .builder()
-			        .email(adminEmail)
-			        .password(passwordEncoder.encode("admin1234!"))
-			        .name("Re-Seat 관리자")
-			        .phone("010-0000-0000")
-			        .role(UserRole.ADMIN)
-			        .status(UserStatus.ACTIVE)
-			        .isVerified(true)
-			        .build();
+        if (!userRepository.existsByEmail(adminEmail)) {
+            User admin
+                = User
+                    .builder()
+                    .email(adminEmail)
+                    .password(passwordEncoder.encode("admin1234!"))
+                    .name("Re-Seat 관리자")
+                    .phone("010-0000-0000")
+                    .role(UserRole.ADMIN)
+                    .status(UserStatus.ACTIVE)
+                    .isVerified(true)
+                    .build();
 
-			userRepository.save(admin);
-			log.info("Successfully seeded default admin user: {}", adminEmail);
-		}
-	}
+            userRepository.save(admin);
+            log.info("Successfully seeded default admin user: {}", adminEmail);
+        }
+    }
 }

@@ -72,215 +72,215 @@ import lombok.extern.slf4j.Slf4j;
 @SpringBootTest
 class SeatHoldFacadeConcurrencyTest {
 
-	private static final int THREAD_COUNT = 10;
-	private final List<Long> userIds = new ArrayList<>();
-	private final List<Long> tokenIds = new ArrayList<>();
-	@Autowired
-	private SeatHoldFacade seatHoldFacade;
-	@Autowired
-	private ReservationRepository reservationRepository;
-	@Autowired
-	private ReservationSeatRepository reservationSeatRepository;
-	@Autowired
-	private GameSeatRepository gameSeatRepository;
-	@Autowired
-	private GameRepository gameRepository;
-	@Autowired
-	private SeatRepository seatRepository;
-	@Autowired
-	private SeatZoneRepository seatZoneRepository;
-	@Autowired
-	private StadiumRepository stadiumRepository;
-	@Autowired
-	private TeamRepository teamRepository;
-	@Autowired
-	private UserRepository userRepository;
-	@Autowired
-	private AdmissionTokenRepository admissionTokenRepository;
-	private Long targetGameSeatId;
-	private Long gameId;
-	private Long seatId;
-	private Long seatZoneId;
-	private Long stadiumId;
-	private Long homeTeamId;
-	private Long awayTeamId;
+    private static final int THREAD_COUNT = 10;
+    private final List<Long> userIds = new ArrayList<>();
+    private final List<Long> tokenIds = new ArrayList<>();
+    @Autowired
+    private SeatHoldFacade seatHoldFacade;
+    @Autowired
+    private ReservationRepository reservationRepository;
+    @Autowired
+    private ReservationSeatRepository reservationSeatRepository;
+    @Autowired
+    private GameSeatRepository gameSeatRepository;
+    @Autowired
+    private GameRepository gameRepository;
+    @Autowired
+    private SeatRepository seatRepository;
+    @Autowired
+    private SeatZoneRepository seatZoneRepository;
+    @Autowired
+    private StadiumRepository stadiumRepository;
+    @Autowired
+    private TeamRepository teamRepository;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private AdmissionTokenRepository admissionTokenRepository;
+    private Long targetGameSeatId;
+    private Long gameId;
+    private Long seatId;
+    private Long seatZoneId;
+    private Long stadiumId;
+    private Long homeTeamId;
+    private Long awayTeamId;
 
-	// @Transactional 금지 → @AfterEach 수동 정리
-	@BeforeEach
-	void setUp() {
-		Stadium stadium = Stadium.of("테스트 구장", "서울시 테스트구 1", 10000);
-		stadiumRepository.save(stadium);
-		stadiumId = stadium.getId();
+    // @Transactional 금지 → @AfterEach 수동 정리
+    @BeforeEach
+    void setUp() {
+        Stadium stadium = Stadium.of("테스트 구장", "서울시 테스트구 1", 10000);
+        stadiumRepository.save(stadium);
+        stadiumId = stadium.getId();
 
-		Team homeTeam = Team.of("홈팀", stadium);
-		Team awayTeam = Team.of("원정팀", stadium);
-		teamRepository.save(homeTeam);
-		teamRepository.save(awayTeam);
-		homeTeamId = homeTeam.getId();
-		awayTeamId = awayTeam.getId();
+        Team homeTeam = Team.of("홈팀", stadium);
+        Team awayTeam = Team.of("원정팀", stadium);
+        teamRepository.save(homeTeam);
+        teamRepository.save(awayTeam);
+        homeTeamId = homeTeam.getId();
+        awayTeamId = awayTeam.getId();
 
-		Game game
-		    = Game
-		        .builder()
-		        .homeTeam(homeTeam)
-		        .awayTeam(awayTeam)
-		        .stadium(stadium)
-		        .gameAt(LocalDateTime.now().plusDays(7))
-		        .bookingOpenAt(LocalDateTime.now().minusHours(1))
-		        .bookingCloseAt(LocalDateTime.now().plusDays(6))
-		        .bookingStatus(BookingStatus.OPEN)
-		        .title("[이슈 #173] 분산락 동시성 테스트 경기")
-		        .build();
-		gameRepository.save(game);
-		gameId = game.getId();
+        Game game
+            = Game
+                .builder()
+                .homeTeam(homeTeam)
+                .awayTeam(awayTeam)
+                .stadium(stadium)
+                .gameAt(LocalDateTime.now().plusDays(7))
+                .bookingOpenAt(LocalDateTime.now().minusHours(1))
+                .bookingCloseAt(LocalDateTime.now().plusDays(6))
+                .bookingStatus(BookingStatus.OPEN)
+                .title("[이슈 #173] 분산락 동시성 테스트 경기")
+                .build();
+        gameRepository.save(game);
+        gameId = game.getId();
 
-		SeatZone zone = SeatZone.of(stadium, "테스트존", SeatGrade.INFIELD, 18000);
-		seatZoneRepository.save(zone);
-		seatZoneId = zone.getId();
+        SeatZone zone = SeatZone.of(stadium, "테스트존", SeatGrade.INFIELD, 18000);
+        seatZoneRepository.save(zone);
+        seatZoneId = zone.getId();
 
-		Seat seat = Seat.of(stadium, zone, "A", "1", "1");
-		seatRepository.save(seat);
-		seatId = seat.getId();
+        Seat seat = Seat.of(stadium, zone, "A", "1", "1");
+        seatRepository.save(seat);
+        seatId = seat.getId();
 
-		GameSeat gameSeat
-		    = GameSeat.builder().game(game).seat(seat).price(18000).status(GameSeatStatus.AVAILABLE).build();
-		gameSeatRepository.save(gameSeat);
-		targetGameSeatId = gameSeat.getId();
+        GameSeat gameSeat
+            = GameSeat.builder().game(game).seat(seat).price(18000).status(GameSeatStatus.AVAILABLE).build();
+        gameSeatRepository.save(gameSeat);
+        targetGameSeatId = gameSeat.getId();
 
-		// 각 사용자에게 유효한 Queue-Token 사전 발급
-		for (int i = 0; i < THREAD_COUNT; i++) {
-			User user
-			    = User
-			        .builder()
-			        .email("facade-concurrency-" + i + "@reseat.com")
-			        .password("pw")
-			        .name("테스트유저" + i)
-			        .phone("010-1111-" + String.format("%04d", i))
-			        .isVerified(true)
-			        .role(UserRole.USER)
-			        .status(UserStatus.ACTIVE)
-			        .build();
-			userRepository.save(user);
-			userIds.add(user.getId());
+        // 각 사용자에게 유효한 Queue-Token 사전 발급
+        for (int i = 0; i < THREAD_COUNT; i++) {
+            User user
+                = User
+                    .builder()
+                    .email("facade-concurrency-" + i + "@reseat.com")
+                    .password("pw")
+                    .name("테스트유저" + i)
+                    .phone("010-1111-" + String.format("%04d", i))
+                    .isVerified(true)
+                    .role(UserRole.USER)
+                    .status(UserStatus.ACTIVE)
+                    .build();
+            userRepository.save(user);
+            userIds.add(user.getId());
 
-			// validateToken / consumeToken 이 DB 조회하므로 실제 토큰 레코드 필요
-			AdmissionToken token
-			    = AdmissionToken
-			        .of(game, user, "qt_test-token-" + i, LocalDateTime.now(), LocalDateTime.now().plusMinutes(5));
-			admissionTokenRepository.save(token);
-			tokenIds.add(token.getId());
-		}
-	}
+            // validateToken / consumeToken 이 DB 조회하므로 실제 토큰 레코드 필요
+            AdmissionToken token
+                = AdmissionToken
+                    .of(game, user, "qt_test-token-" + i, LocalDateTime.now(), LocalDateTime.now().plusMinutes(5));
+            admissionTokenRepository.save(token);
+            tokenIds.add(token.getId());
+        }
+    }
 
-	@AfterEach
-	void tearDown() {
-		admissionTokenRepository.deleteAllById(tokenIds);
-		tokenIds.clear();
+    @AfterEach
+    void tearDown() {
+        admissionTokenRepository.deleteAllById(tokenIds);
+        tokenIds.clear();
 
-		reservationSeatRepository.deleteAll();
-		reservationRepository.deleteAll();
+        reservationSeatRepository.deleteAll();
+        reservationRepository.deleteAll();
 
-		gameSeatRepository.deleteAll();
-		if (gameId != null)
-			gameRepository.deleteById(gameId);
-		if (seatId != null)
-			seatRepository.deleteById(seatId);
-		if (seatZoneId != null)
-			seatZoneRepository.deleteById(seatZoneId);
-		if (homeTeamId != null)
-			teamRepository.deleteById(homeTeamId);
-		if (awayTeamId != null)
-			teamRepository.deleteById(awayTeamId);
-		if (stadiumId != null)
-			stadiumRepository.deleteById(stadiumId);
+        gameSeatRepository.deleteAll();
+        if (gameId != null)
+            gameRepository.deleteById(gameId);
+        if (seatId != null)
+            seatRepository.deleteById(seatId);
+        if (seatZoneId != null)
+            seatZoneRepository.deleteById(seatZoneId);
+        if (homeTeamId != null)
+            teamRepository.deleteById(homeTeamId);
+        if (awayTeamId != null)
+            teamRepository.deleteById(awayTeamId);
+        if (stadiumId != null)
+            stadiumRepository.deleteById(stadiumId);
 
-		if (!userIds.isEmpty()) {
-			userRepository.deleteAllById(userIds);
-			userIds.clear();
-		}
-	}
+        if (!userIds.isEmpty()) {
+            userRepository.deleteAllById(userIds);
+            userIds.clear();
+        }
+    }
 
-	@Test
-	@DisplayName("[이슈 #173] 분산락 적용 Facade 경로에서 동일 좌석 N 요청 시 성공 1건, over-booking 0건")
-	void should_holdSeatOnce_when_sameSeatRequestsCompeteThroughFacade() throws InterruptedException {
-		// given
-		CountDownLatch readyLatch = new CountDownLatch(THREAD_COUNT);
-		CountDownLatch startLatch = new CountDownLatch(1);
+    @Test
+    @DisplayName("[이슈 #173] 분산락 적용 Facade 경로에서 동일 좌석 N 요청 시 성공 1건, over-booking 0건")
+    void should_holdSeatOnce_when_sameSeatRequestsCompeteThroughFacade() throws InterruptedException {
+        // given
+        CountDownLatch readyLatch = new CountDownLatch(THREAD_COUNT);
+        CountDownLatch startLatch = new CountDownLatch(1);
 
-		AtomicInteger successCount = new AtomicInteger(0);
-		AtomicInteger seatAlreadyHeldCount = new AtomicInteger(0);
-		AtomicInteger lockFailedCount = new AtomicInteger(0);
-		AtomicInteger dataIntegrityViolationCount = new AtomicInteger(0);
-		AtomicInteger unexpectedExceptionCount = new AtomicInteger(0);
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger seatAlreadyHeldCount = new AtomicInteger(0);
+        AtomicInteger lockFailedCount = new AtomicInteger(0);
+        AtomicInteger dataIntegrityViolationCount = new AtomicInteger(0);
+        AtomicInteger unexpectedExceptionCount = new AtomicInteger(0);
 
-		ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
+        ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
 
-		// when
-		for (int i = 0; i < THREAD_COUNT; i++) {
-			final Long userId = userIds.get(i);
-			final String token = "qt_test-token-" + i;
+        // when
+        for (int i = 0; i < THREAD_COUNT; i++) {
+            final Long userId = userIds.get(i);
+            final String token = "qt_test-token-" + i;
 
-			executor.submit(() -> {
-				readyLatch.countDown();
-				try {
-					startLatch.await();
-					SeatHoldRequest request = new SeatHoldRequest(gameId, List.of(targetGameSeatId));
-					ReservationResponse response = seatHoldFacade.holdSeats(userId, token, request);
-					assertThat(response.status()).isEqualTo(ReservationStatus.HOLDING);
-					successCount.incrementAndGet();
-				} catch (com.backtoback.reseat.domain.reservation.exception.SeatAlreadyHeldException e) {
-					seatAlreadyHeldCount.incrementAndGet();
-				} catch (com.backtoback.reseat.domain.reservation.exception.LockFailedException e) {
-					lockFailedCount.incrementAndGet();
-				} catch (org.springframework.dao.DataIntegrityViolationException e) {
-					dataIntegrityViolationCount.incrementAndGet();
-				} catch (Exception e) {
-					log.error("[이슈 #173] 예상 외 예외 발생: {}", e.getClass().getSimpleName(), e);
-					unexpectedExceptionCount.incrementAndGet();
-				}
-			});
-		}
+            executor.submit(() -> {
+                readyLatch.countDown();
+                try {
+                    startLatch.await();
+                    SeatHoldRequest request = new SeatHoldRequest(gameId, List.of(targetGameSeatId));
+                    ReservationResponse response = seatHoldFacade.holdSeats(userId, token, request);
+                    assertThat(response.status()).isEqualTo(ReservationStatus.HOLDING);
+                    successCount.incrementAndGet();
+                } catch (com.backtoback.reseat.domain.reservation.exception.SeatAlreadyHeldException e) {
+                    seatAlreadyHeldCount.incrementAndGet();
+                } catch (com.backtoback.reseat.domain.reservation.exception.LockFailedException e) {
+                    lockFailedCount.incrementAndGet();
+                } catch (org.springframework.dao.DataIntegrityViolationException e) {
+                    dataIntegrityViolationCount.incrementAndGet();
+                } catch (Exception e) {
+                    log.error("[이슈 #173] 예상 외 예외 발생: {}", e.getClass().getSimpleName(), e);
+                    unexpectedExceptionCount.incrementAndGet();
+                }
+            });
+        }
 
-		readyLatch.await();
-		startLatch.countDown();
-		executor.shutdown();
-		boolean finished = executor.awaitTermination(15, TimeUnit.SECONDS);
+        readyLatch.await();
+        startLatch.countDown();
+        executor.shutdown();
+        boolean finished = executor.awaitTermination(15, TimeUnit.SECONDS);
 
-		// then
-		GameSeat finalGameSeat = gameSeatRepository.findById(targetGameSeatId).orElseThrow();
-		long reservationSeatRows
-		    = reservationSeatRepository
-		        .findAll()
-		        .stream()
-		        .filter(rs -> rs.getGameSeat().getId().equals(targetGameSeatId))
-		        .count();
+        // then
+        GameSeat finalGameSeat = gameSeatRepository.findById(targetGameSeatId).orElseThrow();
+        long reservationSeatRows
+            = reservationSeatRepository
+                .findAll()
+                .stream()
+                .filter(rs -> rs.getGameSeat().getId().equals(targetGameSeatId))
+                .count();
 
-		log.info("════════════════════════════════════════════════════");
-		log.info("[이슈 #173] Redisson 분산락 Facade 경로 동시성 검증 수치");
-		log.info("  동시 스레드 수                : {}", THREAD_COUNT);
-		log.info("  선점 성공 건수                : {}", successCount.get());
-		log.info("  SEAT_ALREADY_HELD 건수        : {}", seatAlreadyHeldCount.get());
-		log.info("  LOCK_FAILED 건수              : {}", lockFailedCount.get());
-		log.info("  DataIntegrityViolation 건수   : {}", dataIntegrityViolationCount.get());
-		log.info("  예상 외 예외 건수              : {}", unexpectedExceptionCount.get());
-		log.info("  game_seats.status             : {}", finalGameSeat.getStatus());
-		log.info("  reservation_seats 행 수        : {}", reservationSeatRows);
-		log.info("════════════════════════════════════════════════════");
+        log.info("════════════════════════════════════════════════════");
+        log.info("[이슈 #173] Redisson 분산락 Facade 경로 동시성 검증 수치");
+        log.info("  동시 스레드 수                : {}", THREAD_COUNT);
+        log.info("  선점 성공 건수                : {}", successCount.get());
+        log.info("  SEAT_ALREADY_HELD 건수        : {}", seatAlreadyHeldCount.get());
+        log.info("  LOCK_FAILED 건수              : {}", lockFailedCount.get());
+        log.info("  DataIntegrityViolation 건수   : {}", dataIntegrityViolationCount.get());
+        log.info("  예상 외 예외 건수              : {}", unexpectedExceptionCount.get());
+        log.info("  game_seats.status             : {}", finalGameSeat.getStatus());
+        log.info("  reservation_seats 행 수        : {}", reservationSeatRows);
+        log.info("════════════════════════════════════════════════════");
 
-		assertThat(finished).as("15초 내에 모든 스레드가 종료되지 않았다 — 데드락 또는 타임아웃 의심").isTrue();
+        assertThat(finished).as("15초 내에 모든 스레드가 종료되지 않았다 — 데드락 또는 타임아웃 의심").isTrue();
 
-		assertThat(successCount.get()).as("분산락 적용 후 성공은 정확히 1건이어야 한다").isEqualTo(1);
+        assertThat(successCount.get()).as("분산락 적용 후 성공은 정확히 1건이어야 한다").isEqualTo(1);
 
-		assertThat(reservationSeatRows).as("reservation_seats 행은 1건이어야 한다 — over-booking 0건 보장").isEqualTo(1);
+        assertThat(reservationSeatRows).as("reservation_seats 행은 1건이어야 한다 — over-booking 0건 보장").isEqualTo(1);
 
-		assertThat(finalGameSeat.getStatus()).as("최종 좌석 상태는 HELD여야 한다").isEqualTo(GameSeatStatus.HELD);
+        assertThat(finalGameSeat.getStatus()).as("최종 좌석 상태는 HELD여야 한다").isEqualTo(GameSeatStatus.HELD);
 
-		assertThat(dataIntegrityViolationCount.get()).as("DB 유니크 위반은 0건이어야 한다 — 락이 DB까지 도달하는 요청을 차단해야 한다").isZero();
+        assertThat(dataIntegrityViolationCount.get()).as("DB 유니크 위반은 0건이어야 한다 — 락이 DB까지 도달하는 요청을 차단해야 한다").isZero();
 
-		assertThat(unexpectedExceptionCount.get()).as("예상 외 예외는 0건이어야 한다").isZero();
+        assertThat(unexpectedExceptionCount.get()).as("예상 외 예외는 0건이어야 한다").isZero();
 
-		assertThat(seatAlreadyHeldCount.get() + lockFailedCount.get())
-		    .as("실패 건수 합계는 THREAD_COUNT - 1이어야 한다")
-		    .isEqualTo(THREAD_COUNT - 1);
-	}
+        assertThat(seatAlreadyHeldCount.get() + lockFailedCount.get())
+            .as("실패 건수 합계는 THREAD_COUNT - 1이어야 한다")
+            .isEqualTo(THREAD_COUNT - 1);
+    }
 }

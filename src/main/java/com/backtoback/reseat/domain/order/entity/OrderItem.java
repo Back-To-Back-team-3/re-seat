@@ -27,62 +27,62 @@ import lombok.NoArgsConstructor;
             name = "idx_order_items_order",
             columnList = "order_id"
         )
-	}
+    }
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class OrderItem {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-	@ManyToOne(
-	    fetch = FetchType.LAZY,
-	    optional = false
-	)
-	@JoinColumn(
-	    name = "order_id",
-	    nullable = false,
-	    foreignKey = @ForeignKey(name = "fk_order_items_order")
-	)
-	private Order order;
+    @ManyToOne(
+        fetch = FetchType.LAZY,
+        optional = false
+    )
+    @JoinColumn(
+        name = "order_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_order_items_order")
+    )
+    private Order order;
 
-	@ManyToOne(
-	    fetch = FetchType.LAZY,
-	    optional = false
-	)
-	@JoinColumn(
-	    name = "game_seat_id",
-	    nullable = false,
-	    foreignKey = @ForeignKey(name = "fk_order_items_game_seat")
-	)
-	private GameSeat gameSeat;
+    @ManyToOne(
+        fetch = FetchType.LAZY,
+        optional = false
+    )
+    @JoinColumn(
+        name = "game_seat_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_order_items_game_seat")
+    )
+    private GameSeat gameSeat;
 
-	@Column(nullable = false)
-	private int price;
+    @Column(nullable = false)
+    private int price;
 
-	@Column(
-	    name = "created_at",
-	    updatable = false,
-	    nullable = false
-	)
-	private LocalDateTime createdAt;
+    @Column(
+        name = "created_at",
+        updatable = false,
+        nullable = false
+    )
+    private LocalDateTime createdAt;
 
-	/**
-	 * 주문 항목 Entity를 생성한다.
-	 *
-	 * @param order 주문
-	 * @param gameSeat 주문 대상의 경기 좌석
-	 * @param price 주문 항목 가격
-	 * @return 주문 항목 Entity
-	 */
-	public static OrderItem of(Order order, GameSeat gameSeat, int price) {
-		OrderItem orderItem = new OrderItem();
-		orderItem.order = order;
-		orderItem.gameSeat = gameSeat;
-		orderItem.price = price;
-		orderItem.createdAt = LocalDateTime.now();
-		return orderItem;
-	}
+    /**
+     * 주문 항목 Entity를 생성한다.
+     *
+     * @param order 주문
+     * @param gameSeat 주문 대상의 경기 좌석
+     * @param price 주문 항목 가격
+     * @return 주문 항목 Entity
+     */
+    public static OrderItem of(Order order, GameSeat gameSeat, int price) {
+        OrderItem orderItem = new OrderItem();
+        orderItem.order = order;
+        orderItem.gameSeat = gameSeat;
+        orderItem.price = price;
+        orderItem.createdAt = LocalDateTime.now();
+        return orderItem;
+    }
 }

@@ -28,37 +28,37 @@ public record GameDetailResponse(
     BookingStatus bookingStatus
 ) {
 
-	/**
-	 * Game 엔티티를 경기 상세 응답 DTO로 변환한다.
-	 *
-	 * @param game 조회된 경기 엔티티
-	 * @return 경기 상세 응답 DTO
-	 */
-	public static GameDetailResponse from(Game game) {
-		return new GameDetailResponse(
-		    game.getId(),
-		    game.getTitle(),
-		    TeamSummaryResponse.from(game.getHomeTeam()),
-		    TeamSummaryResponse.from(game.getAwayTeam()),
-		    StadiumResponse.from(game.getStadium()),
-		    game.getGameAt(),
-		    game.getBookingOpenAt(),
-		    game.getBookingCloseAt(),
-		    game.getBookingStatus()
-		);
-	}
+    /**
+     * Game 엔티티를 경기 상세 응답 DTO로 변환한다.
+     *
+     * @param game 조회된 경기 엔티티
+     * @return 경기 상세 응답 DTO
+     */
+    public static GameDetailResponse from(Game game) {
+        return new GameDetailResponse(
+            game.getId(),
+            game.getTitle(),
+            TeamSummaryResponse.from(game.getHomeTeam()),
+            TeamSummaryResponse.from(game.getAwayTeam()),
+            StadiumResponse.from(game.getStadium()),
+            game.getGameAt(),
+            game.getBookingOpenAt(),
+            game.getBookingCloseAt(),
+            game.getBookingStatus()
+        );
+    }
 
-	/**
-	 * 경기 상세 응답 전용 구장 DTO.
-	 */
-	public record StadiumResponse(Long stadiumId, String name, String address, int totalCapacity) {
-		public static StadiumResponse from(Stadium stadium) {
-			return new StadiumResponse(
-			    stadium.getId(),
-			    stadium.getName(),
-			    stadium.getAddress(),
-			    stadium.getTotalCapacity()
-			);
-		}
-	}
+    /**
+     * 경기 상세 응답 전용 구장 DTO.
+     */
+    public record StadiumResponse(Long stadiumId, String name, String address, int totalCapacity) {
+        public static StadiumResponse from(Stadium stadium) {
+            return new StadiumResponse(
+                stadium.getId(),
+                stadium.getName(),
+                stadium.getAddress(),
+                stadium.getTotalCapacity()
+            );
+        }
+    }
 }

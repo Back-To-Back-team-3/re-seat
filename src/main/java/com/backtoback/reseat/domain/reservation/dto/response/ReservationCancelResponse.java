@@ -23,7 +23,7 @@ public record ReservationCancelResponse(
         example = "CANCELED"
     ) ReservationStatus status
 ) {
-	public static ReservationCancelResponse from(Reservation reservation) {
-		return new ReservationCancelResponse(reservation.getId(), reservation.getStatus());
-	}
+    public static ReservationCancelResponse from(Reservation reservation) {
+        return new ReservationCancelResponse(reservation.getId(), reservation.getStatus());
+    }
 }

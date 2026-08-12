@@ -8,15 +8,15 @@ import com.backtoback.reseat.global.exception.ErrorCode;
  */
 public class QueueEventPublishFailedException extends BusinessException {
 
-	public QueueEventPublishFailedException() {
-		super(ErrorCode.QUEUE_EVENT_PUBLISH_FAILED);
-	}
+    public QueueEventPublishFailedException() {
+        super(ErrorCode.QUEUE_EVENT_PUBLISH_FAILED);
+    }
 
-	public QueueEventPublishFailedException(String message) {
-		super(ErrorCode.QUEUE_EVENT_PUBLISH_FAILED, message);
-	}
+    public QueueEventPublishFailedException(String message) {
+        super(ErrorCode.QUEUE_EVENT_PUBLISH_FAILED, message);
+    }
 
-	public QueueEventPublishFailedException(Throwable cause) {
-		super(ErrorCode.QUEUE_EVENT_PUBLISH_FAILED, cause);
-	}
+    public QueueEventPublishFailedException(Throwable cause) {
+        super(ErrorCode.QUEUE_EVENT_PUBLISH_FAILED, cause);
+    }
 }

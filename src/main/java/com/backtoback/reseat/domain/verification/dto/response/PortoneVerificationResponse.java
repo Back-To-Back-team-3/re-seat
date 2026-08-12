@@ -8,16 +8,16 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 public class PortoneVerificationResponse {
-	private int code;
-	private String message;
-	private ResponseData response;
+    private int code;
+    private String message;
+    private ResponseData response;
 
-	@Getter
-	@NoArgsConstructor
-	public static class ResponseData {
-		@JsonProperty("unique_key")
-		private String uniqueKey;
-		private String name;
-		private String phone;
-	}
+    @Getter
+    @NoArgsConstructor
+    public static class ResponseData {
+        @JsonProperty("unique_key")
+        private String uniqueKey;
+        private String name;
+        private String phone;
+    }
 }

@@ -18,23 +18,23 @@ import jakarta.servlet.http.HttpServletResponse;
 @Component
 public class CustomAccessDeniedHandler implements AccessDeniedHandler {
 
-	private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-	@Override
-	public void handle(
-	    HttpServletRequest request,
-	    HttpServletResponse response,
-	    AccessDeniedException accessDeniedException
-	)
-	    throws IOException,
-	    ServletException {
-		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-		response.setCharacterEncoding("UTF-8");
-		response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+    @Override
+    public void handle(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        AccessDeniedException accessDeniedException
+    )
+        throws IOException,
+        ServletException {
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding("UTF-8");
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 
-		ApiResponse<Void> apiResponse
-		    = ApiResponse.failure(ErrorCode.FORBIDDEN.getCode(), ErrorCode.FORBIDDEN.getMessage());
+        ApiResponse<Void> apiResponse
+            = ApiResponse.failure(ErrorCode.FORBIDDEN.getCode(), ErrorCode.FORBIDDEN.getMessage());
 
-		response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
-	}
+        response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
+    }
 }

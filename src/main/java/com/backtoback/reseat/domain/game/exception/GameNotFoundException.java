@@ -9,7 +9,7 @@ import com.backtoback.reseat.global.exception.ErrorCode;
  */
 public class GameNotFoundException extends BusinessException {
 
-	public GameNotFoundException(Long gameId) {
-		super(ErrorCode.GAME_NOT_FOUND, "경기를 찾을 수 없습니다. gameId=" + gameId);
-	}
+    public GameNotFoundException(Long gameId) {
+        super(ErrorCode.GAME_NOT_FOUND, "경기를 찾을 수 없습니다. gameId=" + gameId);
+    }
 }

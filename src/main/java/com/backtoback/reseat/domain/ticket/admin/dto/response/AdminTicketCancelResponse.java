@@ -23,19 +23,19 @@ public record AdminTicketCancelResponse(
     Long gameSeatId,
     GameSeatStatus seatStatus // AVAILABLE
 ) {
-	public static AdminTicketCancelResponse from(Ticket ticket) {
-		var gameSeat = ticket.getGameSeat();
+    public static AdminTicketCancelResponse from(Ticket ticket) {
+        var gameSeat = ticket.getGameSeat();
 
-		return AdminTicketCancelResponse
-		    .builder()
-		    .ticketId(ticket.getId())
-		    .ticketNo(ticket.getTicketNo())
-		    .status(ticket.getStatus())
-		    .cancelReason(ticket.getCancelReason())
-		    .cancelDetail(ticket.getCancelDetail())
-		    .canceledAt(ticket.getCanceledAt())
-		    .gameSeatId(gameSeat.getId())
-		    .seatStatus(gameSeat.getStatus())
-		    .build();
-	}
+        return AdminTicketCancelResponse
+            .builder()
+            .ticketId(ticket.getId())
+            .ticketNo(ticket.getTicketNo())
+            .status(ticket.getStatus())
+            .cancelReason(ticket.getCancelReason())
+            .cancelDetail(ticket.getCancelDetail())
+            .canceledAt(ticket.getCanceledAt())
+            .gameSeatId(gameSeat.getId())
+            .seatStatus(gameSeat.getStatus())
+            .build();
+    }
 }
