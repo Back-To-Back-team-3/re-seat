@@ -8,11 +8,11 @@ import com.backtoback.reseat.global.exception.ErrorCode;
  */
 public class QueueTokenExpiredException extends BusinessException {
 
-    public QueueTokenExpiredException() {
-        super(ErrorCode.QUEUE_TOKEN_EXPIRED);
-    }
+	public QueueTokenExpiredException() {
+		super(ErrorCode.QUEUE_TOKEN_EXPIRED);
+	}
 
-    public QueueTokenExpiredException(String message) {
-        super(ErrorCode.QUEUE_TOKEN_EXPIRED, message);
-    }
+	public QueueTokenExpiredException(String message) {
+		super(ErrorCode.QUEUE_TOKEN_EXPIRED, message);
+	}
 }

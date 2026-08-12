@@ -17,12 +17,21 @@ import lombok.RequiredArgsConstructor;
 @Schema(description = "입장 허용 SSE 이벤트 응답")
 public class AdmitEventResponse {
 
-    @Schema(description = "입장 허용 여부", example = "true")
-    private final boolean admitted;
+	@Schema(
+	    description = "입장 허용 여부",
+	    example = "true"
+	)
+	private final boolean admitted;
 
-    @Schema(description = "Queue-Token", example = "qt_c6f443cf-a0d7-467f-b93f-da417c135a97")
-    private final String queueToken;
+	@Schema(
+	    description = "Queue-Token",
+	    example = "qt_c6f443cf-a0d7-467f-b93f-da417c135a97"
+	)
+	private final String queueToken;
 
-    @Schema(description = "Queue-Token 만료 시간", example = "2026-07-21T21:50:00")
-    private final LocalDateTime tokenExpiresAt;
+	@Schema(
+	    description = "Queue-Token 만료 시간",
+	    example = "2026-07-21T21:50:00"
+	)
+	private final LocalDateTime tokenExpiresAt;
 }

@@ -5,7 +5,7 @@ import com.backtoback.reseat.global.exception.ErrorCode;
 
 public class TicketAccessDeniedException extends BusinessException {
 
-    public TicketAccessDeniedException() {
-        super(ErrorCode.TICKET_ACCESS_DENIED);
-    }
+	public TicketAccessDeniedException() {
+		super(ErrorCode.TICKET_ACCESS_DENIED);
+	}
 }

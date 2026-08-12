@@ -11,9 +11,9 @@ import lombok.NoArgsConstructor;
 public class PaymentRequest {
 
 	@Schema(
-		description = "결제할 주문 ID",
-		example = "1001",
-		requiredMode = Schema.RequiredMode.REQUIRED
+	    description = "결제할 주문 ID",
+	    example = "1001",
+	    requiredMode = Schema.RequiredMode.REQUIRED
 	)
 	@NotNull(message = "주문 ID는 필수입니다.")
 	private Long orderId;

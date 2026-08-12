@@ -25,42 +25,44 @@ import lombok.RequiredArgsConstructor;
 @Transactional(readOnly = true)
 public class AdminAuthService {
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtTokenProvider jwtTokenProvider;
-    private final RefreshTokenRepository refreshTokenRepository;
+	private final UserRepository userRepository;
+	private final PasswordEncoder passwordEncoder;
+	private final JwtTokenProvider jwtTokenProvider;
+	private final RefreshTokenRepository refreshTokenRepository;
 
-    @Transactional
-    public AdminLoginResponse login(AdminLoginRequest request) {
-        User user = userRepository.findByEmail(request.email())
-            .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+	@Transactional
+	public AdminLoginResponse login(AdminLoginRequest request) {
+		User user
+		    = userRepository
+		        .findByEmail(request.email())
+		        .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        if (user.getPassword() == null || !passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new BusinessException(ErrorCode.INVALID_PASSWORD);
-        }
+		if (user.getPassword() == null || !passwordEncoder.matches(request.password(), user.getPassword())) {
+			throw new BusinessException(ErrorCode.INVALID_PASSWORD);
+		}
 
-        if (user.getRole() != UserRole.ADMIN) {
-            throw new BusinessException(ErrorCode.ADMIN_ACCESS_REQUIRED);
-        }
+		if (user.getRole() != UserRole.ADMIN) {
+			throw new BusinessException(ErrorCode.ADMIN_ACCESS_REQUIRED);
+		}
 
-        if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new BusinessException(ErrorCode.USER_INACTIVE);
-        }
+		if (user.getStatus() != UserStatus.ACTIVE) {
+			throw new BusinessException(ErrorCode.USER_INACTIVE);
+		}
 
-        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail(), user.getRole().name());
-        String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
-        LocalDateTime expiredAt = LocalDateTime.now().plusDays(14);
+		String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail(), user.getRole().name());
+		String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
+		LocalDateTime expiredAt = LocalDateTime.now().plusDays(14);
 
-        RefreshToken dbRefreshToken = refreshTokenRepository.findByUser(user)
-            .orElseGet(() -> RefreshToken.builder()
-                .user(user)
-                .tokenValue(refreshToken)
-                .expiredAt(expiredAt)
-                .build());
+		RefreshToken dbRefreshToken
+		    = refreshTokenRepository
+		        .findByUser(user)
+		        .orElseGet(
+		            () -> RefreshToken.builder().user(user).tokenValue(refreshToken).expiredAt(expiredAt).build()
+		        );
 
-        dbRefreshToken.updateTokenValue(refreshToken, expiredAt);
-        refreshTokenRepository.save(dbRefreshToken);
+		dbRefreshToken.updateTokenValue(refreshToken, expiredAt);
+		refreshTokenRepository.save(dbRefreshToken);
 
-        return AdminLoginResponse.of(accessToken, refreshToken, user);
-    }
+		return AdminLoginResponse.of(accessToken, refreshToken, user);
+	}
 }

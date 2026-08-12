@@ -7,5 +7,5 @@ import com.backtoback.reseat.domain.user.admin.dto.request.UserSearchCondition;
 import com.backtoback.reseat.domain.user.entity.User;
 
 public interface UserRepositoryCustom {
-    Page<User> searchUsers(UserSearchCondition condition, Pageable pageable);
+	Page<User> searchUsers(UserSearchCondition condition, Pageable pageable);
 }

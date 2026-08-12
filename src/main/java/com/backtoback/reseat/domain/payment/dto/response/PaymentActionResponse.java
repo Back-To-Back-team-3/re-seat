@@ -13,14 +13,14 @@ import lombok.Getter;
 public class PaymentActionResponse {
 
 	@Schema(
-		description = "결제 ID",
-		example = "1001"
+	    description = "결제 ID",
+	    example = "1001"
 	)
 	private final Long paymentId;
 
 	@Schema(
-		description = "처리 후 결제 상태",
-		example = "APPROVED"
+	    description = "처리 후 결제 상태",
+	    example = "APPROVED"
 	)
 	private final PaymentStatus status;
 

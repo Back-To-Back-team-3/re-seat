@@ -13,16 +13,18 @@ public record AdminLoginResponse(
     Long userId,
     String email,
     String name,
-    UserRole role) {
-    public static AdminLoginResponse of(String accessToken, String refreshToken, User user) {
-        return AdminLoginResponse.builder()
-            .grantType("Bearer")
-            .accessToken(accessToken)
-            .refreshToken(refreshToken)
-            .userId(user.getId())
-            .email(user.getEmail())
-            .name(user.getName())
-            .role(user.getRole())
-            .build();
-    }
+    UserRole role
+) {
+	public static AdminLoginResponse of(String accessToken, String refreshToken, User user) {
+		return AdminLoginResponse
+		    .builder()
+		    .grantType("Bearer")
+		    .accessToken(accessToken)
+		    .refreshToken(refreshToken)
+		    .userId(user.getId())
+		    .email(user.getEmail())
+		    .name(user.getName())
+		    .role(user.getRole())
+		    .build();
+	}
 }

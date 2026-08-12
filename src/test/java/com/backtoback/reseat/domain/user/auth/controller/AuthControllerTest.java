@@ -26,48 +26,52 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Import(GlobalExceptionHandler.class)
 class AuthControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+	@Autowired
+	private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+	@Autowired
+	private ObjectMapper objectMapper;
 
-    @MockitoBean
-    private AuthService authService;
+	@MockitoBean
+	private AuthService authService;
 
-    @Test
-    @DisplayName("로그인 요청 성공 시 200 OK와 토큰 정보를 반환한다")
-    void login_Success() throws Exception {
-        // given
-        UserLoginRequest request = new UserLoginRequest("user@test.com", "Password123!");
-        TokenResponse response = TokenResponse.builder()
-            .accessToken("mock-access-token")
-            .refreshToken("mock-refresh-token")
-            .build();
+	@Test
+	@DisplayName("로그인 요청 성공 시 200 OK와 토큰 정보를 반환한다")
+	void login_Success() throws Exception {
+		// given
+		UserLoginRequest request = new UserLoginRequest("user@test.com", "Password123!");
+		TokenResponse response
+		    = TokenResponse.builder().accessToken("mock-access-token").refreshToken("mock-refresh-token").build();
 
-        when(authService.login(any(UserLoginRequest.class))).thenReturn(response);
+		when(authService.login(any(UserLoginRequest.class))).thenReturn(response);
 
-        // when & then
-        mockMvc.perform(post("/api/v1/auth/login")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(request)))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.success").value(true))
-            .andExpect(jsonPath("$.message").value("로그인 성공 완료"))
-            .andExpect(jsonPath("$.data.accessToken").value("mock-access-token"))
-            .andExpect(jsonPath("$.data.refreshToken").value("mock-refresh-token"));
-    }
+		// when & then
+		mockMvc
+		    .perform(
+		        post("/api/v1/auth/login")
+		            .contentType(MediaType.APPLICATION_JSON)
+		            .content(objectMapper.writeValueAsString(request))
+		    )
+		    .andExpect(status().isOk())
+		    .andExpect(jsonPath("$.success").value(true))
+		    .andExpect(jsonPath("$.message").value("로그인 성공 완료"))
+		    .andExpect(jsonPath("$.data.accessToken").value("mock-access-token"))
+		    .andExpect(jsonPath("$.data.refreshToken").value("mock-refresh-token"));
+	}
 
-    @Test
-    @DisplayName("로그인 요청 시 필수 항목(이메일, 비밀번호) 누락 시 400 Bad Request를 반환한다")
-    void login_InvalidRequest() throws Exception {
-        // given
-        UserLoginRequest request = new UserLoginRequest("", "");
+	@Test
+	@DisplayName("로그인 요청 시 필수 항목(이메일, 비밀번호) 누락 시 400 Bad Request를 반환한다")
+	void login_InvalidRequest() throws Exception {
+		// given
+		UserLoginRequest request = new UserLoginRequest("", "");
 
-        // when & then
-        mockMvc.perform(post("/api/v1/auth/login")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(request)))
-            .andExpect(status().isBadRequest());
-    }
+		// when & then
+		mockMvc
+		    .perform(
+		        post("/api/v1/auth/login")
+		            .contentType(MediaType.APPLICATION_JSON)
+		            .content(objectMapper.writeValueAsString(request))
+		    )
+		    .andExpect(status().isBadRequest());
+	}
 }

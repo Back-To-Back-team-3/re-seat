@@ -8,7 +8,7 @@ import com.backtoback.reseat.global.exception.ErrorCode;
  */
 public class QueueTokenRequiredException extends BusinessException {
 
-    public QueueTokenRequiredException() {
-        super(ErrorCode.QUEUE_TOKEN_REQUIRED);
-    }
+	public QueueTokenRequiredException() {
+		super(ErrorCode.QUEUE_TOKEN_REQUIRED);
+	}
 }

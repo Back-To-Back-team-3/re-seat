@@ -36,9 +36,9 @@ public class PaymentCreationService {
 	@Transactional(noRollbackFor = OrderExpiredException.class)
 	public PaymentCreateResponse requestPayment(Long userId, String idempotencyKey, PaymentRequest request) {
 		return paymentRepository
-			.findByIdempotencyKeyWithPessimisticWriteLock(idempotencyKey)
-			.map(payment -> resolveExistingPayment(userId, request, payment))
-			.orElseGet(() -> requestWithNewIdempotencyKey(userId, idempotencyKey, request));
+		    .findByIdempotencyKeyWithPessimisticWriteLock(idempotencyKey)
+		    .map(payment -> resolveExistingPayment(userId, request, payment))
+		    .orElseGet(() -> requestWithNewIdempotencyKey(userId, idempotencyKey, request));
 	}
 
 	/**
@@ -59,9 +59,9 @@ public class PaymentCreationService {
 	 * 처음 사용된 멱등키로 주문의 기존 결제를 확인하고, 없으면 새 결제를 생성한다.
 	 */
 	private PaymentCreateResponse requestWithNewIdempotencyKey(
-		Long userId,
-		String idempotencyKey,
-		PaymentRequest request
+	    Long userId,
+	    String idempotencyKey,
+	    PaymentRequest request
 	) {
 		Order order = paymentOrderPolicy.getOwnedOrder(userId, request.getOrderId());
 		Optional<Payment> existingPayment = paymentRepository.findByOrderIdWithPessimisticWriteLock(order.getId());
@@ -94,17 +94,18 @@ public class PaymentCreationService {
 		String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
 		String paymentNo = "PAY-" + timestamp + "-" + suffix;
 
-		Payment payment = Payment
-			.builder()
-			.paymentNo(paymentNo)
-			.order(order)
-			.user(order.getUser())
-			.amount(order.getTotalAmount())
-			.idempotencyKey(idempotencyKey)
-			.status(PaymentStatus.READY)
-			.pgProvider(PgProvider.TOSS)
-			.pgOrderId(order.getOrderNo())
-			.build();
+		Payment payment
+		    = Payment
+		        .builder()
+		        .paymentNo(paymentNo)
+		        .order(order)
+		        .user(order.getUser())
+		        .amount(order.getTotalAmount())
+		        .idempotencyKey(idempotencyKey)
+		        .status(PaymentStatus.READY)
+		        .pgProvider(PgProvider.TOSS)
+		        .pgOrderId(order.getOrderNo())
+		        .build();
 
 		return paymentRepository.save(payment);
 	}

@@ -8,15 +8,15 @@ import com.backtoback.reseat.global.exception.ErrorCode;
  */
 public class QueueTokenRevokedException extends BusinessException {
 
-    public QueueTokenRevokedException() {
-        super(ErrorCode.QUEUE_TOKEN_REVOKED);
-    }
+	public QueueTokenRevokedException() {
+		super(ErrorCode.QUEUE_TOKEN_REVOKED);
+	}
 
-    public QueueTokenRevokedException(String message) {
-        super(ErrorCode.QUEUE_TOKEN_REVOKED, message);
-    }
+	public QueueTokenRevokedException(String message) {
+		super(ErrorCode.QUEUE_TOKEN_REVOKED, message);
+	}
 
-    public QueueTokenRevokedException(Throwable cause) {
-        super(ErrorCode.QUEUE_TOKEN_REVOKED, cause);
-    }
+	public QueueTokenRevokedException(Throwable cause) {
+		super(ErrorCode.QUEUE_TOKEN_REVOKED, cause);
+	}
 }

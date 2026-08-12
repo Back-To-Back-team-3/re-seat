@@ -8,11 +8,11 @@ import com.backtoback.reseat.global.exception.ErrorCode;
  */
 public class QueueTokenInvalidException extends BusinessException {
 
-    public QueueTokenInvalidException() {
-        super(ErrorCode.QUEUE_TOKEN_INVALID);
-    }
+	public QueueTokenInvalidException() {
+		super(ErrorCode.QUEUE_TOKEN_INVALID);
+	}
 
-    public QueueTokenInvalidException(String message) {
-        super(ErrorCode.QUEUE_TOKEN_INVALID, message);
-    }
+	public QueueTokenInvalidException(String message) {
+		super(ErrorCode.QUEUE_TOKEN_INVALID, message);
+	}
 }

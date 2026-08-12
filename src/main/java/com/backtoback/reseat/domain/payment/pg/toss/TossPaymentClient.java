@@ -28,7 +28,7 @@ public class TossPaymentClient {
 	private static final String CANCEL_PATH = "/v1/payments/{paymentKey}/cancel";
 	private static final String PAYMENT_PATH = "/v1/payments/{paymentKey}";
 	private final WebClient webClient = WebClient.builder().build();
-	//하드코딩 유출 방지를 위해 application.yaml 또는 환경변수에서 키 주입
+	// 하드코딩 유출 방지를 위해 application.yaml 또는 환경변수에서 키 주입
 	@Value("${toss.secret-key}")
 	private String secretKey;
 	@Value("${toss.base-url}")
@@ -50,23 +50,23 @@ public class TossPaymentClient {
 	 */
 	private TossPaymentResponse requestConfirm(String paymentKey, String orderId, Integer amount) {
 		return webClient
-			.post()
-			.uri(baseUrl + CONFIRM_PATH)
-			.header(HttpHeaders.AUTHORIZATION, authorizationHeader())
-			.contentType(MediaType.APPLICATION_JSON)
-			.bodyValue(new TossConfirmRequest(paymentKey, orderId, amount))
-			.retrieve()
-			// 토스 API 오류 응답은 에러 본문을 포함해 호출부로 전파한다.
-			.onStatus(
-				HttpStatusCode::isError,
-				response -> response
-					.bodyToMono(String.class)
-					.defaultIfEmpty("응답 본문 없음")
-					.flatMap(body -> Mono.error(new TossApiException("승인", response.statusCode().value(), body)))
-			)
-			.bodyToMono(TossPaymentResponse.class)
-			// 외부 API 응답 지연으로 요청 스레드가 오래 묶이지 않게 최대 5초만 기다린다.
-			.block(Duration.ofSeconds(5));
+		    .post()
+		    .uri(baseUrl + CONFIRM_PATH)
+		    .header(HttpHeaders.AUTHORIZATION, authorizationHeader())
+		    .contentType(MediaType.APPLICATION_JSON)
+		    .bodyValue(new TossConfirmRequest(paymentKey, orderId, amount))
+		    .retrieve()
+		    // 토스 API 오류 응답은 에러 본문을 포함해 호출부로 전파한다.
+		    .onStatus(
+		        HttpStatusCode::isError,
+		        response -> response
+		            .bodyToMono(String.class)
+		            .defaultIfEmpty("응답 본문 없음")
+		            .flatMap(body -> Mono.error(new TossApiException("승인", response.statusCode().value(), body)))
+		    )
+		    .bodyToMono(TossPaymentResponse.class)
+		    // 외부 API 응답 지연으로 요청 스레드가 오래 묶이지 않게 최대 5초만 기다린다.
+		    .block(Duration.ofSeconds(5));
 	}
 
 	/**
@@ -85,38 +85,38 @@ public class TossPaymentClient {
 	 */
 	private TossPaymentResponse requestCancel(String paymentKey, String cancelReason) {
 		return webClient
-			.post()
-			.uri(baseUrl + CANCEL_PATH, paymentKey)
-			.header(HttpHeaders.AUTHORIZATION, authorizationHeader())
-			.contentType(MediaType.APPLICATION_JSON)
-			.bodyValue(new TossCancelRequest(cancelReason))
-			.retrieve()
-			.onStatus(
-				HttpStatusCode::isError,
-				response -> response
-					.bodyToMono(String.class)
-					.defaultIfEmpty("응답 본문 없음")
-					.flatMap(body -> Mono.error(new TossApiException("취소", response.statusCode().value(), body)))
-			)
-			.bodyToMono(TossPaymentResponse.class)
-			.block(Duration.ofSeconds(5));
+		    .post()
+		    .uri(baseUrl + CANCEL_PATH, paymentKey)
+		    .header(HttpHeaders.AUTHORIZATION, authorizationHeader())
+		    .contentType(MediaType.APPLICATION_JSON)
+		    .bodyValue(new TossCancelRequest(cancelReason))
+		    .retrieve()
+		    .onStatus(
+		        HttpStatusCode::isError,
+		        response -> response
+		            .bodyToMono(String.class)
+		            .defaultIfEmpty("응답 본문 없음")
+		            .flatMap(body -> Mono.error(new TossApiException("취소", response.statusCode().value(), body)))
+		    )
+		    .bodyToMono(TossPaymentResponse.class)
+		    .block(Duration.ofSeconds(5));
 	}
 
 	public TossPaymentResponse getPayment(String paymentKey) {
 		return webClient
-			.get()
-			.uri(baseUrl + PAYMENT_PATH, paymentKey)
-			.header(HttpHeaders.AUTHORIZATION, authorizationHeader())
-			.retrieve()
-			.onStatus(
-				HttpStatusCode::isError,
-				response -> response
-					.bodyToMono(String.class)
-					.defaultIfEmpty("응답 본문 없음")
-					.flatMap(body -> Mono.error(new TossApiException("조회", response.statusCode().value(), body)))
-			)
-			.bodyToMono(TossPaymentResponse.class)
-			.block(Duration.ofSeconds(5));
+		    .get()
+		    .uri(baseUrl + PAYMENT_PATH, paymentKey)
+		    .header(HttpHeaders.AUTHORIZATION, authorizationHeader())
+		    .retrieve()
+		    .onStatus(
+		        HttpStatusCode::isError,
+		        response -> response
+		            .bodyToMono(String.class)
+		            .defaultIfEmpty("응답 본문 없음")
+		            .flatMap(body -> Mono.error(new TossApiException("조회", response.statusCode().value(), body)))
+		    )
+		    .bodyToMono(TossPaymentResponse.class)
+		    .block(Duration.ofSeconds(5));
 	}
 
 	/**
@@ -126,11 +126,12 @@ public class TossPaymentClient {
 		TossPaymentResponse response = requeryAfterFailure(paymentKey, confirmException, "승인");
 
 		if (response.isApproved() || response.isConfirmFailureStatus()) {
-			log.info(
-				"토스 결제 승인 API 성공 응답 없이 재조회로 상태 확인 (paymentKey={}, tossStatus={})",
-				paymentKey,
-				response.getStatus()
-			);
+			log
+			    .info(
+			        "토스 결제 승인 API 성공 응답 없이 재조회로 상태 확인 (paymentKey={}, tossStatus={})",
+			        paymentKey,
+			        response.getStatus()
+			    );
 			return response;
 		}
 
@@ -142,9 +143,9 @@ public class TossPaymentClient {
 	 * API 호출 실패 후 결제 단건을 재조회하고, 재조회도 실패하면 상태 불명확 예외를 던진다.
 	 */
 	private TossPaymentResponse requeryAfterFailure(
-		String paymentKey,
-		RuntimeException originalException,
-		String operation
+	    String paymentKey,
+	    RuntimeException originalException,
+	    String operation
 	) {
 		try {
 			return getPayment(paymentKey);

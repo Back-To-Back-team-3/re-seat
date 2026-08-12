@@ -9,9 +9,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class TicketVerifyRequest {
 
-    @NotBlank
-    private String qrToken;
+	@NotBlank
+	private String qrToken;
 
-    @NotNull
-    private Long gameId;
+	@NotNull
+	private Long gameId;
 }

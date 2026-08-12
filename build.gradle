@@ -118,7 +118,6 @@ spotless {
         target 'src/**/*.java'
         lineEndings 'UNIX'
         eclipse().configFile("config/naver-eclipse-formatter.xml")
-        leadingTabsToSpaces(4)
         removeUnusedImports()
         trimTrailingWhitespace()
         endWithNewline()

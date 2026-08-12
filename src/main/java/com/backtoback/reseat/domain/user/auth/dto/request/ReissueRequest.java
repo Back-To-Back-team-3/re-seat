@@ -8,5 +8,5 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ReissueRequest {
-    private String refreshToken;
+	private String refreshToken;
 }
