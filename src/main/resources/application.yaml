@@ -152,7 +152,7 @@ spring:
     redis:
       host: ${REDIS_HOST:redis}
       port: 6379
-      password: ${REDIS_PASSWORD:?REDIS_PASSWORD environment variable must be set}
+      password: ${REDIS_PASSWORD}
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:19092}
@@ -163,7 +163,7 @@ spring:
     locations: classpath:db/migration
 
 jwt:
-  secret: ${JWT_SECRET:?JWT_SECRET environment variable must be set}
+  secret: ${JWT_SECRET}
 
 # prod 프로필에서도 Actuator 엔드포인트가 유지되도록 재선언
 management:
