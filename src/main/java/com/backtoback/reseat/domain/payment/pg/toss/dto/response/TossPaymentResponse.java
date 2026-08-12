@@ -13,32 +13,26 @@ import lombok.NoArgsConstructor;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TossPaymentResponse {
 
-    private String paymentKey;
-    private String orderId;
-    private String status;
-    private Integer totalAmount;
-    private String approvedAt;
-    private String method;
+	private String paymentKey;
+	private String orderId;
+	private String status;
+	private Integer totalAmount;
+	private String approvedAt;
+	private String method;
 
-    public boolean isApproved() {
-        return parsedStatus()
-            .filter(TossPaymentStatus::isApproved)
-            .isPresent();
-    }
+	public boolean isApproved() {
+		return parsedStatus().filter(TossPaymentStatus::isApproved).isPresent();
+	}
 
-    public boolean isCancelCompleted() {
-        return parsedStatus()
-            .filter(TossPaymentStatus::isCancelCompleted)
-            .isPresent();
-    }
+	public boolean isCancelCompleted() {
+		return parsedStatus().filter(TossPaymentStatus::isCancelCompleted).isPresent();
+	}
 
-    public boolean isConfirmFailureStatus() {
-        return parsedStatus()
-            .filter(TossPaymentStatus::isConfirmFailureStatus)
-            .isPresent();
-    }
+	public boolean isConfirmFailureStatus() {
+		return parsedStatus().filter(TossPaymentStatus::isConfirmFailureStatus).isPresent();
+	}
 
-    private Optional<TossPaymentStatus> parsedStatus() {
-        return TossPaymentStatus.from(status);
-    }
+	private Optional<TossPaymentStatus> parsedStatus() {
+		return TossPaymentStatus.from(status);
+	}
 }

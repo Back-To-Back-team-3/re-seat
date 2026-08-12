@@ -3,8 +3,5 @@
 package com.backtoback.reseat.domain.payment.entity;
 
 public enum PaymentStatus {
-    READY,
-    APPROVED,
-    FAILED,
-    CANCELED
+	READY, APPROVED, FAILED, CANCELED
 }
