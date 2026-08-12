@@ -23,11 +23,21 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "payment_recovery_tasks", uniqueConstraints = {
-	@UniqueConstraint(name = "uk_payment_recovery_tasks_payment", columnNames = "payment_id")
-}, indexes = {
-	@Index(name = "idx_payment_recovery_tasks_status_retry", columnList = "status, next_retry_at")
-})
+@Table(
+	name = "payment_recovery_tasks",
+	uniqueConstraints = {
+		@UniqueConstraint(
+			name = "uk_payment_recovery_tasks_payment",
+			columnNames = "payment_id"
+		)
+	},
+	indexes = {
+		@Index(
+			name = "idx_payment_recovery_tasks_status_retry",
+			columnList = "status, next_retry_at"
+		)
+	}
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PaymentRecoveryTask extends BaseEntity {
@@ -36,7 +46,10 @@ public class PaymentRecoveryTask extends BaseEntity {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	@OneToOne(fetch = FetchType.LAZY, optional = false)
+	@OneToOne(
+		fetch = FetchType.LAZY,
+		optional = false
+	)
 	@JoinColumn(
 		name = "payment_id",
 		nullable = false,
@@ -45,10 +58,16 @@ public class PaymentRecoveryTask extends BaseEntity {
 	private Payment payment;
 
 	@Enumerated(EnumType.STRING)
-	@Column(nullable = false, length = 20)
+	@Column(
+		nullable = false,
+		length = 20
+	)
 	private PaymentRecoveryStatus status;
 
-	@Column(name = "attempt_count", nullable = false)
+	@Column(
+		name = "attempt_count",
+		nullable = false
+	)
 	private int attemptCount;
 
 	@Column(name = "next_retry_at")
@@ -57,7 +76,10 @@ public class PaymentRecoveryTask extends BaseEntity {
 	@Column(name = "processing_started_at")
 	private LocalDateTime processingStartedAt;
 
-	@Column(name = "last_error", length = 500)
+	@Column(
+		name = "last_error",
+		length = 500
+	)
 	private String lastError;
 
 	@Column(name = "completed_at")

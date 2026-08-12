@@ -3,14 +3,7 @@ package com.backtoback.reseat.domain.payment.pg.toss.dto.response;
 import java.util.Optional;
 
 public enum TossPaymentStatus {
-	READY,
-	IN_PROGRESS,
-	WAITING_FOR_DEPOSIT,
-	DONE,
-	CANCELED,
-	PARTIAL_CANCELED,
-	ABORTED,
-	EXPIRED;
+	READY, IN_PROGRESS, WAITING_FOR_DEPOSIT, DONE, CANCELED, PARTIAL_CANCELED, ABORTED, EXPIRED;
 
 	public static Optional<TossPaymentStatus> from(String value) {
 		try {

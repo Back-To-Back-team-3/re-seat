@@ -21,21 +21,15 @@ public class TossPaymentResponse {
 	private String method;
 
 	public boolean isApproved() {
-		return parsedStatus()
-			.filter(TossPaymentStatus::isApproved)
-			.isPresent();
+		return parsedStatus().filter(TossPaymentStatus::isApproved).isPresent();
 	}
 
 	public boolean isCancelCompleted() {
-		return parsedStatus()
-			.filter(TossPaymentStatus::isCancelCompleted)
-			.isPresent();
+		return parsedStatus().filter(TossPaymentStatus::isCancelCompleted).isPresent();
 	}
 
 	public boolean isConfirmFailureStatus() {
-		return parsedStatus()
-			.filter(TossPaymentStatus::isConfirmFailureStatus)
-			.isPresent();
+		return parsedStatus().filter(TossPaymentStatus::isConfirmFailureStatus).isPresent();
 	}
 
 	private Optional<TossPaymentStatus> parsedStatus() {

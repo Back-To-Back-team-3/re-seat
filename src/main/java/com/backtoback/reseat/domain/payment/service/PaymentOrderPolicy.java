@@ -27,8 +27,7 @@ public class PaymentOrderPolicy {
 	 * 주문을 조회하고 결제 요청 사용자에게 소유권이 있는지 검증한다.
 	 */
 	public Order getOwnedOrder(Long userId, Long orderId) {
-		Order order = orderRepository.findById(orderId)
-			.orElseThrow(PaymentOrderNotFoundException::new);
+		Order order = orderRepository.findById(orderId).orElseThrow(PaymentOrderNotFoundException::new);
 
 		if (!order.getUser().getId().equals(userId)) {
 			throw new PaymentAccessDeniedException();
