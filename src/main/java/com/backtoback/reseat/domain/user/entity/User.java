@@ -87,15 +87,6 @@ public class User extends BaseEntity {
         this.providerId = providerId;
     }
 
-    public void completeVerification(String ci, String realName) {
-        if (this.isVerified) {
-            throw new IllegalStateException("이미 본인인증이 완료된 회원입니다.");
-        }
-        this.ci = ci;
-        this.name = realName;
-        this.isVerified = true;
-    }
-
     public void updateProfile(String name, String phone) {
         this.name = name;
         this.phone = phone;
@@ -113,11 +104,6 @@ public class User extends BaseEntity {
         this.status = status;
     }
 
-    public void updateSocialInfo(String provider, String providerId) {
-        this.provider = provider;
-        this.providerId = providerId;
-    }
-
     public void withdraw() {
         //회원상태 DELETE로 변경
         this.status = UserStatus.DELETED;
@@ -130,7 +116,7 @@ public class User extends BaseEntity {
         this.nickname = "탈퇴회원";
 
         //전화번호 및 본인인증 정보 초기화
-        this.phone = "000-0000-0000";
+        this.phone = null;
         this.ci = null;
         this.isVerified = false;
     }
