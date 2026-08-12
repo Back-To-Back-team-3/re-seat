@@ -1,5 +1,6 @@
 package com.backtoback.reseat.domain.user.admin.seeder;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,6 +23,9 @@ public class AdminInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
+    @Value("${ADMIN_PASSWORD:admin1234!}")
+    private String adminPassword;
+
     @Override
     public void run(String... args) {
         String adminEmail = "admin@reseat.com";
@@ -29,7 +33,7 @@ public class AdminInitializer implements CommandLineRunner {
         if (!userRepository.existsByEmail(adminEmail)) {
             User admin = User.builder()
                 .email(adminEmail)
-                .password(passwordEncoder.encode("admin1234!"))
+                .password(passwordEncoder.encode(adminPassword))
                 .name("Re-Seat 관리자")
                 .phone("010-0000-0000")
                 .role(UserRole.ADMIN)
