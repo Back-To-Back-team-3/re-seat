@@ -136,6 +136,7 @@ public class QueueService {
             .admitted(true)
             .queueToken(activeToken.getToken())
             .tokenExpiresAt(activeToken.getExpiresAt())
+            .tokenSeatBrowsingExpiresAt(activeToken.getSeatBrowsingExpiresAt())
             .build();
     }
 
@@ -407,8 +408,7 @@ public class QueueService {
      * @return 사용 가능한 활성 입장 토큰이 있다면 true, 없다면 false
      */
     private boolean hasUsableActiveToken(Long userId, LocalDateTime currentTime) {
-        List<AdmissionToken> activeTokens = admissionTokenRepository.findByUser_IdAndStatusWithPessimisticWriteLock(
-            userId,
+        List<AdmissionToken> activeTokens = admissionTokenRepository.findByUser_IdAndStatusWithPessimisticWriteLock(userId,
             AdmissionTokenStatus.ACTIVE
         );
 
