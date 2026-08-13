@@ -142,17 +142,27 @@ public class AdmissionTokenService {
                 }
 
                 AdmissionToken activeToken = admissionTokenRepository
-                    .findByGame_IdAndUser_IdAndStatusAndExpiresAtAfter(
+                    .findByGame_IdAndUser_IdAndStatusWithPessimisticWriteLock(
                         gameId,
                         userId,
-                        AdmissionTokenStatus.ACTIVE,
-                        LocalDateTime.now()
+                        AdmissionTokenStatus.ACTIVE
                     )
                     .orElse(null);
 
-                // 이전 처리에서 활성 토큰은 발급됐지만 DB 대기 이력이 WAITING으로 남은 경우 기존 토큰을 재사용한다.
-                // 토큰을 중복 발급하지 않고 기존 발급 시간을 기준으로 대기 이력만 ADMITTED 상태로 복구한다.
                 if (activeToken != null) {
+                    // 전체 유효시간이 만료된 토큰은 상태와 대기 이력을 종료하여 새 토큰이 자동 발급되지 않도록 한다.
+                    if (activeToken.isExpiredAt(issuedAt)) {
+                        activeToken.expire(issuedAt);
+                        queueEntryHistory.cancel(issuedAt);
+                        continue;
+                    } else if (activeToken.isSeatBrowsingExpiredAt(issuedAt)) {
+                        // 최초 선점 없이 탐색 시간이 만료된 토큰은 상태와 대기 이력을 종료하여 예매 버튼부터 다시 시작하도록 한다.
+                        activeToken.expireBrowsing(issuedAt);
+                        queueEntryHistory.cancel(issuedAt);
+                        continue;
+                    }
+                    // 이전 처리에서 활성 토큰은 발급됐지만 DB 대기 이력이 WAITING으로 남은 경우 기존 토큰을 재사용한다.
+                    // 토큰을 중복 발급하지 않고 기존 발급 시간을 기준으로 대기 이력만 ADMITTED 상태로 복구한다.
                     queueEntryHistory.admit(activeToken.getIssuedAt());
                     continue;
                 }
