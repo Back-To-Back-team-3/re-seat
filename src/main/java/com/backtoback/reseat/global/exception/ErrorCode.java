@@ -92,6 +92,7 @@ public enum ErrorCode {
     PAYMENT_TIMEOUT(HttpStatus.REQUEST_TIMEOUT, "결제 제한 시간이 초과되었습니다."),
     PAYMENT_CANCEL_NOT_ALLOWED(HttpStatus.CONFLICT, "취소할 수 없는 결제 상태입니다."),
     PAYMENT_CANCEL_FAILED(HttpStatus.BAD_GATEWAY, "결제 취소 처리에 실패했습니다."),
+    PAYMENT_TICKET_ISSUANCE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "승인된 결제의 티켓 발급을 완료하지 못했습니다."),
 
     // 티켓 (tickets)
     TICKET_NOT_FOUND(HttpStatus.NOT_FOUND, "티켓을 찾을 수 없습니다."),
