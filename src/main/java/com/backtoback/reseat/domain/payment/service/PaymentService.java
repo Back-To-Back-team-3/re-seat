@@ -13,6 +13,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.backtoback.reseat.domain.order.entity.OrderItem;
 import com.backtoback.reseat.domain.order.exception.OrderExpiredException;
 import com.backtoback.reseat.domain.order.repository.OrderItemRepository;
 import com.backtoback.reseat.domain.order.service.OrderService;
@@ -26,10 +27,11 @@ import com.backtoback.reseat.domain.payment.dto.response.PaymentCreateResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentResponse;
 import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
-import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
+import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentLockFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
+import com.backtoback.reseat.domain.payment.exception.PaymentTicketIssuanceException;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
 import com.backtoback.reseat.domain.payment.pg.toss.exception.TossPaymentStatusUnknownException;
@@ -106,7 +108,12 @@ public class PaymentService {
      * @param request 토스가 클라이언트에 돌려준 paymentKey/orderId/amount
      * @return 확정된 결제 결과
      */
-    @Transactional(noRollbackFor = OrderExpiredException.class)
+    @Transactional(
+        noRollbackFor = {
+            OrderExpiredException.class,
+            PaymentTicketIssuanceException.class
+        }
+    )
     public PaymentCompleteResponse completePayment(
         Long userId,
         Long paymentId,
@@ -116,8 +123,11 @@ public class PaymentService {
         // 로컬 결제를 잠그고 현재 결제 시도의 콜백인지 확인한다.
         Payment payment = getOwnedPaymentWithPessimisticWriteLock(userId, paymentId);
         paymentValidator.validateActiveIdempotencyKey(payment, idempotencyKey);
-        if (payment.getStatus() != PaymentStatus.READY) {
-            return completeResponse(payment);
+        if (payment.isApproved()) {
+            return approvedResponse(payment);
+        }
+        if (!payment.isReady()) {
+            throw new PaymentAlreadyFinalizedException();
         }
 
         // READY 결제만 Toss 승인 요청 전에 콜백 주문·금액을 검증한다.
@@ -140,7 +150,7 @@ public class PaymentService {
             payment.fail("토스 결제 승인 상태를 확인할 수 없습니다.", LocalDateTime.now());
             paymentRecoveryTaskRepository.save(new PaymentRecoveryTask(payment));
             orderService.failOrder(payment.getOrder().getId());
-            return completeResponse(payment);
+            return PaymentCompleteResponse.from(payment, List.of());
         }
 
         // 승인 API 응답은 받았지만 승인 완료 상태가 아니라면 로컬 결제를 실패로 닫는다.
@@ -152,24 +162,46 @@ public class PaymentService {
                     : "토스 결제 승인 상태가 완료가 아닙니다. status=" + status;
             payment.fail(failReason, LocalDateTime.now());
             orderService.failOrder(payment.getOrder().getId());
-            return completeResponse(payment);
+            return PaymentCompleteResponse.from(payment, List.of());
         }
 
         // Toss 승인이 확인됐으므로 로컬 결제에 PG 키·수단·승인 시각을 반영한다.
         payment.assignPgPaymentKey(response.getPaymentKey());
         payment.approve(response.getMethod(), resolveApprovedAt(response.getApprovedAt()));
         orderService.completeOrder(payment.getOrder().getId());
-        ticketServiceProvider.getObject().issue(payment.getOrder());
 
-        return completeResponse(payment);
+        return approvedResponse(payment);
     }
 
     /**
-     * 승인된 결제는 주문 항목별 발급 티켓을 포함하고, 그 외 상태는 빈 목록을 반환한다.
+     * 승인된 결제의 주문 항목별 티켓을 확인하고 응답한다.
      */
-    private PaymentCompleteResponse completeResponse(Payment payment) {
-        List<TicketListResponse> tickets
-            = payment.getStatus() == PaymentStatus.APPROVED ? findIssuedTickets(payment.getOrder().getId()) : List.of();
+    private PaymentCompleteResponse approvedResponse(Payment payment) {
+        List<OrderItem> orderItems = orderItemRepository.findByOrder_Id(payment.getOrder().getId());
+        if (orderItems.isEmpty()) {
+            throw new PaymentTicketIssuanceException();
+        }
+
+        List<TicketListResponse> tickets = findIssuedTickets(orderItems);
+        if (tickets.size() < orderItems.size()) {
+            try {
+                ticketServiceProvider.getObject().issue(payment.getOrder());
+            } catch (RuntimeException exception) {
+                log
+                    .error(
+                        "승인된 결제의 티켓 발급 실패 (paymentId={}, orderId={})",
+                        payment.getId(),
+                        payment.getOrder().getId(),
+                        exception
+                    );
+                throw new PaymentTicketIssuanceException(exception);
+            }
+            tickets = findIssuedTickets(orderItems);
+        }
+
+        if (tickets.size() != orderItems.size()) {
+            throw new PaymentTicketIssuanceException();
+        }
 
         return PaymentCompleteResponse.from(payment, tickets);
     }
@@ -177,9 +209,8 @@ public class PaymentService {
     /**
      * 기존 주문 항목 조회 메서드와 티켓 단건 조회 메서드로 발급 티켓 응답을 구성한다.
      */
-    private List<TicketListResponse> findIssuedTickets(Long orderId) {
-        return orderItemRepository
-            .findByOrder_Id(orderId)
+    private List<TicketListResponse> findIssuedTickets(List<OrderItem> orderItems) {
+        return orderItems
             .stream()
             .map(orderItem -> ticketRepository.findByOrderItemId(orderItem.getId()))
             .flatMap(Optional::stream)
@@ -205,7 +236,7 @@ public class PaymentService {
     ) {
         Payment payment = getOwnedPaymentWithPessimisticWriteLock(userId, paymentId);
         paymentValidator.validateActiveIdempotencyKey(payment, idempotencyKey);
-        if (payment.getStatus() != PaymentStatus.READY) {
+        if (!payment.isReady()) {
             return PaymentActionResponse.from(payment);
         }
 
@@ -231,7 +262,7 @@ public class PaymentService {
     public PaymentActionResponse cancelPayment(Long userId, Long paymentId, PaymentCancelRequest request) {
         // 로컬 결제를 잠그고 이미 취소된 요청은 기존 결과를 반환해 멱등하게 처리한다.
         Payment payment = getOwnedPaymentWithPessimisticWriteLock(userId, paymentId);
-        if (payment.getStatus() == PaymentStatus.CANCELED) {
+        if (payment.isCanceled()) {
             return PaymentActionResponse.from(payment);
         }
         paymentValidator.validateCancelable(payment);

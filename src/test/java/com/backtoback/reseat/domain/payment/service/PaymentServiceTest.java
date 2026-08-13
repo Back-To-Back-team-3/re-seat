@@ -41,6 +41,7 @@ import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
 import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
+import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.entity.PgProvider;
 import com.backtoback.reseat.domain.payment.exception.IdempotencyKeyRequiredException;
 import com.backtoback.reseat.domain.payment.exception.PaymentAccessDeniedException;
@@ -49,6 +50,7 @@ import com.backtoback.reseat.domain.payment.exception.PaymentCancelFailedExcepti
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelNotAllowedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentLockFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
+import com.backtoback.reseat.domain.payment.exception.PaymentTicketIssuanceException;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
 import com.backtoback.reseat.domain.payment.pg.toss.exception.TossPaymentStatusUnknownException;
@@ -154,6 +156,12 @@ class PaymentServiceTest {
         when(orderItem.getId()).thenReturn(ORDER_ITEM_ID);
         when(orderItemRepository.findByOrder_Id(ORDER_ID)).thenReturn(List.of(orderItem));
         when(ticketRepository.findByOrderItemId(ORDER_ITEM_ID)).thenReturn(Optional.of(ticket));
+    }
+
+    private OrderItem orderItem() {
+        OrderItem orderItem = mock(OrderItem.class);
+        when(orderItem.getId()).thenReturn(ORDER_ITEM_ID);
+        return orderItem;
     }
 
     @Nested
@@ -272,10 +280,13 @@ class PaymentServiceTest {
         void approvesPaymentAndCompletesOrder() {
             Payment payment = payment(PaymentStatus.READY);
             Ticket ticket = mock(Ticket.class, RETURNS_DEEP_STUBS);
+            OrderItem orderItem = orderItem();
             PaymentCompleteRequest request = completeRequest();
             TossPaymentResponse tossResponse = mock(TossPaymentResponse.class);
-            givenIssuedTicket(payment, ticket);
+            when(payment.getOrder().getId()).thenReturn(ORDER_ID);
             when(ticketServiceProvider.getObject()).thenReturn(ticketService);
+            when(orderItemRepository.findByOrder_Id(ORDER_ID)).thenReturn(List.of(orderItem));
+            when(ticketRepository.findByOrderItemId(ORDER_ITEM_ID)).thenReturn(Optional.empty(), Optional.of(ticket));
             when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
             when(tossResponse.isApproved()).thenReturn(true);
             when(tossResponse.getPaymentKey()).thenReturn(PAYMENT_KEY);
@@ -302,32 +313,38 @@ class PaymentServiceTest {
             verify(paymentRecoveryTaskRepository, never()).save(any());
         }
 
-        @ParameterizedTest(name = "{0} 결제의 기존 결과를 반환한다")
-        @EnumSource(
-            value = PaymentStatus.class,
-            names = {
-                "FAILED",
-                "CANCELED"
-            }
-        )
-        @DisplayName("승인되지 않은 종결 결제는 Toss를 호출하지 않고 빈 티켓 목록을 반환한다.")
-        void returnsFinalizedPaymentWithoutConfirm(PaymentStatus status) {
-            Payment payment = payment(status);
+        @Test
+        @DisplayName("이미 실패한 결제에 승인 완료를 요청하면 이미 종결된 결제 예외를 던진다.")
+        void rejectsFailedPayment() {
+            Payment payment = payment(PaymentStatus.FAILED);
             PaymentCompleteRequest request = mock(PaymentCompleteRequest.class);
             when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
 
-            PaymentCompleteResponse response
-                = paymentService.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
+            assertThatThrownBy(() -> paymentService.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
+                .isInstanceOf(PaymentAlreadyFinalizedException.class);
 
-            assertThat(response.getStatus()).isEqualTo(status);
-            assertThat(response.getTickets()).isEmpty();
             verify(paymentValidator).validateOwner(payment, USER_ID);
             verify(paymentValidator).validateActiveIdempotencyKey(payment, IDEMPOTENCY_KEY);
             verifyNoInteractions(paymentOrderPolicy, tossPaymentClient, orderService, paymentRecoveryTaskRepository);
         }
 
         @Test
-        @DisplayName("이미 승인된 결제는 Toss 승인과 티켓 발급을 반복하지 않고 기존 티켓을 반환한다.")
+        @DisplayName("취소된 결제에 승인 완료를 요청하면 이미 종결된 결제 예외를 던진다.")
+        void rejectsCanceledPayment() {
+            Payment payment = payment(PaymentStatus.CANCELED);
+            PaymentCompleteRequest request = mock(PaymentCompleteRequest.class);
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
+
+            assertThatThrownBy(() -> paymentService.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
+                .isInstanceOf(PaymentAlreadyFinalizedException.class);
+
+            verify(paymentValidator).validateOwner(payment, USER_ID);
+            verify(paymentValidator).validateActiveIdempotencyKey(payment, IDEMPOTENCY_KEY);
+            verifyNoInteractions(paymentOrderPolicy, tossPaymentClient, orderService, paymentRecoveryTaskRepository);
+        }
+
+        @Test
+        @DisplayName("이미 승인된 결제에 모든 티켓이 있으면 Toss 승인과 티켓 발급을 반복하지 않는다.")
         void returnsExistingTicketsForApprovedPayment() {
             Payment payment = payment(PaymentStatus.APPROVED);
             Ticket ticket = mock(Ticket.class, RETURNS_DEEP_STUBS);
@@ -341,6 +358,65 @@ class PaymentServiceTest {
             assertThat(response.getStatus()).isEqualTo(PaymentStatus.APPROVED);
             assertThat(response.getTickets()).isNotEmpty();
             verifyNoInteractions(paymentOrderPolicy, tossPaymentClient, orderService, ticketService);
+        }
+
+        @Test
+        @DisplayName("이미 승인된 결제의 티켓이 누락되면 Toss 승인 없이 누락 티켓 발급을 다시 시도한다.")
+        void issuesMissingTicketsForApprovedPayment() {
+            Payment payment = payment(PaymentStatus.APPROVED);
+            Ticket ticket = mock(Ticket.class, RETURNS_DEEP_STUBS);
+            OrderItem orderItem = orderItem();
+            PaymentCompleteRequest request = mock(PaymentCompleteRequest.class);
+            when(payment.getOrder().getId()).thenReturn(ORDER_ID);
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
+            when(orderItemRepository.findByOrder_Id(ORDER_ID)).thenReturn(List.of(orderItem));
+            when(ticketRepository.findByOrderItemId(ORDER_ITEM_ID)).thenReturn(Optional.empty(), Optional.of(ticket));
+            when(ticketServiceProvider.getObject()).thenReturn(ticketService);
+
+            PaymentCompleteResponse response
+                = paymentService.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
+
+            assertThat(response.getTickets()).hasSize(1);
+            verify(ticketService).issue(payment.getOrder());
+            verifyNoInteractions(paymentOrderPolicy, tossPaymentClient, orderService);
+        }
+
+        @Test
+        @DisplayName("티켓 재발급 후에도 주문 항목의 티켓이 부족하면 승인 응답을 반환하지 않는다.")
+        void rejectsIncompleteTicketIssuance() {
+            Payment payment = payment(PaymentStatus.APPROVED);
+            OrderItem orderItem = orderItem();
+            PaymentCompleteRequest request = mock(PaymentCompleteRequest.class);
+            when(payment.getOrder().getId()).thenReturn(ORDER_ID);
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
+            when(orderItemRepository.findByOrder_Id(ORDER_ID)).thenReturn(List.of(orderItem));
+            when(ticketRepository.findByOrderItemId(ORDER_ITEM_ID)).thenReturn(Optional.empty());
+            when(ticketServiceProvider.getObject()).thenReturn(ticketService);
+
+            assertThatThrownBy(() -> paymentService.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
+                .isInstanceOf(PaymentTicketIssuanceException.class);
+
+            verify(ticketService).issue(payment.getOrder());
+            verifyNoInteractions(paymentOrderPolicy, tossPaymentClient, orderService);
+        }
+
+        @Test
+        @DisplayName("티켓 발급 중 오류가 발생하면 티켓 발급 실패 예외로 변환한다.")
+        void wrapsTicketIssuanceFailure() {
+            Payment payment = payment(PaymentStatus.APPROVED);
+            OrderItem orderItem = orderItem();
+            PaymentCompleteRequest request = mock(PaymentCompleteRequest.class);
+            RuntimeException cause = new RuntimeException("티켓 저장 실패");
+            when(payment.getOrder().getId()).thenReturn(ORDER_ID);
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
+            when(orderItemRepository.findByOrder_Id(ORDER_ID)).thenReturn(List.of(orderItem));
+            when(ticketRepository.findByOrderItemId(ORDER_ITEM_ID)).thenReturn(Optional.empty());
+            when(ticketServiceProvider.getObject()).thenReturn(ticketService);
+            doThrow(cause).when(ticketService).issue(payment.getOrder());
+
+            assertThatThrownBy(() -> paymentService.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
+                .isInstanceOf(PaymentTicketIssuanceException.class)
+                .hasCause(cause);
         }
 
         @Test
