@@ -204,6 +204,22 @@ public class Payment extends BaseEntity {
         this.pgPaymentKey = pgPaymentKey;
     }
 
+    public boolean isReady() {
+        return status == PaymentStatus.READY;
+    }
+
+    public boolean isApproved() {
+        return status == PaymentStatus.APPROVED;
+    }
+
+    public boolean isFailed() {
+        return status == PaymentStatus.FAILED;
+    }
+
+    public boolean isCanceled() {
+        return status == PaymentStatus.CANCELED;
+    }
+
     // 결제 승인 처리
     public void approve(String method, LocalDateTime approvedAt) {
         this.status = PaymentStatus.APPROVED;
@@ -222,7 +238,7 @@ public class Payment extends BaseEntity {
 
     // 동일 주문의 READY 결제를 재사용할 때 현재 결제 시도의 멱등키를 교체한다.
     public void changeIdempotencyKey(String idempotencyKey) {
-        if (status != PaymentStatus.READY) {
+        if (!isReady()) {
             throw new PaymentAlreadyFinalizedException();
         }
         this.idempotencyKey = idempotencyKey;
@@ -230,7 +246,7 @@ public class Payment extends BaseEntity {
 
     // 결제 취소 처리
     public void cancel() {
-        if (status != PaymentStatus.APPROVED) {
+        if (!isApproved()) {
             throw new PaymentCancelNotAllowedException();
         }
         this.status = PaymentStatus.CANCELED;
