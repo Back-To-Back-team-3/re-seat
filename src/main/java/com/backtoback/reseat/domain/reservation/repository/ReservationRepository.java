@@ -15,7 +15,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     /**
      * 선점 상세 조회 (ReservationSeat + GameSeat 페치 조인).
-     *
      * <p>해제 시 좌석 상태를 되돌리기 위해 자식 컬렉션을 함께 로딩한다.
      * 컬렉션 페치 조인은 reservationSeats 하나만 사용(MultipleBagFetchException 방지).
      */
@@ -25,8 +24,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
         LEFT JOIN FETCH rs.gameSeat
         WHERE r.id = :id
         """)
-    Optional<Reservation> findWithSeatsById(@Param("id")
-    Long id);
+    Optional<Reservation> findWithSeatsById(@Param("id") Long id);
 
     /**
      * HOLDING 상태이면서 선점 만료 시각이 지난 예약을 EXPIRED로 벌크 전이한다.
@@ -52,12 +50,10 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
            and r.holdExpiresAt < :now
         """)
     int expireHoldingReservations(
-        @Param("now")
-        LocalDateTime now,
-        @Param("holding")
-        ReservationStatus holding,
-        @Param("expired")
-        ReservationStatus expired);
+        @Param("now") LocalDateTime now,
+        @Param("holding") ReservationStatus holding,
+        @Param("expired") ReservationStatus expired
+    );
 
     // C-4: findByReservationNo, findByUserIdAndStatus...
 }

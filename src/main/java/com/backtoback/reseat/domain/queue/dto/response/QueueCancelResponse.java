@@ -17,9 +17,15 @@ import lombok.RequiredArgsConstructor;
 @Schema(description = "대기열 취소 응답")
 public class QueueCancelResponse {
 
-    @Schema(description = "경기 ID", example = "10")
+    @Schema(
+        description = "경기 ID",
+        example = "10"
+    )
     private final Long gameId;
 
-    @Schema(description = "대기열 상태", example = "CANCELED")
+    @Schema(
+        description = "대기열 상태",
+        example = "CANCELED"
+    )
     private final QueueEntryHistoryStatus queueStatus;
 }

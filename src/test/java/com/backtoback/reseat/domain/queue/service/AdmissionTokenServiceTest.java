@@ -74,12 +74,7 @@ public class AdmissionTokenServiceTest {
         when(game.getId()).thenReturn(GAME_ID);
         when(user.getId()).thenReturn(USER_ID);
 
-        return AdmissionToken.of(
-            game,
-            user,
-            TOKEN,
-            issuedAt,
-            expiresAt);
+        return AdmissionToken.of(game, user, TOKEN, issuedAt, expiresAt);
     }
 
     @Test
@@ -88,13 +83,10 @@ public class AdmissionTokenServiceTest {
 
         AdmissionToken admissionToken = activeToken();
 
-        when(admissionTokenRepository.findByToken(TOKEN))
-            .thenReturn(Optional.of(admissionToken));
+        when(admissionTokenRepository.findByToken(TOKEN)).thenReturn(Optional.of(admissionToken));
 
-        assertThatCode(() -> admissionTokenService.validateToken(USER_ID, GAME_ID, TOKEN))
-            .doesNotThrowAnyException();
-        assertThat(admissionToken.getStatus())
-            .isEqualTo(AdmissionTokenStatus.ACTIVE);
+        assertThatCode(() -> admissionTokenService.validateToken(USER_ID, GAME_ID, TOKEN)).doesNotThrowAnyException();
+        assertThat(admissionToken.getStatus()).isEqualTo(AdmissionTokenStatus.ACTIVE);
 
         verify(admissionTokenRepository).findByToken(TOKEN);
     }
@@ -113,8 +105,7 @@ public class AdmissionTokenServiceTest {
     @DisplayName("존재하지 않는 Queue-Token이면 유효하지 않은 토큰 예외가 발생한다.")
     void validateToken_whenTokenNotFound_throwsInvalid() {
 
-        when(admissionTokenRepository.findByToken(TOKEN))
-            .thenReturn(Optional.empty());
+        when(admissionTokenRepository.findByToken(TOKEN)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> admissionTokenService.validateToken(USER_ID, GAME_ID, TOKEN))
             .isInstanceOf(QueueTokenInvalidException.class);
@@ -133,13 +124,11 @@ public class AdmissionTokenServiceTest {
 
         AdmissionToken admissionToken = activeToken(issuedAt, expiredAt);
 
-        when(admissionTokenRepository.findByToken(TOKEN))
-            .thenReturn(Optional.of(admissionToken));
+        when(admissionTokenRepository.findByToken(TOKEN)).thenReturn(Optional.of(admissionToken));
 
         assertThatThrownBy(() -> admissionTokenService.validateToken(USER_ID, GAME_ID, TOKEN))
             .isInstanceOf(QueueTokenExpiredException.class);
-        assertThat(admissionToken.getStatus())
-            .isEqualTo(AdmissionTokenStatus.EXPIRED);
+        assertThat(admissionToken.getStatus()).isEqualTo(AdmissionTokenStatus.EXPIRED);
 
         verify(admissionTokenRepository).findByToken(TOKEN);
         verify(admissionTokenRepository, never()).findByTokenWithPessimisticWriteLock(TOKEN);
@@ -154,12 +143,9 @@ public class AdmissionTokenServiceTest {
         when(admissionTokenRepository.findByTokenWithPessimisticWriteLock(TOKEN))
             .thenReturn(Optional.of(admissionToken));
 
-        assertThatCode(() -> admissionTokenService.consumeToken(USER_ID, GAME_ID, TOKEN))
-            .doesNotThrowAnyException();
-        assertThat(admissionToken.getStatus())
-            .isEqualTo(AdmissionTokenStatus.USED);
-        assertThat(admissionToken.getUsedAt())
-            .isNotNull();
+        assertThatCode(() -> admissionTokenService.consumeToken(USER_ID, GAME_ID, TOKEN)).doesNotThrowAnyException();
+        assertThat(admissionToken.getStatus()).isEqualTo(AdmissionTokenStatus.USED);
+        assertThat(admissionToken.getUsedAt()).isNotNull();
 
         verify(admissionTokenRepository).findByTokenWithPessimisticWriteLock(TOKEN);
         verify(admissionTokenRepository, never()).findByToken(TOKEN);

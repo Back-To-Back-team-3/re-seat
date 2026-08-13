@@ -47,13 +47,15 @@ class AuthServiceTest extends BaseUnitTest {
     void login_Success() {
         // given
         UserLoginRequest request = new UserLoginRequest("user@test.com", "password123!");
-        User user = User.builder()
-            .id(1L)
-            .email("user@test.com")
-            .password("encodedPassword")
-            .role(UserRole.USER)
-            .status(UserStatus.ACTIVE)
-            .build();
+        User user
+            = User
+                .builder()
+                .id(1L)
+                .email("user@test.com")
+                .password("encodedPassword")
+                .role(UserRole.USER)
+                .status(UserStatus.ACTIVE)
+                .build();
 
         when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("password123!", "encodedPassword")).thenReturn(true);
@@ -88,13 +90,15 @@ class AuthServiceTest extends BaseUnitTest {
     void login_InvalidPassword() {
         // given
         UserLoginRequest request = new UserLoginRequest("user@test.com", "wrongPassword");
-        User user = User.builder()
-            .id(1L)
-            .email("user@test.com")
-            .password("encodedPassword")
-            .role(UserRole.USER)
-            .status(UserStatus.ACTIVE)
-            .build();
+        User user
+            = User
+                .builder()
+                .id(1L)
+                .email("user@test.com")
+                .password("encodedPassword")
+                .role(UserRole.USER)
+                .status(UserStatus.ACTIVE)
+                .build();
 
         when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("wrongPassword", "encodedPassword")).thenReturn(false);
@@ -110,13 +114,15 @@ class AuthServiceTest extends BaseUnitTest {
     void login_SuspendedUser() {
         // given
         UserLoginRequest request = new UserLoginRequest("user@test.com", "password123!");
-        User user = User.builder()
-            .id(1L)
-            .email("user@test.com")
-            .password("encodedPassword")
-            .role(UserRole.USER)
-            .status(UserStatus.SUSPENDED)
-            .build();
+        User user
+            = User
+                .builder()
+                .id(1L)
+                .email("user@test.com")
+                .password("encodedPassword")
+                .role(UserRole.USER)
+                .status(UserStatus.SUSPENDED)
+                .build();
 
         when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("password123!", "encodedPassword")).thenReturn(true);
@@ -132,13 +138,15 @@ class AuthServiceTest extends BaseUnitTest {
     void login_DeletedUser() {
         // given
         UserLoginRequest request = new UserLoginRequest("user@test.com", "password123!");
-        User user = User.builder()
-            .id(1L)
-            .email("user@test.com")
-            .password("encodedPassword")
-            .role(UserRole.USER)
-            .status(UserStatus.DELETED)
-            .build();
+        User user
+            = User
+                .builder()
+                .id(1L)
+                .email("user@test.com")
+                .password("encodedPassword")
+                .role(UserRole.USER)
+                .status(UserStatus.DELETED)
+                .build();
 
         when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("password123!", "encodedPassword")).thenReturn(true);

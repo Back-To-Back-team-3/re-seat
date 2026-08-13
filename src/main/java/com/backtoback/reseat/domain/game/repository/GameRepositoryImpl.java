@@ -26,7 +26,6 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * 경기 조회 QueryDSL 구현체.
- *
  * <p>목록 조회에서 homeTeam, awayTeam, stadium을 fetch join하여
  * 카드 UI 렌더링에 필요한 정보를 한 번의 쿼리로 가져온다.</p>
  */
@@ -40,32 +39,39 @@ public class GameRepositoryImpl implements GameRepositoryCustom {
 
     @Override
     public Page<Game> searchGames(GameSearchCondition condition, Pageable pageable) {
-        List<Game> content = queryFactory
-            .selectFrom(game)
-            .join(game.homeTeam, homeTeam).fetchJoin()
-            .join(game.awayTeam, awayTeam).fetchJoin()
-            .join(game.stadium, stadium).fetchJoin()
-            .where(
-                homeTeamIdEq(condition.homeTeamId()),
-                awayTeamIdEq(condition.awayTeamId()),
-                gameAtGoe(condition.from()),
-                gameAtLt(condition.to()),
-                bookingStatusEq(condition.bookingStatus()))
-            .orderBy(getOrderSpecifiers(pageable))
-            .offset(pageable.getOffset())
-            .limit(pageable.getPageSize())
-            .fetch();
+        List<Game> content
+            = queryFactory
+                .selectFrom(game)
+                .join(game.homeTeam, homeTeam)
+                .fetchJoin()
+                .join(game.awayTeam, awayTeam)
+                .fetchJoin()
+                .join(game.stadium, stadium)
+                .fetchJoin()
+                .where(
+                    homeTeamIdEq(condition.homeTeamId()),
+                    awayTeamIdEq(condition.awayTeamId()),
+                    gameAtGoe(condition.from()),
+                    gameAtLt(condition.to()),
+                    bookingStatusEq(condition.bookingStatus())
+                )
+                .orderBy(getOrderSpecifiers(pageable))
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
 
-        Long total = queryFactory
-            .select(game.count())
-            .from(game)
-            .where(
-                homeTeamIdEq(condition.homeTeamId()),
-                awayTeamIdEq(condition.awayTeamId()),
-                gameAtGoe(condition.from()),
-                gameAtLt(condition.to()),
-                bookingStatusEq(condition.bookingStatus()))
-            .fetchOne();
+        Long total
+            = queryFactory
+                .select(game.count())
+                .from(game)
+                .where(
+                    homeTeamIdEq(condition.homeTeamId()),
+                    awayTeamIdEq(condition.awayTeamId()),
+                    gameAtGoe(condition.from()),
+                    gameAtLt(condition.to()),
+                    bookingStatusEq(condition.bookingStatus())
+                )
+                .fetchOne();
 
         return new PageImpl<>(content, pageable, total == null ? 0 : total);
     }
@@ -83,7 +89,6 @@ public class GameRepositoryImpl implements GameRepositoryCustom {
 
     /**
      * from 날짜 이상인 경기를 조회한다.
-     *
      * <p>LocalDate를 받기 때문에 해당 날짜의 00:00:00부터 조회한다.</p>
      */
     private BooleanExpression gameAtGoe(LocalDate from) {
@@ -107,7 +112,6 @@ public class GameRepositoryImpl implements GameRepositoryCustom {
 
     /**
      * to 날짜 이하인 경기를 조회한다.
-     *
      * <p>LocalDate 기준으로는 다음 날 00:00:00 미만 조건을 사용해야
      * to 날짜 전체가 포함된다.</p>
      */
@@ -130,7 +134,6 @@ public class GameRepositoryImpl implements GameRepositoryCustom {
 
     /**
      * Pageable의 sort 조건을 QueryDSL OrderSpecifier로 변환한다.
-     *
      * <p>허용하지 않는 정렬 필드는 무시한다.
      * 기본 정렬은 gameAt ASC, id ASC이다.</p>
      */

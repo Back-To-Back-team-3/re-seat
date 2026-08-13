@@ -23,7 +23,8 @@ public interface AdmissionTokenRepository extends JpaRepository<AdmissionToken, 
         Long gameId,
         Long userId,
         AdmissionTokenStatus status,
-        LocalDateTime now);
+        LocalDateTime now
+    );
 
     // 토큰 값으로 상태와 만료 여부에 관계없이 입장 토큰을 조회한다.
     Optional<AdmissionToken> findByToken(String token);
@@ -31,9 +32,7 @@ public interface AdmissionTokenRepository extends JpaRepository<AdmissionToken, 
     // 토큰 값으로 입장 토큰을 조회하고 소비 처리가 끝날 때까지 비관적 쓰기 잠금을 유지한다.
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from AdmissionToken a where a.token = :token")
-    Optional<AdmissionToken> findByTokenWithPessimisticWriteLock(
-        @Param("token")
-        String token);
+    Optional<AdmissionToken> findByTokenWithPessimisticWriteLock(@Param("token") String token);
 
     // 사용자의 만료되지 않은 활성 입장 토큰이 있는지 확인한다.
     boolean existsByUser_IdAndStatusAndExpiresAtAfter(Long userId, AdmissionTokenStatus status, LocalDateTime now);
@@ -55,10 +54,8 @@ public interface AdmissionTokenRepository extends JpaRepository<AdmissionToken, 
         AND at.status = :status
         """)
     Optional<AdmissionToken> findByGame_IdAndUser_IdAndStatusWithPessimisticWriteLock(
-        @Param("gameId")
-        Long gameId,
-        @Param("userId")
-        Long userId,
-        @Param("status")
-        AdmissionTokenStatus status);
+        @Param("gameId") Long gameId,
+        @Param("userId") Long userId,
+        @Param("status") AdmissionTokenStatus status
+    );
 }

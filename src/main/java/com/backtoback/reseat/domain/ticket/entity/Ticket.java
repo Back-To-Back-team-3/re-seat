@@ -32,15 +32,37 @@ import lombok.NoArgsConstructor;
 @Getter
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "tickets", uniqueConstraints = {
-    @UniqueConstraint(name = "uk_tickets_no", columnNames = "ticket_no"),
-    @UniqueConstraint(name = "uk_tickets_order_item", columnNames = "order_item_id"),
-    @UniqueConstraint(name = "uk_tickets_game_seat", columnNames = "game_seat_id"),
-    @UniqueConstraint(name = "uk_tickets_qr_token", columnNames = "qr_token")
-}, indexes = {
-    @Index(name = "idx_tickets_user_status", columnList = "user_id, status"),
-    @Index(name = "idx_tickets_game", columnList = "game_id")
-})
+@Table(
+    name = "tickets",
+    uniqueConstraints = {
+        @UniqueConstraint(
+            name = "uk_tickets_no",
+            columnNames = "ticket_no"
+        ),
+        @UniqueConstraint(
+            name = "uk_tickets_order_item",
+            columnNames = "order_item_id"
+        ),
+        @UniqueConstraint(
+            name = "uk_tickets_game_seat",
+            columnNames = "game_seat_id"
+        ),
+        @UniqueConstraint(
+            name = "uk_tickets_qr_token",
+            columnNames = "qr_token"
+        )
+    },
+    indexes = {
+        @Index(
+            name = "idx_tickets_user_status",
+            columnList = "user_id, status"
+        ),
+        @Index(
+            name = "idx_tickets_game",
+            columnList = "game_id"
+        )
+    }
+)
 public class Ticket extends BaseEntity {
 
     @Id
@@ -48,49 +70,98 @@ public class Ticket extends BaseEntity {
     private Long id;
 
     // 외부 노출용 티켓 번호
-    @Column(name = "ticket_no", nullable = false, length = 50)
+    @Column(
+        name = "ticket_no",
+        nullable = false,
+        length = 50
+    )
     private String ticketNo;
 
     // 현재 티켓 소유자
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_tickets_user"))
+    @ManyToOne(
+        fetch = FetchType.LAZY,
+        optional = false
+    )
+    @JoinColumn(
+        name = "user_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_tickets_user")
+    )
     private User user;
 
     // orderItem 1개당 1장의 티켓만 발급
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "order_item_id", nullable = false, foreignKey = @ForeignKey(name = "fk_tickets_order_item"))
+    @OneToOne(
+        fetch = FetchType.LAZY,
+        optional = false
+    )
+    @JoinColumn(
+        name = "order_item_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_tickets_order_item")
+    )
     private OrderItem orderItem;
 
     // 경기
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "game_id", nullable = false, foreignKey = @ForeignKey(name = "fk_tickets_game"))
+    @ManyToOne(
+        fetch = FetchType.LAZY,
+        optional = false
+    )
+    @JoinColumn(
+        name = "game_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_tickets_game")
+    )
     private Game game;
 
     // 좌석
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "game_seat_id", nullable = false, foreignKey = @ForeignKey(name = "fk_tickets_game_seat"))
+    @OneToOne(
+        fetch = FetchType.LAZY,
+        optional = false
+    )
+    @JoinColumn(
+        name = "game_seat_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_tickets_game_seat")
+    )
     private GameSeat gameSeat;
 
     // 티켓 상태
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
+    @Column(
+        name = "status",
+        nullable = false,
+        length = 20
+    )
     private TicketStatus status;
 
     // 티켓 취소 사유 유형 (USER_REFUND, ADMIN_FORCE_CANCEL, PAYMENT_CANCELED)
     @Enumerated(EnumType.STRING)
-    @Column(name = "cancel_reason", length = 30)
+    @Column(
+        name = "cancel_reason",
+        length = 30
+    )
     private TicketCancelReason cancelReason;
 
     // 티켓 상세 취소 사유 (관리자 입력 상세 사유 등)
-    @Column(name = "cancel_detail", length = 255)
+    @Column(
+        name = "cancel_detail",
+        length = 255
+    )
     private String cancelDetail;
 
     // 입장 검증용 QR 토큰
-    @Column(name = "qr_token", length = 255)
+    @Column(
+        name = "qr_token",
+        length = 255
+    )
     private String qrToken;
 
     // 티켓 발급 시간
-    @Column(name = "issued_at", nullable = false, updatable = false)
+    @Column(
+        name = "issued_at",
+        nullable = false,
+        updatable = false
+    )
     private LocalDateTime issuedAt;
 
     // 티켓 사용 시간
@@ -101,12 +172,7 @@ public class Ticket extends BaseEntity {
     @Column(name = "canceled_at")
     private LocalDateTime canceledAt;
 
-    public static Ticket issue(
-        String ticketNo,
-        User user,
-        OrderItem orderItem,
-        GameSeat gameSeat,
-        String qrToken) {
+    public static Ticket issue(String ticketNo, User user, OrderItem orderItem, GameSeat gameSeat, String qrToken) {
         validateIssueParams(ticketNo, user, orderItem, gameSeat, qrToken);
 
         Ticket ticket = new Ticket();
@@ -127,7 +193,8 @@ public class Ticket extends BaseEntity {
         User user,
         OrderItem orderItem,
         GameSeat gameSeat,
-        String qrToken) {
+        String qrToken
+    ) {
         if (ticketNo == null || ticketNo.isBlank()) {
             throw new IllegalArgumentException("ticketNo는 필수입니다.");
         }
@@ -152,8 +219,8 @@ public class Ticket extends BaseEntity {
         this.usedAt = LocalDateTime.now();
     }
 
-    //관리자 전용 직권 취소 처리
-    //@param detail 관리자가 입력한 취소 상세 사유 (예: "매크로 부정 예매 탐지")
+    // 관리자 전용 직권 취소 처리
+    // @param detail 관리자가 입력한 취소 상세 사유 (예: "매크로 부정 예매 탐지")
 
     // 티켓 취소 처리, ISSUED 상태의 티켓만 취소 가능
     public void cancel(TicketCancelReason cancelReason) {
@@ -200,7 +267,8 @@ public class Ticket extends BaseEntity {
         if (this.status != expected) {
             throw new BusinessException(
                 ErrorCode.INVALID_REQUEST,
-                "티켓 상태가 올바르지 않습니다. expected=" + expected + ", current=" + this.status);
+                "티켓 상태가 올바르지 않습니다. expected=" + expected + ", current=" + this.status
+            );
         }
     }
 }

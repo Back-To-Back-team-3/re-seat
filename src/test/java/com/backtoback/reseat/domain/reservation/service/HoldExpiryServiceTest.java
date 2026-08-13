@@ -47,15 +47,13 @@ class HoldExpiryServiceTest {
         // given
         LocalDateTime now = LocalDateTime.now();
 
-        given(reservationRepository.expireHoldingReservations(
-            eq(now),
-            eq(ReservationStatus.HOLDING),
-            eq(ReservationStatus.EXPIRED))).willReturn(3);
+        given(
+            reservationRepository
+                .expireHoldingReservations(eq(now), eq(ReservationStatus.HOLDING), eq(ReservationStatus.EXPIRED))
+        ).willReturn(3);
 
-        given(gameSeatRepository.releaseExpiredSeats(
-            eq(now),
-            eq(GameSeatStatus.HELD),
-            eq(GameSeatStatus.AVAILABLE))).willReturn(3);
+        given(gameSeatRepository.releaseExpiredSeats(eq(now), eq(GameSeatStatus.HELD), eq(GameSeatStatus.AVAILABLE)))
+            .willReturn(3);
 
         // when
         HoldExpiryService.HoldExpiryResult result = holdExpiryService.releaseExpired(now);
@@ -77,15 +75,13 @@ class HoldExpiryServiceTest {
         // WHERE hold_expires_at < :now 조건이 거짓이 되어 UPDATE 영향 행이 0이 된다.
         LocalDateTime now = LocalDateTime.now();
 
-        given(reservationRepository.expireHoldingReservations(
-            eq(now),
-            eq(ReservationStatus.HOLDING),
-            eq(ReservationStatus.EXPIRED))).willReturn(0); // 연장으로 조건 불충족 → 회수 0건
+        given(
+            reservationRepository
+                .expireHoldingReservations(eq(now), eq(ReservationStatus.HOLDING), eq(ReservationStatus.EXPIRED))
+        ).willReturn(0); // 연장으로 조건 불충족 → 회수 0건
 
-        given(gameSeatRepository.releaseExpiredSeats(
-            eq(now),
-            eq(GameSeatStatus.HELD),
-            eq(GameSeatStatus.AVAILABLE))).willReturn(0); // 연장으로 조건 불충족 → 회수 0건
+        given(gameSeatRepository.releaseExpiredSeats(eq(now), eq(GameSeatStatus.HELD), eq(GameSeatStatus.AVAILABLE)))
+            .willReturn(0); // 연장으로 조건 불충족 → 회수 0건
 
         // when
         HoldExpiryService.HoldExpiryResult result = holdExpiryService.releaseExpired(now);
@@ -105,28 +101,24 @@ class HoldExpiryServiceTest {
         // given
         LocalDateTime now = LocalDateTime.now();
 
-        given(reservationRepository.expireHoldingReservations(
-            eq(now),
-            eq(ReservationStatus.HOLDING),
-            eq(ReservationStatus.EXPIRED))).willReturn(2);
+        given(
+            reservationRepository
+                .expireHoldingReservations(eq(now), eq(ReservationStatus.HOLDING), eq(ReservationStatus.EXPIRED))
+        ).willReturn(2);
 
-        given(gameSeatRepository.releaseExpiredSeats(
-            eq(now),
-            eq(GameSeatStatus.HELD),
-            eq(GameSeatStatus.AVAILABLE))).willReturn(2);
+        given(gameSeatRepository.releaseExpiredSeats(eq(now), eq(GameSeatStatus.HELD), eq(GameSeatStatus.AVAILABLE)))
+            .willReturn(2);
 
         // when
         holdExpiryService.releaseExpired(now);
 
         // then — 예약·좌석 두 UPDATE 모두 반드시 호출됨을 검증한다
-        then(reservationRepository).should().expireHoldingReservations(
-            eq(now),
-            eq(ReservationStatus.HOLDING),
-            eq(ReservationStatus.EXPIRED));
-        then(gameSeatRepository).should().releaseExpiredSeats(
-            eq(now),
-            eq(GameSeatStatus.HELD),
-            eq(GameSeatStatus.AVAILABLE));
+        then(reservationRepository)
+            .should()
+            .expireHoldingReservations(eq(now), eq(ReservationStatus.HOLDING), eq(ReservationStatus.EXPIRED));
+        then(gameSeatRepository)
+            .should()
+            .releaseExpiredSeats(eq(now), eq(GameSeatStatus.HELD), eq(GameSeatStatus.AVAILABLE));
     }
 
     /**
@@ -141,27 +133,23 @@ class HoldExpiryServiceTest {
         LocalDateTime now = LocalDateTime.now();
         var inOrder = inOrder(reservationRepository, gameSeatRepository);
 
-        given(reservationRepository.expireHoldingReservations(
-            eq(now),
-            eq(ReservationStatus.HOLDING),
-            eq(ReservationStatus.EXPIRED))).willReturn(1);
+        given(
+            reservationRepository
+                .expireHoldingReservations(eq(now), eq(ReservationStatus.HOLDING), eq(ReservationStatus.EXPIRED))
+        ).willReturn(1);
 
-        given(gameSeatRepository.releaseExpiredSeats(
-            eq(now),
-            eq(GameSeatStatus.HELD),
-            eq(GameSeatStatus.AVAILABLE))).willReturn(1);
+        given(gameSeatRepository.releaseExpiredSeats(eq(now), eq(GameSeatStatus.HELD), eq(GameSeatStatus.AVAILABLE)))
+            .willReturn(1);
 
         // when
         holdExpiryService.releaseExpired(now);
 
         // then
-        inOrder.verify(reservationRepository).expireHoldingReservations(
-            eq(now),
-            eq(ReservationStatus.HOLDING),
-            eq(ReservationStatus.EXPIRED));
-        inOrder.verify(gameSeatRepository).releaseExpiredSeats(
-            eq(now),
-            eq(GameSeatStatus.HELD),
-            eq(GameSeatStatus.AVAILABLE));
+        inOrder
+            .verify(reservationRepository)
+            .expireHoldingReservations(eq(now), eq(ReservationStatus.HOLDING), eq(ReservationStatus.EXPIRED));
+        inOrder
+            .verify(gameSeatRepository)
+            .releaseExpiredSeats(eq(now), eq(GameSeatStatus.HELD), eq(GameSeatStatus.AVAILABLE));
     }
 }

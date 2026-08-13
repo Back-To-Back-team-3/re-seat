@@ -179,11 +179,7 @@ The following rules in the Naver coding convention cannot be checked by this con
         <property name="tabWidth" value="4"/>
 
         <!-- [indentation-tab] -->
-        <module name="RegexpSinglelineJava">
-            <property name="format" value="^\t* "/>
-            <property name="message" value="[indentation-tab] Indent must use tab characters"/>
-            <property name="ignoreComments" value="true"/>
-        </module>
+        <!-- Tab vs Space indentation check disabled to prevent conflict with Spotless -->
 
         <!-- End of Indentation chapter -->
 

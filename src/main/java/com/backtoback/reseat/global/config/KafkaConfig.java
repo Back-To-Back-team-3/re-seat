@@ -14,10 +14,6 @@ public class KafkaConfig {
     @Bean
     public NewTopic queueEntryRequestedTopic() {
 
-        return TopicBuilder
-            .name(QUEUE_ENTRY_REQUESTED_TOPIC)
-            .partitions(3)
-            .replicas(1)
-            .build();
+        return TopicBuilder.name(QUEUE_ENTRY_REQUESTED_TOPIC).partitions(3).replicas(1).build();
     }
 }

@@ -96,8 +96,7 @@ class PaymentOrderPolicyTest {
             when(order.getPaymentDeadline()).thenReturn(LocalDateTime.now().plusDays(1));
             when(order.getStatus()).thenReturn(OrderStatus.CREATED);
 
-            assertThatCode(() -> paymentOrderPolicy.ensurePayable(null, order))
-                .doesNotThrowAnyException();
+            assertThatCode(() -> paymentOrderPolicy.ensurePayable(null, order)).doesNotThrowAnyException();
 
             verifyNoInteractions(orderService);
         }
@@ -106,10 +105,7 @@ class PaymentOrderPolicyTest {
         @DisplayName("결제 기한이 지나면 기존 결제와 주문을 만료 처리한다.")
         void expiresExistingPaymentAndOrderAfterDeadline() {
             Order order = mock(Order.class);
-            Payment payment = Payment.builder()
-                .order(order)
-                .status(PaymentStatus.READY)
-                .build();
+            Payment payment = Payment.builder().order(order).status(PaymentStatus.READY).build();
             when(order.getPaymentDeadline()).thenReturn(LocalDateTime.now().minusDays(1));
             when(order.getId()).thenReturn(ORDER_ID);
 
@@ -136,7 +132,11 @@ class PaymentOrderPolicyTest {
         }
 
         @ParameterizedTest(name = "{0} 주문은 결제할 수 없다")
-        @EnumSource(value = OrderStatus.class, mode = EnumSource.Mode.EXCLUDE, names = "CREATED")
+        @EnumSource(
+            value = OrderStatus.class,
+            mode = EnumSource.Mode.EXCLUDE,
+            names = "CREATED"
+        )
         @DisplayName("결제 기한이 남아도 CREATED가 아닌 주문은 결제할 수 없다.")
         void rejectsNonCreatedOrder(OrderStatus status) {
             Order order = mock(Order.class);

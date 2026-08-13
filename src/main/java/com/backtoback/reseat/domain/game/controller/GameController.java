@@ -27,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * 경기 조회 API Controller.
- *
  * <p>경기 목록과 경기 상세 조회를 제공한다.
  * 경기 조회는 예매 흐름의 진입점이므로 인증 없이 접근 가능한 공개 API이다.</p>
  */
@@ -41,39 +40,31 @@ public class GameController implements GameControllerDocs {
     /**
      * 경기 목록 조회.
      *
-     * @param homeTeamId    홈팀 ID
-     * @param awayTeamId    원정팀 ID
-     * @param from          검색 시작 날짜
-     * @param to            검색 종료 날짜
+     * @param homeTeamId 홈팀 ID
+     * @param awayTeamId 원정팀 ID
+     * @param from 검색 시작 날짜
+     * @param to 검색 종료 날짜
      * @param bookingStatus 예매 상태
-     * @param pageable      페이징 조건
+     * @param pageable 페이징 조건
      * @return 경기 목록 응답
      */
     @Override
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<GameListResponse>>> getGames(
-        @RequestParam(required = false)
-        Long homeTeamId,
-        @RequestParam(required = false)
-        Long awayTeamId,
-        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-        LocalDate from,
-        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-        LocalDate to,
-        @RequestParam(required = false)
-        BookingStatus bookingStatus,
-        @PageableDefault(size = 20, sort = "gameAt", direction = Sort.Direction.ASC)
-        Pageable pageable) {
-        GameSearchCondition condition = new GameSearchCondition(
-            homeTeamId,
-            awayTeamId,
-            from,
-            to,
-            bookingStatus);
+        @RequestParam(required = false) Long homeTeamId,
+        @RequestParam(required = false) Long awayTeamId,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+        @RequestParam(required = false) BookingStatus bookingStatus,
+        @PageableDefault(
+            size = 20,
+            sort = "gameAt",
+            direction = Sort.Direction.ASC
+        ) Pageable pageable
+    ) {
+        GameSearchCondition condition = new GameSearchCondition(homeTeamId, awayTeamId, from, to, bookingStatus);
         Page<GameListResponse> response = gameQueryService.getGames(condition, pageable);
-        return ResponseEntity
-            .status(HttpStatus.OK)
-            .body(ApiResponse.success("경기 목록 조회 성공", PageResponse.of(response)));
+        return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success("경기 목록 조회 성공", PageResponse.of(response)));
     }
 
     /**
@@ -84,12 +75,8 @@ public class GameController implements GameControllerDocs {
      */
     @Override
     @GetMapping("/{gameId}")
-    public ResponseEntity<ApiResponse<GameDetailResponse>> getGame(
-        @PathVariable
-        Long gameId) {
+    public ResponseEntity<ApiResponse<GameDetailResponse>> getGame(@PathVariable Long gameId) {
         GameDetailResponse response = gameQueryService.getGame(gameId);
-        return ResponseEntity
-            .status(HttpStatus.OK)
-            .body(ApiResponse.success("경기 상세 조회 성공", response));
+        return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success("경기 상세 조회 성공", response));
     }
 }

@@ -21,7 +21,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class JwtTokenProvider {
 
-    //커스텀 유저 디테일 서비스를 주입받습니다.
+    // 커스텀 유저 디테일 서비스를 주입받습니다.
     private final CustomUserDetailsService customUserDetailsService;
     // AccessToken 만료시간 1시간(3600초)
     private final long accessTokenValidityInMilliseconds = 3600 * 1000L;
@@ -40,38 +40,22 @@ public class JwtTokenProvider {
 
     // access Token 생성
     public String createAccessToken(Long userId, String email, String userRole) {
-        Claims claims = Jwts.claims()
-            .subject(email)
-            .add("userId", userId)
-            .add("userRole", userRole)
-            .build();
+        Claims claims = Jwts.claims().subject(email).add("userId", userId).add("userRole", userRole).build();
 
         Date now = new Date();
         Date validity = new Date(now.getTime() + accessTokenValidityInMilliseconds);
 
-        return Jwts.builder()
-            .claims(claims)
-            .issuedAt(now)
-            .expiration(validity)
-            .signWith(secretKey)
-            .compact();
+        return Jwts.builder().claims(claims).issuedAt(now).expiration(validity).signWith(secretKey).compact();
     }
 
     // refresh Token 생성
     public String createRefreshToken(Long userId) {
-        Claims claims = Jwts.claims()
-            .add("userId", userId)
-            .build();
+        Claims claims = Jwts.claims().add("userId", userId).build();
 
         Date now = new Date();
         Date validity = new Date(now.getTime() + refreshToeknValidityInMillseconds);
 
-        return Jwts.builder()
-            .claims(claims)
-            .issuedAt(now)
-            .expiration(validity)
-            .signWith(secretKey)
-            .compact();
+        return Jwts.builder().claims(claims).issuedAt(now).expiration(validity).signWith(secretKey).compact();
     }
 
     public Long getUserId(String token) {
@@ -83,36 +67,31 @@ public class JwtTokenProvider {
         return parseClaims(token).getSubject();
     }
 
-    //Principal 타입을 CustomUserDetails로 일치화
+    // Principal 타입을 CustomUserDetails로 일치화
     public org.springframework.security.core.Authentication getAuthentication(String token) {
         Claims claims = parseClaims(token);
         String email = claims.getSubject();
 
-        //기존의 뉴비 껍데기 시큐리티 User 생성 코드를 제거하고,
+        // 기존의 뉴비 껍데기 시큐리티 User 생성 코드를 제거하고,
         // 진짜 DB 유저 데이터를 물고 있는 CustomUserDetails를 로드
         UserDetails userDetails = customUserDetailsService.loadUserByUsername(email);
 
         return new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
             userDetails,
             token,
-            userDetails.getAuthorities());
+            userDetails.getAuthorities()
+        );
     }
 
     public boolean validateToken(String token) {
         try {
-            return !parseClaims(token)
-                .getExpiration()
-                .before(new Date());
+            return !parseClaims(token).getExpiration().before(new Date());
         } catch (Exception e) {
             return false;
         }
     }
 
     private io.jsonwebtoken.Claims parseClaims(String token) {
-        return io.jsonwebtoken.Jwts.parser()
-            .verifyWith(secretKey)
-            .build()
-            .parseSignedClaims(token)
-            .getPayload();
+        return io.jsonwebtoken.Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload();
     }
 }

@@ -26,7 +26,8 @@ class PaymentTest {
     private static final int AMOUNT = 10000;
 
     private Payment payment(PaymentStatus status) {
-        return Payment.builder()
+        return Payment
+            .builder()
             .paymentNo(PAYMENT_NO)
             .order(mock(Order.class))
             .user(mock(User.class))
@@ -147,13 +148,16 @@ class PaymentTest {
         }
 
         @ParameterizedTest(name = "{0} 상태의 결제는 취소할 수 없다")
-        @EnumSource(value = PaymentStatus.class, mode = EnumSource.Mode.EXCLUDE, names = "APPROVED")
+        @EnumSource(
+            value = PaymentStatus.class,
+            mode = EnumSource.Mode.EXCLUDE,
+            names = "APPROVED"
+        )
         @DisplayName("APPROVED가 아닌 모든 결제는 취소 불가 예외가 발생한다.")
         void rejectsUnapprovedPayment(PaymentStatus status) {
             Payment payment = payment(status);
 
-            assertThatThrownBy(payment::cancel)
-                .isInstanceOf(PaymentCancelNotAllowedException.class);
+            assertThatThrownBy(payment::cancel).isInstanceOf(PaymentCancelNotAllowedException.class);
             assertThat(payment.getStatus()).isEqualTo(status);
         }
     }
@@ -173,7 +177,11 @@ class PaymentTest {
         }
 
         @ParameterizedTest(name = "{0} 상태의 결제는 멱등키를 교체할 수 없다")
-        @EnumSource(value = PaymentStatus.class, mode = EnumSource.Mode.EXCLUDE, names = "READY")
+        @EnumSource(
+            value = PaymentStatus.class,
+            mode = EnumSource.Mode.EXCLUDE,
+            names = "READY"
+        )
         @DisplayName("READY가 아닌 모든 결제는 이미 처리된 결제 예외가 발생한다.")
         void rejectsFinalizedPayment(PaymentStatus status) {
             Payment payment = payment(status);

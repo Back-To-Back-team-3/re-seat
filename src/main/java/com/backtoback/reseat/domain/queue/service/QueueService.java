@@ -42,7 +42,6 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * 대기열 진입, 상태 조회, 취소, 입장 허용 이벤트 조회를 담당하는 서비스
- *
  * <p>Redis ZSet으로 실시간 순번을 관리하고, DB에는 대기열 진입 이력과 상태를 저장한다.</p>
  */
 @Service
@@ -59,9 +58,7 @@ public class QueueService {
 
     /**
      * 사용자의 현재 대기열 상태를 조회한다.
-     *
      * <p>활성 입장 토큰이 있으면 ADMITTED 상태로 반환하고, 없으면 Redis ZSet 순번을 조회한다.</p>
-     *
      * <p>대기 중인 사용자는 현재 순번과 자동 입장 정책을 기준으로 예상 대기시간을 함께 계산한다.</p>
      *
      * @param gameId 경기 ID
@@ -74,16 +71,19 @@ public class QueueService {
         ZSetOperations<String, String> queueZSet = getZSetOperations();
 
         // 활성 입장 토큰이 있으면 입장 허용 상태를 반환한다.
-        AdmissionToken activeToken = admissionTokenRepository
-            .findByGame_IdAndUser_IdAndStatusAndExpiresAtAfter(
-                gameId,
-                userId,
-                AdmissionTokenStatus.ACTIVE,
-                LocalDateTime.now())
-            .orElse(null);
+        AdmissionToken activeToken
+            = admissionTokenRepository
+                .findByGame_IdAndUser_IdAndStatusAndExpiresAtAfter(
+                    gameId,
+                    userId,
+                    AdmissionTokenStatus.ACTIVE,
+                    LocalDateTime.now()
+                )
+                .orElse(null);
 
         if (Objects.nonNull(activeToken)) {
-            return QueueStatusResponse.builder()
+            return QueueStatusResponse
+                .builder()
                 .rank(0L)
                 .estimatedWaitSeconds(0L)
                 .queueStatus(QueueEntryHistoryStatus.ADMITTED)
@@ -106,7 +106,8 @@ public class QueueService {
         // 현재 순번이 포함되는 자동 입장 처리 횟수를 기준으로 예상 대기시간을 계산한다.
         Long estimatedWaitSeconds = QueueAdmissionPolicy.calculateEstimatedWaitSeconds(userRank);
 
-        return QueueStatusResponse.builder()
+        return QueueStatusResponse
+            .builder()
             .rank(userRank)
             .estimatedWaitSeconds(estimatedWaitSeconds)
             .queueStatus(QueueEntryHistoryStatus.WAITING)
@@ -125,15 +126,18 @@ public class QueueService {
     public AdmitEventResponse getAdmitEvent(Long gameId, Long userId) {
 
         // 활성 입장 토큰을 조회해 SSE admit 이벤트 응답을 만든다.
-        AdmissionToken activeToken = admissionTokenRepository
-            .findByGame_IdAndUser_IdAndStatusAndExpiresAtAfter(
-                gameId,
-                userId,
-                AdmissionTokenStatus.ACTIVE,
-                LocalDateTime.now())
-            .orElseThrow(QueueTokenRequiredException::new);
+        AdmissionToken activeToken
+            = admissionTokenRepository
+                .findByGame_IdAndUser_IdAndStatusAndExpiresAtAfter(
+                    gameId,
+                    userId,
+                    AdmissionTokenStatus.ACTIVE,
+                    LocalDateTime.now()
+                )
+                .orElseThrow(QueueTokenRequiredException::new);
 
-        return AdmitEventResponse.builder()
+        return AdmitEventResponse
+            .builder()
             .admitted(true)
             .queueToken(activeToken.getToken())
             .tokenExpiresAt(activeToken.getExpiresAt())
@@ -142,7 +146,6 @@ public class QueueService {
 
     /**
      * 사용자의 경기별 대기열 진입과 발급된 활성 입장 토큰을 취소한다.
-     *
      * <p>사용자, 대기 이력, 입장 토큰을 순서대로 잠가
      * 입장 허용 및 토큰 소비와의 상태 변경 충돌을 막는다.</p>
      *
@@ -165,21 +168,19 @@ public class QueueService {
             .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
 
         // 대기 취소와 입장 허용이 동시에 상태를 변경하지 않도록 대기 이력을 비관적 락으로 조회한다.
-        QueueEntryHistory queueEntryHistory = queueEntryHistoryRepository
-            .findByQueueKeyWithPessimisticWriteLock(queueKey)
-            .orElseThrow(QueueEntryNotFoundException::new);
+        QueueEntryHistory queueEntryHistory
+            = queueEntryHistoryRepository
+                .findByQueueKeyWithPessimisticWriteLock(queueKey)
+                .orElseThrow(QueueEntryNotFoundException::new);
 
         // 토큰 소비와 취소가 동시에 상태를 변경하지 않도록 활성 입장 토큰을 비관적 락으로 조회한다.
-        AdmissionToken activeToken = admissionTokenRepository
-            .findByGame_IdAndUser_IdAndStatusWithPessimisticWriteLock(
-                gameId,
-                userId,
-                AdmissionTokenStatus.ACTIVE)
-            .orElse(null);
+        AdmissionToken activeToken
+            = admissionTokenRepository
+                .findByGame_IdAndUser_IdAndStatusWithPessimisticWriteLock(gameId, userId, AdmissionTokenStatus.ACTIVE)
+                .orElse(null);
 
         // ADMITTED 이력은 함께 회수할 ACTIVE 토큰이 있을 때만 취소한다.
-        if (queueEntryHistory.getStatus() == QueueEntryHistoryStatus.ADMITTED &&
-            Objects.isNull(activeToken)) {
+        if (queueEntryHistory.getStatus() == QueueEntryHistoryStatus.ADMITTED && Objects.isNull(activeToken)) {
             throw new QueueInvalidStatusException("입장 허용 상태는 활성 입장 토큰과 함께 취소해야 합니다.");
         }
 
@@ -200,10 +201,7 @@ public class QueueService {
             }
         });
 
-        return QueueCancelResponse.builder()
-            .gameId(gameId)
-            .queueStatus(QueueEntryHistoryStatus.CANCELED)
-            .build();
+        return QueueCancelResponse.builder().gameId(gameId).queueStatus(QueueEntryHistoryStatus.CANCELED).build();
     }
 
     /**
@@ -226,24 +224,16 @@ public class QueueService {
         }
 
         // eventId는 이벤트 로그 추적에 사용하고, requestAt은 Redis ZSet의 대기 순서를 결정하는 기준으로 사용한다.
-        QueueEntryRequestedEvent event = new QueueEntryRequestedEvent(
-            UUID.randomUUID(),
-            gameId,
-            userId,
-            Instant.now());
+        QueueEntryRequestedEvent event = new QueueEntryRequestedEvent(UUID.randomUUID(), gameId, userId, Instant.now());
 
         // Kafka 발행 실패는 대기열 진입 요청 실패로 변환하여 비동기 작업을 예외 상태로 완료한다.
-        return queueEntryEventPublisher
-            .publish(event)
-            .thenAccept(result -> {})
-            .exceptionally(exception -> {
-                throw new QueueEventPublishFailedException(exception);
-            });
+        return queueEntryEventPublisher.publish(event).thenAccept(result -> {}).exceptionally(exception -> {
+            throw new QueueEventPublishFailedException(exception);
+        });
     }
 
     /**
      * kafka 대기열 진입 이벤트를 바탕으로 DB 대기 이력과 Redis 대기열을 등록한다.
-     *
      * <p>사용자 행에 비관적 락을 적용하여 동일 사용자의 여러 경기 대기열 등록을 순서대로 처리한다.</p>
      *
      * @param event 대기열 진입 요청 이벤트
@@ -254,25 +244,23 @@ public class QueueService {
         // 잘못된 이벤트는 재시도해도 처리할 수 없으므로 DB와 Redis에 접근하기 전에 검증한다.
         validateQueueEntryEvent(event);
 
-        Game game = gameRepository.findById(event.gameId())
-            .orElseThrow(() -> new GameNotFoundException(event.gameId()));
+        Game game
+            = gameRepository.findById(event.gameId()).orElseThrow(() -> new GameNotFoundException(event.gameId()));
 
         // 동일 사용자의 여러 경기 대기열 등록이 동시에 처리되지 않도록 사용자 행을 잠근다.
-        User user = queueUserRepository.findByIdWithPessimisticWriteLock(event.userId())
-            .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
+        User user
+            = queueUserRepository
+                .findByIdWithPessimisticWriteLock(event.userId())
+                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
 
         LocalDateTime now = LocalDateTime.now();
 
-        boolean hasActiveToken = admissionTokenRepository
-            .existsByUser_IdAndStatusAndExpiresAtAfter(
-                user.getId(),
-                AdmissionTokenStatus.ACTIVE,
-                now);
-        boolean hasWaitingEntryInAnotherGame = queueEntryHistoryRepository
-            .existsByUser_IdAndGame_IdNotAndStatus(
-                user.getId(),
-                game.getId(),
-                QueueEntryHistoryStatus.WAITING);
+        boolean hasActiveToken
+            = admissionTokenRepository
+                .existsByUser_IdAndStatusAndExpiresAtAfter(user.getId(), AdmissionTokenStatus.ACTIVE, now);
+        boolean hasWaitingEntryInAnotherGame
+            = queueEntryHistoryRepository
+                .existsByUser_IdAndGame_IdNotAndStatus(user.getId(), game.getId(), QueueEntryHistoryStatus.WAITING);
 
         // 다른 경기에서 대기 중이거나 유효한 입장 토큰이 있다면 새 대기열에 등록하지 않는다.
         if (hasActiveToken || hasWaitingEntryInAnotherGame) {
@@ -287,9 +275,7 @@ public class QueueService {
         String queueKey = queueKey(event.gameId(), event.userId());
         long score = event.requestedAt().toEpochMilli();
 
-        QueueEntryHistory existingHistory = queueEntryHistoryRepository
-            .findByQueueKey(queueKey)
-            .orElse(null);
+        QueueEntryHistory existingHistory = queueEntryHistoryRepository.findByQueueKey(queueKey).orElse(null);
 
         // 동일 경기와 사용자의 DB 이력이 있으면 새로운 이력을 중복 생성하지 않는다.
         // 기존 상태가 WAITING이면 Consumer 재처리 과정에서 누락됐을 수 있는 Redis 대기열 정보만 복구한다.
@@ -317,9 +303,7 @@ public class QueueService {
         }
 
         // Redis에 등록하기 전에 DB 이력을 즉시 반영하여 queueKey 중복 여부를 먼저 확인한다.
-        queueEntryHistoryRepository.saveAndFlush(
-            QueueEntryHistory.of(
-                game, user, queueKey, now));
+        queueEntryHistoryRepository.saveAndFlush(QueueEntryHistory.of(game, user, queueKey, now));
 
         addRedisQueueEntryIfAbsent(queueZSet, redisKey, redisMember, score);
     }
@@ -374,16 +358,17 @@ public class QueueService {
     /**
      * Redis 대기열에 등록되지 않은 사용자만 요청 시간 점수로 추가한다.
      *
-     * @param queueZSet   Redis ZSet 연산 객체
-     * @param redisKey    경기별 Redis 대기열 Key
+     * @param queueZSet Redis ZSet 연산 객체
+     * @param redisKey 경기별 Redis 대기열 Key
      * @param redisMember 대기열 사용자 member
-     * @param score       대기 순서를 결정하는 요청 시간 점수
+     * @param score 대기 순서를 결정하는 요청 시간 점수
      */
     private void addRedisQueueEntryIfAbsent(
         ZSetOperations<String, String> queueZSet,
         String redisKey,
         String redisMember,
-        long score) {
+        long score
+    ) {
 
         // 이미 등록된 사용자는 기존 점수를 유지하고 등록되지 않은 사용자만 전달받은 요청 시간으로 추가한다.
         Boolean registered = queueZSet.addIfAbsent(redisKey, redisMember, score);
@@ -397,16 +382,17 @@ public class QueueService {
     /**
      * Redis 대기열에 사용자를 추가하거나 요청 시간 점수로 대기 순서를 갱신한다.
      *
-     * @param queueZSet   Redis ZSet 연산 객체
-     * @param redisKey    경기별 Redis 대기열 Key
+     * @param queueZSet Redis ZSet 연산 객체
+     * @param redisKey 경기별 Redis 대기열 Key
      * @param redisMember 대기열 사용자 member
-     * @param score       대기 순서를 결정하는 요청 시간 점수
+     * @param score 대기 순서를 결정하는 요청 시간 점수
      */
     private void addOrUpdateRedisQueueEntry(
         ZSetOperations<String, String> queueZSet,
         String redisKey,
         String redisMember,
-        long score) {
+        long score
+    ) {
 
         // 등록 여부와 관계없이 새 요청 시간으로 점수를 반영해 대기 순서를 갱신한다.
         Boolean registered = queueZSet.add(redisKey, redisMember, score);

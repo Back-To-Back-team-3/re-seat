@@ -53,7 +53,6 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * [이슈 #173] Redisson 분산락 Facade 경로 동시성 회귀 테스트.
- *
  * <p> 이 테스트는 SeatHoldFacade를 통해 실제 락 경로를 검증한다.</p>
  * <p> 핵심 검증:
  * - 동일 좌석 N 요청 → 성공 1건, 나머지 409
@@ -64,7 +63,10 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Disabled("테스트 제외")
 @Slf4j
-@EnabledIfEnvironmentVariable(named = "RUN_CONCURRENCY_TESTS", matches = "true")
+@EnabledIfEnvironmentVariable(
+    named = "RUN_CONCURRENCY_TESTS",
+    matches = "true"
+)
 @Tag("concurrency")
 @ActiveProfiles("test-concurrency")
 @SpringBootTest
@@ -117,16 +119,18 @@ class SeatHoldFacadeConcurrencyTest {
         homeTeamId = homeTeam.getId();
         awayTeamId = awayTeam.getId();
 
-        Game game = Game.builder()
-            .homeTeam(homeTeam)
-            .awayTeam(awayTeam)
-            .stadium(stadium)
-            .gameAt(LocalDateTime.now().plusDays(7))
-            .bookingOpenAt(LocalDateTime.now().minusHours(1))
-            .bookingCloseAt(LocalDateTime.now().plusDays(6))
-            .bookingStatus(BookingStatus.OPEN)
-            .title("[이슈 #173] 분산락 동시성 테스트 경기")
-            .build();
+        Game game
+            = Game
+                .builder()
+                .homeTeam(homeTeam)
+                .awayTeam(awayTeam)
+                .stadium(stadium)
+                .gameAt(LocalDateTime.now().plusDays(7))
+                .bookingOpenAt(LocalDateTime.now().minusHours(1))
+                .bookingCloseAt(LocalDateTime.now().plusDays(6))
+                .bookingStatus(BookingStatus.OPEN)
+                .title("[이슈 #173] 분산락 동시성 테스트 경기")
+                .build();
         gameRepository.save(game);
         gameId = game.getId();
 
@@ -138,36 +142,31 @@ class SeatHoldFacadeConcurrencyTest {
         seatRepository.save(seat);
         seatId = seat.getId();
 
-        GameSeat gameSeat = GameSeat.builder()
-            .game(game)
-            .seat(seat)
-            .price(18000)
-            .status(GameSeatStatus.AVAILABLE)
-            .build();
+        GameSeat gameSeat
+            = GameSeat.builder().game(game).seat(seat).price(18000).status(GameSeatStatus.AVAILABLE).build();
         gameSeatRepository.save(gameSeat);
         targetGameSeatId = gameSeat.getId();
 
         // 각 사용자에게 유효한 Queue-Token 사전 발급
         for (int i = 0; i < THREAD_COUNT; i++) {
-            User user = User.builder()
-                .email("facade-concurrency-" + i + "@reseat.com")
-                .password("pw")
-                .name("테스트유저" + i)
-                .phone("010-1111-" + String.format("%04d", i))
-                .isVerified(true)
-                .role(UserRole.USER)
-                .status(UserStatus.ACTIVE)
-                .build();
+            User user
+                = User
+                    .builder()
+                    .email("facade-concurrency-" + i + "@reseat.com")
+                    .password("pw")
+                    .name("테스트유저" + i)
+                    .phone("010-1111-" + String.format("%04d", i))
+                    .isVerified(true)
+                    .role(UserRole.USER)
+                    .status(UserStatus.ACTIVE)
+                    .build();
             userRepository.save(user);
             userIds.add(user.getId());
 
             // validateToken / consumeToken 이 DB 조회하므로 실제 토큰 레코드 필요
-            AdmissionToken token = AdmissionToken.of(
-                game,
-                user,
-                "qt_test-token-" + i,
-                LocalDateTime.now(),
-                LocalDateTime.now().plusMinutes(5));
+            AdmissionToken token
+                = AdmissionToken
+                    .of(game, user, "qt_test-token-" + i, LocalDateTime.now(), LocalDateTime.now().plusMinutes(5));
             admissionTokenRepository.save(token);
             tokenIds.add(token.getId());
         }
@@ -249,9 +248,12 @@ class SeatHoldFacadeConcurrencyTest {
 
         // then
         GameSeat finalGameSeat = gameSeatRepository.findById(targetGameSeatId).orElseThrow();
-        long reservationSeatRows = reservationSeatRepository.findAll().stream()
-            .filter(rs -> rs.getGameSeat().getId().equals(targetGameSeatId))
-            .count();
+        long reservationSeatRows
+            = reservationSeatRepository
+                .findAll()
+                .stream()
+                .filter(rs -> rs.getGameSeat().getId().equals(targetGameSeatId))
+                .count();
 
         log.info("════════════════════════════════════════════════════");
         log.info("[이슈 #173] Redisson 분산락 Facade 경로 동시성 검증 수치");
@@ -265,29 +267,17 @@ class SeatHoldFacadeConcurrencyTest {
         log.info("  reservation_seats 행 수        : {}", reservationSeatRows);
         log.info("════════════════════════════════════════════════════");
 
-        assertThat(finished)
-            .as("15초 내에 모든 스레드가 종료되지 않았다 — 데드락 또는 타임아웃 의심")
-            .isTrue();
+        assertThat(finished).as("15초 내에 모든 스레드가 종료되지 않았다 — 데드락 또는 타임아웃 의심").isTrue();
 
-        assertThat(successCount.get())
-            .as("분산락 적용 후 성공은 정확히 1건이어야 한다")
-            .isEqualTo(1);
+        assertThat(successCount.get()).as("분산락 적용 후 성공은 정확히 1건이어야 한다").isEqualTo(1);
 
-        assertThat(reservationSeatRows)
-            .as("reservation_seats 행은 1건이어야 한다 — over-booking 0건 보장")
-            .isEqualTo(1);
+        assertThat(reservationSeatRows).as("reservation_seats 행은 1건이어야 한다 — over-booking 0건 보장").isEqualTo(1);
 
-        assertThat(finalGameSeat.getStatus())
-            .as("최종 좌석 상태는 HELD여야 한다")
-            .isEqualTo(GameSeatStatus.HELD);
+        assertThat(finalGameSeat.getStatus()).as("최종 좌석 상태는 HELD여야 한다").isEqualTo(GameSeatStatus.HELD);
 
-        assertThat(dataIntegrityViolationCount.get())
-            .as("DB 유니크 위반은 0건이어야 한다 — 락이 DB까지 도달하는 요청을 차단해야 한다")
-            .isZero();
+        assertThat(dataIntegrityViolationCount.get()).as("DB 유니크 위반은 0건이어야 한다 — 락이 DB까지 도달하는 요청을 차단해야 한다").isZero();
 
-        assertThat(unexpectedExceptionCount.get())
-            .as("예상 외 예외는 0건이어야 한다")
-            .isZero();
+        assertThat(unexpectedExceptionCount.get()).as("예상 외 예외는 0건이어야 한다").isZero();
 
         assertThat(seatAlreadyHeldCount.get() + lockFailedCount.get())
             .as("실패 건수 합계는 THREAD_COUNT - 1이어야 한다")

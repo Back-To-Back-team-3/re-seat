@@ -107,10 +107,13 @@ class GameSeatCreateServiceTest {
 
         // then
         assertThat(gameSeats).allSatisfy(gameSeat -> {
-            int expectedPrice = pricePolicy.calculate(
-                game.getGameAt(),
-                gameSeat.getSeat().getZone().getGrade(),
-                gameSeat.getSeat().getZone().getBasePrice());
+            int expectedPrice
+                = pricePolicy
+                    .calculate(
+                        game.getGameAt(),
+                        gameSeat.getSeat().getZone().getGrade(),
+                        gameSeat.getSeat().getZone().getBasePrice()
+                    );
             assertThat(gameSeat.getPrice()).isEqualTo(expectedPrice);
         });
     }
@@ -130,7 +133,7 @@ class GameSeatCreateServiceTest {
         gameSeatCreateService.openInventory(gameIdWithSeats);
 
         // when & then — 애플리케이션 레벨 1차 방어선이 동작한다.
-        //               (DB 유니크 제약까지 가지 않고 409로 걸린다)
+        // (DB 유니크 제약까지 가지 않고 409로 걸린다)
         assertThatThrownBy(() -> gameSeatCreateService.openInventory(gameIdWithSeats))
             .isInstanceOf(SeatInventoryAlreadyOpenedException.class);
     }
@@ -143,11 +146,12 @@ class GameSeatCreateServiceTest {
     @Test
     void should_throwIllegalState_when_stadiumHasNoSeat() {
         // given
-        Long gameIdWithoutSeats = entityManager.createQuery(
-            "select g.id from Game g where g.stadium.id <> :stadiumId order by g.id asc", Long.class)
-            .setParameter("stadiumId", SEEDED_STADIUM_ID)
-            .setMaxResults(1)
-            .getSingleResult();
+        Long gameIdWithoutSeats
+            = entityManager
+                .createQuery("select g.id from Game g where g.stadium.id <> :stadiumId order by g.id asc", Long.class)
+                .setParameter("stadiumId", SEEDED_STADIUM_ID)
+                .setMaxResults(1)
+                .getSingleResult();
 
         // when & then
         assertThatThrownBy(() -> gameSeatCreateService.openInventory(gameIdWithoutSeats))
@@ -156,8 +160,8 @@ class GameSeatCreateServiceTest {
     }
 
     private Long findFirstGameIdOfStadium(Long stadiumId) {
-        return entityManager.createQuery(
-            "select g.id from Game g where g.stadium.id = :stadiumId order by g.id asc", Long.class)
+        return entityManager
+            .createQuery("select g.id from Game g where g.stadium.id = :stadiumId order by g.id asc", Long.class)
             .setParameter("stadiumId", stadiumId)
             .setMaxResults(1)
             .getSingleResult();
@@ -170,8 +174,6 @@ class GameSeatCreateServiceTest {
             join fetch gs.seat s
             join fetch s.zone
             where gs.game.id = :gameId
-            """, GameSeat.class)
-            .setParameter("gameId", gameId)
-            .getResultList();
+            """, GameSeat.class).setParameter("gameId", gameId).getResultList();
     }
 }

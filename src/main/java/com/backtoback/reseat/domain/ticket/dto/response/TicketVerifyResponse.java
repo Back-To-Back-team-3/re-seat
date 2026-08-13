@@ -39,7 +39,8 @@ public class TicketVerifyResponse {
      * @return 티켓 검표 응답 DTO
      */
     public static TicketVerifyResponse from(Ticket ticket) {
-        return TicketVerifyResponse.builder()
+        return TicketVerifyResponse
+            .builder()
             .ticketId(ticket.getId())
             .status(ticket.getStatus())
             .usedAt(ticket.getUsedAt())
@@ -56,9 +57,7 @@ public class TicketVerifyResponse {
      * @return 좌석 라벨 문자열
      */
     private static String buildSeatLabel(Ticket ticket) {
-        return ticket.getGameSeat().getSeat().getZone().getName() + " "
-            + ticket.getGameSeat().getSeat().getSeatBlock() + "-"
-            + ticket.getGameSeat().getSeat().getSeatRow() + "-"
-            + ticket.getGameSeat().getSeat().getSeatNumber();
+        return ticket.getGameSeat().getSeat().getZone().getName() + " " + ticket.getGameSeat().getSeat().getSeatBlock()
+            + "-" + ticket.getGameSeat().getSeat().getSeatRow() + "-" + ticket.getGameSeat().getSeat().getSeatNumber();
     }
 }

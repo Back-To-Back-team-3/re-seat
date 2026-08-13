@@ -40,17 +40,18 @@ class AuthControllerTest {
     void login_Success() throws Exception {
         // given
         UserLoginRequest request = new UserLoginRequest("user@test.com", "Password123!");
-        TokenResponse response = TokenResponse.builder()
-            .accessToken("mock-access-token")
-            .refreshToken("mock-refresh-token")
-            .build();
+        TokenResponse response
+            = TokenResponse.builder().accessToken("mock-access-token").refreshToken("mock-refresh-token").build();
 
         when(authService.login(any(UserLoginRequest.class))).thenReturn(response);
 
         // when & then
-        mockMvc.perform(post("/api/v1/auth/login")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(request)))
+        mockMvc
+            .perform(
+                post("/api/v1/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request))
+            )
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.message").value("로그인 성공 완료"))
@@ -65,9 +66,12 @@ class AuthControllerTest {
         UserLoginRequest request = new UserLoginRequest("", "");
 
         // when & then
-        mockMvc.perform(post("/api/v1/auth/login")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(request)))
+        mockMvc
+            .perform(
+                post("/api/v1/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request))
+            )
             .andExpect(status().isBadRequest());
     }
 }

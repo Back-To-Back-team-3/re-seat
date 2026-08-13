@@ -15,7 +15,6 @@ public class ReservationNotFoundException extends BusinessException {
      * game 도메인 GameNotFoundException 패턴 계승.
      */
     public ReservationNotFoundException(Long reservationId) {
-        super(ErrorCode.RESERVATION_NOT_FOUND,
-            "예약을 찾을 수 없습니다. reservationId=" + reservationId);
+        super(ErrorCode.RESERVATION_NOT_FOUND, "예약을 찾을 수 없습니다. reservationId=" + reservationId);
     }
 }

@@ -8,9 +8,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * 예약 번호 생성기.
- *
  * <p>형식: RSV-yyyyMMdd-{랜덤6자리 대문자+숫자} 예: RSV-20260711-A7B3C1}
- *
  * <p>랜덤 6자리 충돌 가능성이 존재한다 (1/36^6 ≈ 0.0000022%).
  * DB unique constraint(uk_reservations_no)가 물리 방어선이다.
  * 충돌 재시도 로직은 C-3에서 추가 예정.

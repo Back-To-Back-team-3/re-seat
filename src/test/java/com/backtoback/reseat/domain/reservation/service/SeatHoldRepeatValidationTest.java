@@ -54,15 +54,16 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * [이슈 #176] TC-001 over-booking 0건 대량 반복 검증.
- *
  * <p>동일 좌석 동시 100요청 × REPEAT_COUNT회 반복 시 매 회차 성공 1건, over-booking 0건을 정량으로 증명한다.
  * SeatHoldFacadeConcurrencyTest(이슈 #173, 10스레드 1회) 패턴을 계승하여 스레드 수와 반복 횟수를 확장한다.
- *
  * <p>실행 조건: 환경변수 RUN_CONCURRENCY_TESTS=true + test-concurrency 프로파일(MySQL)
  */
 @Disabled("MySQL 환경 전용 — RUN_CONCURRENCY_TESTS=true 환경변수 설정 후 실행")
 @Slf4j
-@EnabledIfEnvironmentVariable(named = "RUN_CONCURRENCY_TESTS", matches = "true")
+@EnabledIfEnvironmentVariable(
+    named = "RUN_CONCURRENCY_TESTS",
+    matches = "true"
+)
 @Tag("concurrency")
 @ActiveProfiles("test-concurrency")
 @SpringBootTest
@@ -121,16 +122,18 @@ class SeatHoldRepeatValidationTest {
         awayTeamId = awayTeam.getId();
 
         // 경기
-        Game game = Game.builder()
-            .homeTeam(homeTeam)
-            .awayTeam(awayTeam)
-            .stadium(stadium)
-            .gameAt(LocalDateTime.now().plusDays(7))
-            .bookingOpenAt(LocalDateTime.now().minusHours(1))
-            .bookingCloseAt(LocalDateTime.now().plusDays(6))
-            .bookingStatus(BookingStatus.OPEN)
-            .title("[이슈 #176] over-booking 대량 반복 검증 경기")
-            .build();
+        Game game
+            = Game
+                .builder()
+                .homeTeam(homeTeam)
+                .awayTeam(awayTeam)
+                .stadium(stadium)
+                .gameAt(LocalDateTime.now().plusDays(7))
+                .bookingOpenAt(LocalDateTime.now().minusHours(1))
+                .bookingCloseAt(LocalDateTime.now().plusDays(6))
+                .bookingStatus(BookingStatus.OPEN)
+                .title("[이슈 #176] over-booking 대량 반복 검증 경기")
+                .build();
         gameRepository.save(game);
         gameId = game.getId();
 
@@ -144,26 +147,24 @@ class SeatHoldRepeatValidationTest {
         seatId = seat.getId();
 
         // 경기 좌석 재고 (테스트 대상 — AVAILABLE 1건)
-        GameSeat gameSeat = GameSeat.builder()
-            .game(game)
-            .seat(seat)
-            .price(18000)
-            .status(GameSeatStatus.AVAILABLE)
-            .build();
+        GameSeat gameSeat
+            = GameSeat.builder().game(game).seat(seat).price(18000).status(GameSeatStatus.AVAILABLE).build();
         gameSeatRepository.save(gameSeat);
         targetGameSeatId = gameSeat.getId();
 
         // 사용자 THREAD_COUNT명 사전 생성. 토큰은 회차마다 resetForRound()에서 발급.
         for (int i = 0; i < THREAD_COUNT; i++) {
-            User user = User.builder()
-                .email("repeat-validation-" + i + "@reseat.com")
-                .password("pw")
-                .name("테스트유저" + i)
-                .phone("010-9999-" + String.format("%04d", i))
-                .isVerified(true)
-                .role(UserRole.USER)
-                .status(UserStatus.ACTIVE)
-                .build();
+            User user
+                = User
+                    .builder()
+                    .email("repeat-validation-" + i + "@reseat.com")
+                    .password("pw")
+                    .name("테스트유저" + i)
+                    .phone("010-9999-" + String.format("%04d", i))
+                    .isVerified(true)
+                    .role(UserRole.USER)
+                    .status(UserStatus.ACTIVE)
+                    .build();
             userRepository.save(user);
             userIds.add(user.getId());
         }
@@ -198,7 +199,6 @@ class SeatHoldRepeatValidationTest {
     /**
      * 각 회차가 끝난 뒤, 다음 회차 시작 전에 실행한다.
      * admission_tokens 삭제 → reservation_seats/reservations 삭제 → game_seats AVAILABLE 리셋 → 토큰 신규 발급.
-     *
      * <p>consumeToken이 holdSeats 성공 후 토큰을 USED로 전이시키므로 회차마다 토큰을 새로 발급해야 한다.
      */
     private void resetForRound(int round) {
@@ -215,12 +215,17 @@ class SeatHoldRepeatValidationTest {
         Game game = gameRepository.findById(gameId).orElseThrow();
         for (int i = 0; i < THREAD_COUNT; i++) {
             User user = userRepository.findById(userIds.get(i)).orElseThrow();
-            admissionTokenRepository.save(AdmissionToken.of(
-                game,
-                user,
-                "qt_repeat-r" + round + "-" + i,
-                LocalDateTime.now(),
-                LocalDateTime.now().plusMinutes(5)));
+            admissionTokenRepository
+                .save(
+                    AdmissionToken
+                        .of(
+                            game,
+                            user,
+                            "qt_repeat-r" + round + "-" + i,
+                            LocalDateTime.now(),
+                            LocalDateTime.now().plusMinutes(5)
+                        )
+                );
         }
     }
 
@@ -263,12 +268,23 @@ class SeatHoldRepeatValidationTest {
                         lockFailedCount.incrementAndGet();
                     } catch (DataIntegrityViolationException e) {
                         // uk_game_seats_game_seat 위반 — 분산락이 정상 동작한다면 0건이어야 한다.
-                        log.error("[TC-001] 회차 {}/{} DataIntegrityViolation — 락 설계 점검 필요: {}",
-                            currentRound, REPEAT_COUNT, e.getMessage());
+                        log
+                            .error(
+                                "[TC-001] 회차 {}/{} DataIntegrityViolation — 락 설계 점검 필요: {}",
+                                currentRound,
+                                REPEAT_COUNT,
+                                e.getMessage()
+                            );
                         dataIntegrityViolationCount.incrementAndGet();
                     } catch (Exception e) {
-                        log.error("[TC-001] 회차 {}/{} 예상 외 예외: {}",
-                            currentRound, REPEAT_COUNT, e.getClass().getSimpleName(), e);
+                        log
+                            .error(
+                                "[TC-001] 회차 {}/{} 예상 외 예외: {}",
+                                currentRound,
+                                REPEAT_COUNT,
+                                e.getClass().getSimpleName(),
+                                e
+                            );
                         unexpectedExceptionCount.incrementAndGet();
                     }
                 });
@@ -284,18 +300,18 @@ class SeatHoldRepeatValidationTest {
             }
 
             assertThat(finished)
-                .as(
-                    "[회차 %d] %d초 내 모든 스레드가 종료되지 않았다 — 데드락 또는 타임아웃 의심",
-                    currentRound,
-                    AWAIT_SECONDS)
+                .as("[회차 %d] %d초 내 모든 스레드가 종료되지 않았다 — 데드락 또는 타임아웃 의심", currentRound, AWAIT_SECONDS)
                 .isTrue();
 
             // 회차별 수치 로그
             // 모든 스레드가 정상 종료된 경우에만 DB 상태 검증
             GameSeat finalGameSeat = gameSeatRepository.findById(targetGameSeatId).orElseThrow();
-            long reservationSeatRows = reservationSeatRepository.findAll().stream()
-                .filter(rs -> rs.getGameSeat().getId().equals(targetGameSeatId))
-                .count();
+            long reservationSeatRows
+                = reservationSeatRepository
+                    .findAll()
+                    .stream()
+                    .filter(rs -> rs.getGameSeat().getId().equals(targetGameSeatId))
+                    .count();
 
             log.info("===============================================================");
             log.info("[TC-001] over-booking 대량 반복 검증 - 회차 {}/{}", currentRound, REPEAT_COUNT);
@@ -314,18 +330,14 @@ class SeatHoldRepeatValidationTest {
             assertThat(successCount.get())
                 .as("[회차 %d] 선점 성공은 정확히 1건이어야 한다 — over-booking 발생 시 > 1", currentRound)
                 .isEqualTo(1);
-            assertThat(reservationSeatRows)
-                .as("[회차 %d] reservation_seats 행은 1건이어야 한다", currentRound)
-                .isEqualTo(1);
+            assertThat(reservationSeatRows).as("[회차 %d] reservation_seats 행은 1건이어야 한다", currentRound).isEqualTo(1);
             assertThat(finalGameSeat.getStatus())
                 .as("[회차 %d] 최종 game_seats.status는 HELD여야 한다", currentRound)
                 .isEqualTo(GameSeatStatus.HELD);
             assertThat(dataIntegrityViolationCount.get())
                 .as("[회차 %d] DataIntegrityViolation은 0건이어야 한다", currentRound)
                 .isZero();
-            assertThat(unexpectedExceptionCount.get())
-                .as("[회차 %d] 예상 외 예외는 0건이어야 한다", currentRound)
-                .isZero();
+            assertThat(unexpectedExceptionCount.get()).as("[회차 %d] 예상 외 예외는 0건이어야 한다", currentRound).isZero();
         }
 
         log.info("[TC-001] 전 회차 완료 - {}회 × {}스레드 over-booking 0건 확인", REPEAT_COUNT, THREAD_COUNT);

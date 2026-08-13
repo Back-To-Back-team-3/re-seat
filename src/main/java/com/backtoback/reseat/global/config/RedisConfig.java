@@ -29,7 +29,7 @@ public class RedisConfig {
         redisConfiguration.setHostName(host);
         redisConfiguration.setPort(port);
 
-        //비밀번호가 비어있지 않을 때
+        // 비밀번호가 비어있지 않을 때
         if (!password.isEmpty()) {
             redisConfiguration.setPassword(password);
         }

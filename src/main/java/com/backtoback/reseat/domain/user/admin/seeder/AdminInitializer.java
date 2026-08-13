@@ -14,7 +14,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Component
-@Profile({"local", "default"})
+@Profile(
+    {
+        "local",
+        "default"
+    }
+)
 @RequiredArgsConstructor
 @Slf4j
 public class AdminInitializer implements CommandLineRunner {
@@ -27,15 +32,17 @@ public class AdminInitializer implements CommandLineRunner {
         String adminEmail = "admin@reseat.com";
 
         if (!userRepository.existsByEmail(adminEmail)) {
-            User admin = User.builder()
-                .email(adminEmail)
-                .password(passwordEncoder.encode("admin1234!"))
-                .name("Re-Seat 관리자")
-                .phone("010-0000-0000")
-                .role(UserRole.ADMIN)
-                .status(UserStatus.ACTIVE)
-                .isVerified(true)
-                .build();
+            User admin
+                = User
+                    .builder()
+                    .email(adminEmail)
+                    .password(passwordEncoder.encode("admin1234!"))
+                    .name("Re-Seat 관리자")
+                    .phone("010-0000-0000")
+                    .role(UserRole.ADMIN)
+                    .status(UserStatus.ACTIVE)
+                    .isVerified(true)
+                    .build();
 
             userRepository.save(admin);
             log.info("Successfully seeded default admin user: {}", adminEmail);

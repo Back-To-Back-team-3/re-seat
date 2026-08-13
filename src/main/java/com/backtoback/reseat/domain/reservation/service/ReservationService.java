@@ -62,19 +62,18 @@ public class ReservationService {
      * 락 미적용: 4번 단계에서 AVAILABLE 확인 후 HELD 전환 사이에
      * 다른 트랜잭션이 끼어들면 동일 좌석이 중복 선점됩니다. → C-5 서사 준비.
      *
-     * @param userId  인증 사용자 ID
+     * @param userId 인증 사용자 ID
      * @param request 선점 요청 DTO
      * @return 선점 결과 응답 DTO
      */
     @Transactional
     public ReservationResponse holdSeats(Long userId, SeatHoldRequest request) {
         // 1. User 조회
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        User user = userRepository.findById(userId).orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         // 2. Game 조회
-        Game game = gameRepository.findById(request.gameId())
-            .orElseThrow(() -> new GameNotFoundException(request.gameId()));
+        Game game
+            = gameRepository.findById(request.gameId()).orElseThrow(() -> new GameNotFoundException(request.gameId()));
 
         // 3. GameSeat 조회 (요청 개수와 실제 조회 개수가 다르면 존재하지 않는 좌석 포함)
         List<GameSeat> gameSeats = gameSeatRepository.findAllById(request.gameSeatIds());
@@ -92,20 +91,19 @@ public class ReservationService {
         LocalDateTime expiresAt = HoldPolicy.holdExpiresAt(now);
 
         // 6. Reservation 생성
-        Reservation reservation = Reservation.builder()
-            .user(user)
-            .game(game)
-            .reservationNo(reservationNumberGenerator.generate())
-            .status(ReservationStatus.HOLDING)
-            .holdExpiresAt(expiresAt)
-            .build();
+        Reservation reservation
+            = Reservation
+                .builder()
+                .user(user)
+                .game(game)
+                .reservationNo(reservationNumberGenerator.generate())
+                .status(ReservationStatus.HOLDING)
+                .holdExpiresAt(expiresAt)
+                .build();
 
         // 7. ReservationSeat 생성 (price 스냅샷) + 연관관계 편의 메서드로 연결
         for (GameSeat gs : gameSeats) {
-            ReservationSeat rs = ReservationSeat.builder()
-                .gameSeat(gs)
-                .price(gs.getPrice())
-                .build();
+            ReservationSeat rs = ReservationSeat.builder().gameSeat(gs).price(gs.getPrice()).build();
             reservation.addReservationSeat(rs); // 양방향 정합성 + cascade 저장
         }
 
@@ -115,8 +113,13 @@ public class ReservationService {
         // 9. save (cascade = ALL 이므로 ReservationSeat 함께 영속화)
         reservationRepository.save(reservation);
 
-        log.info("[ReservationService] 좌석 선점 완료. reservationId={}, userId={}, seats={}",
-            reservation.getId(), userId, request.gameSeatIds());
+        log
+            .info(
+                "[ReservationService] 좌석 선점 완료. reservationId={}, userId={}, seats={}",
+                reservation.getId(),
+                userId,
+                request.gameSeatIds()
+            );
 
         return ReservationResponse.from(reservation);
     }
@@ -125,13 +128,15 @@ public class ReservationService {
      * 선점 남은 시간을 조회한다.
      *
      * @param reservationId 예약 ID
-     * @param requesterId   인증 사용자 ID
+     * @param requesterId 인증 사용자 ID
      * @return 남은 시간 응답 DTO
      */
     @Transactional(readOnly = true)
     public HoldTimeResponse getHoldTime(Long reservationId, Long requesterId) {
-        Reservation reservation = reservationRepository.findById(reservationId)
-            .orElseThrow(() -> new ReservationNotFoundException(reservationId));
+        Reservation reservation
+            = reservationRepository
+                .findById(reservationId)
+                .orElseThrow(() -> new ReservationNotFoundException(reservationId));
 
         // 소유권 가드: 조회 직후·반환 전 위치 — 권한 없는 요청자에게 상태 정보를 흘리지 않음
         verifyOwner(reservation, requesterId);
@@ -143,13 +148,15 @@ public class ReservationService {
      * 선점을 해제한다.
      *
      * @param reservationId 예약 ID
-     * @param requesterId   인증 사용자 ID
+     * @param requesterId 인증 사용자 ID
      * @return 해제 결과 응답 DTO
      */
     @Transactional
     public ReservationCancelResponse releaseHold(Long reservationId, Long requesterId) {
-        Reservation reservation = reservationRepository.findWithSeatsById(reservationId)
-            .orElseThrow(() -> new ReservationNotFoundException(reservationId));
+        Reservation reservation
+            = reservationRepository
+                .findWithSeatsById(reservationId)
+                .orElseThrow(() -> new ReservationNotFoundException(reservationId));
 
         // 소유권 가드: 조회 직후·상태 전이 전 위치 — 권한 없는 요청자에게 상태 정보를 흘리지 않음
         verifyOwner(reservation, requesterId);
@@ -160,8 +167,7 @@ public class ReservationService {
         // Reservation 상태 HOLDING → CANCELED (도메인 메서드: requireHolding 가드 포함)
         reservation.cancel();
 
-        log.info("[ReservationService] 선점 해제 완료. reservationId={}, userId={}",
-            reservationId, requesterId);
+        log.info("[ReservationService] 선점 해제 완료. reservationId={}, userId={}", reservationId, requesterId);
 
         return ReservationCancelResponse.from(reservation);
     }

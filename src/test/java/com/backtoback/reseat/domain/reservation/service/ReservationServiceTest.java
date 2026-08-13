@@ -55,8 +55,7 @@ class ReservationServiceTest {
         given(reservationRepository.findById(reservationId)).willReturn(Optional.of(reservation));
 
         // when & then — 예외 없이 정상 동작
-        assertThatCode(() -> reservationService.getHoldTime(reservationId, ownerId))
-            .doesNotThrowAnyException();
+        assertThatCode(() -> reservationService.getHoldTime(reservationId, ownerId)).doesNotThrowAnyException();
     }
 
     @Test
@@ -98,8 +97,7 @@ class ReservationServiceTest {
         Reservation reservation = mock(Reservation.class);
         given(reservation.getUser()).willReturn(owner);
 
-        given(reservationRepository.findWithSeatsById(reservationId))
-            .willReturn(Optional.of(reservation));
+        given(reservationRepository.findWithSeatsById(reservationId)).willReturn(Optional.of(reservation));
 
         // when & then
         assertThatThrownBy(() -> reservationService.releaseHold(reservationId, intruderId))

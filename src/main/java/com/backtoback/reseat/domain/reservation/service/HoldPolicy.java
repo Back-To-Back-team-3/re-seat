@@ -31,8 +31,9 @@ public final class HoldPolicy {
         // 클래스 로딩 시 불변식을 강제한다. 상수를 잘못 바꾸면 부팅이 곧바로 실패한다(fail-fast).
         if (HOLD_TTL.compareTo(PAYMENT_DEADLINE) < 0) {
             throw new IllegalStateException(
-                "불변식 위반: HOLD_TTL(" + HOLD_TTL.toMinutes() + "m) 은 "
-                    + "PAYMENT_DEADLINE(" + PAYMENT_DEADLINE.toMinutes() + "m) 이상이어야 합니다.");
+                "불변식 위반: HOLD_TTL(" + HOLD_TTL.toMinutes() + "m) 은 " + "PAYMENT_DEADLINE("
+                    + PAYMENT_DEADLINE.toMinutes() + "m) 이상이어야 합니다."
+            );
         }
     }
 

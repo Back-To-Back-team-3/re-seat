@@ -29,11 +29,11 @@ public class DatabaseCleaner {
                 Table tableAnnotation = javaType.getAnnotation(Table.class);
                 String tableName;
 
-                //테이블 어노테이션이 존재하면 해당 이름을 우선 사용
+                // 테이블 어노테이션이 존재하면 해당 이름을 우선 사용
                 if (tableAnnotation != null && !tableAnnotation.name().isBlank()) {
                     tableName = tableAnnotation.name();
                 } else {
-                    //어노테이션에 테이블명이 명시되지 않은 경우만 fallback으로 snake_case 전환
+                    // 어노테이션에 테이블명이 명시되지 않은 경우만 fallback으로 snake_case 전환
                     tableName = convertToSnakeCase(entity.getName());
                 }
                 tableNames.add(tableName);
@@ -45,15 +45,15 @@ public class DatabaseCleaner {
     public void execute() {
         entityManager.flush();
 
-        //외래키 제약 조건 잠시 해제
+        // 외래키 제약 조건 잠시 해제
         entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS = 0").executeUpdate();
         try {
-            //모든 테이블 TRUNCATE
+            // 모든 테이블 TRUNCATE
             for (String tableName : tableNames) {
                 entityManager.createNativeQuery("TRUNCATE TABLE " + tableName).executeUpdate();
             }
         } finally {
-            //외래키 제약 조건 원복
+            // 외래키 제약 조건 원복
             entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS = 1").executeUpdate();
         }
     }

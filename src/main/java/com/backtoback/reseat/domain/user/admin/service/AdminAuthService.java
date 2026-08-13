@@ -32,8 +32,10 @@ public class AdminAuthService {
 
     @Transactional
     public AdminLoginResponse login(AdminLoginRequest request) {
-        User user = userRepository.findByEmail(request.email())
-            .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        User user
+            = userRepository
+                .findByEmail(request.email())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         if (user.getPassword() == null || !passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new BusinessException(ErrorCode.INVALID_PASSWORD);
@@ -51,12 +53,12 @@ public class AdminAuthService {
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
         LocalDateTime expiredAt = LocalDateTime.now().plusDays(14);
 
-        RefreshToken dbRefreshToken = refreshTokenRepository.findByUser(user)
-            .orElseGet(() -> RefreshToken.builder()
-                .user(user)
-                .tokenValue(refreshToken)
-                .expiredAt(expiredAt)
-                .build());
+        RefreshToken dbRefreshToken
+            = refreshTokenRepository
+                .findByUser(user)
+                .orElseGet(
+                    () -> RefreshToken.builder().user(user).tokenValue(refreshToken).expiredAt(expiredAt).build()
+                );
 
         dbRefreshToken.updateTokenValue(refreshToken, expiredAt);
         refreshTokenRepository.save(dbRefreshToken);
