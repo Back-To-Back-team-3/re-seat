@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.payment.service;
+package com.backtoback.reseat.domain.payment.schedule;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
 import com.backtoback.reseat.domain.payment.repository.PaymentRecoveryTaskRepository;
+import com.backtoback.reseat.domain.payment.service.PaymentRecoveryService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,14 +33,12 @@ public class PaymentRecoveryScheduler {
     )
     public void recoverUnknownConfirmPayments() {
         LocalDateTime now = LocalDateTime.now();
-        List<Long> taskIds
-            = paymentRecoveryTaskRepository
-                .findRecoverableTaskIds(
-                    PaymentRecoveryStatus.PENDING,
-                    PaymentRecoveryStatus.RETRY,
-                    now,
-                    PageRequest.of(0, RECOVERY_BATCH_SIZE)
-                );
+        List<Long> taskIds = paymentRecoveryTaskRepository.findRecoverableTaskIds(
+            PaymentRecoveryStatus.PENDING,
+            PaymentRecoveryStatus.RETRY,
+            now,
+            PageRequest.of(0, RECOVERY_BATCH_SIZE)
+        );
 
         for (Long taskId : taskIds) {
             try {

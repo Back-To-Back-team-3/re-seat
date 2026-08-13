@@ -20,6 +20,7 @@ import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
 import com.backtoback.reseat.domain.payment.repository.PaymentRecoveryTaskRepository;
+import com.backtoback.reseat.domain.payment.schedule.PaymentRecoveryService;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PaymentRecoveryService 결제 승인 복구")
