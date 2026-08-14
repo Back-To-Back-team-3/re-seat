@@ -401,8 +401,8 @@ class PaymentServiceTest {
         }
 
         @Test
-        @DisplayName("티켓 발급 중 오류가 발생하면 티켓 발급 실패 예외로 변환한다.")
-        void wrapsTicketIssuanceFailure() {
+        @DisplayName("티켓 발급 중 오류가 발생하면 원래 예외를 그대로 전파한다.")
+        void propagatesTicketIssuanceFailure() {
             Payment payment = payment(PaymentStatus.APPROVED);
             OrderItem orderItem = orderItem();
             PaymentCompleteRequest request = mock(PaymentCompleteRequest.class);
@@ -415,8 +415,7 @@ class PaymentServiceTest {
             doThrow(cause).when(ticketService).issue(payment.getOrder());
 
             assertThatThrownBy(() -> paymentService.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
-                .isInstanceOf(PaymentTicketIssuanceException.class)
-                .hasCause(cause);
+                .isSameAs(cause);
         }
 
         @Test

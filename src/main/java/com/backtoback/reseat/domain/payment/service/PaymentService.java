@@ -184,18 +184,7 @@ public class PaymentService {
 
         List<TicketListResponse> tickets = findIssuedTickets(orderItems);
         if (tickets.size() < orderItems.size()) {
-            try {
-                ticketServiceProvider.getObject().issue(payment.getOrder());
-            } catch (RuntimeException exception) {
-                log
-                    .error(
-                        "승인된 결제의 티켓 발급 실패 (paymentId={}, orderId={})",
-                        payment.getId(),
-                        payment.getOrder().getId(),
-                        exception
-                    );
-                throw new PaymentTicketIssuanceException(exception);
-            }
+            ticketServiceProvider.getObject().issue(payment.getOrder());
             tickets = findIssuedTickets(orderItems);
         }
 
