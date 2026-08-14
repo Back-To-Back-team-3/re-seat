@@ -32,12 +32,14 @@ public class PaymentRecoveryScheduler {
     )
     public void recoverUnknownConfirmPayments() {
         LocalDateTime now = LocalDateTime.now();
-        List<Long> taskIds = paymentRecoveryTaskRepository.findRecoverableTaskIds(
-            PaymentRecoveryStatus.PENDING,
-            PaymentRecoveryStatus.RETRY,
-            now,
-            PageRequest.of(0, RECOVERY_BATCH_SIZE)
-        );
+        List<Long> taskIds
+            = paymentRecoveryTaskRepository
+                .findRecoverableTaskIds(
+                    PaymentRecoveryStatus.PENDING,
+                    PaymentRecoveryStatus.RETRY,
+                    now,
+                    PageRequest.of(0, RECOVERY_BATCH_SIZE)
+                );
 
         for (Long taskId : taskIds) {
             try {
