@@ -74,10 +74,11 @@ public class QueueService {
         LocalDateTime now = LocalDateTime.now();
 
         // 사용 가능한 활성 입장 토큰이 있으면 입장 허용 상태를 반환한다.
-        AdmissionToken activeToken = admissionTokenRepository
-            .findByGame_IdAndUser_IdAndStatusAndExpiresAtAfter(gameId, userId, AdmissionTokenStatus.ACTIVE, now)
-            .filter(token -> !token.isSeatBrowsingExpiredAt(now))
-            .orElse(null);
+        AdmissionToken activeToken
+            = admissionTokenRepository
+                .findByGame_IdAndUser_IdAndStatusAndExpiresAtAfter(gameId, userId, AdmissionTokenStatus.ACTIVE, now)
+                .filter(token -> !token.isSeatBrowsingExpiredAt(now))
+                .orElse(null);
 
         if (Objects.nonNull(activeToken)) {
             return QueueStatusResponse
@@ -126,10 +127,11 @@ public class QueueService {
         LocalDateTime now = LocalDateTime.now();
 
         // 사용 가능한 활성 입장 토큰을 조회해 SSE admit 이벤트 응답을 만든다.
-        AdmissionToken activeToken = admissionTokenRepository
-            .findByGame_IdAndUser_IdAndStatusAndExpiresAtAfter(gameId, userId, AdmissionTokenStatus.ACTIVE, now)
-            .filter(token -> !token.isSeatBrowsingExpiredAt(now))
-            .orElseThrow(QueueTokenRequiredException::new);
+        AdmissionToken activeToken
+            = admissionTokenRepository
+                .findByGame_IdAndUser_IdAndStatusAndExpiresAtAfter(gameId, userId, AdmissionTokenStatus.ACTIVE, now)
+                .filter(token -> !token.isSeatBrowsingExpiredAt(now))
+                .orElseThrow(QueueTokenRequiredException::new);
 
         return AdmitEventResponse
             .builder()
@@ -164,14 +166,16 @@ public class QueueService {
             .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
 
         // 대기 취소와 입장 허용이 동시에 상태를 변경하지 않도록 대기 이력을 비관적 락으로 조회한다.
-        QueueEntryHistory queueEntryHistory = queueEntryHistoryRepository
-            .findByQueueKeyWithPessimisticWriteLock(queueKey)
-            .orElseThrow(QueueEntryNotFoundException::new);
+        QueueEntryHistory queueEntryHistory
+            = queueEntryHistoryRepository
+                .findByQueueKeyWithPessimisticWriteLock(queueKey)
+                .orElseThrow(QueueEntryNotFoundException::new);
 
         // 토큰 소비와 취소가 동시에 상태를 변경하지 않도록 활성 입장 토큰을 비관적 락으로 조회한다.
-        AdmissionToken activeToken = admissionTokenRepository
-            .findByGame_IdAndUser_IdAndStatusWithPessimisticWriteLock(gameId, userId, AdmissionTokenStatus.ACTIVE)
-            .orElse(null);
+        AdmissionToken activeToken
+            = admissionTokenRepository
+                .findByGame_IdAndUser_IdAndStatusWithPessimisticWriteLock(gameId, userId, AdmissionTokenStatus.ACTIVE)
+                .orElse(null);
 
         // ADMITTED 이력은 함께 회수할 ACTIVE 토큰이 있을 때만 취소한다.
         if (queueEntryHistory.getStatus() == QueueEntryHistoryStatus.ADMITTED && Objects.isNull(activeToken)) {
@@ -221,8 +225,7 @@ public class QueueService {
         QueueEntryRequestedEvent event = new QueueEntryRequestedEvent(UUID.randomUUID(), gameId, userId, Instant.now());
 
         // Kafka 발행 실패는 대기열 진입 요청 실패로 변환하여 비동기 작업을 예외 상태로 완료한다.
-        return queueEntryEventPublisher.publish(event).thenAccept(result -> {
-        }).exceptionally(exception -> {
+        return queueEntryEventPublisher.publish(event).thenAccept(result -> {}).exceptionally(exception -> {
             throw new QueueEventPublishFailedException(exception);
         });
     }
@@ -239,25 +242,21 @@ public class QueueService {
         // 잘못된 이벤트는 재시도해도 처리할 수 없으므로 DB와 Redis에 접근하기 전에 검증한다.
         validateQueueEntryEvent(event);
 
-        Game game = gameRepository
-            .findById(event.gameId())
-            .orElseThrow(() -> new GameNotFoundException(event.gameId()));
+        Game game
+            = gameRepository.findById(event.gameId()).orElseThrow(() -> new GameNotFoundException(event.gameId()));
 
         // 동일 사용자의 여러 경기 대기열 등록이 동시에 처리되지 않도록 사용자 행을 잠근다.
-        User user = queueUserRepository
-            .findByIdWithPessimisticWriteLock(event.userId())
-            .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
+        User user
+            = queueUserRepository
+                .findByIdWithPessimisticWriteLock(event.userId())
+                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
 
         LocalDateTime now = LocalDateTime.now();
 
         boolean hasUsableActiveToken = hasUsableActiveToken(user.getId(), now);
-        boolean
-            hasWaitingEntryInAnotherGame
-            = queueEntryHistoryRepository.existsByUser_IdAndGame_IdNotAndStatus(
-            user.getId(),
-            game.getId(),
-            QueueEntryHistoryStatus.WAITING
-        );
+        boolean hasWaitingEntryInAnotherGame
+            = queueEntryHistoryRepository
+                .existsByUser_IdAndGame_IdNotAndStatus(user.getId(), game.getId(), QueueEntryHistoryStatus.WAITING);
 
         // 다른 경기에서 대기 중이거나 사용 가능한 활성 입장 토큰이 있다면 새 대기열에 등록하지 않는다.
         if (hasUsableActiveToken || hasWaitingEntryInAnotherGame) {
@@ -355,10 +354,10 @@ public class QueueService {
     /**
      * Redis 대기열에 등록되지 않은 사용자만 요청 시간 점수로 추가한다.
      *
-     * @param queueZSet   Redis ZSet 연산 객체
-     * @param redisKey    경기별 Redis 대기열 Key
+     * @param queueZSet Redis ZSet 연산 객체
+     * @param redisKey 경기별 Redis 대기열 Key
      * @param redisMember 대기열 사용자 member
-     * @param score       대기 순서를 결정하는 요청 시간 점수
+     * @param score 대기 순서를 결정하는 요청 시간 점수
      */
     private void addRedisQueueEntryIfAbsent(
         ZSetOperations<String, String> queueZSet,
@@ -379,10 +378,10 @@ public class QueueService {
     /**
      * Redis 대기열에 사용자를 추가하거나 요청 시간 점수로 대기 순서를 갱신한다.
      *
-     * @param queueZSet   Redis ZSet 연산 객체
-     * @param redisKey    경기별 Redis 대기열 Key
+     * @param queueZSet Redis ZSet 연산 객체
+     * @param redisKey 경기별 Redis 대기열 Key
      * @param redisMember 대기열 사용자 member
-     * @param score       대기 순서를 결정하는 요청 시간 점수
+     * @param score 대기 순서를 결정하는 요청 시간 점수
      */
     private void addOrUpdateRedisQueueEntry(
         ZSetOperations<String, String> queueZSet,
@@ -403,14 +402,14 @@ public class QueueService {
     /**
      * 사용자의 활성 입장 토큰을 비관적 락으로 조회하고 만료 상태를 반영한 뒤 사용 가능한 토큰이 남아 있는지 확인한다.
      *
-     * @param userId      조회할 사용자 ID
+     * @param userId 조회할 사용자 ID
      * @param currentTime 만료 여부를 판단할 시간
      * @return 사용 가능한 활성 입장 토큰이 있다면 true, 없다면 false
      */
     private boolean hasUsableActiveToken(Long userId, LocalDateTime currentTime) {
-        List<AdmissionToken> activeTokens = admissionTokenRepository.findByUser_IdAndStatusWithPessimisticWriteLock(userId,
-            AdmissionTokenStatus.ACTIVE
-        );
+        List<AdmissionToken> activeTokens
+            = admissionTokenRepository
+                .findByUser_IdAndStatusWithPessimisticWriteLock(userId, AdmissionTokenStatus.ACTIVE);
 
         activeTokens.forEach(token -> {
             // 전체 유효시간 만료를 최초 좌석 탐색 만료보다 먼저 반영한다.

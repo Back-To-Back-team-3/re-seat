@@ -43,14 +43,12 @@ public interface AdmissionTokenRepository extends JpaRepository<AdmissionToken, 
      * @return 비관적 락으로 조회한 입장 토큰 목록
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query(
-        """
-            SELECT at
-            FROM AdmissionToken at
-            WHERE at.user.id = :userId
-            AND at.status = :status
-            """
-    )
+    @Query("""
+        SELECT at
+        FROM AdmissionToken at
+        WHERE at.user.id = :userId
+        AND at.status = :status
+        """)
     List<AdmissionToken> findByUser_IdAndStatusWithPessimisticWriteLock(
         @Param("userId") Long userId,
         @Param("status") AdmissionTokenStatus status
@@ -65,15 +63,13 @@ public interface AdmissionTokenRepository extends JpaRepository<AdmissionToken, 
      * @return 비관적 락으로 조회한 입장 토큰
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query(
-        """
-            SELECT at
-            FROM AdmissionToken at
-            WHERE at.game.id = :gameId
-            AND at.user.id = :userId
-            AND at.status = :status
-            """
-    )
+    @Query("""
+        SELECT at
+        FROM AdmissionToken at
+        WHERE at.game.id = :gameId
+        AND at.user.id = :userId
+        AND at.status = :status
+        """)
     Optional<AdmissionToken> findByGame_IdAndUser_IdAndStatusWithPessimisticWriteLock(
         @Param("gameId") Long gameId,
         @Param("userId") Long userId,

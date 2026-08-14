@@ -123,11 +123,11 @@ public class AdmissionToken {
     /**
      * 대기열을 통과한 사용자에게 발급할 활성 입장 토큰을 생성한다.
      *
-     * @param game                  입장 대상 경기
-     * @param user                  입장 토큰을 발급받을 사용자
-     * @param token                 고유 Queue-Token 값
-     * @param issuedAt              토큰 발급 시간
-     * @param expiresAt             토큰 만료 시간
+     * @param game 입장 대상 경기
+     * @param user 입장 토큰을 발급받을 사용자
+     * @param token 고유 Queue-Token 값
+     * @param issuedAt 토큰 발급 시간
+     * @param expiresAt 토큰 만료 시간
      * @param seatBrowsingExpiresAt 최초 좌석 탐색 만료 시간
      * @return ACTIVE 상태로 생성된 입장 토큰
      */
