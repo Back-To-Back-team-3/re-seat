@@ -1,26 +1,5 @@
 package com.backtoback.reseat.domain.reservation.service;
 
-import static org.assertj.core.api.Assertions.*;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
@@ -45,8 +24,27 @@ import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserRole;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
-
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * [이슈 #174] 교차 순서 다좌석 요청 데드락 방지 회귀 테스트.
@@ -175,7 +173,14 @@ class SeatHoldDeadlockTest {
 
         AdmissionToken token1
             = AdmissionToken
-                .of(game, user1, "qt_deadlock-token-1", LocalDateTime.now(), LocalDateTime.now().plusMinutes(5));
+                .of(
+                    game,
+                    user1,
+                    "qt_deadlock-token-1",
+                    LocalDateTime.now(),
+                    LocalDateTime.now().plusMinutes(21),
+                    LocalDateTime.now().plusMinutes(3)
+                );
         admissionTokenRepository.save(token1);
         tokenId1 = token1.getId();
 
@@ -196,7 +201,14 @@ class SeatHoldDeadlockTest {
 
         AdmissionToken token2
             = AdmissionToken
-                .of(game, user2, "qt_deadlock-token-2", LocalDateTime.now(), LocalDateTime.now().plusMinutes(5));
+                .of(
+                    game,
+                    user2,
+                    "qt_deadlock-token-2",
+                    LocalDateTime.now(),
+                    LocalDateTime.now().plusMinutes(21),
+                    LocalDateTime.now().plusMinutes(3)
+                );
         admissionTokenRepository.save(token2);
         tokenId2 = token2.getId();
     }

@@ -1,27 +1,5 @@
 package com.backtoback.reseat.domain.reservation.service;
 
-import static org.assertj.core.api.Assertions.*;
-
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
@@ -48,8 +26,28 @@ import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserRole;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
-
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * [이슈 #173] Redisson 분산락 Facade 경로 동시성 회귀 테스트.
@@ -166,7 +164,14 @@ class SeatHoldFacadeConcurrencyTest {
             // validateToken / consumeToken 이 DB 조회하므로 실제 토큰 레코드 필요
             AdmissionToken token
                 = AdmissionToken
-                    .of(game, user, "qt_test-token-" + i, LocalDateTime.now(), LocalDateTime.now().plusMinutes(5));
+                    .of(
+                        game,
+                        user,
+                        "qt_test-token-" + i,
+                        LocalDateTime.now(),
+                        LocalDateTime.now().plusMinutes(21),
+                        LocalDateTime.now().plusMinutes(3)
+                    );
             admissionTokenRepository.save(token);
             tokenIds.add(token.getId());
         }
