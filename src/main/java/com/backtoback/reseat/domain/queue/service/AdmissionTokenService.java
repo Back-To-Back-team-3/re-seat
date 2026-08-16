@@ -285,10 +285,17 @@ public class AdmissionTokenService {
         return redisKey(gameId) + ":" + redisMember(userId);
     }
 
-    // Redis 대기열 구성원 값에서 사용자 ID를 추출한다.
+    // Redis 대기열 구성원 형식을 검증하고 사용자 ID를 추출한다.
     private Long parseUserId(String member) {
+
+        final String prefix = "user:";
+
+        if (member == null || !member.startsWith(prefix)) {
+            throw new QueueRedisMemberInvalidException();
+        }
+
         try {
-            return Long.parseLong(member.replace("user:", ""));
+            return Long.parseLong(member.substring(prefix.length()));
         } catch (NumberFormatException e) {
             throw new QueueRedisMemberInvalidException(e);
         }
