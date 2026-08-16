@@ -1,19 +1,5 @@
 package com.backtoback.reseat.domain.queue.service;
 
-import java.time.LocalDateTime;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-
-import org.redisson.api.RLock;
-import org.redisson.api.RedissonClient;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ZSetOperations;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
-
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
@@ -21,7 +7,8 @@ import com.backtoback.reseat.domain.queue.entity.AdmissionToken;
 import com.backtoback.reseat.domain.queue.entity.AdmissionTokenStatus;
 import com.backtoback.reseat.domain.queue.entity.QueueEntryHistory;
 import com.backtoback.reseat.domain.queue.entity.QueueEntryHistoryStatus;
-import com.backtoback.reseat.domain.queue.exception.QueueAdmissionFailedException;
+import com.backtoback.reseat.domain.queue.exception.QueueAdmissionInterruptedException;
+import com.backtoback.reseat.domain.queue.exception.QueueRedisMemberInvalidException;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenBrowsingExpiredException;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenExpiredException;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenInvalidException;
@@ -31,8 +18,20 @@ import com.backtoback.reseat.domain.queue.repository.QueueEntryHistoryRepository
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
-
 import lombok.RequiredArgsConstructor;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
+import java.time.LocalDateTime;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 대기열 통과 대상자에게 입장 토큰을 발급하는 서비스
@@ -194,7 +193,7 @@ public class AdmissionTokenService {
         } catch (InterruptedException e) {
             // InterruptedException을 처리하면서 제거된 interrupt 상태를 복원해 상위 실행 흐름에서도 중단 사실을 확인할 수 있게 한다.
             Thread.currentThread().interrupt();
-            throw new QueueAdmissionFailedException("입장 허용 처리 중 스레드가 중단되었습니다.");
+            throw new QueueAdmissionInterruptedException(e);
         } finally {
             // 트랜잭션 동기화 등록 전에 예외가 발생한 경우 afterCompletion이 실행되지 않으므로 여기서 직접 lock을 해제한다.
             if (locked && lock.isHeldByCurrentThread() && !lockReleaseRegistered) {
@@ -291,7 +290,7 @@ public class AdmissionTokenService {
         try {
             return Long.parseLong(member.replace("user:", ""));
         } catch (NumberFormatException e) {
-            throw new QueueAdmissionFailedException("Redis 대기열 사용자 정보가 올바르지 않습니다.");
+            throw new QueueRedisMemberInvalidException(e);
         }
     }
 

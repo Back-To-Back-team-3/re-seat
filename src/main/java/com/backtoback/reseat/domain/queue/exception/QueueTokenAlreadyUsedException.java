@@ -11,8 +11,4 @@ public class QueueTokenAlreadyUsedException extends BusinessException {
     public QueueTokenAlreadyUsedException() {
         super(ErrorCode.QUEUE_TOKEN_ALREADY_USED);
     }
-
-    public QueueTokenAlreadyUsedException(String message) {
-        super(ErrorCode.QUEUE_TOKEN_ALREADY_USED, message);
-    }
 }
