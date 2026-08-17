@@ -62,6 +62,10 @@ public class SecurityConfig {
                     .dispatcherTypeMatchers(DispatcherType.ASYNC)
                     .permitAll()
 
+                    // 로그아웃 요청은 인증 필요
+                    .requestMatchers("/api/v1/auth/logout")
+                    .authenticated()
+
                     // 인증이 불필요한 경로 허용
                     .requestMatchers("/api/v1/auth/**", "/oauth2/**", "/login/**")
                     .permitAll()
