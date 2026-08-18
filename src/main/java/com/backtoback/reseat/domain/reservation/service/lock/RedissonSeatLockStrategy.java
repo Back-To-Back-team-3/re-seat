@@ -16,7 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Redisson 기반 좌석 단위 분산 락 구현체.
- *
  * <p>락 키: {@code lock:game-seat:{gameSeatId}}</p>
  * <p>데드락 방지: {@code gameSeatId} 오름차순 획득, 역순 해제</p>
  * <p>락 해제 시점: action(트랜잭션) 완료 후 finally — 커밋 전 해제 시 over-booking 재발</p>

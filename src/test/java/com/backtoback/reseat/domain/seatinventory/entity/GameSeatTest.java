@@ -17,9 +17,7 @@ class GameSeatTest {
 
     // 특정 상태의 좌석을 만드는 헬퍼. 실제 빌더/팩토리에 맞게 조정.
     private GameSeat seatWith(GameSeatStatus status) {
-        return GameSeat.builder()
-            .status(status)
-            .build();
+        return GameSeat.builder().status(status).build();
     }
 
     @Nested
@@ -42,8 +40,7 @@ class GameSeatTest {
         void alreadyHeld_throws() {
             GameSeat seat = seatWith(GameSeatStatus.HELD);
 
-            assertThatThrownBy(() -> seat.hold(EXPIRES_AT))
-                .isInstanceOf(InvalidStateTransitionException.class);
+            assertThatThrownBy(() -> seat.hold(EXPIRES_AT)).isInstanceOf(InvalidStateTransitionException.class);
         }
 
         @Test
@@ -51,8 +48,7 @@ class GameSeatTest {
         void sold_throws() {
             GameSeat seat = seatWith(GameSeatStatus.SOLD);
 
-            assertThatThrownBy(() -> seat.hold(EXPIRES_AT))
-                .isInstanceOf(InvalidStateTransitionException.class);
+            assertThatThrownBy(() -> seat.hold(EXPIRES_AT)).isInstanceOf(InvalidStateTransitionException.class);
         }
     }
 
@@ -76,8 +72,7 @@ class GameSeatTest {
         void available_throws() {
             GameSeat seat = seatWith(GameSeatStatus.AVAILABLE);
 
-            assertThatThrownBy(seat::release)
-                .isInstanceOf(InvalidStateTransitionException.class);
+            assertThatThrownBy(seat::release).isInstanceOf(InvalidStateTransitionException.class);
         }
     }
 
@@ -101,8 +96,7 @@ class GameSeatTest {
         void available_throws() {
             GameSeat seat = seatWith(GameSeatStatus.AVAILABLE);
 
-            assertThatThrownBy(seat::sell)
-                .isInstanceOf(InvalidStateTransitionException.class);
+            assertThatThrownBy(seat::sell).isInstanceOf(InvalidStateTransitionException.class);
         }
     }
 }

@@ -18,7 +18,7 @@ public record CustomUserDetails(User user) implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        //유저의 권한을 스프링 시큐리티 규격으로 변환
+        // 유저의 권한을 스프링 시큐리티 규격으로 변환
         return Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
     }
 
@@ -39,7 +39,7 @@ public record CustomUserDetails(User user) implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        //이용정지 회원이 아닌 경우에만 TRUE
+        // 이용정지 회원이 아닌 경우에만 TRUE
         return user.getStatus() != UserStatus.SUSPENDED;
     }
 
@@ -50,7 +50,7 @@ public record CustomUserDetails(User user) implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        //탈토회원 아닐 경우~
+        // 탈토회원 아닐 경우~
         return user.getStatus() != UserStatus.DELETED;
     }
 

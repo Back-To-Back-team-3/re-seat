@@ -21,9 +21,10 @@ public class UserSignUpResponse {
     private final UserRole role;
     private final UserStatus status;
 
-    //엔티티를 받아 응답 DTO로 변환해 주는 정적 팩토리 메서드
+    // 엔티티를 받아 응답 DTO로 변환해 주는 정적 팩토리 메서드
     public static UserSignUpResponse from(User user) {
-        return UserSignUpResponse.builder()
+        return UserSignUpResponse
+            .builder()
             .userId(user.getId())
             .email(user.getEmail())
             .name(user.getName())

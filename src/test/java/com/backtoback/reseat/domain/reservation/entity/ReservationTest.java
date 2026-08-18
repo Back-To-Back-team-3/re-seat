@@ -13,7 +13,8 @@ import com.backtoback.reseat.domain.reservation.exception.InvalidReservationStat
 class ReservationTest {
 
     private Reservation reservationWith(ReservationStatus status) {
-        return Reservation.builder()
+        return Reservation
+            .builder()
             .reservationNo("RSV-TEST-000001")
             .holdExpiresAt(LocalDateTime.now().plusMinutes(10))
             .status(status)
@@ -55,8 +56,7 @@ class ReservationTest {
     void cancel_fromConfirmed_throws() {
         Reservation reservation = reservationWith(ReservationStatus.CONFIRMED);
 
-        assertThatThrownBy(reservation::cancel)
-            .isInstanceOf(InvalidReservationStatusException.class);
+        assertThatThrownBy(reservation::cancel).isInstanceOf(InvalidReservationStatusException.class);
     }
 
     @Test
@@ -64,8 +64,7 @@ class ReservationTest {
     void confirm_fromCanceled_throws() {
         Reservation reservation = reservationWith(ReservationStatus.CANCELED);
 
-        assertThatThrownBy(reservation::confirm)
-            .isInstanceOf(InvalidReservationStatusException.class);
+        assertThatThrownBy(reservation::confirm).isInstanceOf(InvalidReservationStatusException.class);
     }
 
     @Test
@@ -73,7 +72,6 @@ class ReservationTest {
     void expire_fromExpired_throws() {
         Reservation reservation = reservationWith(ReservationStatus.EXPIRED);
 
-        assertThatThrownBy(reservation::expire)
-            .isInstanceOf(InvalidReservationStatusException.class);
+        assertThatThrownBy(reservation::expire).isInstanceOf(InvalidReservationStatusException.class);
     }
 }

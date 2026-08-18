@@ -1,26 +1,5 @@
 package com.backtoback.reseat.domain.reservation.service;
 
-import static org.assertj.core.api.Assertions.*;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
@@ -45,25 +24,45 @@ import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserRole;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
-
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * [이슈 #174] 교차 순서 다좌석 요청 데드락 방지 회귀 테스트.
- *
  * <p>이 테스트는 교차 순서 요청에서 상호 대기 없이 처리 완료됨을 검증한다.</p>
- *
  * <p>핵심 검증:
  * <ul>
- *   <li>15초 내 모든 스레드 종료 — 데드락 없음 증명</li>
- *   <li>예상 외 예외 0건</li>
- *   <li>LOCK_FAILED는 경합으로 발생 가능하며 정상 동작</li>
+ * <li>15초 내 모든 스레드 종료 — 데드락 없음 증명</li>
+ * <li>예상 외 예외 0건</li>
+ * <li>LOCK_FAILED는 경합으로 발생 가능하며 정상 동작</li>
  * </ul>
  * </p>
  */
 @Disabled("테스트 제외")
 @Slf4j
-@EnabledIfEnvironmentVariable(named = "RUN_CONCURRENCY_TESTS", matches = "true")
+@EnabledIfEnvironmentVariable(
+    named = "RUN_CONCURRENCY_TESTS",
+    matches = "true"
+)
 @Tag("concurrency")
 @ActiveProfiles("test-concurrency")
 @SpringBootTest
@@ -121,16 +120,18 @@ class SeatHoldDeadlockTest {
         homeTeamId = homeTeam.getId();
         awayTeamId = awayTeam.getId();
 
-        Game game = Game.builder()
-            .homeTeam(homeTeam)
-            .awayTeam(awayTeam)
-            .stadium(stadium)
-            .gameAt(LocalDateTime.now().plusDays(7))
-            .bookingOpenAt(LocalDateTime.now().minusHours(1))
-            .bookingCloseAt(LocalDateTime.now().plusDays(6))
-            .bookingStatus(BookingStatus.OPEN)
-            .title("[이슈 #174] 데드락 방지 테스트 경기")
-            .build();
+        Game game
+            = Game
+                .builder()
+                .homeTeam(homeTeam)
+                .awayTeam(awayTeam)
+                .stadium(stadium)
+                .gameAt(LocalDateTime.now().plusDays(7))
+                .bookingOpenAt(LocalDateTime.now().minusHours(1))
+                .bookingCloseAt(LocalDateTime.now().plusDays(6))
+                .bookingStatus(BookingStatus.OPEN)
+                .title("[이슈 #174] 데드락 방지 테스트 경기")
+                .build();
         gameRepository.save(game);
         gameId = game.getId();
 
@@ -146,40 +147,68 @@ class SeatHoldDeadlockTest {
         physicalSeat1Id = seat1.getId();
         physicalSeat2Id = seat2.getId();
 
-        GameSeat gameSeat1 = GameSeat.builder()
-            .game(game).seat(seat1).price(18000).status(GameSeatStatus.AVAILABLE).build();
-        GameSeat gameSeat2 = GameSeat.builder()
-            .game(game).seat(seat2).price(18000).status(GameSeatStatus.AVAILABLE).build();
+        GameSeat gameSeat1
+            = GameSeat.builder().game(game).seat(seat1).price(18000).status(GameSeatStatus.AVAILABLE).build();
+        GameSeat gameSeat2
+            = GameSeat.builder().game(game).seat(seat2).price(18000).status(GameSeatStatus.AVAILABLE).build();
         gameSeatRepository.save(gameSeat1);
         gameSeatRepository.save(gameSeat2);
         seat1Id = gameSeat1.getId();
         seat2Id = gameSeat2.getId();
 
         // 스레드1 사용자
-        User user1 = User.builder()
-            .email("deadlock-test-1@reseat.com").password("pw").name("테스트유저1")
-            .phone("010-2222-0001").isVerified(true).role(UserRole.USER).status(UserStatus.ACTIVE)
-            .build();
+        User user1
+            = User
+                .builder()
+                .email("deadlock-test-1@reseat.com")
+                .password("pw")
+                .name("테스트유저1")
+                .phone("010-2222-0001")
+                .isVerified(true)
+                .role(UserRole.USER)
+                .status(UserStatus.ACTIVE)
+                .build();
         userRepository.save(user1);
         userId1 = user1.getId();
 
-        AdmissionToken token1 = AdmissionToken.of(
-            game, user1, "qt_deadlock-token-1",
-            LocalDateTime.now(), LocalDateTime.now().plusMinutes(5));
+        AdmissionToken token1
+            = AdmissionToken
+                .of(
+                    game,
+                    user1,
+                    "qt_deadlock-token-1",
+                    LocalDateTime.now(),
+                    LocalDateTime.now().plusMinutes(21),
+                    LocalDateTime.now().plusMinutes(3)
+                );
         admissionTokenRepository.save(token1);
         tokenId1 = token1.getId();
 
         // 스레드2 사용자
-        User user2 = User.builder()
-            .email("deadlock-test-2@reseat.com").password("pw").name("테스트유저2")
-            .phone("010-2222-0002").isVerified(true).role(UserRole.USER).status(UserStatus.ACTIVE)
-            .build();
+        User user2
+            = User
+                .builder()
+                .email("deadlock-test-2@reseat.com")
+                .password("pw")
+                .name("테스트유저2")
+                .phone("010-2222-0002")
+                .isVerified(true)
+                .role(UserRole.USER)
+                .status(UserStatus.ACTIVE)
+                .build();
         userRepository.save(user2);
         userId2 = user2.getId();
 
-        AdmissionToken token2 = AdmissionToken.of(
-            game, user2, "qt_deadlock-token-2",
-            LocalDateTime.now(), LocalDateTime.now().plusMinutes(5));
+        AdmissionToken token2
+            = AdmissionToken
+                .of(
+                    game,
+                    user2,
+                    "qt_deadlock-token-2",
+                    LocalDateTime.now(),
+                    LocalDateTime.now().plusMinutes(21),
+                    LocalDateTime.now().plusMinutes(3)
+                );
         admissionTokenRepository.save(token2);
         tokenId2 = token2.getId();
     }
@@ -288,18 +317,12 @@ class SeatHoldDeadlockTest {
         log.info("════════════════════════════════════════════════════");
 
         // 핵심: 15초 내 종료 = 데드락 없음 증명
-        assertThat(finished)
-            .as("15초 내 모든 스레드가 종료되지 않았다 — 데드락 의심")
-            .isTrue();
+        assertThat(finished).as("15초 내 모든 스레드가 종료되지 않았다 — 데드락 의심").isTrue();
 
-        assertThat(unexpectedExceptionCount.get())
-            .as("예상 외 예외는 0건이어야 한다")
-            .isZero();
+        assertThat(unexpectedExceptionCount.get()).as("예상 외 예외는 0건이어야 한다").isZero();
 
         // 두 스레드가 서로 다른 좌석 2개를 각각 요청하므로 둘 다 성공 가능
         // 단, 경합으로 LOCK_FAILED 발생 시 성공 건수가 줄 수 있음
-        assertThat(successCount.get() + lockFailedCount.get())
-            .as("모든 스레드가 경합에 참여해야 한다")
-            .isEqualTo(2);
+        assertThat(successCount.get() + lockFailedCount.get()).as("모든 스레드가 경합에 참여해야 한다").isEqualTo(2);
     }
 }

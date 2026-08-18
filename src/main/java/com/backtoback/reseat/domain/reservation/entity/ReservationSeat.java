@@ -26,9 +26,15 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
-@Table(name = "reservation_seats", indexes = {
-    @Index(name = "idx_reservation_seats_reservation", columnList = "reservation_id")
-})
+@Table(
+    name = "reservation_seats",
+    indexes = {
+        @Index(
+            name = "idx_reservation_seats_reservation",
+            columnList = "reservation_id"
+        )
+    }
+)
 @EntityListeners(AuditingEntityListener.class)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ReservationSeat {
@@ -37,18 +43,39 @@ public class ReservationSeat {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "reservation_id", nullable = false, foreignKey = @ForeignKey(name = "fk_reservation_seats_reservation"))
+    @ManyToOne(
+        fetch = FetchType.LAZY,
+        optional = false
+    )
+    @JoinColumn(
+        name = "reservation_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_reservation_seats_reservation")
+    )
     private Reservation reservation;
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "game_seat_id", nullable = false, foreignKey = @ForeignKey(name = "fk_reservation_seats_game_seat"))
+    @ManyToOne(
+        fetch = FetchType.LAZY,
+        optional = false
+    )
+    @JoinColumn(
+        name = "game_seat_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_reservation_seats_game_seat")
+    )
     private GameSeat gameSeat;
     // 선점 시점 가격 스냅샷. GameSeat.price가 나중에 바뀌어도 예약 시점 가격 유지 (2차 재판매 대비).
-    @Column(name = "price", nullable = false)
+    @Column(
+        name = "price",
+        nullable = false
+    )
     private int price;
     // reservation_seats는 ERD상 created_at만 있고 updated_at은 없음 → BaseTimeEntity 상속 대신 이 필드만.
     @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(
+        name = "created_at",
+        nullable = false,
+        updatable = false
+    )
     private LocalDateTime createdAt;
 
     @Builder
@@ -60,7 +87,6 @@ public class ReservationSeat {
 
     /**
      * 연관관계 편의 메서드.
-     *
      * <p>외부에서 직접 호출하면 Reservation 쪽 컬렉션과 정합성이 깨진다.
      * 반드시 Reservation.addReservationSeat()을 통해 간접 호출할 것.
      */

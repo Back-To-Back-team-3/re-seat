@@ -57,7 +57,10 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Disabled("테스트 제외")
 @Slf4j
-@EnabledIfEnvironmentVariable(named = "RUN_CONCURRENCY_TESTS", matches = "true")
+@EnabledIfEnvironmentVariable(
+    named = "RUN_CONCURRENCY_TESTS",
+    matches = "true"
+)
 @Tag("concurrency")
 @ActiveProfiles("test-concurrency")
 @SpringBootTest
@@ -111,16 +114,18 @@ class SeatHoldConcurrencyTest {
         homeTeamId = homeTeam.getId();
         awayTeamId = awayTeam.getId();
 
-        Game game = Game.builder()
-            .homeTeam(homeTeam)
-            .awayTeam(awayTeam)
-            .stadium(stadium)
-            .gameAt(LocalDateTime.now().plusDays(7))
-            .bookingOpenAt(LocalDateTime.now().minusHours(1))
-            .bookingCloseAt(LocalDateTime.now().plusDays(6))
-            .bookingStatus(BookingStatus.OPEN)
-            .title("[이슈 #172] 동시성 테스트 경기")
-            .build();
+        Game game
+            = Game
+                .builder()
+                .homeTeam(homeTeam)
+                .awayTeam(awayTeam)
+                .stadium(stadium)
+                .gameAt(LocalDateTime.now().plusDays(7))
+                .bookingOpenAt(LocalDateTime.now().minusHours(1))
+                .bookingCloseAt(LocalDateTime.now().plusDays(6))
+                .bookingStatus(BookingStatus.OPEN)
+                .title("[이슈 #172] 동시성 테스트 경기")
+                .build();
         gameRepository.save(game);
         gameId = game.getId();
 
@@ -134,26 +139,24 @@ class SeatHoldConcurrencyTest {
         seatId = seat.getId();
 
         // GameSeat (테스트 대상 — AVAILABLE 상태 1건)
-        GameSeat gameSeat = GameSeat.builder()
-            .game(game)
-            .seat(seat)
-            .price(18000)
-            .status(GameSeatStatus.AVAILABLE)
-            .build();
+        GameSeat gameSeat
+            = GameSeat.builder().game(game).seat(seat).price(18000).status(GameSeatStatus.AVAILABLE).build();
         gameSeatRepository.save(gameSeat);
         targetGameSeatId = gameSeat.getId();
 
         // User × THREAD_COUNT (각 스레드가 서로 다른 사용자로 요청)
         for (int i = 0; i < THREAD_COUNT; i++) {
-            User user = User.builder()
-                .email("concurrency-test-" + i + "@reseat.com")
-                .password("pw")
-                .name("테스트유저" + i)
-                .phone("010-0000-" + String.format("%04d", i))
-                .isVerified(true)
-                .role(UserRole.USER)
-                .status(UserStatus.ACTIVE)
-                .build();
+            User user
+                = User
+                    .builder()
+                    .email("concurrency-test-" + i + "@reseat.com")
+                    .password("pw")
+                    .name("테스트유저" + i)
+                    .phone("010-0000-" + String.format("%04d", i))
+                    .isVerified(true)
+                    .role(UserRole.USER)
+                    .status(UserStatus.ACTIVE)
+                    .build();
             userRepository.save(user);
             userIds.add(user.getId());
         }
@@ -211,7 +214,8 @@ class SeatHoldConcurrencyTest {
         // given
         SeatHoldRequest request = new SeatHoldRequest(gameId, List.of(targetGameSeatId));
 
-        /** CountDownLatch 2개 패턴
+        /**
+         * CountDownLatch 2개 패턴
          * readyLatch(N→0): 모든 스레드 준비 완료 신호
          * startLatch(1→0): 동시 출발 신호
          */
@@ -251,13 +255,14 @@ class SeatHoldConcurrencyTest {
         boolean finished = executor.awaitTermination(10, TimeUnit.SECONDS);
 
         // then
-        assertThat(finished)
-            .as("10초 내에 모든 스레드가 종료되지 않았다 — 데드락 또는 타임아웃 의심")
-            .isTrue();
+        assertThat(finished).as("10초 내에 모든 스레드가 종료되지 않았다 — 데드락 또는 타임아웃 의심").isTrue();
 
-        long heldCount = reservationSeatRepository.findAll().stream()
-            .filter(rs -> rs.getGameSeat().getId().equals(targetGameSeatId))
-            .count();
+        long heldCount
+            = reservationSeatRepository
+                .findAll()
+                .stream()
+                .filter(rs -> rs.getGameSeat().getId().equals(targetGameSeatId))
+                .count();
 
         GameSeat finalGameSeat = gameSeatRepository.findById(targetGameSeatId).orElseThrow();
 
@@ -273,16 +278,12 @@ class SeatHoldConcurrencyTest {
 
         // [이슈 #172] 성공 건수 > 1 → over-booking 재현 증명
         // [이슈 #173] Redisson 분산락 머지 후 isEqualTo(1)로 전환된다. (회귀 검증)
-        assertThat(successCount.get() + failCount.get())
-            .as("모든 스레드가 경합에 참여해야 한다.")
-            .isEqualTo(THREAD_COUNT);
+        assertThat(successCount.get() + failCount.get()).as("모든 스레드가 경합에 참여해야 한다.").isEqualTo(THREAD_COUNT);
 
         assertThat(successCount.get())
             .as("성공 건수가 1이면 우연히 직렬화된 것. over-booking 미재현 — THREAD_COUNT를 늘려서 재시도.")
             .isEqualTo(1);
 
-        assertThat(heldCount)
-            .as("reservation_seats 중복 행 수는 성공 건수와 일치해야 한다.")
-            .isEqualTo(1);
+        assertThat(heldCount).as("reservation_seats 중복 행 수는 성공 건수와 일치해야 한다.").isEqualTo(1);
     }
 }

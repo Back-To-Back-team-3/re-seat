@@ -21,12 +21,7 @@ public class OrderTest {
     private static final int TOTAL_AMOUNT = 34_000;
 
     private Order createdOrder() {
-        return Order.of(
-            ORDER_NO,
-            mock(User.class),
-            mock(Reservation.class),
-            TOTAL_AMOUNT,
-            PAYMENT_DEADLINE);
+        return Order.of(ORDER_NO, mock(User.class), mock(Reservation.class), TOTAL_AMOUNT, PAYMENT_DEADLINE);
     }
 
     @Test
@@ -37,8 +32,7 @@ public class OrderTest {
 
         order.paid();
 
-        assertThat(order.getStatus())
-            .isEqualTo(OrderStatus.PAID);
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.PAID);
     }
 
     @Test
@@ -49,8 +43,7 @@ public class OrderTest {
 
         order.expired();
 
-        assertThat(order.getStatus())
-            .isEqualTo(OrderStatus.EXPIRED);
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.EXPIRED);
     }
 
     @Test
@@ -61,8 +54,7 @@ public class OrderTest {
 
         order.cancel();
 
-        assertThat(order.getStatus())
-            .isEqualTo(OrderStatus.CANCELED);
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELED);
     }
 
     @Test
@@ -72,10 +64,8 @@ public class OrderTest {
         Order order = createdOrder();
         order.cancel();
 
-        assertThatThrownBy(order::paid)
-            .isInstanceOf(InvalidOrderStatusException.class);
-        assertThat(order.getStatus())
-            .isEqualTo(OrderStatus.CANCELED);
+        assertThatThrownBy(order::paid).isInstanceOf(InvalidOrderStatusException.class);
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELED);
     }
 
     @Test
@@ -85,10 +75,8 @@ public class OrderTest {
         Order order = createdOrder();
         order.paid();
 
-        assertThatThrownBy(order::expired)
-            .isInstanceOf(InvalidOrderStatusException.class);
-        assertThat(order.getStatus())
-            .isEqualTo(OrderStatus.PAID);
+        assertThatThrownBy(order::expired).isInstanceOf(InvalidOrderStatusException.class);
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.PAID);
     }
 
     @Test
@@ -98,9 +86,7 @@ public class OrderTest {
         Order order = createdOrder();
         order.expired();
 
-        assertThatThrownBy(order::cancel)
-            .isInstanceOf(InvalidOrderStatusException.class);
-        assertThat(order.getStatus())
-            .isEqualTo(OrderStatus.EXPIRED);
+        assertThatThrownBy(order::cancel).isInstanceOf(InvalidOrderStatusException.class);
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.EXPIRED);
     }
 }

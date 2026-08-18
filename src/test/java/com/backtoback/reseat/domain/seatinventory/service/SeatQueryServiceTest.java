@@ -46,8 +46,7 @@ class SeatQueryServiceTest {
         gameIdWithSeats = findFirstGameIdOfStadium();
         gameSeatCreateService.openInventory(gameIdWithSeats);
 
-        SessionFactory sessionFactory = entityManager.getEntityManagerFactory()
-            .unwrap(SessionFactory.class);
+        SessionFactory sessionFactory = entityManager.getEntityManagerFactory().unwrap(SessionFactory.class);
         statistics = sessionFactory.getStatistics();
         statistics.setStatisticsEnabled(true);
 
@@ -71,9 +70,8 @@ class SeatQueryServiceTest {
     }
 
     private Long findFirstGameIdOfStadium() {
-        return entityManager.createQuery(
-            "SELECT g.id FROM Game g WHERE g.stadium.id = :stadiumId ORDER BY g.id ASC",
-            Long.class)
+        return entityManager
+            .createQuery("SELECT g.id FROM Game g WHERE g.stadium.id = :stadiumId ORDER BY g.id ASC", Long.class)
             .setParameter("stadiumId", SEEDED_STADIUM_ID)
             .setMaxResults(1)
             .getSingleResult();

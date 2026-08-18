@@ -41,7 +41,8 @@ class PaymentServiceValidatorTest {
         User user = mock(User.class);
         when(user.getId()).thenReturn(USER_ID);
 
-        return Payment.builder()
+        return Payment
+            .builder()
             .paymentNo("PAY-20260727010000-000001")
             .order(order)
             .user(user)
@@ -65,8 +66,7 @@ class PaymentServiceValidatorTest {
         @Test
         @DisplayName("값이 있는 멱등키는 사용할 수 있다.")
         void acceptsPresentKey() {
-            assertThatCode(() -> validator.validateIdempotencyKey(IDEMPOTENCY_KEY))
-                .doesNotThrowAnyException();
+            assertThatCode(() -> validator.validateIdempotencyKey(IDEMPOTENCY_KEY)).doesNotThrowAnyException();
         }
 
         @Test
@@ -88,8 +88,7 @@ class PaymentServiceValidatorTest {
         void acceptsSameOrder() {
             Payment payment = readyPayment();
 
-            assertThatCode(() -> validator.validateIdempotencyRequest(payment, ORDER_ID))
-                .doesNotThrowAnyException();
+            assertThatCode(() -> validator.validateIdempotencyRequest(payment, ORDER_ID)).doesNotThrowAnyException();
         }
 
         @Test
@@ -134,8 +133,7 @@ class PaymentServiceValidatorTest {
         void acceptsOwner() {
             Payment payment = readyPayment();
 
-            assertThatCode(() -> validator.validateOwner(payment, USER_ID))
-                .doesNotThrowAnyException();
+            assertThatCode(() -> validator.validateOwner(payment, USER_ID)).doesNotThrowAnyException();
         }
 
         @Test
@@ -162,7 +160,11 @@ class PaymentServiceValidatorTest {
         }
 
         @ParameterizedTest(name = "{0} 상태의 결제는 승인할 수 없다")
-        @EnumSource(value = PaymentStatus.class, mode = EnumSource.Mode.EXCLUDE, names = "READY")
+        @EnumSource(
+            value = PaymentStatus.class,
+            mode = EnumSource.Mode.EXCLUDE,
+            names = "READY"
+        )
         @DisplayName("READY가 아닌 모든 결제는 이미 처리된 결제 예외가 발생한다.")
         void rejectsFinalizedPayment(PaymentStatus status) {
             Payment payment = payment(status, PG_PAYMENT_KEY);
@@ -181,12 +183,15 @@ class PaymentServiceValidatorTest {
         void acceptsReadyPayment() {
             Payment payment = readyPayment();
 
-            assertThatCode(() -> validator.validateFailable(payment))
-                .doesNotThrowAnyException();
+            assertThatCode(() -> validator.validateFailable(payment)).doesNotThrowAnyException();
         }
 
         @ParameterizedTest(name = "{0} 상태의 결제는 실패 처리할 수 없다")
-        @EnumSource(value = PaymentStatus.class, mode = EnumSource.Mode.EXCLUDE, names = "READY")
+        @EnumSource(
+            value = PaymentStatus.class,
+            mode = EnumSource.Mode.EXCLUDE,
+            names = "READY"
+        )
         @DisplayName("READY가 아닌 모든 결제는 이미 처리된 결제 예외가 발생한다.")
         void rejectsFinalizedPayment(PaymentStatus status) {
             Payment payment = payment(status, PG_PAYMENT_KEY);
@@ -205,12 +210,15 @@ class PaymentServiceValidatorTest {
         void acceptsApprovedPaymentWithPgKey() {
             Payment payment = payment(PaymentStatus.APPROVED, PG_PAYMENT_KEY);
 
-            assertThatCode(() -> validator.validateCancelable(payment))
-                .doesNotThrowAnyException();
+            assertThatCode(() -> validator.validateCancelable(payment)).doesNotThrowAnyException();
         }
 
         @ParameterizedTest(name = "{0} 상태의 결제는 취소할 수 없다")
-        @EnumSource(value = PaymentStatus.class, mode = EnumSource.Mode.EXCLUDE, names = "APPROVED")
+        @EnumSource(
+            value = PaymentStatus.class,
+            mode = EnumSource.Mode.EXCLUDE,
+            names = "APPROVED"
+        )
         @DisplayName("APPROVED가 아닌 모든 결제는 취소할 수 없다.")
         void rejectsUnapprovedPayment(PaymentStatus status) {
             Payment payment = payment(status, PG_PAYMENT_KEY);
@@ -239,8 +247,7 @@ class PaymentServiceValidatorTest {
         void acceptsMatchingPgOrderId() {
             Payment payment = readyPayment();
 
-            assertThatCode(() -> validator.validatePgOrderId(payment, PG_ORDER_ID))
-                .doesNotThrowAnyException();
+            assertThatCode(() -> validator.validatePgOrderId(payment, PG_ORDER_ID)).doesNotThrowAnyException();
         }
 
         @Test
@@ -262,8 +269,7 @@ class PaymentServiceValidatorTest {
         void acceptsMatchingAmount() {
             Payment payment = readyPayment();
 
-            assertThatCode(() -> validator.validateAmount(payment, AMOUNT))
-                .doesNotThrowAnyException();
+            assertThatCode(() -> validator.validateAmount(payment, AMOUNT)).doesNotThrowAnyException();
         }
 
         @Test

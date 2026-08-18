@@ -26,15 +26,25 @@ public class RefreshToken {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    //기존 유저 엔티티와 일대다 연관관계 매핑
+    // 기존 유저 엔티티와 일대다 연관관계 매핑
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(
+        name = "user_id",
+        nullable = false
+    )
     private User user;
 
-    @Column(name = "token_value", nullable = false, unique = true)
+    @Column(
+        name = "token_value",
+        nullable = false,
+        unique = true
+    )
     private String tokenValue;
 
-    @Column(name = "expired_at", nullable = false)
+    @Column(
+        name = "expired_at",
+        nullable = false
+    )
     private LocalDateTime expiredAt; // DB용 절대 만료 시각
 
     @Builder

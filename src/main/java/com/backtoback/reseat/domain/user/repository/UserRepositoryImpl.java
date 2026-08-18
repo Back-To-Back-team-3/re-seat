@@ -28,31 +28,35 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
 
     @Override
     public Page<User> searchUsers(UserSearchCondition condition, Pageable pageable) {
-        List<User> content = queryFactory
-            .selectFrom(user)
-            .where(
-                emailContains(condition.email()),
-                nameContains(condition.name()),
-                nicknameContains(condition.nickname()),
-                phoneContains(condition.phone()),
-                roleEq(condition.role()),
-                statusEq(condition.status()))
-            .orderBy(getOrderSpecifiers(pageable))
-            .offset(pageable.getOffset())
-            .limit(pageable.getPageSize())
-            .fetch();
+        List<User> content
+            = queryFactory
+                .selectFrom(user)
+                .where(
+                    emailContains(condition.email()),
+                    nameContains(condition.name()),
+                    nicknameContains(condition.nickname()),
+                    phoneContains(condition.phone()),
+                    roleEq(condition.role()),
+                    statusEq(condition.status())
+                )
+                .orderBy(getOrderSpecifiers(pageable))
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
 
-        Long total = queryFactory
-            .select(user.count())
-            .from(user)
-            .where(
-                emailContains(condition.email()),
-                nameContains(condition.name()),
-                nicknameContains(condition.nickname()),
-                phoneContains(condition.phone()),
-                roleEq(condition.role()),
-                statusEq(condition.status()))
-            .fetchOne();
+        Long total
+            = queryFactory
+                .select(user.count())
+                .from(user)
+                .where(
+                    emailContains(condition.email()),
+                    nameContains(condition.name()),
+                    nicknameContains(condition.nickname()),
+                    phoneContains(condition.phone()),
+                    roleEq(condition.role()),
+                    statusEq(condition.status())
+                )
+                .fetchOne();
 
         return new PageImpl<>(content, pageable, total == null ? 0 : total);
     }

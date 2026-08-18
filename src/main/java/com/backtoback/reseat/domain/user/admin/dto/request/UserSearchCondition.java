@@ -9,5 +9,6 @@ public record UserSearchCondition(
     String nickname,
     String phone,
     UserRole role,
-    UserStatus status) {
+    UserStatus status
+) {
 }

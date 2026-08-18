@@ -19,11 +19,9 @@ public class TicketCancelResponse {
     private GameSeatStatus seatStatus;
 
     // Ticket 엔티티 기반 응답 생성
-    public static TicketCancelResponse of(
-        Ticket ticket,
-        boolean refunded,
-        Integer refundAmount) {
-        return TicketCancelResponse.builder()
+    public static TicketCancelResponse of(Ticket ticket, boolean refunded, Integer refundAmount) {
+        return TicketCancelResponse
+            .builder()
             .ticketId(ticket.getId())
             .status(ticket.getStatus())
             .refunded(refunded)

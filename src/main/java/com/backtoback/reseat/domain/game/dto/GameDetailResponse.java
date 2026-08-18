@@ -9,7 +9,6 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 
 /**
  * 경기 상세 조회 응답 DTO.
- *
  * <p>사용자가 특정 경기를 선택했을 때 예매 진입 판단에 필요한 경기 상세 정보를 제공한다.
  * 좌석 재고와 가격 정보는 포함하지 않고, 경기 기준 정보만 반환한다.</p>
  */
@@ -20,16 +19,14 @@ public record GameDetailResponse(
     TeamSummaryResponse awayTeam,
     StadiumResponse stadium,
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    LocalDateTime gameAt,
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime gameAt,
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    LocalDateTime bookingOpenAt,
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime bookingOpenAt,
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    LocalDateTime bookingCloseAt,
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime bookingCloseAt,
 
-    BookingStatus bookingStatus) {
+    BookingStatus bookingStatus
+) {
 
     /**
      * Game 엔티티를 경기 상세 응답 DTO로 변환한다.
@@ -47,23 +44,21 @@ public record GameDetailResponse(
             game.getGameAt(),
             game.getBookingOpenAt(),
             game.getBookingCloseAt(),
-            game.getBookingStatus());
+            game.getBookingStatus()
+        );
     }
 
     /**
      * 경기 상세 응답 전용 구장 DTO.
      */
-    public record StadiumResponse(
-        Long stadiumId,
-        String name,
-        String address,
-        int totalCapacity) {
+    public record StadiumResponse(Long stadiumId, String name, String address, int totalCapacity) {
         public static StadiumResponse from(Stadium stadium) {
             return new StadiumResponse(
                 stadium.getId(),
                 stadium.getName(),
                 stadium.getAddress(),
-                stadium.getTotalCapacity());
+                stadium.getTotalCapacity()
+            );
         }
     }
 }
