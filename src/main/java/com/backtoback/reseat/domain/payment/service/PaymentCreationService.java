@@ -48,7 +48,7 @@ public class PaymentCreationService {
         paymentValidator.validateOwner(payment, userId);
         paymentValidator.validateIdempotencyRequest(payment, request.getOrderId());
 
-        if (payment.getStatus() == PaymentStatus.READY) {
+        if (payment.isReady()) {
             paymentOrderPolicy.ensurePayable(payment, payment.getOrder());
         }
 
@@ -69,11 +69,11 @@ public class PaymentCreationService {
         if (existingPayment.isPresent()) {
             Payment payment = existingPayment.get();
 
-            if (payment.getStatus() == PaymentStatus.APPROVED) {
+            if (payment.isApproved()) {
                 return PaymentCreateResponse.from(payment);
             }
 
-            if (payment.getStatus() != PaymentStatus.READY) {
+            if (!payment.isReady()) {
                 throw new PaymentOrderNotPayableException();
             }
 

@@ -7,6 +7,7 @@ import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentFailRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentRequest;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentActionResponse;
+import com.backtoback.reseat.domain.payment.dto.response.PaymentCompleteResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCreateResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentResponse;
 import com.backtoback.reseat.global.security.CustomUserDetails;
@@ -85,7 +86,7 @@ public interface PaymentControllerDocs {
         summary = "결제 승인",
         description = """
             Toss 결제 인증 결과를 검증하고 승인 API를 호출해 결제를 확정합니다.
-            승인 성공 시 결제와 주문을 완료 처리합니다.
+            승인 성공 시 결제와 주문을 완료 처리하고 주문 항목별 티켓을 발급해 반환합니다.
             승인 상태를 확인할 수 없으면 결제를 실패 처리하고 자동 환불을 위한 복구 작업을 등록합니다.
             """,
         security = @SecurityRequirement(name = "JWT Bearer Token")
@@ -128,7 +129,7 @@ public interface PaymentControllerDocs {
             )
         }
     )
-    ResponseEntity<com.backtoback.reseat.global.common.ApiResponse<PaymentActionResponse>> completePayment(
+    ResponseEntity<com.backtoback.reseat.global.common.ApiResponse<PaymentCompleteResponse>> completePayment(
         @Parameter(hidden = true) CustomUserDetails userDetails,
         @Parameter(
             description = "결제 ID",

@@ -95,6 +95,23 @@ class PaymentTest {
     }
 
     @Nested
+    @DisplayName("현재 결제 상태를 확인한다")
+    class StatusQuery {
+
+        @ParameterizedTest(name = "{0} 상태를 각 상태 질의 결과에 반영한다")
+        @EnumSource(PaymentStatus.class)
+        @DisplayName("각 상태 질의 메서드는 현재 상태에만 true를 반환한다.")
+        void returnsWhetherStatusMatches(PaymentStatus status) {
+            Payment payment = payment(status);
+
+            assertThat(payment.isReady()).isEqualTo(status == PaymentStatus.READY);
+            assertThat(payment.isApproved()).isEqualTo(status == PaymentStatus.APPROVED);
+            assertThat(payment.isFailed()).isEqualTo(status == PaymentStatus.FAILED);
+            assertThat(payment.isCanceled()).isEqualTo(status == PaymentStatus.CANCELED);
+        }
+    }
+
+    @Nested
     @DisplayName("결제를 승인한다")
     class Approve {
 

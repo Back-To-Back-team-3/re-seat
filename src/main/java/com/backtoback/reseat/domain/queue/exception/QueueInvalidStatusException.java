@@ -11,8 +11,4 @@ public class QueueInvalidStatusException extends BusinessException {
     public QueueInvalidStatusException() {
         super(ErrorCode.QUEUE_INVALID_STATUS);
     }
-
-    public QueueInvalidStatusException(String message) {
-        super(ErrorCode.QUEUE_INVALID_STATUS, message);
-    }
 }

@@ -11,10 +11,14 @@ import com.backtoback.reseat.domain.queue.entity.AdmissionToken;
 import com.backtoback.reseat.domain.queue.entity.AdmissionTokenStatus;
 import com.backtoback.reseat.domain.queue.entity.QueueEntryHistory;
 import com.backtoback.reseat.domain.queue.entity.QueueEntryHistoryStatus;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryCancellationTokenRequiredException;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryEventGameIdInvalidException;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryEventIdRequiredException;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryEventRequestedAtRequiredException;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryEventRequiredException;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryEventUserIdInvalidException;
 import com.backtoback.reseat.domain.queue.exception.QueueEntryNotFoundException;
 import com.backtoback.reseat.domain.queue.exception.QueueEventPublishFailedException;
-import com.backtoback.reseat.domain.queue.exception.QueueInvalidEventException;
-import com.backtoback.reseat.domain.queue.exception.QueueInvalidStatusException;
 import com.backtoback.reseat.domain.queue.exception.QueueRegistrationFailedException;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenRequiredException;
 import com.backtoback.reseat.domain.queue.repository.AdmissionTokenRepository;
@@ -178,7 +182,7 @@ public class QueueService {
 
         // ADMITTED 이력은 함께 회수할 ACTIVE 토큰이 있을 때만 취소한다.
         if (queueEntryHistory.getStatus() == QueueEntryHistoryStatus.ADMITTED && Objects.isNull(activeToken)) {
-            throw new QueueInvalidStatusException("입장 허용 상태는 활성 입장 토큰과 함께 취소해야 합니다.");
+            throw new QueueEntryCancellationTokenRequiredException();
         }
 
         // 대기 이력을 CANCELED로 변경하고 활성 입장 토큰이 있으면 함께 REVOKED로 전환한다.
@@ -331,23 +335,23 @@ public class QueueService {
     private void validateQueueEntryEvent(QueueEntryRequestedEvent event) {
 
         if (Objects.isNull(event)) {
-            throw new QueueInvalidEventException("대기열 진입 이벤트가 비어 있습니다.");
+            throw new QueueEntryEventRequiredException();
         }
 
         if (Objects.isNull(event.eventId())) {
-            throw new QueueInvalidEventException("대기열 진입 이벤트 ID가 누락되었습니다.");
+            throw new QueueEntryEventIdRequiredException();
         }
 
         if (Objects.isNull(event.gameId()) || event.gameId() <= 0) {
-            throw new QueueInvalidEventException("대기열 진입 이벤트의 경기 ID가 올바르지 않습니다.");
+            throw new QueueEntryEventGameIdInvalidException();
         }
 
         if (Objects.isNull(event.userId()) || event.userId() <= 0) {
-            throw new QueueInvalidEventException("대기열 진입 이벤트의 사용자 ID가 올바르지 않습니다.");
+            throw new QueueEntryEventUserIdInvalidException();
         }
 
         if (Objects.isNull(event.requestedAt())) {
-            throw new QueueInvalidEventException("대기열 진입 요청 시간이 누락되었습니다.");
+            throw new QueueEntryEventRequestedAtRequiredException();
         }
     }
 

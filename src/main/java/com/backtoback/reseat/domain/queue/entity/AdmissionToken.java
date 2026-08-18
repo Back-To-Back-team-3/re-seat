@@ -1,15 +1,14 @@
 package com.backtoback.reseat.domain.queue.entity;
 
-import java.time.LocalDateTime;
-
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.queue.exception.QueueInvalidStatusException;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenAlreadyUsedException;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenBrowsingExpiredException;
+import com.backtoback.reseat.domain.queue.exception.QueueTokenBrowsingNotExpiredException;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenExpiredException;
+import com.backtoback.reseat.domain.queue.exception.QueueTokenNotExpiredException;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenRevokedException;
 import com.backtoback.reseat.domain.user.entity.User;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -27,6 +26,8 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
 
 /**
  * 대기열을 통과한 사용자에게 발급한 입장 토큰과 유효 기간, 최초 좌석 탐색 상태를 저장하는 Entity
@@ -173,7 +174,7 @@ public class AdmissionToken {
         validateActiveStatus();
 
         if (!isExpiredAt(currentTime)) {
-            throw new QueueInvalidStatusException("아직 만료되지 않은 입장 토큰 입니다.");
+            throw new QueueTokenNotExpiredException();
         }
 
         this.status = AdmissionTokenStatus.EXPIRED;
@@ -189,7 +190,7 @@ public class AdmissionToken {
         validateActiveStatus();
 
         if (!isSeatBrowsingExpiredAt(currentTime)) {
-            throw new QueueInvalidStatusException("아직 좌석 탐색 시간이 만료되지 않은 입장 토큰 입니다.");
+            throw new QueueTokenBrowsingNotExpiredException();
         }
 
         this.status = AdmissionTokenStatus.BROWSING_EXPIRED;
