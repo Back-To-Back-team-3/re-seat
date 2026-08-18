@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.payment.service;
+package com.backtoback.reseat.domain.payment.schedule;
 
 import java.time.LocalDateTime;
 import java.util.List;
