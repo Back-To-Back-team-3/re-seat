@@ -12,10 +12,6 @@ public class QueueEventPublishFailedException extends BusinessException {
         super(ErrorCode.QUEUE_EVENT_PUBLISH_FAILED);
     }
 
-    public QueueEventPublishFailedException(String message) {
-        super(ErrorCode.QUEUE_EVENT_PUBLISH_FAILED, message);
-    }
-
     public QueueEventPublishFailedException(Throwable cause) {
         super(ErrorCode.QUEUE_EVENT_PUBLISH_FAILED, cause);
     }

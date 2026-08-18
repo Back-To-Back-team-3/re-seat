@@ -2,10 +2,9 @@
 
 package com.backtoback.reseat.global.exception;
 
-import org.springframework.http.HttpStatus;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 
 @Getter
 @RequiredArgsConstructor
@@ -49,11 +48,22 @@ public enum ErrorCode {
     QUEUE_TOKEN_EXPIRED(HttpStatus.GONE, "만료된 입장 토큰입니다."),
     QUEUE_TOKEN_REVOKED(HttpStatus.GONE, "취소된 입장 토큰입니다."),
     QUEUE_ENTRY_NOT_FOUND(HttpStatus.NOT_FOUND, "대기열 진입 이력이 없습니다."),
+    QUEUE_ENTRY_CANCELLATION_NOT_ALLOWED(HttpStatus.CONFLICT, "대기 중 혹은 입장 허용된 상태만 취소할 수 있습니다."),
+    QUEUE_ENTRY_ADMISSION_NOT_ALLOWED(HttpStatus.CONFLICT, "대기 중인 상태만 입장 허용할 수 있습니다."),
+    QUEUE_ENTRY_REENTRY_NOT_ALLOWED(HttpStatus.CONFLICT, "취소된 상태만 대기열에 재진입할 수 있습니다."),
+    QUEUE_ENTRY_CANCELLATION_TOKEN_REQUIRED(HttpStatus.CONFLICT, "입장 허용 상태는 활성 입장 토큰과 함께 취소해야 합니다."),
     QUEUE_INVALID_STATUS(HttpStatus.CONFLICT, "유효하지 않은 상태입니다."),
+    QUEUE_TOKEN_NOT_EXPIRED(HttpStatus.CONFLICT, "아직 만료되지 않은 입장 토큰입니다."),
+    QUEUE_TOKEN_BROWSING_NOT_EXPIRED(HttpStatus.CONFLICT, "아직 좌석 탐색 시간이 만료되지 않은 입장 토큰입니다."),
     QUEUE_REGISTRATION_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "Redis ZSet 대기열 등록에 실패했습니다."),
     QUEUE_EVENT_PUBLISH_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "Kafka 대기열 진입 이벤트 발행에 실패했습니다."),
-    QUEUE_INVALID_EVENT(HttpStatus.BAD_REQUEST, "대기열 진입 이벤트 값이 올바르지 않습니다."),
-    QUEUE_ADMISSION_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "대기열 자동 입장 처리에 실패했습니다."),
+    QUEUE_ENTRY_EVENT_REQUIRED(HttpStatus.BAD_REQUEST, "대기열 진입 이벤트가 비어 있습니다."),
+    QUEUE_ENTRY_EVENT_ID_REQUIRED(HttpStatus.BAD_REQUEST, "대기열 진입 이벤트 ID가 누락되었습니다."),
+    QUEUE_ENTRY_EVENT_GAME_ID_INVALID(HttpStatus.BAD_REQUEST, "대기열 진입 이벤트의 경기 ID가 올바르지 않습니다."),
+    QUEUE_ENTRY_EVENT_USER_ID_INVALID(HttpStatus.BAD_REQUEST, "대기열 진입 이벤트의 사용자 ID가 올바르지 않습니다."),
+    QUEUE_ENTRY_EVENT_REQUESTED_AT_REQUIRED(HttpStatus.BAD_REQUEST, "대기열 진입 요청 시간이 누락되었습니다."),
+    QUEUE_ADMISSION_INTERRUPTED(HttpStatus.SERVICE_UNAVAILABLE, "입장 허용 처리 중 스레드가 중단되었습니다."),
+    QUEUE_REDIS_MEMBER_INVALID(HttpStatus.SERVICE_UNAVAILABLE, "Redis 대기열 사용자 정보가 올바르지 않습니다."),
 
     // 좌석 (seats, game_seats)
     SEAT_NOT_FOUND(HttpStatus.NOT_FOUND, "좌석을 찾을 수 없습니다."),
