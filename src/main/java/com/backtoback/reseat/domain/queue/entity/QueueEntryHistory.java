@@ -1,7 +1,9 @@
 package com.backtoback.reseat.domain.queue.entity;
 
 import com.backtoback.reseat.domain.game.entity.Game;
-import com.backtoback.reseat.domain.queue.exception.QueueInvalidStatusException;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryAdmissionNotAllowedException;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryCancellationNotAllowedException;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryReentryNotAllowedException;
 import com.backtoback.reseat.domain.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -135,7 +137,7 @@ public class QueueEntryHistory {
     public void cancel(LocalDateTime canceledAt) {
 
         if (this.status != QueueEntryHistoryStatus.WAITING && this.status != QueueEntryHistoryStatus.ADMITTED) {
-            throw new QueueInvalidStatusException("대기 중 혹은 입장 허용된 상태만 취소할 수 있습니다.");
+            throw new QueueEntryCancellationNotAllowedException();
         }
 
         this.status = QueueEntryHistoryStatus.CANCELED;
@@ -149,7 +151,7 @@ public class QueueEntryHistory {
      */
     public void admit(LocalDateTime admittedAt) {
         if (this.status != QueueEntryHistoryStatus.WAITING) {
-            throw new QueueInvalidStatusException("대기 중인 상태만 입장 허용할 수 있습니다.");
+            throw new QueueEntryAdmissionNotAllowedException();
         }
 
         this.status = QueueEntryHistoryStatus.ADMITTED;
@@ -165,7 +167,7 @@ public class QueueEntryHistory {
      */
     public void reenter(LocalDateTime enteredAt) {
         if (this.status != QueueEntryHistoryStatus.CANCELED) {
-            throw new QueueInvalidStatusException("취소된 상태만 대기열에 재진입할 수 있습니다.");
+            throw new QueueEntryReentryNotAllowedException();
         }
 
         this.status = QueueEntryHistoryStatus.WAITING;
