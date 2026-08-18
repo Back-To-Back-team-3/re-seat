@@ -15,6 +15,7 @@ import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentFailRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentRequest;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentActionResponse;
+import com.backtoback.reseat.domain.payment.dto.response.PaymentCompleteResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCreateResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentResponse;
 import com.backtoback.reseat.domain.payment.service.PaymentService;
@@ -45,13 +46,13 @@ public class PaymentController implements PaymentControllerDocs {
 
     @Override
     @PostMapping("/{paymentId}/complete")
-    public ResponseEntity<ApiResponse<PaymentActionResponse>> completePayment(
+    public ResponseEntity<ApiResponse<PaymentCompleteResponse>> completePayment(
         @AuthenticationPrincipal CustomUserDetails userDetails,
         @PathVariable Long paymentId,
         @RequestHeader("Idempotency-Key") String idempotencyKey,
         @Valid @RequestBody PaymentCompleteRequest request
     ) {
-        PaymentActionResponse response
+        PaymentCompleteResponse response
             = paymentService.completePayment(userDetails.getId(), paymentId, idempotencyKey, request);
 
         return ResponseEntity.ok(ApiResponse.success("결제 승인 처리 완료", response));
