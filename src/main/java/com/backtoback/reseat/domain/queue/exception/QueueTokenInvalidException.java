@@ -11,8 +11,4 @@ public class QueueTokenInvalidException extends BusinessException {
     public QueueTokenInvalidException() {
         super(ErrorCode.QUEUE_TOKEN_INVALID);
     }
-
-    public QueueTokenInvalidException(String message) {
-        super(ErrorCode.QUEUE_TOKEN_INVALID, message);
-    }
 }

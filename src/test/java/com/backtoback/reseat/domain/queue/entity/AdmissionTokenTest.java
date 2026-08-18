@@ -1,9 +1,9 @@
 package com.backtoback.reseat.domain.queue.entity;
 
 import com.backtoback.reseat.domain.game.entity.Game;
-import com.backtoback.reseat.domain.queue.exception.QueueInvalidStatusException;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenAlreadyUsedException;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenExpiredException;
+import com.backtoback.reseat.domain.queue.exception.QueueTokenNotExpiredException;
 import com.backtoback.reseat.domain.user.entity.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -85,10 +85,15 @@ public class AdmissionTokenTest {
     @Test
     @DisplayName("ACTIVE 토큰을 만료 시간 전에 만료 처리하면 예외가 발생한다.")
     void expire_beforeExpiration_throws() {
+
+        // given
         AdmissionToken admissionToken = activeToken();
         LocalDateTime expiredAt = EXPIRES_AT.minusSeconds(1);
 
-        assertThatThrownBy(() -> admissionToken.expire(expiredAt)).isInstanceOf(QueueInvalidStatusException.class);
+        // when & then
+        assertThatThrownBy(() -> admissionToken.expire(expiredAt)).isInstanceOf(QueueTokenNotExpiredException.class);
+
+        // then
         assertThat(admissionToken.getStatus()).isEqualTo(AdmissionTokenStatus.ACTIVE);
     }
 }
