@@ -11,8 +11,4 @@ public class QueueTokenExpiredException extends BusinessException {
     public QueueTokenExpiredException() {
         super(ErrorCode.QUEUE_TOKEN_EXPIRED);
     }
-
-    public QueueTokenExpiredException(String message) {
-        super(ErrorCode.QUEUE_TOKEN_EXPIRED, message);
-    }
 }
