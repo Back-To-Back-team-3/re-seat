@@ -45,6 +45,7 @@ public enum ErrorCode {
     QUEUE_TOKEN_INVALID(HttpStatus.FORBIDDEN, "유효하지 않은 입장 토큰입니다."),
     QUEUE_TOKEN_ALREADY_USED(HttpStatus.CONFLICT, "이미 사용된 입장 토큰입니다."),
     QUEUE_TOKEN_EXPIRED(HttpStatus.GONE, "만료된 입장 토큰입니다."),
+    QUEUE_TOKEN_BROWSING_EXPIRED(HttpStatus.GONE, "최초 좌석 탐색 시간이 만료된 입장 토큰입니다."),
     QUEUE_TOKEN_REVOKED(HttpStatus.GONE, "취소된 입장 토큰입니다."),
     QUEUE_ENTRY_NOT_FOUND(HttpStatus.NOT_FOUND, "대기열 진입 이력이 없습니다."),
     QUEUE_INVALID_STATUS(HttpStatus.CONFLICT, "유효하지 않은 상태입니다."),
