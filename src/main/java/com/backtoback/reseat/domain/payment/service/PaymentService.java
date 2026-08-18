@@ -31,7 +31,6 @@ import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedExc
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentLockFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
-import com.backtoback.reseat.domain.payment.exception.PaymentTicketIssuanceException;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
 import com.backtoback.reseat.domain.payment.pg.toss.exception.TossPaymentStatusUnknownException;
@@ -108,12 +107,7 @@ public class PaymentService {
      * @param request 토스가 클라이언트에 돌려준 paymentKey/orderId/amount
      * @return 확정된 결제 결과
      */
-    @Transactional(
-        noRollbackFor = {
-            OrderExpiredException.class,
-            PaymentTicketIssuanceException.class
-        }
-    )
+    @Transactional(noRollbackFor = OrderExpiredException.class)
     public PaymentCompleteResponse completePayment(
         Long userId,
         Long paymentId,
@@ -178,18 +172,15 @@ public class PaymentService {
      */
     private PaymentCompleteResponse approvedResponse(Payment payment) {
         List<OrderItem> orderItems = orderItemRepository.findByOrder_Id(payment.getOrder().getId());
-        if (orderItems.isEmpty()) {
-            throw new PaymentTicketIssuanceException();
-        }
-
         List<TicketListResponse> tickets = findIssuedTickets(orderItems);
         if (tickets.size() < orderItems.size()) {
-            ticketServiceProvider.getObject().issue(payment.getOrder());
-            tickets = findIssuedTickets(orderItems);
-        }
-
-        if (tickets.size() != orderItems.size()) {
-            throw new PaymentTicketIssuanceException();
+            tickets
+                = ticketServiceProvider
+                    .getObject()
+                    .issue(payment.getOrder())
+                    .stream()
+                    .map(TicketListResponse::from)
+                    .toList();
         }
 
         return PaymentCompleteResponse.from(payment, tickets);

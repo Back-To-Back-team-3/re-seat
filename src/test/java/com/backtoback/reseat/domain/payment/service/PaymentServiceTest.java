@@ -50,7 +50,6 @@ import com.backtoback.reseat.domain.payment.exception.PaymentCancelFailedExcepti
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelNotAllowedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentLockFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
-import com.backtoback.reseat.domain.payment.exception.PaymentTicketIssuanceException;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
 import com.backtoback.reseat.domain.payment.pg.toss.exception.TossPaymentStatusUnknownException;
@@ -286,7 +285,8 @@ class PaymentServiceTest {
             when(payment.getOrder().getId()).thenReturn(ORDER_ID);
             when(ticketServiceProvider.getObject()).thenReturn(ticketService);
             when(orderItemRepository.findByOrder_Id(ORDER_ID)).thenReturn(List.of(orderItem));
-            when(ticketRepository.findByOrderItemId(ORDER_ITEM_ID)).thenReturn(Optional.empty(), Optional.of(ticket));
+            when(ticketRepository.findByOrderItemId(ORDER_ITEM_ID)).thenReturn(Optional.empty());
+            when(ticketService.issue(payment.getOrder())).thenReturn(List.of(ticket));
             when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
             when(tossResponse.isApproved()).thenReturn(true);
             when(tossResponse.getPaymentKey()).thenReturn(PAYMENT_KEY);
@@ -370,32 +370,14 @@ class PaymentServiceTest {
             when(payment.getOrder().getId()).thenReturn(ORDER_ID);
             when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
             when(orderItemRepository.findByOrder_Id(ORDER_ID)).thenReturn(List.of(orderItem));
-            when(ticketRepository.findByOrderItemId(ORDER_ITEM_ID)).thenReturn(Optional.empty(), Optional.of(ticket));
+            when(ticketRepository.findByOrderItemId(ORDER_ITEM_ID)).thenReturn(Optional.empty());
             when(ticketServiceProvider.getObject()).thenReturn(ticketService);
+            when(ticketService.issue(payment.getOrder())).thenReturn(List.of(ticket));
 
             PaymentCompleteResponse response
                 = paymentService.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
 
             assertThat(response.getTickets()).hasSize(1);
-            verify(ticketService).issue(payment.getOrder());
-            verifyNoInteractions(paymentOrderPolicy, tossPaymentClient, orderService);
-        }
-
-        @Test
-        @DisplayName("티켓 재발급 후에도 주문 항목의 티켓이 부족하면 승인 응답을 반환하지 않는다.")
-        void rejectsIncompleteTicketIssuance() {
-            Payment payment = payment(PaymentStatus.APPROVED);
-            OrderItem orderItem = orderItem();
-            PaymentCompleteRequest request = mock(PaymentCompleteRequest.class);
-            when(payment.getOrder().getId()).thenReturn(ORDER_ID);
-            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
-            when(orderItemRepository.findByOrder_Id(ORDER_ID)).thenReturn(List.of(orderItem));
-            when(ticketRepository.findByOrderItemId(ORDER_ITEM_ID)).thenReturn(Optional.empty());
-            when(ticketServiceProvider.getObject()).thenReturn(ticketService);
-
-            assertThatThrownBy(() -> paymentService.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
-                .isInstanceOf(PaymentTicketIssuanceException.class);
-
             verify(ticketService).issue(payment.getOrder());
             verifyNoInteractions(paymentOrderPolicy, tossPaymentClient, orderService);
         }
