@@ -37,3 +37,7 @@ spring:
             client-id: test-kakao-client-id
             client-secret: test-kakao-client-secret
             redirect-uri: http://localhost/login/oauth2/code/kakao
+
+jwt:
+  secret: ${TEST_JWT_SECRET:${JWT_SECRET}}
+

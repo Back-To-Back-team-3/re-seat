@@ -104,7 +104,7 @@ management:
       application: re-seat
 
 jwt:
-  secret: c3ByaW5nYm9vdC1zZWN1cml0eS1qd3QtdG9rZW4tc2VjcmV0LWtleS1kZW1vLWJmYWtiZmtiYWZiYWY=
+  secret: ${JWT_SECRET}
 
 portone:
   api-secret: "MOCK_PORTONE_SECRET_TOKEN"
@@ -130,6 +130,12 @@ spring:
     activate:
       on-profile: prod
 
+  h2:
+    console:
+      enabled: false
+      settings:
+        web-allow-others: false
+
   datasource:
     url: ${SPRING_DATASOURCE_URL}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -146,7 +152,7 @@ spring:
     redis:
       host: ${REDIS_HOST:redis}
       port: 6379
-      password: ${REDIS_PASSWORD:?REDIS_PASSWORD environment variable must be set!}
+      password: ${REDIS_PASSWORD}
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:19092}
@@ -157,7 +163,7 @@ spring:
     locations: classpath:db/migration
 
 jwt:
-  secret: ${JWT_SECRET:?JWT_SECRET environment variable must be set!}
+  secret: ${JWT_SECRET}
 
 # prod 프로필에서도 Actuator 엔드포인트가 유지되도록 재선언
 management:
