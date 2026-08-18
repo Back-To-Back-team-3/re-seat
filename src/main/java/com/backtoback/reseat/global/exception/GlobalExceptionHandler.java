@@ -22,7 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    //@Valid 유효성 검증 실패 처리 - 400 에러
+    // @Valid 유효성 검증 실패 처리 - 400 에러
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
         log.warn("MethodArgumentNotvalidException 발생: {}", e.getMessage());
@@ -34,7 +34,7 @@ public class GlobalExceptionHandler {
             .body(ApiResponse.failure(errorCode.getCode(), errorCode.getMessage()));
     }
 
-    //도메인 에서 던지는 비즈니스 예외 처리
+    // 도메인 에서 던지는 비즈니스 예외 처리
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e) {
         log.warn("{} 발생: {}", e.getClass().getSimpleName(), e.getMessage());
@@ -44,7 +44,7 @@ public class GlobalExceptionHandler {
             .body(ApiResponse.failure(e.getErrorCode().getCode(), e.getMessage()));
     }
 
-    //서버 내부 에러 - 500 에러
+    // 서버 내부 에러 - 500 에러
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleAllException(Exception e) {
         log.error("예상치 못한 서버 에러 발생: ", e);
@@ -56,15 +56,17 @@ public class GlobalExceptionHandler {
             .body(ApiResponse.failure(errorCode.getCode(), errorCode.getMessage()));
     }
 
-    //HTTP 요청 파라미터 타입 불일치
+    // HTTP 요청 파라미터 타입 불일치
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiResponse<Void>> handleMethodArgumenTpyeMismatchException(
-        MethodArgumentTypeMismatchException e) {
+        MethodArgumentTypeMismatchException e
+    ) {
         log.warn("MethodArgumentTypeMismatchException 발생: {} ", e.getMessage());
 
         String requiredTypeName = e.getRequiredType() != null ? e.getRequiredType().getSimpleName() : "Unknown";
-        String detailMessage = String.format("'%s' 파라미터의 타입이 잘못되었습니다. (입력값: '%s', 기대타입: %s)",
-            e.getName(), e.getValue(), requiredTypeName);
+        String detailMessage
+            = String
+                .format("'%s' 파라미터의 타입이 잘못되었습니다. (입력값: '%s', 기대타입: %s)", e.getName(), e.getValue(), requiredTypeName);
 
         return ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
@@ -74,27 +76,29 @@ public class GlobalExceptionHandler {
     // 필수 쿼리 파라미터 누락 처리
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ApiResponse<Void>> handleMissingServletRequestParameterException(
-        MissingServletRequestParameterException e) {
+        MissingServletRequestParameterException e
+    ) {
         log.warn("MissingServletRequestParameterException 발생: {}", e.getMessage());
 
-        String detailMessage = String.format("필수 쿼리 파라미터 '%s'(타입: %s)가 누락되었습니다.",
-            e.getParameterName(), e.getParameterType());
+        String detailMessage
+            = String.format("필수 쿼리 파라미터 '%s'(타입: %s)가 누락되었습니다.", e.getParameterName(), e.getParameterType());
 
         return ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
             .body(ApiResponse.failure(ErrorCode.INVALID_REQUEST.getCode(), detailMessage));
     }
 
-    //파라미터 제약 조건 위반 처리 (@RequestParam 유효성 검증 실패 등)
+    // 파라미터 제약 조건 위반 처리 (@RequestParam 유효성 검증 실패 등)
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiResponse<Void>> handleConstraintViolationException(ConstraintViolationException e) {
         log.warn("ConstraintViolationException 발생: {}", e.getMessage());
 
-        String detailMessage = e.getConstraintViolations().stream()
-            .map(violation -> String.format("[%s] %s",
-                violation.getPropertyPath(),
-                violation.getMessage()))
-            .collect(Collectors.joining(", "));
+        String detailMessage
+            = e
+                .getConstraintViolations()
+                .stream()
+                .map(violation -> String.format("[%s] %s", violation.getPropertyPath(), violation.getMessage()))
+                .collect(Collectors.joining(", "));
 
         return ResponseEntity
             .status(HttpStatus.BAD_REQUEST)

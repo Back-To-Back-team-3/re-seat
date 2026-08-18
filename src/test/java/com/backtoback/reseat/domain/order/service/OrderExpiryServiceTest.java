@@ -44,35 +44,37 @@ public class OrderExpiryServiceTest {
         // given
         LocalDateTime now = LocalDateTime.now();
 
-        given(orderRepository.expireCreatedOrders(
-            eq(now),
-            eq(OrderStatus.CREATED),
-            eq(OrderStatus.EXPIRED))).willReturn(1);
+        given(orderRepository.expireCreatedOrders(eq(now), eq(OrderStatus.CREATED), eq(OrderStatus.EXPIRED)))
+            .willReturn(1);
 
-        given(orderReservationRepository.expireReservationsByExpiredOrders(
-            eq(now),
-            eq(ReservationStatus.HOLDING),
-            eq(OrderStatus.EXPIRED),
-            eq(ReservationStatus.EXPIRED))).willReturn(1);
+        given(
+            orderReservationRepository
+                .expireReservationsByExpiredOrders(
+                    eq(now),
+                    eq(ReservationStatus.HOLDING),
+                    eq(OrderStatus.EXPIRED),
+                    eq(ReservationStatus.EXPIRED)
+                )
+        ).willReturn(1);
 
-        given(orderGameSeatRepository.releaseGameSeatsByExpiredOrders(
-            eq(now),
-            eq(GameSeatStatus.HELD),
-            eq(OrderStatus.EXPIRED),
-            eq(GameSeatStatus.AVAILABLE))).willReturn(2);
+        given(
+            orderGameSeatRepository
+                .releaseGameSeatsByExpiredOrders(
+                    eq(now),
+                    eq(GameSeatStatus.HELD),
+                    eq(OrderStatus.EXPIRED),
+                    eq(GameSeatStatus.AVAILABLE)
+                )
+        ).willReturn(2);
 
         // when
         OrderExpiryService.OrderExpiryResult result = orderExpiryService.expireOrders(now);
 
         // then
-        assertThat(result.expiredOrders())
-            .isEqualTo(1);
-        assertThat(result.expiredReservations())
-            .isEqualTo(1);
-        assertThat(result.releasedSeats())
-            .isEqualTo(2);
-        assertThat(result.total())
-            .isEqualTo(4);
+        assertThat(result.expiredOrders()).isEqualTo(1);
+        assertThat(result.expiredReservations()).isEqualTo(1);
+        assertThat(result.releasedSeats()).isEqualTo(2);
+        assertThat(result.total()).isEqualTo(4);
     }
 
     @Test
@@ -87,20 +89,18 @@ public class OrderExpiryServiceTest {
         orderExpiryService.expireOrders(now);
 
         // then
-        inOrder.verify(orderRepository).expireCreatedOrders(
-            now,
-            OrderStatus.CREATED,
-            OrderStatus.EXPIRED);
-        inOrder.verify(orderReservationRepository).expireReservationsByExpiredOrders(
-            now,
-            ReservationStatus.HOLDING,
-            OrderStatus.EXPIRED,
-            ReservationStatus.EXPIRED);
-        inOrder.verify(orderGameSeatRepository).releaseGameSeatsByExpiredOrders(
-            now,
-            GameSeatStatus.HELD,
-            OrderStatus.EXPIRED,
-            GameSeatStatus.AVAILABLE);
+        inOrder.verify(orderRepository).expireCreatedOrders(now, OrderStatus.CREATED, OrderStatus.EXPIRED);
+        inOrder
+            .verify(orderReservationRepository)
+            .expireReservationsByExpiredOrders(
+                now,
+                ReservationStatus.HOLDING,
+                OrderStatus.EXPIRED,
+                ReservationStatus.EXPIRED
+            );
+        inOrder
+            .verify(orderGameSeatRepository)
+            .releaseGameSeatsByExpiredOrders(now, GameSeatStatus.HELD, OrderStatus.EXPIRED, GameSeatStatus.AVAILABLE);
     }
 
     @Test
@@ -111,14 +111,11 @@ public class OrderExpiryServiceTest {
         LocalDateTime now = LocalDateTime.now();
         RuntimeException exception = new RuntimeException("주문 만료 처리 실패");
 
-        given(orderRepository.expireCreatedOrders(
-            eq(now),
-            eq(OrderStatus.CREATED),
-            eq(OrderStatus.EXPIRED))).willThrow(exception);
+        given(orderRepository.expireCreatedOrders(eq(now), eq(OrderStatus.CREATED), eq(OrderStatus.EXPIRED)))
+            .willThrow(exception);
 
         // when & then
-        assertThatThrownBy(() -> orderExpiryService.expireOrders(now))
-            .isSameAs(exception);
+        assertThatThrownBy(() -> orderExpiryService.expireOrders(now)).isSameAs(exception);
 
         // then
         verifyNoInteractions(orderReservationRepository, orderGameSeatRepository);

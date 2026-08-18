@@ -14,16 +14,14 @@ public record GameListResponse(
     TeamSummaryResponse awayTeam,
     StadiumSummaryResponse stadium,
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    LocalDateTime gameAt,
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime gameAt,
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    LocalDateTime bookingOpenAt,
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime bookingOpenAt,
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    LocalDateTime bookingCloseAt,
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime bookingCloseAt,
 
-    BookingStatus bookingStatus) {
+    BookingStatus bookingStatus
+) {
 
     /**
      * Game 엔티티를 경기 목록 응답 DTO로 변환한다.
@@ -41,15 +39,14 @@ public record GameListResponse(
             game.getGameAt(),
             game.getBookingOpenAt(),
             game.getBookingCloseAt(),
-            game.getBookingStatus());
+            game.getBookingStatus()
+        );
     }
 
     /**
      * 경기 응답 내부에서 사용하는 구단 요약 응답 DTO.
      */
-    public record TeamResponse(
-        Long teamId,
-        String name) {
+    public record TeamResponse(Long teamId, String name) {
 
         public static TeamResponse from(Long teamId, String name) {
             return new TeamResponse(teamId, name);
@@ -59,9 +56,7 @@ public record GameListResponse(
     /**
      * 경기 응답 내부에서 사용하는 구장 요약 응답 DTO.
      */
-    public record StadiumResponse(
-        Long stadiumId,
-        String name) {
+    public record StadiumResponse(Long stadiumId, String name) {
 
         public static StadiumResponse from(Long stadiumId, String name) {
             return new StadiumResponse(stadiumId, name);

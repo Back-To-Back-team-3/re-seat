@@ -26,14 +26,20 @@ public class PaymentRecoveryScheduler {
     /**
      * 승인 상태가 불명확한 결제 복구 작업을 주기적으로 실행한다.
      */
-    @Scheduled(fixedDelay = 30_000, initialDelay = 30_000)
+    @Scheduled(
+        fixedDelay = 30_000,
+        initialDelay = 30_000
+    )
     public void recoverUnknownConfirmPayments() {
         LocalDateTime now = LocalDateTime.now();
-        List<Long> taskIds = paymentRecoveryTaskRepository.findRecoverableTaskIds(
-            PaymentRecoveryStatus.PENDING,
-            PaymentRecoveryStatus.RETRY,
-            now,
-            PageRequest.of(0, RECOVERY_BATCH_SIZE));
+        List<Long> taskIds
+            = paymentRecoveryTaskRepository
+                .findRecoverableTaskIds(
+                    PaymentRecoveryStatus.PENDING,
+                    PaymentRecoveryStatus.RETRY,
+                    now,
+                    PageRequest.of(0, RECOVERY_BATCH_SIZE)
+                );
 
         for (Long taskId : taskIds) {
             try {

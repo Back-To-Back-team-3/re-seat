@@ -11,10 +11,10 @@ import java.util.function.Consumer;
 
 public abstract class BaseConcurrencyTest extends BaseIntegrationTest {
 
-    //지정한 횟수만큼 동시 요청 실행하는 헬퍼메서드
-    //@Param ThreadCount 동시 실행 스레드 수
-    //@Param task 각 스레드에서 수행할 작업
-    //@return 성공한 작업 횟수
+    // 지정한 횟수만큼 동시 요청 실행하는 헬퍼메서드
+    // @Param ThreadCount 동시 실행 스레드 수
+    // @Param task 각 스레드에서 수행할 작업
+    // @return 성공한 작업 횟수
     protected int executeConcurrentTasks(int threadCount, Consumer<Integer> task) throws InterruptedException {
 
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);

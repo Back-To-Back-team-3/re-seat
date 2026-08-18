@@ -20,10 +20,8 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * 경기별 좌석 현황·구역 요약 조회 서비스.
- *
  * <p>재고 생성은 GameSeatCreateService가 담당하고,
  * 이 클래스는 조회만 담당한다.
- *
  * <p>메서드 readOnly = true
  * 동시 접속자가 많은 경로라 N+1 쿼리가 없는지가 가장 중요하다.
  */
@@ -40,18 +38,16 @@ public class SeatQueryService {
      *
      * @param gameId 경기 ID
      * @param zoneId 구역 ID (null이면 전체)
-     * @param grade  좌석 등급 (null이면 전체)
+     * @param grade 좌석 등급 (null이면 전체)
      * @param status 좌석 상태 (null이면 전체)
-     * @throws GameNotFoundException           경기가 없을 때 (404)
+     * @throws GameNotFoundException 경기가 없을 때 (404)
      * @throws SeatInventoryNotOpenedException 재고가 아직 오픈되지 않았을 때 (409)
      */
-    public List<SeatStatusResponse> getSeats(
-        Long gameId, Long zoneId, SeatGrade grade, GameSeatStatus status) {
+    public List<SeatStatusResponse> getSeats(Long gameId, Long zoneId, SeatGrade grade, GameSeatStatus status) {
 
         validateGame(gameId);
 
-        List<GameSeat> gameSeats = gameSeatRepository.findAllByGameIdWithFilters(
-            gameId, zoneId, grade, status);
+        List<GameSeat> gameSeats = gameSeatRepository.findAllByGameIdWithFilters(gameId, zoneId, grade, status);
 
         if (gameSeats.isEmpty()) {
             // 필터 결과가 0건이면 두 가지 경우가 있다:
@@ -64,22 +60,19 @@ public class SeatQueryService {
             // 재고는 있고 필터 조건만 안 맞는 경우 → 빈 리스트 반환 (404 아님)
         }
 
-        return gameSeats.stream()
-            .map(SeatStatusResponse::from)
-            .toList();
+        return gameSeats.stream().map(SeatStatusResponse::from).toList();
     }
 
     /**
      * 경기의 구역별 잔여 좌석 수를 집계한다.
      *
      * @param gameId 경기 ID
-     * @throws GameNotFoundException           경기가 없을 때 (404)
+     * @throws GameNotFoundException 경기가 없을 때 (404)
      * @throws SeatInventoryNotOpenedException 재고가 아직 오픈되지 않았을 때 (409)
      */
     public List<ZoneSummaryResponse> getZoneSummaries(Long gameId) {
 
-        Game game = gameRepository.findDetailById(gameId)
-            .orElseThrow(() -> new GameNotFoundException(gameId));
+        Game game = gameRepository.findDetailById(gameId).orElseThrow(() -> new GameNotFoundException(gameId));
 
         if (!gameSeatRepository.existsByGameId(gameId)) {
             throw new SeatInventoryNotOpenedException(gameId);

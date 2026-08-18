@@ -23,17 +23,15 @@ public interface PaymentRecoveryTaskRepository extends JpaRepository<PaymentReco
         select task.id
         from PaymentRecoveryTask task
         where task.status = :pending
-           or (task.status = :retry and task.nextRetryAt <= :now)
+        or (task.status = :retry and task.nextRetryAt <= :now)
         order by task.createdAt asc
         """)
     List<Long> findRecoverableTaskIds(
-        @Param("pending")
-        PaymentRecoveryStatus pending,
-        @Param("retry")
-        PaymentRecoveryStatus retry,
-        @Param("now")
-        LocalDateTime now,
-        Pageable pageable);
+        @Param("pending") PaymentRecoveryStatus pending,
+        @Param("retry") PaymentRecoveryStatus retry,
+        @Param("now") LocalDateTime now,
+        Pageable pageable
+    );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
@@ -42,6 +40,5 @@ public interface PaymentRecoveryTaskRepository extends JpaRepository<PaymentReco
         join fetch task.payment
         where task.id = :taskId
         """)
-    Optional<PaymentRecoveryTask> findByIdWithPessimisticWriteLock(@Param("taskId")
-    Long taskId);
+    Optional<PaymentRecoveryTask> findByIdWithPessimisticWriteLock(@Param("taskId") Long taskId);
 }

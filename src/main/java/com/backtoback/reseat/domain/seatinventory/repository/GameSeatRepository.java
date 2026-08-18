@@ -25,7 +25,6 @@ public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
 
     /**
      * 경기의 좌석 현황을 seat·zone과 함께 조회한다.
-     *
      * <p>GameSeat → Seat → SeatZone 3단계 fetch join으로 N+1을 방지한다.
      *
      * @param gameId 경기 ID
@@ -39,18 +38,16 @@ public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
         where gs.game.id = :gameId
         order by z.id asc, s.seatRow asc, s.seatNumber asc
         """)
-    List<GameSeat> findAllByGameIdWithSeatAndZone(@Param("gameId")
-    Long gameId);
+    List<GameSeat> findAllByGameIdWithSeatAndZone(@Param("gameId") Long gameId);
 
     /**
      * 경기의 좌석 현황을 구역·등급·상태 필터로 조회한다.
-     *
      * <p>필터가 null이면 해당 조건을 무시한다.
      * <p>QueryDSL 미사용 환경에서 JPQL 동적 조건으로 처리한다.
      *
      * @param gameId 경기 ID (필수)
      * @param zoneId 구역 ID (선택)
-     * @param grade  좌석 등급 (선택)
+     * @param grade 좌석 등급 (선택)
      * @param status 좌석 상태 (선택)
      * @return 필터 적용된 좌석 현황 목록
      */
@@ -66,25 +63,20 @@ public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
         order by z.id asc, s.seatRow asc, s.seatNumber asc
         """)
     List<GameSeat> findAllByGameIdWithFilters(
-        @Param("gameId")
-        Long gameId,
-        @Param("zoneId")
-        Long zoneId,
-        @Param("grade")
-        SeatGrade grade,
-        @Param("status")
-        GameSeatStatus status);
+        @Param("gameId") Long gameId,
+        @Param("zoneId") Long zoneId,
+        @Param("grade") SeatGrade grade,
+        @Param("status") GameSeatStatus status
+    );
 
     /**
      * 경기의 구역별 잔여 좌석 수를 집계한다.
-     *
      * <p>SeatZone을 기준으로 LEFT JOIN해 잔여수가 0인 구역도 결과에 포함한다.
      * AVAILABLE 상태인 game_seats만 카운트한다.
-     *
      * <p>현재 totalCount는 50으로 고정 (V4 시드 기준 구역당 50석).
      * 구장·구역 구성이 바뀌면 COUNT(s)로 교체한다.
      *
-     * @param gameId    경기 ID
+     * @param gameId 경기 ID
      * @param stadiumId 구장 ID (해당 구장의 구역만 조회)
      * @return 구역별 요약 목록
      */
@@ -105,14 +97,13 @@ public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
         order by z.id asc
         """)
     List<ZoneSummaryResponse> findZoneSummariesByGameId(
-        @Param("gameId")
-        Long gameId,
-        @Param("stadiumId")
-        Long stadiumId);
+        @Param("gameId") Long gameId,
+        @Param("stadiumId") Long stadiumId
+    );
 
     // 이후에 추가 예정:
-    //   findByIdWithPessimisticLock(Long id)  — @Lock(PESSIMISTIC_WRITE)
-    //   countByGameIdAndStatus(Long gameId, GameSeatStatus status)
+    // findByIdWithPessimisticLock(Long id) — @Lock(PESSIMISTIC_WRITE)
+    // countByGameIdAndStatus(Long gameId, GameSeatStatus status)
 
     /**
      * HELD 상태이면서 선점 만료 시각이 지난 좌석을 AVAILABLE로 벌크 회수한다.
@@ -137,10 +128,8 @@ public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
            and gs.holdExpiresAt < :now
         """)
     int releaseExpiredSeats(
-        @Param("now")
-        LocalDateTime now,
-        @Param("held")
-        GameSeatStatus held,
-        @Param("available")
-        GameSeatStatus available);
+        @Param("now") LocalDateTime now,
+        @Param("held") GameSeatStatus held,
+        @Param("available") GameSeatStatus available
+    );
 }

@@ -106,7 +106,8 @@ class PaymentServiceTest {
     private Payment payment(PaymentStatus status) {
         Order order = mock(Order.class);
 
-        return Payment.builder()
+        return Payment
+            .builder()
             .paymentNo("PAY-20260728010000-000001")
             .order(order)
             .user(mock(User.class))
@@ -138,8 +139,7 @@ class PaymentServiceTest {
             PaymentCreateResponse expected = mock(PaymentCreateResponse.class);
             when(lock.tryLock(3L, TimeUnit.SECONDS)).thenReturn(true);
             when(lock.isHeldByCurrentThread()).thenReturn(true);
-            when(paymentCreationService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request))
-                .thenReturn(expected);
+            when(paymentCreationService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request)).thenReturn(expected);
 
             PaymentCreateResponse response = paymentService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request);
 
@@ -179,8 +179,7 @@ class PaymentServiceTest {
             PaymentCreateResponse response = paymentService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request);
 
             assertThat(response).isSameAs(expected);
-            verify(paymentCreationService, times(2))
-                .requestPayment(USER_ID, IDEMPOTENCY_KEY, request);
+            verify(paymentCreationService, times(2)).requestPayment(USER_ID, IDEMPOTENCY_KEY, request);
             verify(lock).unlock();
         }
 
@@ -211,8 +210,7 @@ class PaymentServiceTest {
             RuntimeException exception = new RuntimeException("결제 생성 실패");
             when(lock.tryLock(3L, TimeUnit.SECONDS)).thenReturn(true);
             when(lock.isHeldByCurrentThread()).thenReturn(true);
-            when(paymentCreationService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request))
-                .thenThrow(exception);
+            when(paymentCreationService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request)).thenThrow(exception);
 
             assertThatThrownBy(() -> paymentService.requestPayment(USER_ID, IDEMPOTENCY_KEY, request))
                 .isSameAs(exception);
@@ -247,24 +245,21 @@ class PaymentServiceTest {
             PaymentCompleteRequest request = completeRequest();
             TossPaymentResponse tossResponse = mock(TossPaymentResponse.class);
             when(payment.getOrder().getId()).thenReturn(ORDER_ID);
-            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID))
-                .thenReturn(Optional.of(payment));
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
             when(tossResponse.isApproved()).thenReturn(true);
             when(tossResponse.getPaymentKey()).thenReturn(PAYMENT_KEY);
             when(tossResponse.getMethod()).thenReturn("CARD");
             when(tossResponse.getApprovedAt()).thenReturn("2026-07-28T12:00:00+09:00");
-            when(tossPaymentClient.confirm(PAYMENT_KEY, PG_ORDER_ID, AMOUNT))
-                .thenReturn(tossResponse);
+            when(tossPaymentClient.confirm(PAYMENT_KEY, PG_ORDER_ID, AMOUNT)).thenReturn(tossResponse);
 
-            PaymentActionResponse response = paymentService.completePayment(
-                USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
+            PaymentActionResponse response
+                = paymentService.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
 
             assertThat(response.getStatus()).isEqualTo(PaymentStatus.APPROVED);
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED);
             assertThat(payment.getPgPaymentKey()).isEqualTo(PAYMENT_KEY);
             assertThat(payment.getMethod()).isEqualTo("CARD");
-            assertThat(payment.getApprovedAt())
-                .isEqualTo(LocalDateTime.of(2026, 7, 28, 12, 0));
+            assertThat(payment.getApprovedAt()).isEqualTo(LocalDateTime.of(2026, 7, 28, 12, 0));
             verify(paymentValidator).validateOwner(payment, USER_ID);
             verify(paymentValidator).validateActiveIdempotencyKey(payment, IDEMPOTENCY_KEY);
             verify(paymentValidator).validateConfirmable(payment, PG_ORDER_ID, AMOUNT);
@@ -275,16 +270,19 @@ class PaymentServiceTest {
         }
 
         @ParameterizedTest(name = "{0} 결제의 기존 결과를 반환한다")
-        @EnumSource(value = PaymentStatus.class, mode = EnumSource.Mode.EXCLUDE, names = "READY")
+        @EnumSource(
+            value = PaymentStatus.class,
+            mode = EnumSource.Mode.EXCLUDE,
+            names = "READY"
+        )
         @DisplayName("이미 종결된 결제는 Toss를 호출하지 않고 기존 결과를 반환한다.")
         void returnsFinalizedPaymentWithoutConfirm(PaymentStatus status) {
             Payment payment = payment(status);
             PaymentCompleteRequest request = mock(PaymentCompleteRequest.class);
-            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID))
-                .thenReturn(Optional.of(payment));
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
 
-            PaymentActionResponse response = paymentService.completePayment(
-                USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
+            PaymentActionResponse response
+                = paymentService.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
 
             assertThat(response.getStatus()).isEqualTo(status);
             verify(paymentValidator).validateOwner(payment, USER_ID);
@@ -299,19 +297,16 @@ class PaymentServiceTest {
             PaymentCompleteRequest request = completeRequest();
             TossPaymentResponse tossResponse = mock(TossPaymentResponse.class);
             when(payment.getOrder().getId()).thenReturn(ORDER_ID);
-            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID))
-                .thenReturn(Optional.of(payment));
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
             when(tossResponse.isApproved()).thenReturn(false);
             when(tossResponse.getStatus()).thenReturn("ABORTED");
-            when(tossPaymentClient.confirm(PAYMENT_KEY, PG_ORDER_ID, AMOUNT))
-                .thenReturn(tossResponse);
+            when(tossPaymentClient.confirm(PAYMENT_KEY, PG_ORDER_ID, AMOUNT)).thenReturn(tossResponse);
 
-            PaymentActionResponse response = paymentService.completePayment(
-                USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
+            PaymentActionResponse response
+                = paymentService.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
 
             assertThat(response.getStatus()).isEqualTo(PaymentStatus.FAILED);
-            assertThat(payment.getFailReason())
-                .isEqualTo("토스 결제 승인 상태가 완료가 아닙니다. status=ABORTED");
+            assertThat(payment.getFailReason()).isEqualTo("토스 결제 승인 상태가 완료가 아닙니다. status=ABORTED");
             verify(orderService).failOrder(ORDER_ID);
             verify(orderService, never()).completeOrder(any());
             verify(paymentRecoveryTaskRepository, never()).save(any());
@@ -323,14 +318,12 @@ class PaymentServiceTest {
             Payment payment = payment(PaymentStatus.READY);
             PaymentCompleteRequest request = completeRequest();
             when(payment.getOrder().getId()).thenReturn(ORDER_ID);
-            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID))
-                .thenReturn(Optional.of(payment));
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
             when(tossPaymentClient.confirm(PAYMENT_KEY, PG_ORDER_ID, AMOUNT))
-                .thenThrow(new TossPaymentStatusUnknownException(
-                    "승인", new RuntimeException("Toss 응답 없음")));
+                .thenThrow(new TossPaymentStatusUnknownException("승인", new RuntimeException("Toss 응답 없음")));
 
-            PaymentActionResponse response = paymentService.completePayment(
-                USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
+            PaymentActionResponse response
+                = paymentService.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
 
             assertThat(response.getStatus()).isEqualTo(PaymentStatus.FAILED);
             assertThat(payment.getPgPaymentKey()).isEqualTo(PAYMENT_KEY);
@@ -338,8 +331,7 @@ class PaymentServiceTest {
             ArgumentCaptor<PaymentRecoveryTask> taskCaptor = ArgumentCaptor.forClass(PaymentRecoveryTask.class);
             verify(paymentRecoveryTaskRepository).save(taskCaptor.capture());
             assertThat(taskCaptor.getValue().getPayment()).isSameAs(payment);
-            assertThat(taskCaptor.getValue().getStatus())
-                .isEqualTo(PaymentRecoveryStatus.PENDING);
+            assertThat(taskCaptor.getValue().getStatus()).isEqualTo(PaymentRecoveryStatus.PENDING);
             verify(orderService).failOrder(ORDER_ID);
             verify(orderService, never()).completeOrder(any());
         }
@@ -351,14 +343,12 @@ class PaymentServiceTest {
             PaymentCompleteRequest request = mock(PaymentCompleteRequest.class);
             when(request.getOrderId()).thenReturn(PG_ORDER_ID);
             when(request.getAmount()).thenReturn(AMOUNT);
-            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID))
-                .thenReturn(Optional.of(payment));
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
             doThrow(new PaymentCallbackMismatchException())
                 .when(paymentValidator)
                 .validateConfirmable(payment, PG_ORDER_ID, AMOUNT);
 
-            assertThatThrownBy(() -> paymentService.completePayment(
-                USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
+            assertThatThrownBy(() -> paymentService.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
                 .isInstanceOf(PaymentCallbackMismatchException.class);
 
             verifyNoInteractions(paymentOrderPolicy, tossPaymentClient, orderService, paymentRecoveryTaskRepository);
@@ -372,14 +362,10 @@ class PaymentServiceTest {
             PaymentCompleteRequest request = mock(PaymentCompleteRequest.class);
             when(request.getOrderId()).thenReturn(PG_ORDER_ID);
             when(request.getAmount()).thenReturn(AMOUNT);
-            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID))
-                .thenReturn(Optional.of(payment));
-            doThrow(new OrderExpiredException())
-                .when(paymentOrderPolicy)
-                .ensurePayable(payment, payment.getOrder());
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
+            doThrow(new OrderExpiredException()).when(paymentOrderPolicy).ensurePayable(payment, payment.getOrder());
 
-            assertThatThrownBy(() -> paymentService.completePayment(
-                USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
+            assertThatThrownBy(() -> paymentService.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
                 .isInstanceOf(OrderExpiredException.class);
 
             verifyNoInteractions(tossPaymentClient, orderService, paymentRecoveryTaskRepository);
@@ -400,16 +386,13 @@ class PaymentServiceTest {
             when(request.getOrderId()).thenReturn(PG_ORDER_ID);
             when(request.getCode()).thenReturn("PAY_PROCESS_CANCELED");
             when(request.getMessage()).thenReturn("사용자가 결제를 취소했습니다.");
-            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID))
-                .thenReturn(Optional.of(payment));
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
 
-            PaymentActionResponse response = paymentService.failPayment(
-                USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
+            PaymentActionResponse response = paymentService.failPayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
 
             assertThat(response.getStatus()).isEqualTo(PaymentStatus.FAILED);
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.FAILED);
-            assertThat(payment.getFailReason())
-                .isEqualTo("[PAY_PROCESS_CANCELED] 사용자가 결제를 취소했습니다.");
+            assertThat(payment.getFailReason()).isEqualTo("[PAY_PROCESS_CANCELED] 사용자가 결제를 취소했습니다.");
             assertThat(payment.getFailedAt()).isNotNull();
             verify(paymentValidator).validateOwner(payment, USER_ID);
             verify(paymentValidator).validateActiveIdempotencyKey(payment, IDEMPOTENCY_KEY);
@@ -419,16 +402,18 @@ class PaymentServiceTest {
         }
 
         @ParameterizedTest(name = "{0} 결제의 기존 결과를 반환한다")
-        @EnumSource(value = PaymentStatus.class, mode = EnumSource.Mode.EXCLUDE, names = "READY")
+        @EnumSource(
+            value = PaymentStatus.class,
+            mode = EnumSource.Mode.EXCLUDE,
+            names = "READY"
+        )
         @DisplayName("이미 종결된 결제는 상태를 변경하지 않고 기존 결과를 반환한다.")
         void returnsFinalizedPaymentWithoutFailingOrder(PaymentStatus status) {
             Payment payment = payment(status);
             PaymentFailRequest request = mock(PaymentFailRequest.class);
-            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID))
-                .thenReturn(Optional.of(payment));
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
 
-            PaymentActionResponse response = paymentService.failPayment(
-                USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
+            PaymentActionResponse response = paymentService.failPayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
 
             assertThat(response.getStatus()).isEqualTo(status);
             assertThat(payment.getStatus()).isEqualTo(status);
@@ -445,14 +430,12 @@ class PaymentServiceTest {
             Payment payment = payment(PaymentStatus.READY);
             PaymentFailRequest request = mock(PaymentFailRequest.class);
             when(request.getOrderId()).thenReturn("different-order-id");
-            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID))
-                .thenReturn(Optional.of(payment));
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
             doThrow(new PaymentCallbackMismatchException())
                 .when(paymentValidator)
                 .validatePgOrderId(payment, "different-order-id");
 
-            assertThatThrownBy(() -> paymentService.failPayment(
-                USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
+            assertThatThrownBy(() -> paymentService.failPayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
                 .isInstanceOf(PaymentCallbackMismatchException.class);
 
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.READY);
@@ -473,10 +456,8 @@ class PaymentServiceTest {
             PaymentCancelRequest request = new PaymentCancelRequest("사용자 요청");
             TossPaymentResponse tossResponse = mock(TossPaymentResponse.class);
             payment.assignPgPaymentKey(PAYMENT_KEY);
-            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID))
-                .thenReturn(Optional.of(payment));
-            when(tossPaymentClient.cancel(PAYMENT_KEY, request.getCancelReason()))
-                .thenReturn(tossResponse);
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
+            when(tossPaymentClient.cancel(PAYMENT_KEY, request.getCancelReason())).thenReturn(tossResponse);
             when(tossResponse.isCancelCompleted()).thenReturn(true);
 
             PaymentActionResponse response = paymentService.cancelPayment(USER_ID, PAYMENT_ID, request);
@@ -493,8 +474,7 @@ class PaymentServiceTest {
         void returnsCanceledPaymentWithoutCancelingAgain() {
             Payment payment = payment(PaymentStatus.CANCELED);
             PaymentCancelRequest request = new PaymentCancelRequest("중복 요청");
-            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID))
-                .thenReturn(Optional.of(payment));
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
 
             PaymentActionResponse response = paymentService.cancelPayment(USER_ID, PAYMENT_ID, request);
 
@@ -505,16 +485,19 @@ class PaymentServiceTest {
         }
 
         @ParameterizedTest(name = "{0} 결제는 취소할 수 없다")
-        @EnumSource(value = PaymentStatus.class, names = {"READY", "FAILED"})
+        @EnumSource(
+            value = PaymentStatus.class,
+            names = {
+                "READY",
+                "FAILED"
+            }
+        )
         @DisplayName("승인되지 않은 결제는 Toss 취소를 호출하지 않는다.")
         void rejectsUnapprovedPayment(PaymentStatus status) {
             Payment payment = payment(status);
             PaymentCancelRequest request = new PaymentCancelRequest("사용자 요청");
-            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID))
-                .thenReturn(Optional.of(payment));
-            doThrow(new PaymentCancelNotAllowedException())
-                .when(paymentValidator)
-                .validateCancelable(payment);
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
+            doThrow(new PaymentCancelNotAllowedException()).when(paymentValidator).validateCancelable(payment);
 
             assertThatThrownBy(() -> paymentService.cancelPayment(USER_ID, PAYMENT_ID, request))
                 .isInstanceOf(PaymentCancelNotAllowedException.class);
@@ -529,11 +512,9 @@ class PaymentServiceTest {
             Payment payment = payment(PaymentStatus.APPROVED);
             PaymentCancelRequest request = new PaymentCancelRequest("사용자 요청");
             payment.assignPgPaymentKey(PAYMENT_KEY);
-            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID))
-                .thenReturn(Optional.of(payment));
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
             when(tossPaymentClient.cancel(PAYMENT_KEY, request.getCancelReason()))
-                .thenThrow(new TossPaymentStatusUnknownException(
-                    "취소", new RuntimeException("Toss 응답 없음")));
+                .thenThrow(new TossPaymentStatusUnknownException("취소", new RuntimeException("Toss 응답 없음")));
 
             assertThatThrownBy(() -> paymentService.cancelPayment(USER_ID, PAYMENT_ID, request))
                 .isInstanceOf(PaymentCancelFailedException.class);
@@ -548,10 +529,8 @@ class PaymentServiceTest {
             PaymentCancelRequest request = new PaymentCancelRequest("사용자 요청");
             TossPaymentResponse tossResponse = mock(TossPaymentResponse.class);
             payment.assignPgPaymentKey(PAYMENT_KEY);
-            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID))
-                .thenReturn(Optional.of(payment));
-            when(tossPaymentClient.cancel(PAYMENT_KEY, request.getCancelReason()))
-                .thenReturn(tossResponse);
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
+            when(tossPaymentClient.cancel(PAYMENT_KEY, request.getCancelReason())).thenReturn(tossResponse);
             when(tossResponse.isCancelCompleted()).thenReturn(false);
             when(tossResponse.getStatus()).thenReturn("DONE");
 
@@ -601,9 +580,7 @@ class PaymentServiceTest {
         void rejectsPaymentOwnedByAnotherUser() {
             Payment payment = payment(PaymentStatus.APPROVED);
             when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(payment));
-            doThrow(new PaymentAccessDeniedException())
-                .when(paymentValidator)
-                .validateOwner(payment, USER_ID);
+            doThrow(new PaymentAccessDeniedException()).when(paymentValidator).validateOwner(payment, USER_ID);
 
             assertThatThrownBy(() -> paymentService.getPayment(USER_ID, PAYMENT_ID))
                 .isInstanceOf(PaymentAccessDeniedException.class);

@@ -18,7 +18,7 @@ public class TestDatabaseCleanUpService {
         this.redisTemplate = redisTemplate;
     }
 
-    //모든 저장소 RDB+Redis 초기화
+    // 모든 저장소 RDB+Redis 초기화
     @Transactional
     public void cleanUpAll() {
         // MySQL RDB 테이블 Truncate

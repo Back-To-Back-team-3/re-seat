@@ -17,7 +17,7 @@ public class RedissonConfig {
     private String host;
     @Value("${spring.data.redis.port:6379}")
     private int port;
-    //application.yml의 패스워드 읽기
+    // application.yml의 패스워드 읽기
     @Value("${spring.data.redis.password:}")
     private String password;
 
@@ -25,10 +25,9 @@ public class RedissonConfig {
     public RedissonClient redissonClient() {
         Config config = new Config();
 
-        var singleServerConfig = config.useSingleServer()
-            .setAddress(REDISSON_HOST_PREFIX + host + ":" + port);
+        var singleServerConfig = config.useSingleServer().setAddress(REDISSON_HOST_PREFIX + host + ":" + port);
 
-        //비밀번호가 설정되어 있다면 Redisson에 주입합니다
+        // 비밀번호가 설정되어 있다면 Redisson에 주입합니다
         if (password != null && !password.trim().isEmpty()) {
             singleServerConfig.setPassword(password.trim());
         }

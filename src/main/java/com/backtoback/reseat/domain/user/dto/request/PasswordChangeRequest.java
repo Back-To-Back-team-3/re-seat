@@ -13,7 +13,11 @@ public class PasswordChangeRequest {
     private String currentPassword;
 
     @NotBlank(message = "새로운 비밀번호는 필수 입력값입니다.")
-    @Size(min = 8, max = 20, message = "비밀번호는 8자 이상 20자 이하로 입력해 주세요.")
+    @Size(
+        min = 8,
+        max = 20,
+        message = "비밀번호는 8자 이상 20자 이하로 입력해 주세요."
+    )
     private String newPassword;
 
 }

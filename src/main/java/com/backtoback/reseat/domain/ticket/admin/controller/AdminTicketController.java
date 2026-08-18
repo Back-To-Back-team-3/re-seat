@@ -32,15 +32,17 @@ public class AdminTicketController {
 
     private final AdminTicketService adminTicketService;
 
-    //관리자 전용: 특정 사용자별 티켓 소유 목록 조회
+    // 관리자 전용: 특정 사용자별 티켓 소유 목록 조회
     @GetMapping("/users/{userId}")
     public ResponseEntity<ApiResponse<PageResponse<AdminUserTicketResponse>>> getUserTickets(
-        @PathVariable
-        Long userId,
-        @RequestParam(required = false)
-        TicketStatus status,
-        @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
-        Pageable pageable) {
+        @PathVariable Long userId,
+        @RequestParam(required = false) TicketStatus status,
+        @PageableDefault(
+            size = 20,
+            sort = "createdAt",
+            direction = Sort.Direction.DESC
+        ) Pageable pageable
+    ) {
 
         Page<AdminUserTicketResponse> pageResult = adminTicketService.getUserTickets(userId, status, pageable);
 
@@ -49,18 +51,15 @@ public class AdminTicketController {
             .body(ApiResponse.success("사용자 티켓 소유 목록 조회 완료", PageResponse.of(pageResult)));
     }
 
-    //관리자 전용: 특정 티켓 강제 취소
+    // 관리자 전용: 특정 티켓 강제 취소
     @PostMapping("/{ticketId}/cancel")
     public ResponseEntity<ApiResponse<AdminTicketCancelResponse>> cancelTicketByAdmin(
-        @PathVariable
-        Long ticketId,
-        @Valid @RequestBody
-        AdminTicketCancelRequest request) {
+        @PathVariable Long ticketId,
+        @Valid @RequestBody AdminTicketCancelRequest request
+    ) {
 
         AdminTicketCancelResponse response = adminTicketService.cancelTicketByAdmin(ticketId, request);
 
-        return ResponseEntity
-            .status(HttpStatus.OK)
-            .body(ApiResponse.success("관리자 직권 티켓 강제 취소 및 자원 반환 완료", response));
+        return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success("관리자 직권 티켓 강제 취소 및 자원 반환 완료", response));
     }
 }

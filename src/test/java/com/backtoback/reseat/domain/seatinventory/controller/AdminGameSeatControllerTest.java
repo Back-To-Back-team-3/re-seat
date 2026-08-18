@@ -41,18 +41,20 @@ class AdminGameSeatControllerTest {
 
     @BeforeEach
     void setUp() {
-        gameIdWithSeats = entityManager.createQuery(
-            "select g.id from Game g where g.stadium.id = :stadiumId order by g.id asc", Long.class)
-            .setParameter("stadiumId", SEEDED_STADIUM_ID)
-            .setMaxResults(1)
-            .getSingleResult();
+        gameIdWithSeats
+            = entityManager
+                .createQuery("select g.id from Game g where g.stadium.id = :stadiumId order by g.id asc", Long.class)
+                .setParameter("stadiumId", SEEDED_STADIUM_ID)
+                .setMaxResults(1)
+                .getSingleResult();
     }
 
     @DisplayName("ADMIN이 재고 오픈을 요청하면 201 Created와 생성 결과를 반환한다")
     @WithMockUser(roles = "ADMIN")
     @Test
     void should_return201_when_adminOpensInventory() throws Exception {
-        mockMvc.perform(post(OPEN_INVENTORY_URI, gameIdWithSeats))
+        mockMvc
+            .perform(post(OPEN_INVENTORY_URI, gameIdWithSeats))
             .andDo(print())
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.success").value(true))
@@ -66,25 +68,22 @@ class AdminGameSeatControllerTest {
     @WithAnonymousUser
     @Test
     void should_return401_when_anonymousUser() throws Exception {
-        mockMvc.perform(post(OPEN_INVENTORY_URI, gameIdWithSeats))
-            .andDo(print())
-            .andExpect(status().isUnauthorized());
+        mockMvc.perform(post(OPEN_INVENTORY_URI, gameIdWithSeats)).andDo(print()).andExpect(status().isUnauthorized());
     }
 
     @DisplayName("ADMIN이 아닌 일반 사용자는 403을 받는다")
     @WithMockUser(roles = "USER")
     @Test
     void should_return403_when_normalUser() throws Exception {
-        mockMvc.perform(post(OPEN_INVENTORY_URI, gameIdWithSeats))
-            .andDo(print())
-            .andExpect(status().isForbidden());
+        mockMvc.perform(post(OPEN_INVENTORY_URI, gameIdWithSeats)).andDo(print()).andExpect(status().isForbidden());
     }
 
     @DisplayName("존재하지 않는 경기는 404 GAME_NOT_FOUND를 반환한다")
     @WithMockUser(roles = "ADMIN")
     @Test
     void should_return404_when_gameNotFound() throws Exception {
-        mockMvc.perform(post(OPEN_INVENTORY_URI, NOT_EXISTING_GAME_ID))
+        mockMvc
+            .perform(post(OPEN_INVENTORY_URI, NOT_EXISTING_GAME_ID))
             .andDo(print())
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.success").value(false))
@@ -96,11 +95,11 @@ class AdminGameSeatControllerTest {
     @Test
     void should_return409_when_calledTwice() throws Exception {
         // given
-        mockMvc.perform(post(OPEN_INVENTORY_URI, gameIdWithSeats))
-            .andExpect(status().isCreated());
+        mockMvc.perform(post(OPEN_INVENTORY_URI, gameIdWithSeats)).andExpect(status().isCreated());
 
         // when & then
-        mockMvc.perform(post(OPEN_INVENTORY_URI, gameIdWithSeats))
+        mockMvc
+            .perform(post(OPEN_INVENTORY_URI, gameIdWithSeats))
             .andDo(print())
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.success").value(false))

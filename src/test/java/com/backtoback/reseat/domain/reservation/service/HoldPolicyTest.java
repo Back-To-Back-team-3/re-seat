@@ -26,15 +26,13 @@ class HoldPolicyTest {
     @Test
     @DisplayName("불변식: HOLD_TTL >= PAYMENT_DEADLINE (깨지면 결제 성공 시점에 좌석이 풀림)")
     void invariant_holdTtl_gte_paymentDeadline() {
-        assertThat(HoldPolicy.HOLD_TTL)
-            .isGreaterThanOrEqualTo(HoldPolicy.PAYMENT_DEADLINE);
+        assertThat(HoldPolicy.HOLD_TTL).isGreaterThanOrEqualTo(HoldPolicy.PAYMENT_DEADLINE);
     }
 
     @Test
     @DisplayName("연장 상한은 선점 10 + 결제 8 = 18분이다")
     void extendCap_is18Minutes() {
-        assertThat(HoldPolicy.HOLD_EXTEND_CAP)
-            .isEqualTo(HoldPolicy.HOLD_TTL.plus(HoldPolicy.PAYMENT_DEADLINE));
+        assertThat(HoldPolicy.HOLD_EXTEND_CAP).isEqualTo(HoldPolicy.HOLD_TTL.plus(HoldPolicy.PAYMENT_DEADLINE));
     }
 
     @Test

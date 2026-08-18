@@ -47,14 +47,16 @@ class AdminUserControllerTest {
     @DisplayName("회원 목록을 검색하여 조회한다")
     void searchUsers() throws Exception {
         // given
-        User user = User.builder()
-            .id(1L)
-            .email("test@test.com")
-            .name("test")
-            .phone("010-1234-5678")
-            .role(UserRole.USER)
-            .status(UserStatus.ACTIVE)
-            .build();
+        User user
+            = User
+                .builder()
+                .id(1L)
+                .email("test@test.com")
+                .name("test")
+                .phone("010-1234-5678")
+                .role(UserRole.USER)
+                .status(UserStatus.ACTIVE)
+                .build();
 
         AdminUserResponse response = AdminUserResponse.from(user);
         Page<AdminUserResponse> page = new PageImpl<>(List.of(response));
@@ -62,10 +64,8 @@ class AdminUserControllerTest {
         when(adminUserService.searchUsers(any(), any())).thenReturn(page);
 
         // when & then
-        mockMvc.perform(get("/api/v1/admin/users")
-            .param("email", "test@test.com")
-            .param("page", "0")
-            .param("size", "20"))
+        mockMvc
+            .perform(get("/api/v1/admin/users").param("email", "test@test.com").param("page", "0").param("size", "20"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.message").value("회원 목록 조회 완료"))
@@ -76,20 +76,23 @@ class AdminUserControllerTest {
     @DisplayName("회원 상세 정보를 조회한다")
     void getUserDetail() throws Exception {
         // given
-        User user = User.builder()
-            .id(1L)
-            .email("test@test.com")
-            .name("test")
-            .phone("010-1234-5678")
-            .role(UserRole.USER)
-            .status(UserStatus.ACTIVE)
-            .build();
+        User user
+            = User
+                .builder()
+                .id(1L)
+                .email("test@test.com")
+                .name("test")
+                .phone("010-1234-5678")
+                .role(UserRole.USER)
+                .status(UserStatus.ACTIVE)
+                .build();
 
         AdminUserResponse response = AdminUserResponse.from(user);
         when(adminUserService.getUserDetail(1L)).thenReturn(response);
 
         // when & then
-        mockMvc.perform(get("/api/v1/admin/users/{userId}", 1L))
+        mockMvc
+            .perform(get("/api/v1/admin/users/{userId}", 1L))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.message").value("회원 상세 조회 완료"))
@@ -106,9 +109,12 @@ class AdminUserControllerTest {
         doNothing().when(adminUserService).updateUserRole(1L, UserRole.ADMIN);
 
         // when & then
-        mockMvc.perform(patch("/api/v1/admin/users/{userId}/role", 1L)
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(request)))
+        mockMvc
+            .perform(
+                patch("/api/v1/admin/users/{userId}/role", 1L)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request))
+            )
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.message").value("회원 권한 변경 완료"));
@@ -124,9 +130,12 @@ class AdminUserControllerTest {
         doNothing().when(adminUserService).updateUserStatus(1L, UserStatus.SUSPENDED);
 
         // when & then
-        mockMvc.perform(patch("/api/v1/admin/users/{userId}/status", 1L)
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(request)))
+        mockMvc
+            .perform(
+                patch("/api/v1/admin/users/{userId}/status", 1L)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request))
+            )
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.message").value("회원 상태 변경 완료"));

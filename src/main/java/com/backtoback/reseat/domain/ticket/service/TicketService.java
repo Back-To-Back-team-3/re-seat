@@ -48,18 +48,14 @@ public class TicketService {
     public List<Ticket> issue(Order order) {
         List<OrderItem> orderItems = orderItemRepository.findByOrder_Id(order.getId());
 
-        return orderItems.stream()
+        return orderItems
+            .stream()
             .filter(orderItem -> !ticketRepository.existsByOrderItemId(orderItem.getId()))
             .map(orderItem -> {
                 String ticketNo = generateTicketNo(order.getCreatedAt());
                 String qrToken = generateQrToken();
 
-                Ticket ticket = Ticket.issue(
-                    ticketNo,
-                    order.getUser(),
-                    orderItem,
-                    orderItem.getGameSeat(),
-                    qrToken);
+                Ticket ticket = Ticket.issue(ticketNo, order.getUser(), orderItem, orderItem.getGameSeat(), qrToken);
 
                 return ticketRepository.save(ticket);
             })
@@ -68,17 +64,16 @@ public class TicketService {
 
     @Transactional(readOnly = true)
     public Page<TicketListResponse> getMyTickets(Long userId, TicketStatus status, Pageable pageable) {
-        Page<Ticket> tickets = (status == null)
-            ? ticketRepository.findByUserId(userId, pageable)
-            : ticketRepository.findByUserIdAndStatus(userId, status, pageable);
+        Page<Ticket> tickets
+            = (status == null) ? ticketRepository.findByUserId(userId, pageable)
+                : ticketRepository.findByUserIdAndStatus(userId, status, pageable);
 
         return tickets.map(TicketListResponse::from);
     }
 
     @Transactional(readOnly = true)
     public TicketDetailResponse getTicket(Long userId, Long ticketId) {
-        Ticket ticket = ticketRepository.findDetailById(ticketId)
-            .orElseThrow(TicketNotFoundException::new);
+        Ticket ticket = ticketRepository.findDetailById(ticketId).orElseThrow(TicketNotFoundException::new);
 
         if (!ticket.getUser().getId().equals(userId)) {
             throw new TicketAccessDeniedException();
@@ -89,8 +84,7 @@ public class TicketService {
 
     @Transactional
     public TicketCancelResponse cancelTicket(Long userId, Long ticketId) {
-        Ticket ticket = ticketRepository.findDetailById(ticketId)
-            .orElseThrow(TicketNotFoundException::new);
+        Ticket ticket = ticketRepository.findDetailById(ticketId).orElseThrow(TicketNotFoundException::new);
 
         if (!ticket.getUser().getId().equals(userId)) {
             throw new TicketAccessDeniedException();
@@ -102,10 +96,8 @@ public class TicketService {
 
         Payment payment = getApprovedPaymentByOrderId(ticket.getOrderItem().getOrder().getId());
 
-        PaymentActionResponse paymentResponse = paymentService.cancelPayment(
-            userId,
-            payment.getId(),
-            new PaymentCancelRequest("사용자 티켓 취소"));
+        PaymentActionResponse paymentResponse
+            = paymentService.cancelPayment(userId, payment.getId(), new PaymentCancelRequest("사용자 티켓 취소"));
 
         boolean refunded = paymentResponse.getStatus() == PaymentStatus.CANCELED;
 
@@ -117,8 +109,8 @@ public class TicketService {
 
     @Transactional
     public TicketVerifyResponse verify(Long gameId, String qrToken) {
-        Ticket ticket = ticketRepository.findByQrTokenAndGameId(qrToken, gameId)
-            .orElseThrow(TicketNotFoundException::new);
+        Ticket ticket
+            = ticketRepository.findByQrTokenAndGameId(qrToken, gameId).orElseThrow(TicketNotFoundException::new);
 
         ticket.markUsed();
 
@@ -133,24 +125,24 @@ public class TicketService {
     }
 
     private Payment getApprovedPaymentByOrderId(Long orderId) {
-        return paymentRepository.findByOrder_IdAndStatus(orderId, PaymentStatus.APPROVED)
-            .orElseGet(() -> paymentRepository.findByOrderIdWithPessimisticWriteLock(orderId)
-                .orElseThrow(PaymentNotFoundException::new));
+        return paymentRepository
+            .findByOrder_IdAndStatus(orderId, PaymentStatus.APPROVED)
+            .orElseGet(
+                () -> paymentRepository
+                    .findByOrderIdWithPessimisticWriteLock(orderId)
+                    .orElseThrow(PaymentNotFoundException::new)
+            );
     }
 
     private String generateTicketNo(LocalDateTime baseTime) {
         String datePart = baseTime.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String ticketNo = "TKT-" + datePart + "-" + UUID.randomUUID().toString()
-            .replace("-", "")
-            .substring(0, 6)
-            .toUpperCase();
+        String ticketNo
+            = "TKT-" + datePart + "-" + UUID.randomUUID().toString().replace("-", "").substring(0, 6).toUpperCase();
 
         int retry = 0;
         while (ticketRepository.existsByTicketNo(ticketNo) && retry < 3) {
-            ticketNo = "TKT-" + datePart + "-" + UUID.randomUUID().toString()
-                .replace("-", "")
-                .substring(0, 6)
-                .toUpperCase();
+            ticketNo
+                = "TKT-" + datePart + "-" + UUID.randomUUID().toString().replace("-", "").substring(0, 6).toUpperCase();
             retry++;
         }
 

@@ -21,8 +21,16 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@Table(name = "seat_zones", uniqueConstraints = @UniqueConstraint(name = "uk_seat_zones_stadium_name", columnNames = {
-    "stadium_id", "name"}))
+@Table(
+    name = "seat_zones",
+    uniqueConstraints = @UniqueConstraint(
+        name = "uk_seat_zones_stadium_name",
+        columnNames = {
+            "stadium_id",
+            "name"
+        }
+    )
+)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class SeatZone extends BaseEntity {
 
@@ -31,10 +39,18 @@ public class SeatZone extends BaseEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "stadium_id", nullable = false, foreignKey = @ForeignKey(name = "fk_seat_zones_stadium"))
+    @JoinColumn(
+        name = "stadium_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_seat_zones_stadium")
+    )
     private Stadium stadium;
 
-    @Column(name = "name", nullable = false, length = 100)
+    @Column(
+        name = "name",
+        nullable = false,
+        length = 100
+    )
     private String name;
 
     /**
@@ -42,7 +58,11 @@ public class SeatZone extends BaseEntity {
      * 요일·시기·연령 할인은 여기서 다루지 않고 C-2 PricePolicy에서 산정한다.
      */
     @Enumerated(EnumType.STRING)
-    @Column(name = "grade", nullable = false, length = 20)
+    @Column(
+        name = "grade",
+        nullable = false,
+        length = 20
+    )
     private SeatGrade grade;
 
     /**
@@ -50,7 +70,10 @@ public class SeatZone extends BaseEntity {
      * 화~목 기준: INFIELD=18000, OUTFIELD=16000
      * 실제 game_seats.price는 C-2 PricePolicy.calculate()가 배수를 곱해 산정한다.
      */
-    @Column(name = "base_price", nullable = false)
+    @Column(
+        name = "base_price",
+        nullable = false
+    )
     private int basePrice;
 
     public static SeatZone of(Stadium stadium, String name, SeatGrade grade, int basePrice) {

@@ -15,12 +15,20 @@ import jakarta.servlet.http.HttpServletResponse;
 public class OAuth2AuthenticationFailureHandler extends SimpleUrlAuthenticationFailureHandler {
 
     @Override
-    public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
-        AuthenticationException exception) throws IOException, ServletException {
+    public void onAuthenticationFailure(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        AuthenticationException exception
+    )
+        throws IOException,
+        ServletException {
 
-        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173")
-            .queryParam("error", exception.getLocalizedMessage())
-            .build().toUriString();
+        String targetUrl
+            = UriComponentsBuilder
+                .fromUriString("http://localhost:5173")
+                .queryParam("error", exception.getLocalizedMessage())
+                .build()
+                .toUriString();
 
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }

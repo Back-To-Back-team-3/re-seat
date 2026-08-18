@@ -24,17 +24,33 @@ public class Stadium extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "name", nullable = false, length = 100, unique = true)
+    @Column(
+        name = "name",
+        nullable = false,
+        length = 100,
+        unique = true
+    )
     private String name;
 
-    @Column(name = "address", nullable = false, length = 255)
+    @Column(
+        name = "address",
+        nullable = false,
+        length = 255
+    )
     private String address;
 
-    @Column(name = "total_capacity", nullable = false)
+    @Column(
+        name = "total_capacity",
+        nullable = false
+    )
     private int totalCapacity;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
+    @Column(
+        name = "status",
+        nullable = false,
+        length = 20
+    )
     private StadiumStatus status = StadiumStatus.ACTIVE;
 
     public static Stadium of(String name, String address, int totalCapacity) {

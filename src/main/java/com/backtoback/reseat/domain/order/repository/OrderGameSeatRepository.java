@@ -18,13 +18,12 @@ public interface OrderGameSeatRepository extends JpaRepository<GameSeat, Long> {
 
     /**
      * 결제 기한 만료 주문과 연결된 HELD 경기 좌석을 AVAILABLE로 벌크 전이한다.
-     *
      * <p>좌석 상태를 AVAILABLE로 변경하면서 선점 만료 시간을 함께 초기화 한다.</p>
      *
-     * @param now          만료 판정 기준 시간
-     * @param held         선점 해제 대상 좌석 상태
+     * @param now 만료 판정 기준 시간
+     * @param held 선점 해제 대상 좌석 상태
      * @param orderExpired 연결된 주문의 만료 상태
-     * @param available    변경할 좌석 상태
+     * @param available 변경할 좌석 상태
      * @return AVAILABLE로 전이된 경기 좌석 수
      */
     @Modifying(clearAutomatically = true)
@@ -41,12 +40,9 @@ public interface OrderGameSeatRepository extends JpaRepository<GameSeat, Long> {
         )
         """)
     int releaseGameSeatsByExpiredOrders(
-        @Param("now")
-        LocalDateTime now,
-        @Param("held")
-        GameSeatStatus held,
-        @Param("orderExpired")
-        OrderStatus orderExpired,
-        @Param("available")
-        GameSeatStatus available);
+        @Param("now") LocalDateTime now,
+        @Param("held") GameSeatStatus held,
+        @Param("orderExpired") OrderStatus orderExpired,
+        @Param("available") GameSeatStatus available
+    );
 }

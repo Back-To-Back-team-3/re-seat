@@ -46,18 +46,12 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
      * - 사용자 상세 조회 API
      * 에서 연관 엔티티(경기, 좌석 등)를 Fetch Join으로 함께 조회할 때 사용
      */
-    @Query("select t from Ticket t " +
-        "join fetch t.user u " +
-        "join fetch t.game g " +
-        "join fetch g.stadium st " +
-        "join fetch g.homeTeam ht " +
-        "join fetch g.awayTeam at " +
-        "join fetch t.gameSeat gs " +
-        "join fetch gs.seat s " +
-        "join fetch s.zone z " +
-        "where t.id = :id")
-    Optional<Ticket> findDetailById(@Param("id")
-    Long id);
+    @Query(
+        "select t from Ticket t " + "join fetch t.user u " + "join fetch t.game g " + "join fetch g.stadium st "
+            + "join fetch g.homeTeam ht " + "join fetch g.awayTeam at " + "join fetch t.gameSeat gs "
+            + "join fetch gs.seat s " + "join fetch s.zone z " + "where t.id = :id"
+    )
+    Optional<Ticket> findDetailById(@Param("id") Long id);
 
     /**
      * 사용자 본인 티켓 단건 조회
@@ -71,22 +65,17 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
      * 관리자용: 특정 사용자의 티켓 소유 목록 조회
      * Fetch Join + 동적 상태 필터 + 페이징
      */
-    @Query(value = "select t from Ticket t " +
-        "join fetch t.game g " +
-        "join fetch g.stadium st " +
-        "join fetch g.homeTeam ht " +
-        "join fetch g.awayTeam at " +
-        "join fetch t.gameSeat gs " +
-        "join fetch gs.seat s " +
-        "join fetch s.zone z " +
-        "where t.user.id = :userId " +
-        "and (:status is null or t.status = :status)", countQuery = "select count(t) from Ticket t " +
-            "where t.user.id = :userId " +
-            "and (:status is null or t.status = :status)")
+    @Query(
+        value = "select t from Ticket t " + "join fetch t.game g " + "join fetch g.stadium st "
+            + "join fetch g.homeTeam ht " + "join fetch g.awayTeam at " + "join fetch t.gameSeat gs "
+            + "join fetch gs.seat s " + "join fetch s.zone z " + "where t.user.id = :userId "
+            + "and (:status is null or t.status = :status)",
+        countQuery = "select count(t) from Ticket t " + "where t.user.id = :userId "
+            + "and (:status is null or t.status = :status)"
+    )
     Page<Ticket> findAllByUserIdAndStatusWithDetails(
-        @Param("userId")
-        Long userId,
-        @Param("status")
-        TicketStatus status,
-        Pageable pageable);
+        @Param("userId") Long userId,
+        @Param("status") TicketStatus status,
+        Pageable pageable
+    );
 }

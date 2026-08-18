@@ -65,40 +65,25 @@ public class OrderServiceTest {
     private OrderService orderService;
 
     private Order createdOrder() {
-        return Order.of(
-            ORDER_NO,
-            mock(User.class),
-            mock(Reservation.class),
-            TOTAL_AMOUNT,
-            PAYMENT_DEADLINE);
+        return Order.of(ORDER_NO, mock(User.class), mock(Reservation.class), TOTAL_AMOUNT, PAYMENT_DEADLINE);
     }
 
-    private void givenLockedReservation(
-        LocalDateTime createdAt,
-        LocalDateTime holdExpiresAt) {
+    private void givenLockedReservation(LocalDateTime createdAt, LocalDateTime holdExpiresAt) {
 
-        User user = User.builder()
-            .id(USER_ID)
-            .build();
+        User user = User.builder().id(USER_ID).build();
 
-        Reservation reservation = Reservation.builder()
-            .user(user)
-            .status(ReservationStatus.HOLDING)
-            .holdExpiresAt(holdExpiresAt)
-            .build();
+        Reservation reservation
+            = Reservation.builder().user(user).status(ReservationStatus.HOLDING).holdExpiresAt(holdExpiresAt).build();
 
         // 생성 시간을 테스트 조건에 맞게 설정한다.
         ReflectionTestUtils.setField(reservation, "createdAt", createdAt);
 
-        given(userRepository.findById(USER_ID))
-            .willReturn(Optional.of(user));
+        given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
         given(orderReservationRepository.findByIdWithPessimisticWriteLock(RESERVATION_ID))
             .willReturn(Optional.of(reservation));
     }
 
-    private CreateOrderFixture givenValidCreateOrder(
-        LocalDateTime createdAt,
-        LocalDateTime holdExpiresAt) {
+    private CreateOrderFixture givenValidCreateOrder(LocalDateTime createdAt, LocalDateTime holdExpiresAt) {
 
         return givenValidCreateOrder(createdAt, holdExpiresAt, 1);
     }
@@ -106,7 +91,8 @@ public class OrderServiceTest {
     private CreateOrderFixture givenValidCreateOrder(
         LocalDateTime createdAt,
         LocalDateTime holdExpiresAt,
-        int seatCount) {
+        int seatCount
+    ) {
 
         givenLockedReservation(createdAt, holdExpiresAt);
 
@@ -114,24 +100,18 @@ public class OrderServiceTest {
         List<ReservationSeat> reservationSeats = new ArrayList<>();
 
         for (int i = 0; i < seatCount; i++) {
-            GameSeat gameSeat = GameSeat.builder()
-                .status(GameSeatStatus.HELD)
-                .build();
+            GameSeat gameSeat = GameSeat.builder().status(GameSeatStatus.HELD).build();
 
             gameSeats.add(gameSeat);
 
-            ReservationSeat reservationSeat = ReservationSeat.builder()
-                .gameSeat(gameSeat)
-                .build();
+            ReservationSeat reservationSeat = ReservationSeat.builder().gameSeat(gameSeat).build();
 
             reservationSeats.add(reservationSeat);
         }
 
-        given(reservationSeatRepository.findByReservation_Id(RESERVATION_ID))
-            .willReturn(reservationSeats);
+        given(reservationSeatRepository.findByReservation_Id(RESERVATION_ID)).willReturn(reservationSeats);
 
-        given(orderRepository.save(any(Order.class)))
-            .willAnswer(invocation -> invocation.getArgument(0));
+        given(orderRepository.save(any(Order.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         return new CreateOrderFixture(gameSeats);
     }
@@ -142,13 +122,11 @@ public class OrderServiceTest {
 
         Order order = createdOrder();
 
-        when(orderRepository.findById(ORDER_ID))
-            .thenReturn(Optional.of(order));
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
 
         orderService.completeOrder(ORDER_ID);
 
-        assertThat(order.getStatus())
-            .isEqualTo(OrderStatus.PAID);
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.PAID);
 
         verify(orderRepository).findById(ORDER_ID);
     }
@@ -161,13 +139,11 @@ public class OrderServiceTest {
 
         Order order = createdOrder();
 
-        when(orderRepository.findById(ORDER_ID))
-            .thenReturn(Optional.of(order));
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
 
         orderService.expireOrder(ORDER_ID);
 
-        assertThat(order.getStatus())
-            .isEqualTo(OrderStatus.EXPIRED);
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.EXPIRED);
 
         verify(orderRepository).findById(ORDER_ID);
     }
@@ -178,13 +154,11 @@ public class OrderServiceTest {
 
         Order order = createdOrder();
 
-        when(orderRepository.findById(ORDER_ID))
-            .thenReturn(Optional.of(order));
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
 
         orderService.failOrder(ORDER_ID);
 
-        assertThat(order.getStatus())
-            .isEqualTo(OrderStatus.CANCELED);
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELED);
 
         verify(orderRepository).findById(ORDER_ID);
     }
@@ -193,11 +167,9 @@ public class OrderServiceTest {
     @DisplayName("존재하지 않는 주문을 결제 완료 처리하면 예외가 발생한다.")
     void completeOrder_throwsExceptionWhenOrderNotFound() {
 
-        when(orderRepository.findById(ORDER_ID))
-            .thenReturn(Optional.empty());
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> orderService.completeOrder(ORDER_ID))
-            .isInstanceOf(OrderNotFoundException.class);
+        assertThatThrownBy(() -> orderService.completeOrder(ORDER_ID)).isInstanceOf(OrderNotFoundException.class);
 
         verify(orderRepository).findById(ORDER_ID);
     }
@@ -216,8 +188,7 @@ public class OrderServiceTest {
         OrderResponse response = orderService.createOrder(USER_ID, RESERVATION_ID);
 
         // then
-        assertThat(response.getHoldExpiresAt())
-            .isEqualTo(response.getPaymentDeadline());
+        assertThat(response.getHoldExpiresAt()).isEqualTo(response.getPaymentDeadline());
     }
 
     // ---------- 주문 생성 시 선점 만료 시간 연장 ----------
@@ -236,8 +207,7 @@ public class OrderServiceTest {
         OrderResponse response = orderService.createOrder(USER_ID, RESERVATION_ID);
 
         // then
-        assertThat(response.getHoldExpiresAt())
-            .isEqualTo(holdExpiresAt);
+        assertThat(response.getHoldExpiresAt()).isEqualTo(holdExpiresAt);
     }
 
     @Test
@@ -255,8 +225,7 @@ public class OrderServiceTest {
         OrderResponse response = orderService.createOrder(USER_ID, RESERVATION_ID);
 
         // then
-        assertThat(response.getHoldExpiresAt())
-            .isEqualTo(expectedExpiresAt);
+        assertThat(response.getHoldExpiresAt()).isEqualTo(expectedExpiresAt);
     }
 
     @Test
@@ -299,8 +268,7 @@ public class OrderServiceTest {
         verify(orderReservationRepository).updateHoldExpiresAtById(RESERVATION_ID, response.getHoldExpiresAt());
 
         assertThat(gameSeats)
-            .allSatisfy(gameSeat -> assertThat(gameSeat.getHoldExpiresAt())
-                .isEqualTo(response.getHoldExpiresAt()));
+            .allSatisfy(gameSeat -> assertThat(gameSeat.getHoldExpiresAt()).isEqualTo(response.getHoldExpiresAt()));
     }
 
     @Test
@@ -324,8 +292,7 @@ public class OrderServiceTest {
         verify(orderReservationRepository, never()).updateHoldExpiresAtById(any(), any(LocalDateTime.class));
     }
 
-    private record CreateOrderFixture(
-        List<GameSeat> gameSeats) {
+    private record CreateOrderFixture(List<GameSeat> gameSeats) {
 
     }
 }

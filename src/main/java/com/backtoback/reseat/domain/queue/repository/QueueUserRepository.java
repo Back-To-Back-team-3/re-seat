@@ -28,6 +28,5 @@ public interface QueueUserRepository extends JpaRepository<User, Long> {
         FROM User u
         WHERE u.id = :userId
         """)
-    Optional<User> findByIdWithPessimisticWriteLock(@Param("userId")
-    Long userId);
+    Optional<User> findByIdWithPessimisticWriteLock(@Param("userId") Long userId);
 }

@@ -28,22 +28,25 @@ public class AdminUserService {
 
     // 1. 회원 전체 조회 (페이징 + 필터링)
     public Page<AdminUserResponse> searchUsers(UserSearchCondition condition, Pageable pageable) {
-        return userRepository.searchUsers(condition, pageable)
-            .map(AdminUserResponse::from);
+        return userRepository.searchUsers(condition, pageable).map(AdminUserResponse::from);
     }
 
     // 2. 회원 상세 조회
     public AdminUserResponse getUserDetail(Long userId) {
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다. ID: " + userId));
+        User user
+            = userRepository
+                .findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다. ID: " + userId));
         return AdminUserResponse.from(user);
     }
 
     // 3. 회원 권한 변경
     @Transactional
     public void updateUserRole(Long userId, UserRole role) {
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다. ID: " + userId));
+        User user
+            = userRepository
+                .findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다. ID: " + userId));
 
         if (user.getStatus() == UserStatus.DELETED) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "탈퇴한 회원의 권한은 변경할 수 없습니다.");
@@ -55,8 +58,10 @@ public class AdminUserService {
     // 4. 회원 상태 변경
     @Transactional
     public void updateUserStatus(Long userId, UserStatus status) {
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다. ID: " + userId));
+        User user
+            = userRepository
+                .findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다. ID: " + userId));
 
         if (user.getStatus() == UserStatus.DELETED) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "이미 탈퇴한 회원입니다.");
@@ -64,8 +69,7 @@ public class AdminUserService {
 
         if (status == UserStatus.DELETED) {
             user.withdraw();
-            refreshTokenRepository.findByUser(user)
-                .ifPresent(refreshTokenRepository::delete);
+            refreshTokenRepository.findByUser(user).ifPresent(refreshTokenRepository::delete);
         } else {
             user.updateStatus(status);
         }

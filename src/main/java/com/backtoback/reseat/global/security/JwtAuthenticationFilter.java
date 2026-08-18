@@ -19,15 +19,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
         String path = request.getRequestURI();
-        return path.startsWith("/actuator") ||
-            path.startsWith("/h2-console") ||
-            path.startsWith("/swagger-ui") ||
-            path.startsWith("/v3/api-docs");
+        return path.startsWith("/actuator") || path.startsWith("/h2-console") || path.startsWith("/swagger-ui")
+            || path.startsWith("/v3/api-docs");
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-        throws jakarta.servlet.ServletException, java.io.IOException {
+        throws jakarta.servlet.ServletException,
+        java.io.IOException {
 
         String token = resolveToken(request);
 

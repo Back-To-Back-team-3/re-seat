@@ -80,38 +80,39 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
     @BeforeEach
     void setUp() {
 
-        Stadium stadium = stadiumRepository.save(
-            Stadium.of(
-                "테스트 구장",
-                "테스트시 테스트구",
-                10_000));
+        Stadium stadium = stadiumRepository.save(Stadium.of("테스트 구장", "테스트시 테스트구", 10_000));
 
-        Team team = teamRepository.save(
-            Team.of(
-                "테스트팀",
-                stadium));
+        Team team = teamRepository.save(Team.of("테스트팀", stadium));
 
-        user = userRepository.save(
-            User.builder()
-                .email("test-user@test.com")
-                .password("test")
-                .name("테스트 사용자")
-                .phone("010-1234-5678")
-                .isVerified(true)
-                .role(UserRole.USER)
-                .status(UserStatus.ACTIVE)
-                .build());
+        user
+            = userRepository
+                .save(
+                    User
+                        .builder()
+                        .email("test-user@test.com")
+                        .password("test")
+                        .name("테스트 사용자")
+                        .phone("010-1234-5678")
+                        .isVerified(true)
+                        .role(UserRole.USER)
+                        .status(UserStatus.ACTIVE)
+                        .build()
+                );
 
-        game = gameRepository.save(
-            Game.builder()
-                .homeTeam(team)
-                .awayTeam(team)
-                .stadium(stadium)
-                .gameAt(LocalDateTime.now().plusDays(1))
-                .bookingOpenAt(LocalDateTime.now().minusHours(1))
-                .bookingCloseAt(LocalDateTime.now().plusHours(5))
-                .title("테스트 경기")
-                .build());
+        game
+            = gameRepository
+                .save(
+                    Game
+                        .builder()
+                        .homeTeam(team)
+                        .awayTeam(team)
+                        .stadium(stadium)
+                        .gameAt(LocalDateTime.now().plusDays(1))
+                        .bookingOpenAt(LocalDateTime.now().minusHours(1))
+                        .bookingCloseAt(LocalDateTime.now().plusHours(5))
+                        .title("테스트 경기")
+                        .build()
+                );
     }
 
     /**
@@ -131,11 +132,7 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
      */
     private QueueEntryRequestedEvent queueEntryEvent(Instant requestedAt) {
 
-        return new QueueEntryRequestedEvent(
-            UUID.randomUUID(),
-            game.getId(),
-            user.getId(),
-            requestedAt);
+        return new QueueEntryRequestedEvent(UUID.randomUUID(), game.getId(), user.getId(), requestedAt);
     }
 
     /**
@@ -146,23 +143,19 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
      */
     private QueueEntryHistory findQueueEntryHistory(String queueKey) {
 
-        return queueEntryHistoryRepository
-            .findByQueueKey(queueKey)
-            .orElseThrow();
+        return queueEntryHistoryRepository.findByQueueKey(queueKey).orElseThrow();
     }
 
     /**
      * Redis 대기열에서 사용자의 점수를 조회한다.
      *
-     * @param redisKey    경기별 Redis 대기열 Key
+     * @param redisKey 경기별 Redis 대기열 Key
      * @param redisMember 사용자 Redis Member
      * @return Redis 대기열 점수, 등록되지 않은 경우 null
      */
     private Double queueScore(String redisKey, String redisMember) {
 
-        return redisTemplate
-            .opsForZSet()
-            .score(redisKey, redisMember);
+        return redisTemplate.opsForZSet().score(redisKey, redisMember);
     }
 
     @Test
@@ -174,12 +167,9 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
         String lockKey = "lock:queue:admit:" + game.getId();
 
         RLock lock = mock(RLock.class);
-        given(redissonClient.getLock(lockKey))
-            .willReturn(lock);
-        given(lock.tryLock(1L, TimeUnit.SECONDS))
-            .willReturn(true);
-        given(lock.isHeldByCurrentThread())
-            .willReturn(true);
+        given(redissonClient.getLock(lockKey)).willReturn(lock);
+        given(lock.tryLock(1L, TimeUnit.SECONDS)).willReturn(true);
+        given(lock.isHeldByCurrentThread()).willReturn(true);
 
         String redisKey = "queue:game:" + game.getId();
         String redisMember = "user:" + user.getId();
@@ -193,20 +183,19 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
 
         // then
         // 자동 입장은 DB 이력과 Queue-Token을 커밋한 뒤 Redis 대기열에서 사용자를 제거한다.
-        assertThat(admittedCount)
-            .isEqualTo(1);
+        assertThat(admittedCount).isEqualTo(1);
         QueueEntryHistory admittedHistory = findQueueEntryHistory(queueKey);
-        assertThat(admittedHistory.getStatus())
-            .isEqualTo(QueueEntryHistoryStatus.ADMITTED);
-        assertThat(admissionTokenRepository
-            .findByGame_IdAndUser_IdAndStatusAndExpiresAtAfter(
-                game.getId(),
-                user.getId(),
-                AdmissionTokenStatus.ACTIVE,
-                LocalDateTime.now()))
-            .isPresent();
-        assertThat(queueScore(redisKey, redisMember))
-            .isNull();
+        assertThat(admittedHistory.getStatus()).isEqualTo(QueueEntryHistoryStatus.ADMITTED);
+        assertThat(
+            admissionTokenRepository
+                .findByGame_IdAndUser_IdAndStatusAndExpiresAtAfter(
+                    game.getId(),
+                    user.getId(),
+                    AdmissionTokenStatus.ACTIVE,
+                    LocalDateTime.now()
+                )
+        ).isPresent();
+        assertThat(queueScore(redisKey, redisMember)).isNull();
     }
 
     @Test
@@ -235,20 +224,14 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
 
         // then
         // 재진입은 기존 이력을 WAITING으로 되돌리고 Redis 대기열에 사용자를 다시 등록한다.
-        assertThat(statusAfterCancel)
-            .isEqualTo(QueueEntryHistoryStatus.CANCELED);
-        assertThat(scoreAfterCancel)
-            .isNull();
+        assertThat(statusAfterCancel).isEqualTo(QueueEntryHistoryStatus.CANCELED);
+        assertThat(scoreAfterCancel).isNull();
 
         QueueEntryHistory reenteredHistory = findQueueEntryHistory(queueKey);
-        assertThat(reenteredHistory.getStatus())
-            .isEqualTo(QueueEntryHistoryStatus.WAITING);
-        assertThat(reenteredHistory.getCanceledAt())
-            .isNull();
+        assertThat(reenteredHistory.getStatus()).isEqualTo(QueueEntryHistoryStatus.WAITING);
+        assertThat(reenteredHistory.getCanceledAt()).isNull();
 
-        assertThat(queueEntryHistoryRepository.count())
-            .isEqualTo(1);
-        assertThat(queueScore(redisKey, redisMember))
-            .isEqualTo(reentryRequestedAt.toEpochMilli());
+        assertThat(queueEntryHistoryRepository.count()).isEqualTo(1);
+        assertThat(queueScore(redisKey, redisMember)).isEqualTo(reentryRequestedAt.toEpochMilli());
     }
 }

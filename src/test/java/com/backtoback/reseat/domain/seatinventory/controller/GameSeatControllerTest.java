@@ -59,7 +59,8 @@ class GameSeatControllerTest {
     @WithMockUser
     @Test
     void should_return200AndAllSeats_when_noFilter() throws Exception {
-        mockMvc.perform(get(SEATS_URI, gameIdWithSeats))
+        mockMvc
+            .perform(get(SEATS_URI, gameIdWithSeats))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.length()").value(500));
@@ -71,7 +72,8 @@ class GameSeatControllerTest {
     void should_filterByZone_when_zoneIdGiven() throws Exception {
         Long zoneId = findFirstZoneIdOfGame(gameIdWithSeats);
 
-        mockMvc.perform(get(SEATS_URI, gameIdWithSeats).param("zoneId", String.valueOf(zoneId)))
+        mockMvc
+            .perform(get(SEATS_URI, gameIdWithSeats).param("zoneId", String.valueOf(zoneId)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data[0].zoneId").value(zoneId))
@@ -82,12 +84,14 @@ class GameSeatControllerTest {
     @WithMockUser
     @Test
     void should_filterByGrade_when_gradeGiven() throws Exception {
-        mockMvc.perform(get(SEATS_URI, gameIdWithSeats).param("grade", SeatGrade.INFIELD.name()))
+        mockMvc
+            .perform(get(SEATS_URI, gameIdWithSeats).param("grade", SeatGrade.INFIELD.name()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
-            .andExpect(jsonPath("$.data[*].grade")
-                .value(org.hamcrest.Matchers.everyItem(
-                    org.hamcrest.Matchers.is(SeatGrade.INFIELD.name()))))
+            .andExpect(
+                jsonPath("$.data[*].grade")
+                    .value(org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is(SeatGrade.INFIELD.name())))
+            )
             .andExpect(jsonPath("$.data.length()").value(org.hamcrest.Matchers.greaterThan(0)));
     }
 
@@ -98,24 +102,27 @@ class GameSeatControllerTest {
         // given: 좌석 일부를 SOLD로 바꿔 AVAILABLE/SOLD가 섞인 상태를 만든다
         markSomeSeatsSold(gameIdWithSeats);
 
-        mockMvc.perform(get(SEATS_URI, gameIdWithSeats).param("status", GameSeatStatus.SOLD.name()))
+        mockMvc
+            .perform(get(SEATS_URI, gameIdWithSeats).param("status", GameSeatStatus.SOLD.name()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.length()").value(10))
-            .andExpect(jsonPath("$.data[*].status")
-                .value(org.hamcrest.Matchers.everyItem(
-                    org.hamcrest.Matchers.is(GameSeatStatus.SOLD.name()))));
+            .andExpect(
+                jsonPath("$.data[*].status")
+                    .value(org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is(GameSeatStatus.SOLD.name())))
+            );
     }
 
     // 헬퍼: N건만 SOLD로 변경 (기존 markAllSeatsSold와 구분)
     private void markSomeSeatsSold(Long gameId) {
-        List<Long> targetIds = entityManager.createQuery(
-            "SELECT gs.id FROM GameSeat gs WHERE gs.game.id = :gameId ORDER BY gs.id ASC",
-            Long.class)
-            .setParameter("gameId", gameId)
-            .setMaxResults(10)
-            .getResultList();
+        List<Long> targetIds
+            = entityManager
+                .createQuery("SELECT gs.id FROM GameSeat gs WHERE gs.game.id = :gameId ORDER BY gs.id ASC", Long.class)
+                .setParameter("gameId", gameId)
+                .setMaxResults(10)
+                .getResultList();
 
-        entityManager.createQuery("UPDATE GameSeat gs SET gs.status = :status WHERE gs.id IN :ids")
+        entityManager
+            .createQuery("UPDATE GameSeat gs SET gs.status = :status WHERE gs.id IN :ids")
             .setParameter("status", GameSeatStatus.SOLD)
             .setParameter("ids", targetIds)
             .executeUpdate();
@@ -127,7 +134,8 @@ class GameSeatControllerTest {
     @WithMockUser
     @Test
     void should_return404_when_gameNotFound() throws Exception {
-        mockMvc.perform(get(SEATS_URI, 999_999L))
+        mockMvc
+            .perform(get(SEATS_URI, 999_999L))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.errorCode").value("GAME_NOT_FOUND"));
     }
@@ -138,7 +146,8 @@ class GameSeatControllerTest {
     void should_return409_when_inventoryNotOpened() throws Exception {
         Long gameIdWithoutInventory = findFirstGameIdOfDifferentStadium();
 
-        mockMvc.perform(get(SEATS_URI, gameIdWithoutInventory))
+        mockMvc
+            .perform(get(SEATS_URI, gameIdWithoutInventory))
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.errorCode").value("SEAT_INVENTORY_NOT_OPENED"));
     }
@@ -149,7 +158,8 @@ class GameSeatControllerTest {
     @WithMockUser
     @Test
     void should_return200AndAllZones_when_getZoneSummaries() throws Exception {
-        mockMvc.perform(get(ZONES_URI, gameIdWithSeats))
+        mockMvc
+            .perform(get(ZONES_URI, gameIdWithSeats))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data[0].totalCount").value(50));
@@ -162,7 +172,8 @@ class GameSeatControllerTest {
         // given: 선점 로직이 아직 없으므로 테스트에서 직접 상태를 SOLD로 변경
         markAllSeatsSold(gameIdWithSeats);
 
-        mockMvc.perform(get(ZONES_URI, gameIdWithSeats))
+        mockMvc
+            .perform(get(ZONES_URI, gameIdWithSeats))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data[0].availableCount").value(0));
     }
@@ -171,7 +182,8 @@ class GameSeatControllerTest {
     @WithMockUser
     @Test
     void should_return404_when_gameNotFoundForZones() throws Exception {
-        mockMvc.perform(get(ZONES_URI, 999_999L))
+        mockMvc
+            .perform(get(ZONES_URI, 999_999L))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.errorCode").value("GAME_NOT_FOUND"));
     }
@@ -182,7 +194,8 @@ class GameSeatControllerTest {
     void should_return409_when_inventoryNotOpenedForZones() throws Exception {
         Long gameIdWithoutInventory = findFirstGameIdOfDifferentStadium();
 
-        mockMvc.perform(get(ZONES_URI, gameIdWithoutInventory))
+        mockMvc
+            .perform(get(ZONES_URI, gameIdWithoutInventory))
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.errorCode").value("SEAT_INVENTORY_NOT_OPENED"));
     }
@@ -192,8 +205,7 @@ class GameSeatControllerTest {
     @DisplayName("인증 없이 접근하면 401을 반환한다")
     @Test
     void should_return401_when_unauthenticated() throws Exception {
-        mockMvc.perform(get(SEATS_URI, gameIdWithSeats))
-            .andExpect(status().isUnauthorized());
+        mockMvc.perform(get(SEATS_URI, gameIdWithSeats)).andExpect(status().isUnauthorized());
     }
 
     // ---------- 테스트 헬퍼 ----------
@@ -203,9 +215,8 @@ class GameSeatControllerTest {
      * gameId 하드코딩을 피하기 위한 헬퍼.
      */
     private Long findFirstGameIdOfStadium() {
-        return entityManager.createQuery(
-            "SELECT g.id FROM Game g WHERE g.stadium.id = :stadiumId ORDER BY g.id ASC",
-            Long.class)
+        return entityManager
+            .createQuery("SELECT g.id FROM Game g WHERE g.stadium.id = :stadiumId ORDER BY g.id ASC", Long.class)
             .setParameter("stadiumId", SEEDED_STADIUM_ID)
             .setMaxResults(1)
             .getSingleResult();
@@ -216,23 +227,21 @@ class GameSeatControllerTest {
      * 재고 미오픈(409) 케이스 검증용.
      */
     private Long findFirstGameIdOfDifferentStadium() {
-        return entityManager.createQuery(
-            """
-                SELECT g.id FROM Game g
-                WHERE NOT EXISTS (
-                    SELECT 1 FROM GameSeat gs WHERE gs.game.id = g.id
-                )
-                ORDER BY g.id ASC
-                """,
-            Long.class)
-            .setMaxResults(1)
-            .getSingleResult();
+        return entityManager.createQuery("""
+            SELECT g.id FROM Game g
+            WHERE NOT EXISTS (
+                SELECT 1 FROM GameSeat gs WHERE gs.game.id = g.id
+            )
+            ORDER BY g.id ASC
+            """, Long.class).setMaxResults(1).getSingleResult();
     }
 
     private Long findFirstZoneIdOfGame(Long gameId) {
-        return entityManager.createQuery(
-            "SELECT gs.seat.zone.id FROM GameSeat gs WHERE gs.game.id = :gameId ORDER BY gs.id ASC",
-            Long.class)
+        return entityManager
+            .createQuery(
+                "SELECT gs.seat.zone.id FROM GameSeat gs WHERE gs.game.id = :gameId ORDER BY gs.id ASC",
+                Long.class
+            )
             .setParameter("gameId", gameId)
             .setMaxResults(1)
             .getSingleResult();
@@ -243,8 +252,8 @@ class GameSeatControllerTest {
      * 테스트에서 직접 game_seats 상태를 SOLD로 bulk update한다.
      */
     private void markAllSeatsSold(Long gameId) {
-        Query query = entityManager.createQuery(
-            "UPDATE GameSeat gs SET gs.status = :status WHERE gs.game.id = :gameId");
+        Query query
+            = entityManager.createQuery("UPDATE GameSeat gs SET gs.status = :status WHERE gs.game.id = :gameId");
         query.setParameter("status", GameSeatStatus.SOLD);
         query.setParameter("gameId", gameId);
         query.executeUpdate();

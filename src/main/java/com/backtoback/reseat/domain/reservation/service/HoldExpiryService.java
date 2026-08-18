@@ -45,15 +45,11 @@ public class HoldExpiryService {
      */
     @Transactional
     public HoldExpiryResult releaseExpired(LocalDateTime now) {
-        int expiredReservations = reservationRepository.expireHoldingReservations(
-            now,
-            ReservationStatus.HOLDING,
-            ReservationStatus.EXPIRED);
+        int expiredReservations
+            = reservationRepository
+                .expireHoldingReservations(now, ReservationStatus.HOLDING, ReservationStatus.EXPIRED);
 
-        int releasedSeats = gameSeatRepository.releaseExpiredSeats(
-            now,
-            GameSeatStatus.HELD,
-            GameSeatStatus.AVAILABLE);
+        int releasedSeats = gameSeatRepository.releaseExpiredSeats(now, GameSeatStatus.HELD, GameSeatStatus.AVAILABLE);
 
         return new HoldExpiryResult(expiredReservations, releasedSeats);
     }
@@ -62,7 +58,7 @@ public class HoldExpiryService {
      * 만료 회수 결과 반환값.
      *
      * @param expiredReservations EXPIRED로 전이된 예약 행 수
-     * @param releasedSeats       AVAILABLE로 회수된 좌석 행 수
+     * @param releasedSeats AVAILABLE로 회수된 좌석 행 수
      */
     public record HoldExpiryResult(int expiredReservations, int releasedSeats) {
 

@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * 관리자용 경기 좌석 재고 API.
- *
  * <p>같은 규칙이 두 곳에 존재하면 한쪽만 수정되는 사고가 난다.
  */
 @RestController
@@ -33,14 +32,10 @@ public class AdminGameSeatController implements AdminGameSeatControllerDocs {
      */
     @Override
     @PostMapping("/{gameId}/seats")
-    public ResponseEntity<ApiResponse<GameSeatOpenResponse>> openSeatInventory(
-        @PathVariable
-        Long gameId) {
+    public ResponseEntity<ApiResponse<GameSeatOpenResponse>> openSeatInventory(@PathVariable Long gameId) {
         GameSeatOpenResponse response = gameSeatCreateService.openInventory(gameId);
 
         // 리소스가 새로 생성됐으므로 201.
-        return ResponseEntity
-            .status(HttpStatus.CREATED)
-            .body(ApiResponse.success("좌석 재고 오픈 성공", response));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("좌석 재고 오픈 성공", response));
     }
 }

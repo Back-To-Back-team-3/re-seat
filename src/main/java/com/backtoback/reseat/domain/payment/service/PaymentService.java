@@ -52,12 +52,11 @@ public class PaymentService {
 
     /**
      * 주문 기준 결제를 요청한다.
-     *
      * <p>Idempotency-Key가 이미 사용된 경우 기존 결제 요청을 검증해 같은 결과를 반환하고, 처음 사용된 키라면 새 결제를 생성한다.
      *
-     * @param userId         현재 사용자 ID
+     * @param userId 현재 사용자 ID
      * @param idempotencyKey 중복 결제 방지 키
-     * @param request        결제 요청 정보
+     * @param request 결제 요청 정보
      * @return 결제 처리 결과
      */
     public PaymentCreateResponse requestPayment(Long userId, String idempotencyKey, PaymentRequest request) {
@@ -89,15 +88,19 @@ public class PaymentService {
     /**
      * 토스 위젯 인증 완료 후 전달받은 결제 정보로 토스 승인(confirm) API를 동기 호출해 결제를 확정한다.
      *
-     * @param userId         현재 사용자 ID
-     * @param paymentId      결제 ID
+     * @param userId 현재 사용자 ID
+     * @param paymentId 결제 ID
      * @param idempotencyKey 현재 결제 시도의 활성 멱등키
-     * @param request        토스가 클라이언트에 돌려준 paymentKey/orderId/amount
+     * @param request 토스가 클라이언트에 돌려준 paymentKey/orderId/amount
      * @return 확정된 결제 결과
      */
     @Transactional(noRollbackFor = OrderExpiredException.class)
     public PaymentActionResponse completePayment(
-        Long userId, Long paymentId, String idempotencyKey, PaymentCompleteRequest request) {
+        Long userId,
+        Long paymentId,
+        String idempotencyKey,
+        PaymentCompleteRequest request
+    ) {
         // 로컬 결제를 잠그고 현재 결제 시도의 콜백인지 확인한다.
         Payment payment = getOwnedPaymentWithPessimisticWriteLock(userId, paymentId);
         paymentValidator.validateActiveIdempotencyKey(payment, idempotencyKey);
@@ -113,11 +116,15 @@ public class PaymentService {
         // Toss에 최종 승인을 요청하고, 응답을 받지 못하면 클라이언트 내부에서 단건 재조회로 상태를 확인한다.
         TossPaymentResponse response;
         try {
-            response = tossPaymentClient.confirm(
-                request.getPaymentKey(), request.getOrderId(), request.getAmount());
+            response = tossPaymentClient.confirm(request.getPaymentKey(), request.getOrderId(), request.getAmount());
         } catch (TossPaymentStatusUnknownException e) {
-            log.warn("토스 결제 승인 상태 확인 불가 - 복구 작업 등록 (paymentId={}, paymentKey={})",
-                paymentId, request.getPaymentKey(), e);
+            log
+                .warn(
+                    "토스 결제 승인 상태 확인 불가 - 복구 작업 등록 (paymentId={}, paymentKey={})",
+                    paymentId,
+                    request.getPaymentKey(),
+                    e
+                );
             payment.fail("토스 결제 승인 상태를 확인할 수 없습니다.", LocalDateTime.now());
             paymentRecoveryTaskRepository.save(new PaymentRecoveryTask(payment));
             orderService.failOrder(payment.getOrder().getId());
@@ -128,9 +135,9 @@ public class PaymentService {
         if (!response.isApproved()) {
             String status = response.getStatus();
             log.warn("토스 결제 승인 상태 불일치 (paymentId={}, tossStatus={})", paymentId, status);
-            String failReason = status == null || status.isBlank()
-                ? "토스 결제 승인 상태가 비어 있습니다."
-                : "토스 결제 승인 상태가 완료가 아닙니다. status=" + status;
+            String failReason
+                = status == null || status.isBlank() ? "토스 결제 승인 상태가 비어 있습니다."
+                    : "토스 결제 승인 상태가 완료가 아닙니다. status=" + status;
             payment.fail(failReason, LocalDateTime.now());
             orderService.failOrder(payment.getOrder().getId());
             return PaymentActionResponse.from(payment);
@@ -147,15 +154,19 @@ public class PaymentService {
     /**
      * 위젯 취소 또는 실패 리다이렉트 시 결제를 실패로 기록한다. 토스 API는 호출하지 않는다.
      *
-     * @param userId         현재 사용자 ID
-     * @param paymentId      결제 ID
+     * @param userId 현재 사용자 ID
+     * @param paymentId 결제 ID
      * @param idempotencyKey 현재 결제 시도의 활성 멱등키
-     * @param request        토스가 클라이언트에 돌려준 실패 code/message/orderId
+     * @param request 토스가 클라이언트에 돌려준 실패 code/message/orderId
      * @return 실패 처리된 결제 결과
      */
     @Transactional
     public PaymentActionResponse failPayment(
-        Long userId, Long paymentId, String idempotencyKey, PaymentFailRequest request) {
+        Long userId,
+        Long paymentId,
+        String idempotencyKey,
+        PaymentFailRequest request
+    ) {
         Payment payment = getOwnedPaymentWithPessimisticWriteLock(userId, paymentId);
         paymentValidator.validateActiveIdempotencyKey(payment, idempotencyKey);
         if (payment.getStatus() != PaymentStatus.READY) {
@@ -173,12 +184,11 @@ public class PaymentService {
 
     /**
      * 승인된 결제를 전액 취소한다.
-     *
      * <p>Toss 취소 API가 성공한 뒤에만 로컬 결제 상태를 CANCELED로 변경한다. 주문/좌석/티켓 상태 전파는 각 도메인과 합의 후 후속 작업에서 연결한다.
      *
-     * @param userId    현재 사용자 ID
+     * @param userId 현재 사용자 ID
      * @param paymentId 결제 ID
-     * @param request   결제 취소 요청 정보
+     * @param request 결제 취소 요청 정보
      * @return 취소 처리된 결제 결과
      */
     @Transactional
@@ -193,20 +203,18 @@ public class PaymentService {
         // Toss에 전액 취소를 요청하고, 응답을 받지 못하면 클라이언트 내부에서 단건 재조회로 상태를 확인한다.
         TossPaymentResponse response;
         try {
-            response = tossPaymentClient.cancel(
-                payment.getPgPaymentKey(), request.getCancelReason());
+            response = tossPaymentClient.cancel(payment.getPgPaymentKey(), request.getCancelReason());
         } catch (TossPaymentStatusUnknownException e) {
-            log.warn("토스 결제 취소 상태 확인 불가 (paymentId={}, paymentKey={})",
-                paymentId, payment.getPgPaymentKey(), e);
+            log.warn("토스 결제 취소 상태 확인 불가 (paymentId={}, paymentKey={})", paymentId, payment.getPgPaymentKey(), e);
             throw new PaymentCancelFailedException("토스 결제 취소 상태를 확인할 수 없습니다.");
         }
 
         // Toss 응답에서도 취소 완료가 확인돼야 로컬 상태를 변경할 수 있다.
         if (!response.isCancelCompleted()) {
             String status = response.getStatus();
-            String failReason = status == null || status.isBlank()
-                ? "토스 결제 취소 상태가 비어 있습니다."
-                : "토스 결제 취소 상태가 완료가 아닙니다. status=" + status;
+            String failReason
+                = status == null || status.isBlank() ? "토스 결제 취소 상태가 비어 있습니다."
+                    : "토스 결제 취소 상태가 완료가 아닙니다. status=" + status;
             throw new PaymentCancelFailedException(failReason);
         }
 
@@ -219,14 +227,13 @@ public class PaymentService {
     /**
      * 결제 단건을 조회한다.
      *
-     * @param userId    현재 사용자 ID
+     * @param userId 현재 사용자 ID
      * @param paymentId 결제 ID
      * @return 결제 상세 정보
      */
     @Transactional(readOnly = true)
     public PaymentResponse getPayment(Long userId, Long paymentId) {
-        Payment payment = paymentRepository.findById(paymentId)
-            .orElseThrow(PaymentNotFoundException::new);
+        Payment payment = paymentRepository.findById(paymentId).orElseThrow(PaymentNotFoundException::new);
         // 단순 조회는 락을 잡지 않고 소유자만 확인한다.
         paymentValidator.validateOwner(payment, userId);
         return PaymentResponse.from(payment);
@@ -238,8 +245,8 @@ public class PaymentService {
      * 수정이 필요한 결제를 비관적 쓰기 락으로 조회하고 소유자를 검증한다.
      */
     private Payment getOwnedPaymentWithPessimisticWriteLock(Long userId, Long paymentId) {
-        Payment payment = paymentRepository.findByIdWithPessimisticWriteLock(paymentId)
-            .orElseThrow(PaymentNotFoundException::new);
+        Payment payment
+            = paymentRepository.findByIdWithPessimisticWriteLock(paymentId).orElseThrow(PaymentNotFoundException::new);
         paymentValidator.validateOwner(payment, userId);
         return payment;
     }
@@ -250,9 +257,7 @@ public class PaymentService {
      * 토스 승인 시각 문자열을 로컬 날짜시간으로 변환하고, 값이 없으면 현재 시각을 사용한다.
      */
     private LocalDateTime resolveApprovedAt(String approvedAt) {
-        return approvedAt != null
-            ? OffsetDateTime.parse(approvedAt).toLocalDateTime()
-            : LocalDateTime.now();
+        return approvedAt != null ? OffsetDateTime.parse(approvedAt).toLocalDateTime() : LocalDateTime.now();
     }
 
     /**
