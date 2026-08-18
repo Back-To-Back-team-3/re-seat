@@ -119,4 +119,11 @@ public class AuthService {
         // 성공 시 기존 구형 토큰 대신 새로 교체된 newRefreshToken을 리턴
         return TokenResponse.builder().accessToken(newAccessToken).refreshToken(newRefreshToken).build();
     }
+
+    @Transactional
+    public void logout(Long userId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException("존재하지 않는 회원입니다."));
+
+        refreshTokenRepository.findByUser(user).ifPresent(refreshTokenRepository::delete);
+    }
 }

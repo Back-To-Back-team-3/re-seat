@@ -8,28 +8,46 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import com.backtoback.reseat.domain.user.entity.User;
-import com.backtoback.reseat.domain.user.entity.UserStatus;
 
-public record CustomUserDetails(User user) implements UserDetails {
+public record CustomUserDetails(Long id, String email, String role) implements UserDetails {
+
+    public static CustomUserDetails of(Long id, String email, String role) {
+        return new CustomUserDetails(id, email, role);
+    }
+
+    public static CustomUserDetails from(User user) {
+        return new CustomUserDetails(
+            user.getId(),
+            user.getEmail(),
+            user.getRole() != null ? user.getRole().name() : "USER"
+        );
+    }
+
+    public CustomUserDetails(User user) {
+        this(user.getId(), user.getEmail(), user.getRole() != null ? user.getRole().name() : "USER");
+    }
 
     public Long getId() {
-        return user.getId();
+        return id;
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // 유저의 권한을 스프링 시큐리티 규격으로 변환
-        return Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
+        if (role == null) {
+            return Collections.emptyList();
+        }
+        String roleWithPrefix = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+        return Collections.singletonList(new SimpleGrantedAuthority(roleWithPrefix));
     }
 
     @Override
     public String getPassword() {
-        return user.getPassword();
+        return null;
     }
 
     @Override
     public String getUsername() {
-        return user.getEmail();
+        return email;
     }
 
     @Override
@@ -39,8 +57,7 @@ public record CustomUserDetails(User user) implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        // 이용정지 회원이 아닌 경우에만 TRUE
-        return user.getStatus() != UserStatus.SUSPENDED;
+        return true;
     }
 
     @Override
@@ -50,8 +67,7 @@ public record CustomUserDetails(User user) implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        // 탈토회원 아닐 경우~
-        return user.getStatus() != UserStatus.DELETED;
+        return true;
     }
 
 }

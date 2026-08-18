@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.verification.service;
+package com.backtoback.reseat.domain.user.auth.service;
 
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
