@@ -47,7 +47,8 @@ public class JwtTokenProvider {
 
         if (keyBytes.length < 32) {
             throw new IllegalStateException(
-                String.format("JWT secret key는 최소 32바이트(256비트) 이상이어야 합니다. (현재 디코딩된 길이: %d 바이트)", keyBytes.length));
+                String.format("JWT secret key는 최소 32바이트(256비트) 이상이어야 합니다. (현재 디코딩된 길이: %d 바이트)", keyBytes.length)
+            );
         }
 
         this.secretKey = Keys.hmacShaKeyFor(keyBytes);
