@@ -37,6 +37,11 @@ public class VerificationService {
         // 1. 현재 세션 유저 조회
         User user = userRepository.findById(userId).orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
+        // 이미 본인인증을 완료한 경우 외부 API 호출 전 사전 예외 처리
+        if (user.isVerified()) {
+            throw new IllegalStateException("이미 본인인증이 완료된 회원입니다.");
+        }
+
         String certifiedCi;
         String certifiedName;
         String certifiedPhone;
