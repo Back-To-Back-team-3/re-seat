@@ -34,4 +34,10 @@ public class AdmitEventResponse {
         example = "2026-07-21T21:50:00"
     )
     private final LocalDateTime tokenExpiresAt;
+
+    @Schema(
+        description = "Queue-Token 최초 좌석 탐색 만료 시간",
+        example = "2026-07-21T21:32:00"
+    )
+    private final LocalDateTime tokenSeatBrowsingExpiresAt;
 }

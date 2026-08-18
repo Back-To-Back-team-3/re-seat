@@ -1,11 +1,8 @@
 package com.backtoback.reseat.domain.queue.entity;
 
-import java.time.LocalDateTime;
-
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.queue.exception.QueueInvalidStatusException;
 import com.backtoback.reseat.domain.user.entity.User;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -23,6 +20,8 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
 
 /**
  * 경기별 사용자 대기열의 처리 상태와 상태 전환 시간을 저장하는 Entity
@@ -128,7 +127,8 @@ public class QueueEntryHistory {
 
     /**
      * 대기 중이거나 입장 허용된 사용자의 상태를 취소로 변경한다.
-     * <p>입장 허용 상태의 취소는 발급된 활성 입장 토큰을 함께 회수할 때 사용한다.</p>
+     * <p>입장 허용 상태의 취소는 발급된 입장 토큰을 회수하거나,
+     * 토큰 만료 후 대기열 재진입을 허용할 때 사용한다.</p>
      *
      * @param canceledAt 대기열 취소 시간
      */
