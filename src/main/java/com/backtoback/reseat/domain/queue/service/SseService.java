@@ -1,5 +1,15 @@
 package com.backtoback.reseat.domain.queue.service;
 
+import com.backtoback.reseat.domain.queue.dto.response.QueueStatusResponse;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryCancellationNotAllowedException;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryCancellationTokenRequiredException;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryNotFoundException;
+import jakarta.annotation.PreDestroy;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -9,17 +19,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-
-import org.springframework.stereotype.Service;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-
-import com.backtoback.reseat.domain.queue.dto.response.QueueStatusResponse;
-import com.backtoback.reseat.domain.queue.exception.QueueEntryNotFoundException;
-import com.backtoback.reseat.domain.queue.exception.QueueInvalidStatusException;
-
-import jakarta.annotation.PreDestroy;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * 대기열 상태와 입장 허용 이벤트를 SSE로 주기적으로 전송하고 연결을 관리하는 서비스
@@ -243,9 +242,9 @@ public class SseService {
                     return;
                 }
                 queueService.cancelMyQueue(connectionKey.gameId(), connectionKey.userId());
-            } catch (QueueInvalidStatusException e) {
+            } catch (QueueEntryCancellationNotAllowedException | QueueEntryCancellationTokenRequiredException e) {
 
-                // 이미 취소됐거나 Queue-Token이 사용된 상태는 추가 이탈 처리를 생략한다.
+                // 이미 취소됐거나 함께 회수할 활성 Queue-Token이 없어 추가 이탈 처리를 할 수 없는 경우 생략한다.
                 log
                     .info(
                         "SSE 연결 종료 후 대기열 이탈 처리 대상이 아닙니다. gameId={}, userId={}",

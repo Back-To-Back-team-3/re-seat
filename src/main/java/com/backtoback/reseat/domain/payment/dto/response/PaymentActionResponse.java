@@ -9,7 +9,7 @@ import lombok.Getter;
 
 @Getter
 @Builder
-@Schema(description = "결제 승인·실패·취소 처리 응답")
+@Schema(description = "결제 실패·취소 처리 응답")
 public class PaymentActionResponse {
 
     @Schema(
@@ -20,7 +20,7 @@ public class PaymentActionResponse {
 
     @Schema(
         description = "처리 후 결제 상태",
-        example = "APPROVED"
+        example = "FAILED"
     )
     private final PaymentStatus status;
 

@@ -12,10 +12,6 @@ public class QueueTokenRevokedException extends BusinessException {
         super(ErrorCode.QUEUE_TOKEN_REVOKED);
     }
 
-    public QueueTokenRevokedException(String message) {
-        super(ErrorCode.QUEUE_TOKEN_REVOKED, message);
-    }
-
     public QueueTokenRevokedException(Throwable cause) {
         super(ErrorCode.QUEUE_TOKEN_REVOKED, cause);
     }

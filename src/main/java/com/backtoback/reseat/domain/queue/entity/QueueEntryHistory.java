@@ -1,11 +1,10 @@
 package com.backtoback.reseat.domain.queue.entity;
 
-import java.time.LocalDateTime;
-
 import com.backtoback.reseat.domain.game.entity.Game;
-import com.backtoback.reseat.domain.queue.exception.QueueInvalidStatusException;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryAdmissionNotAllowedException;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryCancellationNotAllowedException;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryReentryNotAllowedException;
 import com.backtoback.reseat.domain.user.entity.User;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -23,6 +22,8 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
 
 /**
  * 경기별 사용자 대기열의 처리 상태와 상태 전환 시간을 저장하는 Entity
@@ -128,14 +129,15 @@ public class QueueEntryHistory {
 
     /**
      * 대기 중이거나 입장 허용된 사용자의 상태를 취소로 변경한다.
-     * <p>입장 허용 상태의 취소는 발급된 활성 입장 토큰을 함께 회수할 때 사용한다.</p>
+     * <p>입장 허용 상태의 취소는 발급된 입장 토큰을 회수하거나,
+     * 토큰 만료 후 대기열 재진입을 허용할 때 사용한다.</p>
      *
      * @param canceledAt 대기열 취소 시간
      */
     public void cancel(LocalDateTime canceledAt) {
 
         if (this.status != QueueEntryHistoryStatus.WAITING && this.status != QueueEntryHistoryStatus.ADMITTED) {
-            throw new QueueInvalidStatusException("대기 중 혹은 입장 허용된 상태만 취소할 수 있습니다.");
+            throw new QueueEntryCancellationNotAllowedException();
         }
 
         this.status = QueueEntryHistoryStatus.CANCELED;
@@ -149,7 +151,7 @@ public class QueueEntryHistory {
      */
     public void admit(LocalDateTime admittedAt) {
         if (this.status != QueueEntryHistoryStatus.WAITING) {
-            throw new QueueInvalidStatusException("대기 중인 상태만 입장 허용할 수 있습니다.");
+            throw new QueueEntryAdmissionNotAllowedException();
         }
 
         this.status = QueueEntryHistoryStatus.ADMITTED;
@@ -165,7 +167,7 @@ public class QueueEntryHistory {
      */
     public void reenter(LocalDateTime enteredAt) {
         if (this.status != QueueEntryHistoryStatus.CANCELED) {
-            throw new QueueInvalidStatusException("취소된 상태만 대기열에 재진입할 수 있습니다.");
+            throw new QueueEntryReentryNotAllowedException();
         }
 
         this.status = QueueEntryHistoryStatus.WAITING;
