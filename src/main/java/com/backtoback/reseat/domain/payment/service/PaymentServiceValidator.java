@@ -3,7 +3,6 @@ package com.backtoback.reseat.domain.payment.service;
 import org.springframework.stereotype.Component;
 
 import com.backtoback.reseat.domain.payment.entity.Payment;
-import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
 import com.backtoback.reseat.domain.payment.exception.IdempotencyKeyConflictException;
 import com.backtoback.reseat.domain.payment.exception.IdempotencyKeyRequiredException;
 import com.backtoback.reseat.domain.payment.exception.IdempotencyKeyUnavailableException;
@@ -56,7 +55,7 @@ public class PaymentServiceValidator {
      * 결제가 승인 가능한 상태이고 콜백 주문과 금액이 일치하는지 검증한다.
      */
     public void validateConfirmable(Payment payment, String pgOrderId, Integer amount) {
-        if (payment.getStatus() != PaymentStatus.READY) {
+        if (!payment.isReady()) {
             throw new PaymentAlreadyFinalizedException();
         }
         validatePgOrderId(payment, pgOrderId);
@@ -67,7 +66,7 @@ public class PaymentServiceValidator {
      * 결제가 실패 처리 가능한 READY 상태인지 검증한다.
      */
     public void validateFailable(Payment payment) {
-        if (payment.getStatus() != PaymentStatus.READY) {
+        if (!payment.isReady()) {
             throw new PaymentAlreadyFinalizedException();
         }
     }
@@ -76,7 +75,7 @@ public class PaymentServiceValidator {
      * 결제가 취소 가능한 상태이고 PG 결제 키를 가지고 있는지 검증한다.
      */
     public void validateCancelable(Payment payment) {
-        if (payment.getStatus() != PaymentStatus.APPROVED) {
+        if (!payment.isApproved()) {
             throw new PaymentCancelNotAllowedException();
         }
 
