@@ -1,19 +1,5 @@
 package com.backtoback.reseat.domain.queue.service;
 
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ZSetOperations;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
-
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
@@ -37,8 +23,22 @@ import com.backtoback.reseat.domain.queue.repository.QueueUserRepository;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * 대기열 진입, 상태 조회, 취소, 입장 허용 이벤트 조회를 담당하는 서비스
@@ -70,15 +70,13 @@ public class QueueService {
 
         ZSetOperations<String, String> queueZSet = getZSetOperations();
 
-        // 활성 입장 토큰이 있으면 입장 허용 상태를 반환한다.
+        LocalDateTime now = LocalDateTime.now();
+
+        // 사용 가능한 활성 입장 토큰이 있으면 입장 허용 상태를 반환한다.
         AdmissionToken activeToken
             = admissionTokenRepository
-                .findByGame_IdAndUser_IdAndStatusAndExpiresAtAfter(
-                    gameId,
-                    userId,
-                    AdmissionTokenStatus.ACTIVE,
-                    LocalDateTime.now()
-                )
+                .findByGame_IdAndUser_IdAndStatusAndExpiresAtAfter(gameId, userId, AdmissionTokenStatus.ACTIVE, now)
+                .filter(token -> !token.isSeatBrowsingExpiredAt(now))
                 .orElse(null);
 
         if (Objects.nonNull(activeToken)) {
@@ -101,7 +99,7 @@ public class QueueService {
         }
 
         // Redis 순번은 0부터 시작하므로 사용자에게 반환할 순번은 1을 더해 계산한다.
-        Long userRank = redisRank + 1;
+        long userRank = redisRank + 1;
 
         // 현재 순번이 포함되는 자동 입장 처리 횟수를 기준으로 예상 대기시간을 계산한다.
         Long estimatedWaitSeconds = QueueAdmissionPolicy.calculateEstimatedWaitSeconds(userRank);
@@ -125,15 +123,13 @@ public class QueueService {
     @Transactional(readOnly = true)
     public AdmitEventResponse getAdmitEvent(Long gameId, Long userId) {
 
-        // 활성 입장 토큰을 조회해 SSE admit 이벤트 응답을 만든다.
+        LocalDateTime now = LocalDateTime.now();
+
+        // 사용 가능한 활성 입장 토큰을 조회해 SSE admit 이벤트 응답을 만든다.
         AdmissionToken activeToken
             = admissionTokenRepository
-                .findByGame_IdAndUser_IdAndStatusAndExpiresAtAfter(
-                    gameId,
-                    userId,
-                    AdmissionTokenStatus.ACTIVE,
-                    LocalDateTime.now()
-                )
+                .findByGame_IdAndUser_IdAndStatusAndExpiresAtAfter(gameId, userId, AdmissionTokenStatus.ACTIVE, now)
+                .filter(token -> !token.isSeatBrowsingExpiredAt(now))
                 .orElseThrow(QueueTokenRequiredException::new);
 
         return AdmitEventResponse
@@ -141,6 +137,7 @@ public class QueueService {
             .admitted(true)
             .queueToken(activeToken.getToken())
             .tokenExpiresAt(activeToken.getExpiresAt())
+            .tokenSeatBrowsingExpiresAt(activeToken.getSeatBrowsingExpiresAt())
             .build();
     }
 
@@ -223,7 +220,7 @@ public class QueueService {
             throw new UserNotFoundException("사용자를 찾을 수 없습니다.");
         }
 
-        // eventId는 이벤트 로그 추적에 사용하고, requestAt은 Redis ZSet의 대기 순서를 결정하는 기준으로 사용한다.
+        // eventId는 이벤트 로그 추적에 사용하고, requestedAt은 Redis ZSet의 대기 순서를 결정하는 기준으로 사용한다.
         QueueEntryRequestedEvent event = new QueueEntryRequestedEvent(UUID.randomUUID(), gameId, userId, Instant.now());
 
         // Kafka 발행 실패는 대기열 진입 요청 실패로 변환하여 비동기 작업을 예외 상태로 완료한다.
@@ -254,26 +251,24 @@ public class QueueService {
                 .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
 
         LocalDateTime now = LocalDateTime.now();
-
-        boolean hasActiveToken
-            = admissionTokenRepository
-                .existsByUser_IdAndStatusAndExpiresAtAfter(user.getId(), AdmissionTokenStatus.ACTIVE, now);
-        boolean hasWaitingEntryInAnotherGame
-            = queueEntryHistoryRepository
-                .existsByUser_IdAndGame_IdNotAndStatus(user.getId(), game.getId(), QueueEntryHistoryStatus.WAITING);
-
-        // 다른 경기에서 대기 중이거나 유효한 입장 토큰이 있다면 새 대기열에 등록하지 않는다.
-        if (hasActiveToken || hasWaitingEntryInAnotherGame) {
-            return;
-        }
-
-        ZSetOperations<String, String> queueZSet = getZSetOperations();
         LocalDateTime requestedAt = event.requestedAt().atZone(ZoneId.systemDefault()).toLocalDateTime();
 
         String redisKey = redisKey(event.gameId());
         String redisMember = redisMember(event.userId());
         String queueKey = queueKey(event.gameId(), event.userId());
         long score = event.requestedAt().toEpochMilli();
+
+        ActiveTokenCheckResult activeTokenCheckResult = checkActiveTokens(user.getId(), queueKey, now);
+        boolean hasWaitingEntryInAnotherGame
+            = queueEntryHistoryRepository
+                .existsByUser_IdAndGame_IdNotAndStatus(user.getId(), game.getId(), QueueEntryHistoryStatus.WAITING);
+
+        // 다른 경기에서 대기 중이거나 사용 가능한 활성 입장 토큰이 있다면 새 대기열에 등록하지 않는다.
+        if (activeTokenCheckResult.hasUsableActiveToken() || hasWaitingEntryInAnotherGame) {
+            return;
+        }
+
+        ZSetOperations<String, String> queueZSet = getZSetOperations();
 
         QueueEntryHistory existingHistory = queueEntryHistoryRepository.findByQueueKey(queueKey).orElse(null);
 
@@ -286,8 +281,9 @@ public class QueueService {
 
             // 취소된 이력은 새 요청 시간으로 갱신하고 DB 커밋 후 Redis 점수도 덮어써 대기열 맨 뒤에 등록한다.
             if (existingHistory.getStatus() == QueueEntryHistoryStatus.CANCELED) {
-                // 취소 시간보다 늦게 발행된 새로운 요청만 재진입으로 처리한다.
-                if (existingHistory.getCanceledAt().isBefore(requestedAt)) {
+                // 이번 요청에서 토큰 만료로 취소됐거나 취소 시간보다 늦게 발행된 요청만 재진입으로 처리한다.
+                if (existingHistory.getCanceledAt().isBefore(requestedAt)
+                    || activeTokenCheckResult.currentQueueHistoryCanceled()) {
                     existingHistory.reenter(requestedAt);
                     // DB 커밋이 완료된 경우에만 Redis 대기 순서를 갱신하여 두 저장소의 상태 불일치를 방지한다.
                     TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -401,5 +397,83 @@ public class QueueService {
         if (Objects.isNull(registered)) {
             throw new QueueRegistrationFailedException();
         }
+    }
+
+    /**
+     * 사용자의 활성 입장 토큰을 비관적 락으로 조회하고 만료 상태를 반영한다.
+     * <p>만료된 토큰과 연결된 입장 허용 이력은 함께 취소하고,
+     * 현재 요청 경기의 이력 취소 여부를 반환한다.</p>
+     *
+     * @param userId 조회할 사용자 ID
+     * @param currentQueueKey 현재 요청한 경기와 사용자의 대기열 식별값
+     * @param currentTime 만료 여부를 판단할 시간
+     * @return 사용 가능한 활성 토큰과 현재 요청 경기의 이력 취소 여부
+     */
+    private ActiveTokenCheckResult checkActiveTokens(Long userId, String currentQueueKey, LocalDateTime currentTime) {
+        List<AdmissionToken> activeTokens
+            = admissionTokenRepository
+                .findByUser_IdAndStatusWithPessimisticWriteLock(userId, AdmissionTokenStatus.ACTIVE);
+
+        boolean currentQueueHistoryCanceled = false;
+
+        for (AdmissionToken token : activeTokens) {
+            // 전체 유효시간 만료를 최초 좌석 탐색 만료보다 먼저 반영한다.
+            if (token.isExpiredAt(currentTime)) {
+                token.expire(currentTime);
+                if (cancelAdmittedHistoryForExpiredToken(token, currentTime, currentQueueKey)) {
+                    currentQueueHistoryCanceled = true;
+                }
+            } else if (token.isSeatBrowsingExpiredAt(currentTime)) {
+                token.expireBrowsing(currentTime);
+                if (cancelAdmittedHistoryForExpiredToken(token, currentTime, currentQueueKey)) {
+                    currentQueueHistoryCanceled = true;
+                }
+            }
+        }
+
+        boolean hasUsableActiveToken
+            = activeTokens.stream().anyMatch(token -> token.getStatus() == AdmissionTokenStatus.ACTIVE);
+
+        return new ActiveTokenCheckResult(hasUsableActiveToken, currentQueueHistoryCanceled);
+    }
+
+    /**
+     * 만료된 Queue-Token과 연결된 입장 허용 이력을 취소한다.
+     *
+     * @param admissionToken 만료된 Queue-Token
+     * @param currentTime 대기 이력을 취소할 시간
+     * @param currentQueueKey 현재 요청한 경기와 사용자의 대기열 식별값
+     * @return 현재 요청 경기의 입장 허용 이력을 취소했다면 true
+     */
+    private boolean cancelAdmittedHistoryForExpiredToken(
+        AdmissionToken admissionToken,
+        LocalDateTime currentTime,
+        String currentQueueKey
+    ) {
+
+        String queueKey = queueKey(admissionToken.getGame().getId(), admissionToken.getUser().getId());
+
+        // 만료된 토큰의 입장 허용 이력을 취소해 동일 경기 대기열 재진입을 허용한다.
+        Optional<QueueEntryHistory> admittedHistory
+            = queueEntryHistoryRepository
+                .findByQueueKeyWithPessimisticWriteLock(queueKey)
+                .filter(history -> history.getStatus() == QueueEntryHistoryStatus.ADMITTED);
+
+        if (admittedHistory.isEmpty()) {
+            return false;
+        }
+
+        admittedHistory.get().cancel(currentTime);
+
+        return queueKey.equals(currentQueueKey);
+    }
+
+    /**
+     * 활성 Queue-Token 확인 결과
+     *
+     * @param hasUsableActiveToken 사용 가능한 활성 토큰 존재 여부
+     * @param currentQueueHistoryCanceled 현재 요청 경기의 입장 이력이 토큰 만료로 취소됐는지 여부
+     */
+    private record ActiveTokenCheckResult(boolean hasUsableActiveToken, boolean currentQueueHistoryCanceled) {
     }
 }
