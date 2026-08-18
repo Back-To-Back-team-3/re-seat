@@ -19,6 +19,7 @@ import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserRole;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
 import com.backtoback.reseat.domain.user.exception.DeleteUserException;
+import com.backtoback.reseat.domain.user.exception.InactiveUserException;
 import com.backtoback.reseat.domain.user.exception.InvalidPasswordException;
 import com.backtoback.reseat.domain.user.exception.SuspendedUserException;
 import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
@@ -157,6 +158,24 @@ class AuthServiceTest extends BaseUnitTest {
         assertThatThrownBy(() -> authService.login(request))
             .isInstanceOf(DeleteUserException.class)
             .hasMessage("탈퇴 처리된 계정입니다.");
+    }
+
+    @Test
+    @DisplayName("비활성화된 계정(ACTIVE가 아닌 상태)으로 로그인 시 InactiveUserException이 발생한다")
+    void login_InactiveUser() {
+        // given
+        UserLoginRequest request = new UserLoginRequest("user@test.com", "password123!");
+        User user
+            = User.builder().id(1L).email("user@test.com").password("encodedPassword").role(UserRole.USER).build();
+        user.updateStatus(null);
+
+        when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("password123!", "encodedPassword")).thenReturn(true);
+
+        // when & then
+        assertThatThrownBy(() -> authService.login(request))
+            .isInstanceOf(InactiveUserException.class)
+            .hasMessage("비활성화된 계정입니다.");
     }
 
     @Test

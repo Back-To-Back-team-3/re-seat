@@ -14,8 +14,6 @@ import com.backtoback.reseat.domain.user.auth.dto.request.UserLoginRequest;
 import com.backtoback.reseat.domain.user.auth.dto.response.TokenResponse;
 import com.backtoback.reseat.domain.user.auth.service.AuthService;
 import com.backtoback.reseat.global.common.ApiResponse;
-import com.backtoback.reseat.global.exception.BusinessException;
-import com.backtoback.reseat.global.exception.ErrorCode;
 import com.backtoback.reseat.global.security.CustomUserDetails;
 
 import jakarta.validation.Valid;
@@ -45,9 +43,6 @@ public class AuthController implements AuthControllerDocs {
     @PostMapping("/logout")
     @Override
     public ResponseEntity<ApiResponse<Void>> logout(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        if (userDetails == null) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED);
-        }
         authService.logout(userDetails.getId());
         return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success("로그아웃 완료", null));
     }
