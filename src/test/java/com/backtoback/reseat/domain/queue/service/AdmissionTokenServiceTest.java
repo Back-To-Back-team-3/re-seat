@@ -320,8 +320,19 @@ public class AdmissionTokenServiceTest {
     void validateToken_withDifferentUser_throwsInvalid() {
 
         // given
+        // 사용자 불일치에서 검증이 종료되므로 경기 ID는 Stub으로 설정하지 않는다.
+        Game game = mock(Game.class);
+        User user = mock(User.class);
+
+        when(user.getId()).thenReturn(USER_ID);
+
+        LocalDateTime issuedAt = LocalDateTime.now().minusMinutes(1);
+        LocalDateTime expiresAt = issuedAt.plusMinutes(21);
+        LocalDateTime seatBrowsingExpiresAt = issuedAt.plusMinutes(3);
+
+        AdmissionToken activeToken = AdmissionToken.of(game, user, TOKEN, issuedAt, expiresAt, seatBrowsingExpiresAt);
+
         // 다른 사용자가 유효한 토큰 값을 이용해 검증을 요청한 상황을 준비한다.
-        AdmissionToken activeToken = activeToken();
         Long differentUserId = 2L;
 
         given(admissionTokenRepository.findByTokenWithPessimisticWriteLock(TOKEN)).willReturn(Optional.of(activeToken));
