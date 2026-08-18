@@ -8,7 +8,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
 import com.backtoback.reseat.domain.user.verification.dto.response.PortoneVerificationResponse;
-import com.backtoback.reseat.domain.user.verification.dto.response.VerificationStatusResponse;
 import com.backtoback.reseat.domain.user.verification.exception.VerificationException;
 import com.backtoback.reseat.global.exception.BusinessException;
 import com.backtoback.reseat.global.exception.ErrorCode;
@@ -26,10 +25,9 @@ public class VerificationService {
     private final Environment environment;
 
     @Transactional(readOnly = true)
-    public VerificationStatusResponse getVerificationStatus(Long userId) {
+    public boolean isVerified(Long userId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        return VerificationStatusResponse.of(user.isVerified(), user.getName(), user.getPhone());
+        return user.isVerified();
     }
 
     @Transactional
