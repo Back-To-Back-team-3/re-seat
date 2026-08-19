@@ -23,7 +23,6 @@ import java.time.LocalDateTime;
  * 1. validateToken  — 불필요한 락 획득 방지 (락 전 사전 검증)
  * 2. 수량 검증       — 누적 보유 좌석 수 기준, MAX_SEAT_COUNT_EXCEEDED(400)
  * 3. executeWithLocks → holdSeats (트랜잭션·커밋)
- * 4. consumeToken   — 선점 성공 확인 후 토큰 USED 전이
  * </pre>
  */
 @Slf4j
@@ -62,16 +61,6 @@ public class SeatHoldFacade {
         ReservationResponse response
             = seatLockStrategy
                 .executeWithLocks(request.gameSeatIds(), () -> reservationService.holdSeats(userId, request));
-
-        // 4단계: 선점 성공 후 토큰 소비 — 동일 토큰으로 재진입 방지
-        try {
-            admissionTokenService.consumeToken(userId, request.gameId(), token);
-        } catch (Exception e) {
-            // consumeToken 실패 시 선점은 롤백하지 않는다.
-            // Queue-Token TTL(5분) 내 재진입 가능하나, validateToken에서 ACTIVE 상태·만료 여부를 재검증해 차단된다.
-            // 운영 모니터링 대상으로 ERROR 로그를 남긴다.
-            log.error("[SeatHoldFacade] 토큰 소비 실패 — 선점은 유지됩니다. userId={}, gameId={}", userId, request.gameId(), e);
-        }
 
         log
             .info(

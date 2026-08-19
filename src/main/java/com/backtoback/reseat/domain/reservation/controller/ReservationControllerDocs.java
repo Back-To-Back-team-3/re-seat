@@ -36,13 +36,13 @@ public interface ReservationControllerDocs {
             사전 검증 순서:
             1. 예매 가능 여부: games.booking_status = OPEN → BOOKING_NOT_OPEN(409)
             2. 본인인증: users.is_verified = false → USER_NOT_VERIFIED(403)
-            3. Queue-Token: 누락/무효/만료/사용됨 → QUEUE_TOKEN_*(403/409/410)
+            3. Queue-Token: 누락/무효/만료/사용됨 → QUEUE_TOKEN_*(403/409/410) — 검증만 하며 소비하지 않습니다.
             4. 수량 제한: HELD+SOLD 좌석 수 + 요청 수 > 2 → MAX_SEAT_COUNT_EXCEEDED(400)
             5. 좌석 상태·소속 검증 → 락 획득 → HELD 전이
 
             락 전략: Redisson 분산락 또는 DB 비관적 락(FOR UPDATE).
             gameSeatId 오름차순 정렬 후 락 획득(데드락 방지).
-            처리 흐름: Queue-Token 검증 → 분산 락 → 선점 트랜잭션 → 토큰 소비.
+            처리 흐름: Queue-Token 검증 → 분산 락 → 선점 트랜잭션.
             """,
         security = {
             @SecurityRequirement(name = "JWT Bearer Token"),
