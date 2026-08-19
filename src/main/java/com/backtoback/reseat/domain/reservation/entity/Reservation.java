@@ -147,6 +147,14 @@ public class Reservation extends BaseEntity {
     }
 
     /**
+     * @deprecated 전이 가드를 우회하는 레거시 메서드. cancel()·confirm()·expire()로 교체 예정.
+     */
+    @Deprecated
+    public void updateStatus(ReservationStatus status) {
+        this.status = status;
+    }
+
+    /**
      * 예약이 만료됐는지 판정한다.
      * <p>
      * status가 EXPIRED(스케줄러가 이미 회수)이거나,
