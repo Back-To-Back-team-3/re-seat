@@ -165,13 +165,6 @@ public class Reservation extends BaseEntity {
     }
 
     /**
-     * 예약 상태 전이. 상태 전이 검증은 이후에 추가.
-     */
-    public void updateStatus(ReservationStatus status) {
-        this.status = status;
-    }
-
-    /**
      * 연관관계 편의 메서드. ReservationSeat을 이 예약에 연결한다.
      */
     public void addReservationSeat(ReservationSeat seat) {
