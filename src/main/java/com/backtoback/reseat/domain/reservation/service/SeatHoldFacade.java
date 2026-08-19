@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
  * 1. validateToken  — 불필요한 락 획득 방지 (락 전 사전 검증)
  * 2. 수량 검증       — 누적 보유 좌석 수 기준, MAX_SEAT_COUNT_EXCEEDED(400)
  * 3. executeWithLocks → holdSeats (트랜잭션·커밋)
+ * 4. completeSeatBrowsing — 최초 좌석 탐색 완료 시각 기록 (실패해도 선점은 유지)
  * </pre>
  */
 @Slf4j
@@ -38,7 +39,7 @@ public class SeatHoldFacade {
 
     /**
      * 좌석 선점 요청을 처리한다.
-     * Queue-Token 검증 → 수량 검증 → 분산 락 획득 → 좌석 선점 트랜잭션 → 토큰 소비 순으로 처리한다.
+     * Queue-Token 검증 → 수량 검증 → 분산 락 획득 → 좌석 선점 트랜잭션 → 좌석 탐색 완료 기록 순으로 처리한다.
      *
      * @param userId 인증 사용자 ID
      * @param token Queue-Token 헤더 값
@@ -62,6 +63,9 @@ public class SeatHoldFacade {
             = seatLockStrategy
                 .executeWithLocks(request.gameSeatIds(), () -> reservationService.holdSeats(userId, request));
 
+        // 4단계: 최초 좌석 탐색 완료 시각 기록 — expireBrowsing(#305)이 이 기록을 전제로 동작한다.
+        recordSeatBrowsingCompleted(userId, request.gameId(), token);
+
         log
             .info(
                 "[SeatHoldFacade] 좌석 선점 완료. userId={}, gameId={}, seats={}",
@@ -72,4 +76,19 @@ public class SeatHoldFacade {
 
         return response;
     }
+
+    /**
+     * 최초 좌석 탐색 완료 시각을 기록한다.
+     *
+     * <p>실패해도 좌석 선점 자체는 성공으로 유지한다.
+     * 기록 실패는 정합성 위반이 아니므로 좌석 점유 상한은 Queue-Token TTL(21분)이 백스톱한다.
+     */
+    private void recordSeatBrowsingCompleted(Long userId, Long gameId, String token) {
+        try {
+            admissionTokenService.completeSeatBrowsing(userId, gameId, token);
+        } catch (Exception e) {
+            log.warn("좌석 탐색 완료 기록 실패 - userId={}, gameId={}", userId, gameId, e);
+        }
+    }
+
 }
