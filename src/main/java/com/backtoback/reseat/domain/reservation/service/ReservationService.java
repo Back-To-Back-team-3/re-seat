@@ -154,8 +154,8 @@ public class ReservationService {
     public ReservationCancelResponse releaseHold(Long reservationId, Long requesterId) {
         Reservation reservation
             = reservationRepository
-            .findWithSeatsById(reservationId)
-            .orElseThrow(() -> new ReservationNotFoundException(reservationId));
+                .findWithSeatsById(reservationId)
+                .orElseThrow(() -> new ReservationNotFoundException(reservationId));
 
         // 1. 소유권 가드 — 타인 예약의 존재 여부가 상태 코드로 노출되지 않도록 최우선 수행
         verifyOwner(reservation, requesterId);
@@ -171,7 +171,7 @@ public class ReservationService {
         }
 
         // 3. 재취소 멱등 처리 — 이미 취소된 예약의 재취소는 새로운 실패가 아닌 현재 상태와 200으로 반환한다.
-        //  좌석은 최초 취소 시점에 이미 반환됐으므로 release()를 다시 호출하지 않는다.
+        // 좌석은 최초 취소 시점에 이미 반환됐으므로 release()를 다시 호출하지 않는다.
         if (reservation.isCanceled()) {
             return ReservationCancelResponse.from(reservation);
         }

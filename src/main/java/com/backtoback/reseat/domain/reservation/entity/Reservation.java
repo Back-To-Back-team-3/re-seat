@@ -126,6 +126,19 @@ public class Reservation extends BaseEntity {
     }
 
     /**
+     * CONFIRMED → CANCELED (결제 완료 이후 주문 취소·환불에 따른 예약 취소).
+     * <p>
+     * cancel()과 달리 HOLDING이 아닌 CONFIRMED 상태에서 출발한다.
+     * OrderService에서 결제 취소 시 호출한다.
+     *
+     * @throws InvalidReservationStatusException CONFIRMED가 아닌 상태에서 호출 시
+     */
+    public void cancelConfirmed() {
+        requireConfirmed();
+        this.status = ReservationStatus.CANCELED;
+    }
+
+    /**
      * HOLDING → EXPIRED (TTL 만료).
      * 만료 스케줄러(HoldExpiryScheduler)가 호출한다.
      *
@@ -147,11 +160,13 @@ public class Reservation extends BaseEntity {
     }
 
     /**
-     * @deprecated 전이 가드를 우회하는 레거시 메서드. cancel()·confirm()·expire()로 교체 예정.
+     * cancelConfirmed()의 가드.
+     * 현재 상태가 CONFIRMED가 아니면 전이를 차단한다.
      */
-    @Deprecated
-    public void updateStatus(ReservationStatus status) {
-        this.status = status;
+    private void requireConfirmed() {
+        if (this.status != ReservationStatus.CONFIRMED) {
+            throw new InvalidReservationStatusException();
+        }
     }
 
     /**
