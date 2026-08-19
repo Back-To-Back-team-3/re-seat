@@ -307,6 +307,7 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
         QueueEntryHistory queueEntryHistory = QueueEntryHistory.of(game, user, queueKey, issuedAt);
         queueEntryHistory.admit(now);
         queueEntryHistoryRepository.save(queueEntryHistory);
+        Long savedQueueEntryHistoryId = queueEntryHistory.getId();
 
         AdmissionToken activeToken = AdmissionToken.of(game, user, token, issuedAt, expiresAt, seatBrowsingExpiresAt);
         admissionTokenRepository.save(activeToken);
@@ -326,6 +327,9 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
 
         QueueEntryHistory reenteredHistory = findQueueEntryHistory(queueKey);
         assertThat(reenteredHistory.getStatus()).isEqualTo(QueueEntryHistoryStatus.WAITING);
+
+        // 만료 정리에서는 기존 DB 이력을 재사용하고 새 이력을 만들지 않아야 한다.
+        assertThat(reenteredHistory.getId()).isEqualTo(savedQueueEntryHistoryId);
 
         // 재진입한 이력에는 이전 입장 허용시간과 만료 정리 과정의 취소 시간이 남지 않아야 한다.
         assertThat(reenteredHistory.getAdmittedAt()).isNull();
@@ -359,6 +363,7 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
         QueueEntryHistory queueEntryHistory = QueueEntryHistory.of(game, user, queueKey, issuedAt);
         queueEntryHistory.admit(now);
         queueEntryHistoryRepository.save(queueEntryHistory);
+        Long savedQueueEntryHistoryId = queueEntryHistory.getId();
 
         AdmissionToken activeToken = AdmissionToken.of(game, user, token, issuedAt, expiresAt, seatBrowsingExpiresAt);
         admissionTokenRepository.save(activeToken);
@@ -378,6 +383,9 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
 
         QueueEntryHistory reenteredHistory = findQueueEntryHistory(queueKey);
         assertThat(reenteredHistory.getStatus()).isEqualTo(QueueEntryHistoryStatus.WAITING);
+
+        // 만료 정리에서는 기존 DB 이력을 재사용하고 새 이력을 만들지 않아야 한다.
+        assertThat(reenteredHistory.getId()).isEqualTo(savedQueueEntryHistoryId);
 
         // 재진입한 이력에는 이전 입장 허용시간과 탐색 만료 정리 과정의 취소 시간이 남지 않아야 한다.
         assertThat(reenteredHistory.getAdmittedAt()).isNull();

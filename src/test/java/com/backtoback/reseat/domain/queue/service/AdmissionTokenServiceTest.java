@@ -4,6 +4,7 @@ import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
 import com.backtoback.reseat.domain.queue.entity.AdmissionToken;
 import com.backtoback.reseat.domain.queue.entity.AdmissionTokenStatus;
+import com.backtoback.reseat.domain.queue.exception.QueueTokenAlreadyUsedException;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenBrowsingExpiredException;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenExpiredException;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenInvalidException;
@@ -255,6 +256,30 @@ public class AdmissionTokenServiceTest {
     }
 
     @Test
+    @DisplayName("USED 토큰을 검증하면 이미 사용된 토큰 예외가 발생하고 최초 사용 시간이 유지된다.")
+    void validateToken_withUsedToken_throwsAlreadyUsed() {
+
+        // given
+        // 이미 소비된 Queue-Token이 좌석 조회나 재선점 단계에서 다시 사용되는 상황을 준비한다.
+        AdmissionToken usedToken = activeToken();
+        LocalDateTime firstUsedAt = LocalDateTime.now();
+        usedToken.use(firstUsedAt);
+        given(admissionTokenRepository.findByTokenWithPessimisticWriteLock(TOKEN)).willReturn(Optional.of(usedToken));
+
+        // when & then
+        assertThatThrownBy(() -> admissionTokenService.validateToken(USER_ID, GAME_ID, TOKEN))
+            .isInstanceOf(QueueTokenAlreadyUsedException.class);
+
+        // then
+        // USED 토큰의 재검증은 최초 사용시간과 상태를 변경하지 않아야 한다.
+        assertThat(usedToken.getStatus()).isEqualTo(AdmissionTokenStatus.USED);
+        assertThat(usedToken.getUsedAt()).isEqualTo(firstUsedAt);
+
+        then(admissionTokenRepository).should().findByTokenWithPessimisticWriteLock(TOKEN);
+        then(admissionTokenRepository).should(never()).findByToken(TOKEN);
+    }
+
+    @Test
     @DisplayName("REVOKED 토큰을 소비하면 예외가 발생하고 사용 시간이 기록되지 않는다.")
     void consumeToken_withRevokedToken_throwsRevoked() {
 
@@ -309,6 +334,31 @@ public class AdmissionTokenServiceTest {
 
         // 전체 유효시간이 끝난 Queue-Token은 티켓 발급 단계에서 소비되지 않아야 한다.
         assertThat(expiredToken.getUsedAt()).isNull();
+
+        // 소비 경합을 막는 비관적 락 조회 경로만 사용했는지 확인한다.
+        then(admissionTokenRepository).should().findByTokenWithPessimisticWriteLock(TOKEN);
+        then(admissionTokenRepository).should(never()).findByToken(TOKEN);
+    }
+
+    @Test
+    @DisplayName("USED 토큰을 다시 소비하면 이미 사용된 토큰 예외가 발생하고 최초 사용 시간이 유지된다.")
+    void consumeToken_withUsedToken_throwsAlreadyUsed() {
+
+        // given
+        // 이미 소비된 Queue-Token이 티켓 발급 단계에서 다시 소비되는 상황을 준비한다.
+        AdmissionToken usedToken = activeToken();
+        LocalDateTime firstUsedAt = LocalDateTime.now();
+        usedToken.use(firstUsedAt);
+        given(admissionTokenRepository.findByTokenWithPessimisticWriteLock(TOKEN)).willReturn(Optional.of(usedToken));
+
+        // when & then
+        assertThatThrownBy(() -> admissionTokenService.consumeToken(USER_ID, GAME_ID, TOKEN))
+            .isInstanceOf(QueueTokenAlreadyUsedException.class);
+
+        // then
+        // 중복 소비는 상태와 최초 사용시간을 변경하지 않아야 한다.
+        assertThat(usedToken.getStatus()).isEqualTo(AdmissionTokenStatus.USED);
+        assertThat(usedToken.getUsedAt()).isEqualTo(firstUsedAt);
 
         // 소비 경합을 막는 비관적 락 조회 경로만 사용했는지 확인한다.
         then(admissionTokenRepository).should().findByTokenWithPessimisticWriteLock(TOKEN);
