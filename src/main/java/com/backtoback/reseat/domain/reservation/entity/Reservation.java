@@ -1,34 +1,18 @@
 package com.backtoback.reseat.domain.reservation.entity;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.reservation.exception.InvalidReservationStatusException;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.global.common.BaseEntity;
-
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.ForeignKey;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Index;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Entity
@@ -163,7 +147,25 @@ public class Reservation extends BaseEntity {
     }
 
     /**
-     * 예약 상태 전이. 상태 전이 검증은 C-3에서 추가.
+     * 예약이 만료됐는지 판정한다.
+     * <p>
+     * status가 EXPIRED(스케줄러가 이미 회수)이거나,
+     * status는 아직 HOLDING이지만 holdExpiresAt이 지난 경우(스케줄러 미회수 구간)를 포함한다.
+     */
+    public boolean isExpired(LocalDateTime now) {
+        return status == ReservationStatus.EXPIRED
+            || (status == ReservationStatus.HOLDING && holdExpiresAt.isBefore(now));
+    }
+
+    /**
+     * 예약이 이미 취소됐는지 판정한다. 재취소 요청 멱등 처리에 사용한다.
+     */
+    public boolean isCanceled() {
+        return status == ReservationStatus.CANCELED;
+    }
+
+    /**
+     * 예약 상태 전이. 상태 전이 검증은 이후에 추가.
      */
     public void updateStatus(ReservationStatus status) {
         this.status = status;

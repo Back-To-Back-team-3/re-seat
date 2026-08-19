@@ -1,11 +1,5 @@
 package com.backtoback.reseat.domain.reservation.service;
 
-import java.time.LocalDateTime;
-import java.util.List;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
@@ -16,6 +10,7 @@ import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse
 import com.backtoback.reseat.domain.reservation.entity.Reservation;
 import com.backtoback.reseat.domain.reservation.entity.ReservationSeat;
 import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
+import com.backtoback.reseat.domain.reservation.exception.PreReservationExpiredException;
 import com.backtoback.reseat.domain.reservation.exception.ReservationAccessDeniedException;
 import com.backtoback.reseat.domain.reservation.exception.ReservationNotFoundException;
 import com.backtoback.reseat.domain.reservation.exception.SeatAlreadyHeldException;
@@ -27,9 +22,13 @@ import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
 import com.backtoback.reseat.global.exception.BusinessException;
 import com.backtoback.reseat.global.exception.ErrorCode;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 예약(선점) 도메인 서비스.
@@ -155,16 +154,36 @@ public class ReservationService {
     public ReservationCancelResponse releaseHold(Long reservationId, Long requesterId) {
         Reservation reservation
             = reservationRepository
-                .findWithSeatsById(reservationId)
-                .orElseThrow(() -> new ReservationNotFoundException(reservationId));
+            .findWithSeatsById(reservationId)
+            .orElseThrow(() -> new ReservationNotFoundException(reservationId));
 
-        // 소유권 가드: 조회 직후·상태 전이 전 위치 — 권한 없는 요청자에게 상태 정보를 흘리지 않음
+        // 1. 소유권 가드 — 타인 예약의 존재 여부가 상태 코드로 노출되지 않도록 최우선 수행
         verifyOwner(reservation, requesterId);
 
-        // GameSeat 상태 HELD → AVAILABLE 복귀 (도메인 메서드: 전이 가드 + holdExpiresAt null)
+        LocalDateTime now = LocalDateTime.now();
+
+        // 2. 만료 전용 가드 — 잘못된 상태 전이(409)와 만료(410)를 구분한다.
+        // 좌석 반환 로직보다 먼저 검사한다:
+        // 스케줄러가 이미 좌석을 AVAILABLE로 되돌린 상태에서 release()를 다시 호출하면
+        // GameSeat 쪽 전이 가드가 별도 예외를 던질 수 있어, 여기서 먼저 걸러 410으로 응답한다.
+        if (reservation.isExpired(now)) {
+            throw new PreReservationExpiredException();
+        }
+
+        // 3. 재취소 멱등 처리 — 이미 취소된 예약의 재취소는 새로운 실패가 아닌 현재 상태와 200으로 반환한다.
+        //  좌석은 최초 취소 시점에 이미 반환됐으므로 release()를 다시 호출하지 않는다.
+        if (reservation.isCanceled()) {
+            return ReservationCancelResponse.from(reservation);
+        }
+
+        // 4. 정상 취소 전이 — 여기 도달했다면 HOLDING 상태만 남는다.
+
+        // GameSeat 상태 HELD → AVAILABLE 복귀
+        // 도메인 메서드: 전이 가드 + holdExpiresAt null 처리 포함
         reservation.getReservationSeats().forEach(rs -> rs.getGameSeat().release());
 
-        // Reservation 상태 HOLDING → CANCELED (도메인 메서드: requireHolding 가드 포함)
+        // Reservation 상태 HOLDING → CANCELED
+        // 도메인 메서드: requireHolding 가드 포함
         reservation.cancel();
 
         log.info("[ReservationService] 선점 해제 완료. reservationId={}, userId={}", reservationId, requesterId);
