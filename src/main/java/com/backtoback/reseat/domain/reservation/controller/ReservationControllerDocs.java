@@ -1,13 +1,10 @@
 package com.backtoback.reseat.domain.reservation.controller;
 
-import org.springframework.http.ResponseEntity;
-
 import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
 import com.backtoback.reseat.domain.reservation.dto.response.HoldTimeResponse;
 import com.backtoback.reseat.domain.reservation.dto.response.ReservationCancelResponse;
 import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse;
 import com.backtoback.reseat.global.security.CustomUserDetails;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -15,6 +12,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.ResponseEntity;
 
 /**
  * 좌석 선점(HOLD)·남은시간 조회·해제 API Swagger 문서화 인터페이스.
@@ -239,6 +237,7 @@ public interface ReservationControllerDocs {
             선점된 좌석을 해제합니다.
             좌석은 즉시 AVAILABLE 상태로 복귀합니다.
             이미 만료된 선점 해제 시 410 PRE_RESERVATION_EXPIRED.
+            이미 취소된 예약에 대한 재취소 요청은 200으로 멱등 처리됩니다.
             """,
         security = @SecurityRequirement(name = "JWT Bearer Token")
     )
