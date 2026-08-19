@@ -1,14 +1,16 @@
 package com.backtoback.reseat.domain.reservation.service;
 
-import org.springframework.stereotype.Component;
-
 import com.backtoback.reseat.domain.queue.service.AdmissionTokenService;
 import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
 import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse;
+import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
 import com.backtoback.reseat.domain.reservation.service.lock.SeatLockStrategy;
-
+import com.backtoback.reseat.domain.reservation.service.port.TicketCountPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
 
 /**
  * 좌석 선점 흐름을 조율하는 Facade.
@@ -19,8 +21,9 @@ import lombok.extern.slf4j.Slf4j;
  *
  * <pre>
  * 1. validateToken  — 불필요한 락 획득 방지 (락 전 사전 검증)
- * 2. executeWithLocks → holdSeats (트랜잭션·커밋)
- * 3. consumeToken   — 선점 성공 확인 후 토큰 USED 전이
+ * 2. 수량 검증       — 누적 보유 좌석 수 기준, MAX_SEAT_COUNT_EXCEEDED(400)
+ * 3. executeWithLocks → holdSeats (트랜잭션·커밋)
+ * 4. consumeToken   — 선점 성공 확인 후 토큰 USED 전이
  * </pre>
  */
 @Slf4j
@@ -31,10 +34,12 @@ public class SeatHoldFacade {
     private final ReservationService reservationService;
     private final SeatLockStrategy seatLockStrategy;
     private final AdmissionTokenService admissionTokenService;
+    private final ReservationSeatRepository reservationSeatRepository;
+    private final TicketCountPort ticketCountPort;
 
     /**
      * 좌석 선점 요청을 처리한다.
-     * Queue-Token 검증 → 분산 락 획득 → 좌석 선점 트랜잭션 → 토큰 소비 순으로 처리한다.
+     * Queue-Token 검증 → 수량 검증 → 분산 락 획득 → 좌석 선점 트랜잭션 → 토큰 소비 순으로 처리한다.
      *
      * @param userId 인증 사용자 ID
      * @param token Queue-Token 헤더 값
@@ -45,12 +50,20 @@ public class SeatHoldFacade {
         // 1단계: 락 획득 전 토큰 사전 검증 — 유효하지 않은 요청이 락까지 진입하는 것을 차단
         admissionTokenService.validateToken(userId, request.gameId(), token);
 
-        // 2단계: 좌석 단위 분산 락 획득 → 선점 트랜잭션 실행(커밋) → 락 해제
+        // 2단계: 예매 수량 — 누적 보유 좌석 수 기준 검증
+        // 집계 ① HOLDING 예약(만료 제외) + 집계 ② 유효 티켓(stub, 0 반환 — T3-06에서 실제 구현으로 교체)
+        int heldSeatCount
+            = reservationSeatRepository.countActiveHoldingSeats(userId, request.gameId(), LocalDateTime.now())
+                + ticketCountPort.countActiveTickets(userId, request.gameId());
+
+        SeatCountPolicy.validateSeatCount(heldSeatCount, request.gameSeatIds().size());
+
+        // 3단계: 좌석 단위 분산 락 획득 → 선점 트랜잭션 실행(커밋) → 락 해제
         ReservationResponse response
             = seatLockStrategy
                 .executeWithLocks(request.gameSeatIds(), () -> reservationService.holdSeats(userId, request));
 
-        // 3단계: 선점 성공 후 토큰 소비 — 동일 토큰으로 재진입 방지
+        // 4단계: 선점 성공 후 토큰 소비 — 동일 토큰으로 재진입 방지
         try {
             admissionTokenService.consumeToken(userId, request.gameId(), token);
         } catch (Exception e) {
