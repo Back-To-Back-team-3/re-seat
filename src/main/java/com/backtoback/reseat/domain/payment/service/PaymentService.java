@@ -231,7 +231,7 @@ public class PaymentService {
 
     /**
      * 승인된 결제를 전액 취소한다.
-     * <p>Toss 취소 API가 성공한 뒤에만 로컬 결제 상태를 CANCELED로 변경한다. 주문/좌석/티켓 상태 전파는 각 도메인과 합의 후 후속 작업에서 연결한다.
+     * <p>Toss 취소 API가 성공한 뒤에만 로컬 결제와 주문을 취소 상태로 변경한다.
      *
      * @param userId 현재 사용자 ID
      * @param paymentId 결제 ID
@@ -265,8 +265,9 @@ public class PaymentService {
             throw new PaymentCancelFailedException(failReason);
         }
 
-        // 토스 취소가 확인된 뒤에만 로컬 결제를 취소 상태로 변경한다.
+        // 토스 취소가 확인된 뒤에만 로컬 결제와 주문을 함께 취소 상태로 변경한다.
         payment.cancel();
+        orderService.cancelPaidOrder(payment.getOrder().getId());
 
         return PaymentActionResponse.from(payment);
     }
