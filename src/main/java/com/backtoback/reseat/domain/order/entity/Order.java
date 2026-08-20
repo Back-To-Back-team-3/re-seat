@@ -1,12 +1,9 @@
 package com.backtoback.reseat.domain.order.entity;
 
-import java.time.LocalDateTime;
-
 import com.backtoback.reseat.domain.order.exception.InvalidOrderStatusException;
 import com.backtoback.reseat.domain.reservation.entity.Reservation;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.global.common.BaseEntity;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -25,6 +22,8 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(
@@ -140,6 +139,16 @@ public class Order extends BaseEntity {
     }
 
     /**
+     * 결제 완료 주문을 취소 상태로 변경한다.
+     * <p>PAID 상태의 주문만 CANCELED 상태로 변경할 수 있다.</p>
+     */
+    public void cancelAfterPayment() {
+
+        validatePaidStatus();
+        this.status = OrderStatus.CANCELED;
+    }
+
+    /**
      * 주문을 결제 완료 상태로 변경한다.
      * <p>CREATED 상태의 주문만 PAID 상태로 변경할 수 있다.</p>
      */
@@ -169,4 +178,14 @@ public class Order extends BaseEntity {
         }
     }
 
+    /**
+     * 주문이 결제 완료 취소 가능한 상태인지 검증한다.
+     * <p>PAID 상태가 아닌 경우 예외가 발생한다.</p>
+     */
+    private void validatePaidStatus() {
+
+        if (this.status != OrderStatus.PAID) {
+            throw new InvalidOrderStatusException();
+        }
+    }
 }
