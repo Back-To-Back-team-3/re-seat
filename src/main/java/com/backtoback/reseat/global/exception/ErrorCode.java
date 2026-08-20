@@ -28,6 +28,7 @@ public enum ErrorCode {
     ADMIN_ACCESS_REQUIRED(HttpStatus.FORBIDDEN, "관리자 권한 계정만 로그인할 수 있습니다."),
     TICKET_EXISTS_ON_WITHDRAWAL(HttpStatus.CONFLICT, "정산 미완료 티켓이 존재하여 탈퇴할 수 없습니다."),
     // 본인인증
+    USER_NOT_VERIFIED(HttpStatus.FORBIDDEN, "본인인증이 완료되지 않은 계정입니다."),
     VERIFICATION_FAILED(HttpStatus.BAD_REQUEST, "본인인증 처리에 실패했습니다."),
     VERIFICATION_DUPLICATE_CI(HttpStatus.CONFLICT, "이미 동일한 명의로 가입된 다른 계정이 존재합니다."),
 
