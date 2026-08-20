@@ -2,9 +2,10 @@
 
 package com.backtoback.reseat.global.exception;
 
+import org.springframework.http.HttpStatus;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 
 @Getter
 @RequiredArgsConstructor
@@ -25,6 +26,8 @@ public enum ErrorCode {
     USER_INACTIVE(HttpStatus.FORBIDDEN, "비활성 또는 정지된 계정입니다."),
     INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "비밀번호가 올바르지 않습니다."),
     ADMIN_ACCESS_REQUIRED(HttpStatus.FORBIDDEN, "관리자 권한 계정만 로그인할 수 있습니다."),
+    TICKET_EXISTS_ON_WITHDRAWAL(HttpStatus.CONFLICT, "정산 미완료 티켓이 존재하여 탈퇴할 수 없습니다."),
+    // 본인인증
     USER_NOT_VERIFIED(HttpStatus.FORBIDDEN, "본인인증이 완료되지 않은 계정입니다."),
     VERIFICATION_FAILED(HttpStatus.BAD_REQUEST, "본인인증 처리에 실패했습니다."),
     VERIFICATION_DUPLICATE_CI(HttpStatus.CONFLICT, "이미 동일한 명의로 가입된 다른 계정이 존재합니다."),
@@ -45,8 +48,8 @@ public enum ErrorCode {
     QUEUE_TOKEN_INVALID(HttpStatus.FORBIDDEN, "유효하지 않은 입장 토큰입니다."),
     QUEUE_TOKEN_ALREADY_USED(HttpStatus.CONFLICT, "이미 사용된 입장 토큰입니다."),
     QUEUE_TOKEN_EXPIRED(HttpStatus.GONE, "만료된 입장 토큰입니다."),
-    QUEUE_TOKEN_BROWSING_EXPIRED(HttpStatus.GONE, "최초 좌석 탐색 시간이 만료된 입장 토큰입니다."),
     QUEUE_TOKEN_REVOKED(HttpStatus.GONE, "취소된 입장 토큰입니다."),
+    QUEUE_TOKEN_BROWSING_EXPIRED(HttpStatus.GONE, "최초 좌석 탐색 시간이 만료된 입장 토큰입니다."),
     QUEUE_ENTRY_NOT_FOUND(HttpStatus.NOT_FOUND, "대기열 진입 이력이 없습니다."),
     QUEUE_ENTRY_CANCELLATION_NOT_ALLOWED(HttpStatus.CONFLICT, "대기 중 혹은 입장 허용된 상태만 취소할 수 있습니다."),
     QUEUE_ENTRY_ADMISSION_NOT_ALLOWED(HttpStatus.CONFLICT, "대기 중인 상태만 입장 허용할 수 있습니다."),
