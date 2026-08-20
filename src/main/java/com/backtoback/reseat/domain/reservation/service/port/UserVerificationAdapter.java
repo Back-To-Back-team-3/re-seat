@@ -6,7 +6,6 @@ import org.springframework.stereotype.Component;
 
 /**
  * UserVerificationPort의 기본 구현체.
- *
  * <p>user 도메인이 제공하는 본인인증 조회 서비스(VerificationService)에 위임한다.
  */
 @Component
