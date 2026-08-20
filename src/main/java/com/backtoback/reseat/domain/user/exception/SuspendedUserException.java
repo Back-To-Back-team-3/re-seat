@@ -4,7 +4,8 @@ import com.backtoback.reseat.global.exception.BusinessException;
 import com.backtoback.reseat.global.exception.ErrorCode;
 
 public class SuspendedUserException extends BusinessException {
-    public SuspendedUserException(String message) {
-        super(ErrorCode.FORBIDDEN, message);
+
+    public SuspendedUserException() {
+        super(ErrorCode.FORBIDDEN);
     }
 }
