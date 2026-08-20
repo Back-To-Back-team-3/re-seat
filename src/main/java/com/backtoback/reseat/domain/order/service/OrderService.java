@@ -170,7 +170,6 @@ public class OrderService {
 
     /**
      * 결제 취소 시 주문, 예약과 좌석의 상태를 변경한다.
-     *
      * <p>주문과 예약은 CANCELED, 주문에 포함된 모든 경기 좌석은 AVAILABLE 상태로 변경한다.</p>
      *
      * @param orderId 취소 처리할 주문 ID

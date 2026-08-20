@@ -50,12 +50,14 @@ public class UserService {
         String encodePassword = passwordEncoder.encode(request.getPassword());
 
         // 3. Request DTO 를 User엔티티로 변환
-        User user = User.builder()
-            .email(request.getEmail())
-            .password(encodePassword)
-            .name(request.getName())
-            .phone(request.getPhone())
-            .build();
+        User user
+            = User
+                .builder()
+                .email(request.getEmail())
+                .password(encodePassword)
+                .name(request.getName())
+                .phone(request.getPhone())
+                .build();
 
         // 4. 데이터베이스 저장 및 고유 식별자 반환
         User savedUser = userRepository.save(user);
@@ -64,8 +66,8 @@ public class UserService {
 
     // 내 정보 조회
     public UserProfileResponse getMyProfile(Long userId) {
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new UserNotFoundException(String.valueOf(userId)));
+        User user
+            = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(String.valueOf(userId)));
 
         return UserProfileResponse.from(user);
     }
@@ -73,8 +75,8 @@ public class UserService {
     // 회원 정보 수정
     @Transactional
     public void updateProfile(Long userId, UserUpdateRequest request) {
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new UserNotFoundException(String.valueOf(userId)));
+        User user
+            = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(String.valueOf(userId)));
 
         if (!user.getPhone().equals(request.getPhone()) && userRepository.existsByPhone(request.getPhone())) {
             throw new DuplicatePhoneException(request.getPhone());
@@ -84,8 +86,8 @@ public class UserService {
 
     @Transactional
     public void changePassword(Long userId, PasswordChangeRequest request) {
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new UserNotFoundException(String.valueOf(userId)));
+        User user
+            = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(String.valueOf(userId)));
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
             throw new InvalidPasswordException("현재 비밀번호가 일치하지 않습니다.");
@@ -103,8 +105,8 @@ public class UserService {
     @Transactional
     public void withdraw(Long userId) {
         // 사용자 조회 및 404 예외 처리
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new UserNotFoundException(String.valueOf(userId)));
+        User user
+            = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(String.valueOf(userId)));
 
         // 이미 탈퇴한 회원인 경우 중복 처리 방지
         if (user.getStatus() == UserStatus.DELETED) {
@@ -121,8 +123,7 @@ public class UserService {
         user.withdraw();
 
         // DB 내 저장되어 있는 사용자의 리프레시 토큰 제거
-        refreshTokenRepository.findByUser(user)
-            .ifPresent(refreshTokenRepository::delete);
+        refreshTokenRepository.findByUser(user).ifPresent(refreshTokenRepository::delete);
     }
 
 }
