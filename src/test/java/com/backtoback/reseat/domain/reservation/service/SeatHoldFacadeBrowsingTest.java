@@ -7,6 +7,7 @@ import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
 import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
 import com.backtoback.reseat.domain.reservation.service.lock.SeatLockStrategy;
 import com.backtoback.reseat.domain.reservation.service.port.TicketCountPort;
+import com.backtoback.reseat.domain.reservation.service.port.UserVerificationPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
@@ -41,6 +42,8 @@ class SeatHoldFacadeBrowsingTest {
     private ReservationSeatRepository reservationSeatRepository;
     @Mock
     private TicketCountPort ticketCountPort;
+    @Mock
+    private UserVerificationPort userVerificationPort;
 
     private SeatHoldFacade seatHoldFacade;
     private SeatHoldRequest request;
@@ -53,7 +56,8 @@ class SeatHoldFacadeBrowsingTest {
                 seatLockStrategy,
                 admissionTokenService,
                 reservationSeatRepository,
-                ticketCountPort
+                ticketCountPort,
+                userVerificationPort
             );
 
         request = new SeatHoldRequest(GAME_ID, List.of(101L));
