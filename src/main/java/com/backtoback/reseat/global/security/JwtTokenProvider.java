@@ -8,7 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
-import com.backtoback.reseat.domain.verification.service.CustomUserDetailsService;
+import com.backtoback.reseat.domain.user.auth.service.CustomUserDetailsService;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -34,7 +34,23 @@ public class JwtTokenProvider {
     // 객체 생성 후 주입받은 secretKey 문자열을 암호화 키 객체로 변환
     @PostConstruct
     protected void init() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKeyString);
+        if (secretKeyString == null || secretKeyString.isBlank()) {
+            throw new IllegalStateException("JWT secret key가 설정되지 않았습니다. (JWT_SECRET 환경변수를 확인하세요)");
+        }
+
+        byte[] keyBytes;
+        try {
+            keyBytes = Decoders.BASE64.decode(secretKeyString);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("JWT secret key가 올바른 Base64 형식이 아닙니다.", e);
+        }
+
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException(
+                String.format("JWT secret key는 최소 32바이트(256비트) 이상이어야 합니다. (현재 디코딩된 길이: %d 바이트)", keyBytes.length)
+            );
+        }
+
         this.secretKey = Keys.hmacShaKeyFor(keyBytes);
     }
 
