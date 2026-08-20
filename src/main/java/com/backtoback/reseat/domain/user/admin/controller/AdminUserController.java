@@ -27,12 +27,12 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/v1/admin/users")
 @RequiredArgsConstructor
-public class AdminUserController {
+public class AdminUserController implements AdminUserControllerDocs {
 
     private final AdminUserService adminUserService;
 
     @GetMapping
-    // 반환 타입을 PageResponse<AdminUserResponse> 로 격리 수용 변경
+    @Override
     public ResponseEntity<ApiResponse<PageResponse<AdminUserResponse>>> searchUsers(
         UserSearchCondition condition,
         @PageableDefault(
@@ -50,12 +50,14 @@ public class AdminUserController {
     }
 
     @GetMapping("/{userId}")
+    @Override
     public ResponseEntity<ApiResponse<AdminUserResponse>> getUserDetail(@PathVariable Long userId) {
         AdminUserResponse response = adminUserService.getUserDetail(userId);
         return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success("회원 상세 조회 완료", response));
     }
 
     @PatchMapping("/{userId}/role")
+    @Override
     public ResponseEntity<ApiResponse<Void>> updateUserRole(
         @PathVariable Long userId,
         @Valid @RequestBody AdminUserRoleUpdateRequest request
@@ -66,6 +68,7 @@ public class AdminUserController {
     }
 
     @PatchMapping("/{userId}/status")
+    @Override
     public ResponseEntity<ApiResponse<Void>> updateUserStatus(
         @PathVariable Long userId,
         @Valid @RequestBody AdminUserStatusUpdateRequest request
