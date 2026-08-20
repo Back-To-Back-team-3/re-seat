@@ -1,6 +1,8 @@
 package com.backtoback.reseat.domain.payment.integration;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,6 +23,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -31,6 +34,7 @@ import com.backtoback.reseat.domain.payment.dto.request.PaymentRequest;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCreateResponse;
 import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
+import com.backtoback.reseat.domain.payment.service.PaymentCreationService;
 import com.backtoback.reseat.domain.payment.service.PaymentService;
 import com.backtoback.reseat.domain.reservation.entity.Reservation;
 import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
@@ -57,6 +61,9 @@ class PaymentCreationConcurrencyTest extends BaseIntegrationTest {
     @Autowired
     private PaymentService paymentService;
 
+    @MockitoSpyBean
+    private PaymentCreationService paymentCreationService;
+
     @Autowired
     private PaymentRepository paymentRepository;
 
@@ -79,10 +86,26 @@ class PaymentCreationConcurrencyTest extends BaseIntegrationTest {
         try {
             Future<PaymentCreateResponse> first
                 = executor
-                    .submit(() -> requestPayment(fixture.userId(), fixture.orderId(), IDEMPOTENCY_KEY_A, ready, start));
+                    .submit(
+                        () -> requestPaymentAfterStartSignal(
+                            fixture.userId(),
+                            fixture.orderId(),
+                            IDEMPOTENCY_KEY_A,
+                            ready,
+                            start
+                        )
+                    );
             Future<PaymentCreateResponse> second
                 = executor
-                    .submit(() -> requestPayment(fixture.userId(), fixture.orderId(), IDEMPOTENCY_KEY_B, ready, start));
+                    .submit(
+                        () -> requestPaymentAfterStartSignal(
+                            fixture.userId(),
+                            fixture.orderId(),
+                            IDEMPOTENCY_KEY_B,
+                            ready,
+                            start
+                        )
+                    );
 
             assertThat(ready.await(5, TimeUnit.SECONDS)).as("두 결제 요청이 동시 실행 준비를 마치지 못했다.").isTrue();
             start.countDown();
@@ -108,7 +131,69 @@ class PaymentCreationConcurrencyTest extends BaseIntegrationTest {
         }
     }
 
-    private PaymentCreateResponse requestPayment(
+    @Test
+    @DisplayName("첫 번째 요청이 결제 생성 락을 보유하면 두 번째 요청은 락 해제까지 대기한다.")
+    void serializesRequestsWithOrderLock() throws Exception {
+        PaymentFixture fixture = createFixture();
+
+        // 테스트 스레드가 첫 번째 요청의 생성 서비스 진입까지 기다린다.
+        CountDownLatch firstRequestEntered = new CountDownLatch(1);
+
+        // 첫 번째 요청 스레드가 테스트 스레드의 검증 완료 신호까지 락을 보유하며 기다린다.
+        CountDownLatch releaseFirstRequest = new CountDownLatch(1);
+
+        // 테스트 스레드가 두 번째 요청 스레드의 실행 시작까지 기다린다.
+        CountDownLatch secondRequestStarted = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        // 호출 사이에 동작을 끼워넣기 위해 doAnswer()를 사용한다.
+        // 초기 동작시 doAnswer(...)가 동작하며, 이후로는 체인으로 붙은 doCallRealMethod()를 통해 실제 메서드가 실행된다.
+        doAnswer(invocation -> {
+            // 처음 진입했을 시, 첫 요청 진입 레치의 카운트를 줄인다.
+            firstRequestEntered.countDown();
+            // 그리고 첫 요청 스레드가 테스트 스레드의 검증 완료 신호까지 기다린다.
+            if (!releaseFirstRequest.await(5, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("첫 번째 결제 요청을 제한 시간 안에 해제하지 못했다.");
+            }
+            // 락 대기가 검증된 이후 실제 생성 로직을 실행한다.
+            return invocation.callRealMethod();
+        })
+            // 연속 설정된 두 번째 호출부터는 대기 없이 실제 생성 로직을 실행한다.
+            .doCallRealMethod()
+            // PaymentCreationService의 생성 부분을 호출하므로, 해당 메서드의 호출 시점은 해당 스레드가 락을 갖고 있는 상태이다.
+            .when(paymentCreationService)
+            .requestPayment(anyLong(), anyString(), any(PaymentRequest.class));
+
+        try {
+            Future<PaymentCreateResponse> first = executor.submit(() -> requestPayment(fixture, IDEMPOTENCY_KEY_A));
+            assertThat(firstRequestEntered.await(5, TimeUnit.SECONDS)).as("첫 번째 요청이 결제 생성 서비스에 진입하지 못했다.").isTrue();
+
+            Future<PaymentCreateResponse> second = executor.submit(() -> {
+                secondRequestStarted.countDown();
+                return requestPayment(fixture, IDEMPOTENCY_KEY_B);
+            });
+            assertThat(secondRequestStarted.await(5, TimeUnit.SECONDS)).as("두 번째 결제 요청이 시작되지 않았다.").isTrue();
+
+            // 첫 번째 요청이 락을 보유하는 동안 생성 서비스 호출은 한 번만 발생해야 한다.
+            verify(paymentCreationService, after(500).times(1))
+                .requestPayment(anyLong(), anyString(), any(PaymentRequest.class));
+            // 실제 첫 요청의 검증 완료 신호는 500ms 이후에 전달된다.
+            releaseFirstRequest.countDown();
+
+            PaymentCreateResponse firstResponse = first.get(10, TimeUnit.SECONDS);
+            PaymentCreateResponse secondResponse = second.get(10, TimeUnit.SECONDS);
+
+            // 최종적으로는 paymentCreationService.requestPayment(...)는 2번 호출 되어야 한다.
+            verify(paymentCreationService, times(2)).requestPayment(anyLong(), anyString(), any(PaymentRequest.class));
+            assertThat(firstResponse.getPaymentId()).isEqualTo(secondResponse.getPaymentId());
+            assertThat(paymentRepository.findAll()).hasSize(1);
+        } finally {
+            releaseFirstRequest.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    private PaymentCreateResponse requestPaymentAfterStartSignal(
         Long userId,
         Long orderId,
         String idempotencyKey,
@@ -123,6 +208,12 @@ class PaymentCreationConcurrencyTest extends BaseIntegrationTest {
         ready.countDown();
         start.await();
         return paymentService.requestPayment(userId, idempotencyKey, request);
+    }
+
+    private PaymentCreateResponse requestPayment(PaymentFixture fixture, String idempotencyKey) {
+        PaymentRequest request = new PaymentRequest();
+        ReflectionTestUtils.setField(request, "orderId", fixture.orderId());
+        return paymentService.requestPayment(fixture.userId(), idempotencyKey, request);
     }
 
     private PaymentFixture createFixture() {
