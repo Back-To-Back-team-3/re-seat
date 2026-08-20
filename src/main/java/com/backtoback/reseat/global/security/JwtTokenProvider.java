@@ -5,24 +5,27 @@ import java.util.Date;
 import javax.crypto.SecretKey;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
-import com.backtoback.reseat.domain.user.auth.service.CustomUserDetailsService;
-
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SecurityException;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtTokenProvider {
 
-    // 커스텀 유저 디테일 서비스를 주입받습니다.
-    private final CustomUserDetailsService customUserDetailsService;
     // AccessToken 만료시간 1시간(3600초)
     private final long accessTokenValidityInMilliseconds = 3600 * 1000L;
     // RefreshToken 만료시간 14일
@@ -34,23 +37,7 @@ public class JwtTokenProvider {
     // 객체 생성 후 주입받은 secretKey 문자열을 암호화 키 객체로 변환
     @PostConstruct
     protected void init() {
-        if (secretKeyString == null || secretKeyString.isBlank()) {
-            throw new IllegalStateException("JWT secret key가 설정되지 않았습니다. (JWT_SECRET 환경변수를 확인하세요)");
-        }
-
-        byte[] keyBytes;
-        try {
-            keyBytes = Decoders.BASE64.decode(secretKeyString);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalStateException("JWT secret key가 올바른 Base64 형식이 아닙니다.", e);
-        }
-
-        if (keyBytes.length < 32) {
-            throw new IllegalStateException(
-                String.format("JWT secret key는 최소 32바이트(256비트) 이상이어야 합니다. (현재 디코딩된 길이: %d 바이트)", keyBytes.length)
-            );
-        }
-
+        byte[] keyBytes = Decoders.BASE64.decode(secretKeyString);
         this.secretKey = Keys.hmacShaKeyFor(keyBytes);
     }
 
@@ -76,35 +63,45 @@ public class JwtTokenProvider {
 
     public Long getUserId(String token) {
         Claims claims = parseClaims(token);
-        return claims.get("userId", Long.class);
+        Object userId = claims.get("userId");
+        if (userId instanceof Number number) {
+            return number.longValue();
+        }
+        return null;
     }
 
     public String getEmail(String token) {
         return parseClaims(token).getSubject();
     }
 
-    // Principal 타입을 CustomUserDetails로 일치화
-    public org.springframework.security.core.Authentication getAuthentication(String token) {
+    // JWT Claims 정보를 기반으로 Authentication 생성 (DB 조회 제거)
+    public Authentication getAuthentication(String token) {
         Claims claims = parseClaims(token);
         String email = claims.getSubject();
+        Object userIdObj = claims.get("userId");
+        Long userId = (userIdObj instanceof Number number) ? number.longValue() : null;
+        String userRole = claims.get("userRole", String.class);
 
-        // 기존의 뉴비 껍데기 시큐리티 User 생성 코드를 제거하고,
-        // 진짜 DB 유저 데이터를 물고 있는 CustomUserDetails를 로드
-        UserDetails userDetails = customUserDetailsService.loadUserByUsername(email);
+        CustomUserDetails userDetails = CustomUserDetails.of(userId, email, userRole);
 
-        return new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
-            userDetails,
-            token,
-            userDetails.getAuthorities()
-        );
+        return new UsernamePasswordAuthenticationToken(userDetails, token, userDetails.getAuthorities());
     }
 
     public boolean validateToken(String token) {
         try {
             return !parseClaims(token).getExpiration().before(new Date());
+        } catch (SecurityException | MalformedJwtException e) {
+            log.warn("[보안 이벤트] 유효하지 않은 JWT 서명 또는 잘못된 토큰 형식입니다. reason={}", e.getMessage());
+        } catch (ExpiredJwtException e) {
+            log.info("[보안 이벤트] 만료된 JWT 토큰입니다. reason={}", e.getMessage());
+        } catch (UnsupportedJwtException e) {
+            log.warn("[보안 이벤트] 지원되지 않는 JWT 토큰입니다. reason={}", e.getMessage());
+        } catch (IllegalArgumentException e) {
+            log.warn("[보안 이벤트] JWT 클레임이 비어있거나 잘못되었습니다. reason={}", e.getMessage());
         } catch (Exception e) {
-            return false;
+            log.error("[보안 이벤트] JWT 검증 중 예기치 못한 오류가 발생했습니다.", e);
         }
+        return false;
     }
 
     private io.jsonwebtoken.Claims parseClaims(String token) {
