@@ -49,6 +49,9 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             if (existingUser.getStatus() == UserStatus.DELETED) {
                 throw new OAuth2AuthenticationException("탈퇴한 사용자입니다.");
             }
+            if (existingUser.getStatus() == UserStatus.SUSPENDED) {
+                throw new OAuth2AuthenticationException("이용이 정지된 계정입니다.");
+            }
             return existingUser;
         }).orElseGet(() -> createNewOAuthUser(name, provider, providerId));
 

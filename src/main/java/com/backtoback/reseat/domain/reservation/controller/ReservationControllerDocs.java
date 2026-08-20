@@ -1,13 +1,10 @@
 package com.backtoback.reseat.domain.reservation.controller;
 
-import org.springframework.http.ResponseEntity;
-
 import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
 import com.backtoback.reseat.domain.reservation.dto.response.HoldTimeResponse;
 import com.backtoback.reseat.domain.reservation.dto.response.ReservationCancelResponse;
 import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse;
 import com.backtoback.reseat.global.security.CustomUserDetails;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -15,6 +12,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.ResponseEntity;
 
 /**
  * 좌석 선점(HOLD)·남은시간 조회·해제 API Swagger 문서화 인터페이스.
@@ -38,13 +36,13 @@ public interface ReservationControllerDocs {
             사전 검증 순서:
             1. 예매 가능 여부: games.booking_status = OPEN → BOOKING_NOT_OPEN(409)
             2. 본인인증: users.is_verified = false → USER_NOT_VERIFIED(403)
-            3. Queue-Token: 누락/무효/만료/사용됨 → QUEUE_TOKEN_*(403/409/410)
+            3. Queue-Token: 누락/무효/만료/사용됨 → QUEUE_TOKEN_*(403/409/410) — 검증만 하며 소비하지 않습니다.
             4. 수량 제한: HELD+SOLD 좌석 수 + 요청 수 > 2 → MAX_SEAT_COUNT_EXCEEDED(400)
             5. 좌석 상태·소속 검증 → 락 획득 → HELD 전이
 
             락 전략: Redisson 분산락 또는 DB 비관적 락(FOR UPDATE).
             gameSeatId 오름차순 정렬 후 락 획득(데드락 방지).
-            처리 흐름: Queue-Token 검증 → 분산 락 → 선점 트랜잭션 → 토큰 소비.
+            처리 흐름: Queue-Token 검증 → 분산 락 → 선점 트랜잭션.
             """,
         security = {
             @SecurityRequirement(name = "JWT Bearer Token"),
@@ -239,6 +237,7 @@ public interface ReservationControllerDocs {
             선점된 좌석을 해제합니다.
             좌석은 즉시 AVAILABLE 상태로 복귀합니다.
             이미 만료된 선점 해제 시 410 PRE_RESERVATION_EXPIRED.
+            이미 취소된 예약에 대한 재취소 요청은 200으로 멱등 처리됩니다.
             """,
         security = @SecurityRequirement(name = "JWT Bearer Token")
     )

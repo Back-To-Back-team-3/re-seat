@@ -13,14 +13,13 @@ import com.backtoback.reseat.domain.user.entity.RefreshToken;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
 import com.backtoback.reseat.domain.user.exception.DeleteUserException;
+import com.backtoback.reseat.domain.user.exception.InactiveUserException;
 import com.backtoback.reseat.domain.user.exception.InvalidPasswordException;
 import com.backtoback.reseat.domain.user.exception.InvalidTokenException;
 import com.backtoback.reseat.domain.user.exception.SuspendedUserException;
 import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
 import com.backtoback.reseat.domain.user.repository.RefreshTokenRepository;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
-import com.backtoback.reseat.global.exception.BusinessException;
-import com.backtoback.reseat.global.exception.ErrorCode;
 import com.backtoback.reseat.global.security.JwtTokenProvider;
 
 import lombok.RequiredArgsConstructor;
@@ -55,7 +54,7 @@ public class AuthService {
             throw new DeleteUserException("탈퇴 처리된 계정입니다.");
         }
         if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new BusinessException(ErrorCode.USER_INACTIVE);
+            throw new InactiveUserException("비활성화된 계정입니다.");
         }
 
         String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail(), user.getRole().name());
@@ -118,5 +117,12 @@ public class AuthService {
 
         // 성공 시 기존 구형 토큰 대신 새로 교체된 newRefreshToken을 리턴
         return TokenResponse.builder().accessToken(newAccessToken).refreshToken(newRefreshToken).build();
+    }
+
+    @Transactional
+    public void logout(Long userId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException("존재하지 않는 회원입니다."));
+
+        refreshTokenRepository.findByUser(user).ifPresent(refreshTokenRepository::delete);
     }
 }

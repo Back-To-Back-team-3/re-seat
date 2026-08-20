@@ -15,12 +15,7 @@ import com.backtoback.reseat.domain.order.repository.OrderReservationRepository;
 import com.backtoback.reseat.domain.reservation.entity.Reservation;
 import com.backtoback.reseat.domain.reservation.entity.ReservationSeat;
 import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
-import com.backtoback.reseat.domain.reservation.exception.InvalidReservationStatusException;
-import com.backtoback.reseat.domain.reservation.exception.PreReservationExpiredException;
-import com.backtoback.reseat.domain.reservation.exception.ReservationAccessDeniedException;
-import com.backtoback.reseat.domain.reservation.exception.ReservationAlreadyOrderedException;
-import com.backtoback.reseat.domain.reservation.exception.ReservationNotFoundException;
-import com.backtoback.reseat.domain.reservation.exception.ReservationSeatNotFoundException;
+import com.backtoback.reseat.domain.reservation.exception.*;
 import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.user.entity.User;
@@ -184,7 +179,7 @@ public class OrderService {
 
         // 주문 · 예약을 취소 상태로 변경한다.
         order.cancelAfterPayment();
-        order.getReservation().updateStatus(ReservationStatus.CANCELED);
+        order.getReservation().cancelConfirmed();
 
         // 주문 항목의 경기 좌석을 다시 예매 가능 상태로 되돌린다.
         List<OrderItem> orderItems = orderItemRepository.findByOrder_Id(orderId);
