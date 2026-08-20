@@ -2,9 +2,10 @@
 
 package com.backtoback.reseat.global.exception;
 
+import org.springframework.http.HttpStatus;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 
 @Getter
 @RequiredArgsConstructor
@@ -47,6 +48,7 @@ public enum ErrorCode {
     QUEUE_TOKEN_ALREADY_USED(HttpStatus.CONFLICT, "이미 사용된 입장 토큰입니다."),
     QUEUE_TOKEN_EXPIRED(HttpStatus.GONE, "만료된 입장 토큰입니다."),
     QUEUE_TOKEN_REVOKED(HttpStatus.GONE, "취소된 입장 토큰입니다."),
+    QUEUE_TOKEN_BROWSING_EXPIRED(HttpStatus.GONE, "최초 좌석 탐색 시간이 만료된 입장 토큰입니다."),
     QUEUE_ENTRY_NOT_FOUND(HttpStatus.NOT_FOUND, "대기열 진입 이력이 없습니다."),
     QUEUE_ENTRY_CANCELLATION_NOT_ALLOWED(HttpStatus.CONFLICT, "대기 중 혹은 입장 허용된 상태만 취소할 수 있습니다."),
     QUEUE_ENTRY_ADMISSION_NOT_ALLOWED(HttpStatus.CONFLICT, "대기 중인 상태만 입장 허용할 수 있습니다."),
