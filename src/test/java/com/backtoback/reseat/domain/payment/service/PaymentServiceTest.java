@@ -562,11 +562,12 @@ class PaymentServiceTest {
     class CancelPayment {
 
         @Test
-        @DisplayName("Toss 취소가 완료되면 로컬 결제를 취소 처리한다.")
-        void cancelsApprovedPayment() {
+        @DisplayName("Toss 취소가 완료되면 결제와 주문을 취소 처리한다.")
+        void cancelsApprovedPaymentAndOrder() {
             Payment payment = payment(PaymentStatus.APPROVED);
             PaymentCancelRequest request = new PaymentCancelRequest("사용자 요청");
             TossPaymentResponse tossResponse = mock(TossPaymentResponse.class);
+            when(payment.getOrder().getId()).thenReturn(ORDER_ID);
             payment.assignPgPaymentKey(PAYMENT_KEY);
             when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
             when(tossPaymentClient.cancel(PAYMENT_KEY, request.getCancelReason())).thenReturn(tossResponse);
@@ -579,6 +580,7 @@ class PaymentServiceTest {
             verify(paymentValidator).validateOwner(payment, USER_ID);
             verify(paymentValidator).validateCancelable(payment);
             verify(tossPaymentClient).cancel(PAYMENT_KEY, "사용자 요청");
+            verify(orderService).cancelPaidOrder(ORDER_ID);
         }
 
         @Test
@@ -593,7 +595,7 @@ class PaymentServiceTest {
             assertThat(response.getStatus()).isEqualTo(PaymentStatus.CANCELED);
             verify(paymentValidator).validateOwner(payment, USER_ID);
             verify(paymentValidator, never()).validateCancelable(any());
-            verifyNoInteractions(tossPaymentClient);
+            verifyNoInteractions(tossPaymentClient, orderService);
         }
 
         @ParameterizedTest(name = "{0} 결제는 취소할 수 없다")
@@ -615,7 +617,7 @@ class PaymentServiceTest {
                 .isInstanceOf(PaymentCancelNotAllowedException.class);
 
             assertThat(payment.getStatus()).isEqualTo(status);
-            verifyNoInteractions(tossPaymentClient);
+            verifyNoInteractions(tossPaymentClient, orderService);
         }
 
         @Test
@@ -632,6 +634,7 @@ class PaymentServiceTest {
                 .isInstanceOf(PaymentCancelFailedException.class);
 
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED);
+            verifyNoInteractions(orderService);
         }
 
         @Test
@@ -650,6 +653,7 @@ class PaymentServiceTest {
                 .isInstanceOf(PaymentCancelFailedException.class);
 
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED);
+            verifyNoInteractions(orderService);
         }
     }
 
