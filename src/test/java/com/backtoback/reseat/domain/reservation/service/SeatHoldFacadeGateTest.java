@@ -117,6 +117,20 @@ class SeatHoldFacadeGateTest {
     }
 
     @Test
+    @DisplayName("HOLDING 좌석 0개 + 유효 티켓 2장 상태에서 1좌석 요청은 상한을 초과해 차단된다")
+    void should_throwMaxSeatCountExceeded_when_activeTicketCountAloneExceedsLimit() {
+        // given
+        SeatHoldRequest request = new SeatHoldRequest(GAME_ID, List.of(101L));
+        when(reservationSeatRepository.countActiveHoldingSeats(eq(USER_ID), eq(GAME_ID), any(LocalDateTime.class)))
+            .thenReturn(0);
+        when(ticketCountPort.countActiveTickets(USER_ID, GAME_ID)).thenReturn(2);
+
+        // when & then
+        assertThatThrownBy(() -> seatHoldFacade.holdSeats(USER_ID, TOKEN, request))
+            .isInstanceOf(MaxSeatCountExceededException.class);
+    }
+
+    @Test
     @DisplayName("검증 순서는 토큰 → 수량이다: 토큰이 유효하지 않으면 수량 검증을 시도하지 않는다")
     void should_notCheckQuantity_when_tokenValidationFails() {
         // given
