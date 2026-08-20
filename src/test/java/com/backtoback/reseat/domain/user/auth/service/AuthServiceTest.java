@@ -11,12 +11,15 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import com.backtoback.reseat.domain.user.auth.dto.request.ReissueRequest;
 import com.backtoback.reseat.domain.user.auth.dto.request.UserLoginRequest;
 import com.backtoback.reseat.domain.user.auth.dto.response.TokenResponse;
+import com.backtoback.reseat.domain.user.entity.RefreshToken;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserRole;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
 import com.backtoback.reseat.domain.user.exception.DeleteUserException;
+import com.backtoback.reseat.domain.user.exception.InactiveUserException;
 import com.backtoback.reseat.domain.user.exception.InvalidPasswordException;
 import com.backtoback.reseat.domain.user.exception.SuspendedUserException;
 import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
@@ -155,5 +158,104 @@ class AuthServiceTest extends BaseUnitTest {
         assertThatThrownBy(() -> authService.login(request))
             .isInstanceOf(DeleteUserException.class)
             .hasMessage("탈퇴 처리된 계정입니다.");
+    }
+
+    @Test
+    @DisplayName("비활성화된 계정(ACTIVE가 아닌 상태)으로 로그인 시 InactiveUserException이 발생한다")
+    void login_InactiveUser() {
+        // given
+        UserLoginRequest request = new UserLoginRequest("user@test.com", "password123!");
+        User user
+            = User.builder().id(1L).email("user@test.com").password("encodedPassword").role(UserRole.USER).build();
+        user.updateStatus(null);
+
+        when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("password123!", "encodedPassword")).thenReturn(true);
+
+        // when & then
+        assertThatThrownBy(() -> authService.login(request))
+            .isInstanceOf(InactiveUserException.class)
+            .hasMessage("비활성화된 계정입니다.");
+    }
+
+    @Test
+    @DisplayName("유효한 RefreshToken으로 재발급 시 새로운 토큰 쌍을 반환한다")
+    void reissue_Success() {
+        // given
+        String oldRefreshToken = "old-refresh-token";
+        ReissueRequest request = new ReissueRequest(oldRefreshToken);
+        User user = User.builder().id(1L).email("user@test.com").role(UserRole.USER).status(UserStatus.ACTIVE).build();
+        RefreshToken dbRefreshToken
+            = RefreshToken
+                .builder()
+                .user(user)
+                .tokenValue(oldRefreshToken)
+                .expiredAt(java.time.LocalDateTime.now().plusDays(14))
+                .build();
+
+        when(jwtTokenProvider.validateToken(oldRefreshToken)).thenReturn(true);
+        when(jwtTokenProvider.getUserId(oldRefreshToken)).thenReturn(1L);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(refreshTokenRepository.findByUser(user)).thenReturn(Optional.of(dbRefreshToken));
+        when(jwtTokenProvider.createAccessToken(1L, "user@test.com", "USER")).thenReturn("new-access-token");
+        when(jwtTokenProvider.createRefreshToken(1L)).thenReturn("new-refresh-token");
+
+        // when
+        TokenResponse response = authService.reissue(request);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getAccessToken()).isEqualTo("new-access-token");
+        assertThat(response.getRefreshToken()).isEqualTo("new-refresh-token");
+        assertThat(dbRefreshToken.getTokenValue()).isEqualTo("new-refresh-token");
+    }
+
+    @Test
+    @DisplayName("DB의 RefreshToken과 클라이언트가 보낸 토큰이 불일치하면 예외가 발생한다")
+    void reissue_TokenMismatch() {
+        // given
+        String clientToken = "client-token";
+        ReissueRequest request = new ReissueRequest(clientToken);
+        User user = User.builder().id(1L).email("user@test.com").role(UserRole.USER).status(UserStatus.ACTIVE).build();
+        RefreshToken dbRefreshToken
+            = RefreshToken
+                .builder()
+                .user(user)
+                .tokenValue("different-db-token")
+                .expiredAt(java.time.LocalDateTime.now().plusDays(14))
+                .build();
+
+        when(jwtTokenProvider.validateToken(clientToken)).thenReturn(true);
+        when(jwtTokenProvider.getUserId(clientToken)).thenReturn(1L);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(refreshTokenRepository.findByUser(user)).thenReturn(Optional.of(dbRefreshToken));
+
+        // when & then
+        assertThatThrownBy(() -> authService.reissue(request))
+            .isInstanceOf(com.backtoback.reseat.domain.user.exception.InvalidTokenException.class)
+            .hasMessage("토큰 정보가 일치하지 않습니다.");
+    }
+
+    @Test
+    @DisplayName("로그아웃 시 DB의 RefreshToken을 삭제한다")
+    void logout_Success() {
+        // given
+        User user = User.builder().id(1L).email("user@test.com").role(UserRole.USER).status(UserStatus.ACTIVE).build();
+        RefreshToken refreshToken
+            = RefreshToken
+                .builder()
+                .user(user)
+                .tokenValue("refresh-token")
+                .expiredAt(java.time.LocalDateTime.now().plusDays(14))
+                .build();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(refreshTokenRepository.findByUser(user)).thenReturn(Optional.of(refreshToken));
+
+        // when
+        authService.logout(1L);
+
+        // then
+        verify(refreshTokenRepository, times(1)).delete(refreshToken);
     }
 }

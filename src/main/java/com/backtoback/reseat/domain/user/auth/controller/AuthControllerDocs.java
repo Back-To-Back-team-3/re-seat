@@ -65,4 +65,23 @@ public interface AuthControllerDocs {
         }
     )
     ResponseEntity<ApiResponse<TokenResponse>> reissue(ReissueRequest request);
+
+    @Operation(
+        summary = "사용자 로그아웃",
+        description = "로그인된 사용자의 세션을 종료하고 DB에 저장된 Refresh Token을 삭제합니다."
+    )
+    @ApiResponses(
+        {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "200",
+                description = "로그아웃 성공"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "401",
+                description = "UNAUTHORIZED - 인증 정보 없음 또는 유효하지 않음",
+                content = @Content
+            )
+        }
+    )
+    ResponseEntity<ApiResponse<Void>> logout(com.backtoback.reseat.global.security.CustomUserDetails userDetails);
 }
