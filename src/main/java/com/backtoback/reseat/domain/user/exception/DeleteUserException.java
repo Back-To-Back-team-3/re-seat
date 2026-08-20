@@ -5,7 +5,6 @@ import com.backtoback.reseat.global.exception.ErrorCode;
 
 public class DeleteUserException extends BusinessException {
 
-    public DeleteUserException() {
-        super(ErrorCode.UNAUTHORIZED);
+    public DeleteUserException() { super(ErrorCode.UNAUTHORIZED);
     }
 }
