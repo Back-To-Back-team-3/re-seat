@@ -62,6 +62,8 @@ class SeatHoldFacadeBrowsingTest {
 
         request = new SeatHoldRequest(GAME_ID, List.of(101L));
 
+        when(userVerificationPort.isVerified(USER_ID)).thenReturn(true);
+
         when(reservationSeatRepository.countActiveHoldingSeats(eq(USER_ID), eq(GAME_ID), any(LocalDateTime.class)))
             .thenReturn(0);
         when(ticketCountPort.countActiveTickets(USER_ID, GAME_ID)).thenReturn(0);
