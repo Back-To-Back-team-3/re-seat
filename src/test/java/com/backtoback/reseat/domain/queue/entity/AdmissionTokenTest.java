@@ -96,4 +96,29 @@ public class AdmissionTokenTest {
         // then
         assertThat(admissionToken.getStatus()).isEqualTo(AdmissionTokenStatus.ACTIVE);
     }
+
+    @Test
+    @DisplayName("최초 좌석 탐색 완료를 반복 처리해도 최초 완료시간과 만료시간이 유지된다.")
+    void completeSeatBrowsing_twice_keepsFirstCompletionAndExpiration() {
+
+        // given
+        // 최초 선점과 재선점이 연속으로 발생해도 최초 탐색 완료시간과 두 만료시간을 유지하는 조건을 준비한다.
+        AdmissionToken activeToken = activeToken();
+        LocalDateTime firstSeatBrowsingCompletedAt = SEAT_BROWSING_EXPIRES_AT.minusMinutes(1);
+        LocalDateTime secondSeatBrowsingCompletedAt = firstSeatBrowsingCompletedAt.plusSeconds(1);
+        LocalDateTime expiresAt = activeToken.getExpiresAt();
+        LocalDateTime seatBrowsingExpiresAt = activeToken.getSeatBrowsingExpiresAt();
+
+        // when
+        // 첫 호출에서만 탐색 완료시간을 기록하고, 재선점에 해당하는 두 번째 호출은 기존 완료정보를 유지해야 한다.
+        activeToken.completeSeatBrowsing(firstSeatBrowsingCompletedAt);
+        activeToken.completeSeatBrowsing(secondSeatBrowsingCompletedAt);
+
+        // then
+        // 재선점은 Queue-Token 상태나 유효시간을 변경하지 않고 최초 탐색 완료시간을 유지해야 한다.
+        assertThat(activeToken.getStatus()).isEqualTo(AdmissionTokenStatus.ACTIVE);
+        assertThat(activeToken.getSeatBrowsingCompletedAt()).isEqualTo(firstSeatBrowsingCompletedAt);
+        assertThat(activeToken.getExpiresAt()).isEqualTo(expiresAt);
+        assertThat(activeToken.getSeatBrowsingExpiresAt()).isEqualTo(seatBrowsingExpiresAt);
+    }
 }

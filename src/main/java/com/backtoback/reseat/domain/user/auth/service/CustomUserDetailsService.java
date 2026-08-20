@@ -19,7 +19,6 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        // 이메일 기반으로 유저 엔티티를 찾은 뒤, 시큐리티 규격
         User user
             = userRepository
                 .findByEmail(email)
@@ -27,5 +26,4 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         return new CustomUserDetails(user);
     }
-
 }
