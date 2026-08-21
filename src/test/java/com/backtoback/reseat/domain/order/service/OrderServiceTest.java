@@ -1,8 +1,16 @@
 package com.backtoback.reseat.domain.order.service;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.BDDMockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.mock;
+import static org.mockito.BDDMockito.never;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.verify;
+import static org.mockito.BDDMockito.verifyNoInteractions;
+import static org.mockito.BDDMockito.when;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -19,7 +27,10 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import com.backtoback.reseat.domain.order.dto.response.OrderResponse;
 import com.backtoback.reseat.domain.order.entity.Order;
+import com.backtoback.reseat.domain.order.entity.OrderItem;
 import com.backtoback.reseat.domain.order.entity.OrderStatus;
+import com.backtoback.reseat.domain.order.exception.InvalidOrderStatusException;
+import com.backtoback.reseat.domain.order.exception.OrderExpiredException;
 import com.backtoback.reseat.domain.order.exception.OrderNotFoundException;
 import com.backtoback.reseat.domain.order.repository.OrderItemRepository;
 import com.backtoback.reseat.domain.order.repository.OrderRepository;
@@ -42,6 +53,7 @@ public class OrderServiceTest {
     private static final LocalDateTime CREATED_AT = LocalDateTime.of(2026, 7, 24, 2, 0);
     private static final LocalDateTime PAYMENT_DEADLINE = CREATED_AT.plusMinutes(8);
     private static final int TOTAL_AMOUNT = 34_000;
+    private static final int PRICE = 17_000;
     private static final Long ORDER_ID = 1L;
     private static final Long USER_ID = 1L;
     private static final Long RESERVATION_ID = 1L;
@@ -64,8 +76,8 @@ public class OrderServiceTest {
     @InjectMocks
     private OrderService orderService;
 
-    private Order createdOrder() {
-        return Order.of(ORDER_NO, mock(User.class), mock(Reservation.class), TOTAL_AMOUNT, PAYMENT_DEADLINE);
+    private Order createdOrder(Reservation reservation, LocalDateTime paymentDeadline) {
+        return Order.of(ORDER_NO, mock(User.class), reservation, TOTAL_AMOUNT, paymentDeadline);
     }
 
     private void givenLockedReservation(LocalDateTime createdAt, LocalDateTime holdExpiresAt) {
@@ -83,9 +95,12 @@ public class OrderServiceTest {
             .willReturn(Optional.of(reservation));
     }
 
-    private CreateOrderFixture givenValidCreateOrder(LocalDateTime createdAt, LocalDateTime holdExpiresAt) {
+    private record CreateOrderFixture(List<GameSeat> gameSeats) {
+    }
 
-        return givenValidCreateOrder(createdAt, holdExpiresAt, 1);
+    private void givenValidCreateOrder(LocalDateTime createdAt, LocalDateTime holdExpiresAt) {
+
+        givenValidCreateOrder(createdAt, holdExpiresAt, 1);
     }
 
     private CreateOrderFixture givenValidCreateOrder(
@@ -116,19 +131,153 @@ public class OrderServiceTest {
         return new CreateOrderFixture(gameSeats);
     }
 
+    /**
+     * 결제 완료 상태 전이를 검증할 주문, 예약, 좌석을 함께 전달한다.
+     *
+     * @param order 결제 완료 상태를 검증할 주문
+     * @param reservation 결제 완료 후 CONFIRMED 상태를 검증할 예약
+     * @param gameSeat 결제 완료 후 SOLD 상태를 검증할 경기 좌석
+     * @param orderItems 결제 완료 성공 시 조회할 주문 항목 목록
+     */
+    private record CompleteOrderFixture(
+        Order order,
+        Reservation reservation,
+        GameSeat gameSeat,
+        List<OrderItem> orderItems
+    ) {
+    }
+
+    /**
+     * 결제 완료 조건부 UPDATE 결과에 따른 주문, 예약, 좌석과 Repository 응답을 준비한다.
+     *
+     * @param completeOrderCount 결제 완료 조건부 UPDATE가 반환할 변경 주문 수
+     * @return 결제 완료 후 상태를 검증할 주문, 예약, 좌석과 주문 항목 fixture
+     */
+    private CompleteOrderFixture givenCompletableOrder(int completeOrderCount) {
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime paymentDeadline = now.plusMinutes(8);
+        LocalDateTime holdExpiresAt = now.plusMinutes(10);
+
+        Reservation reservation
+            = Reservation.builder().status(ReservationStatus.HOLDING).holdExpiresAt(holdExpiresAt).build();
+        Order order = createdOrder(reservation, paymentDeadline);
+        GameSeat gameSeat = GameSeat.builder().status(GameSeatStatus.AVAILABLE).build();
+        gameSeat.hold(holdExpiresAt);
+        List<OrderItem> orderItems = new ArrayList<>();
+        OrderItem orderItem = OrderItem.of(order, gameSeat, PRICE);
+        orderItems.add(orderItem);
+
+        given(orderRepository.findById(ORDER_ID)).willReturn(Optional.of(order));
+
+        // 조건부 UPDATE가 성공한 경우에만 예약과 좌석의 후속 상태 전이가 진행된다.
+        given(
+            orderRepository
+                .completeCreatedOrder(
+                    eq(ORDER_ID),
+                    any(LocalDateTime.class),
+                    eq(OrderStatus.CREATED),
+                    eq(OrderStatus.PAID)
+                )
+        ).willReturn(completeOrderCount);
+
+        return new CompleteOrderFixture(order, reservation, gameSeat, orderItems);
+    }
+
+    // ---------- 결제 완료 ----------
+
     @Test
-    @DisplayName("CREATED 주문을 결제 완료 처리하면 PAID 상태로 변경된다.")
-    void completeOrder_changesStatusToPaid() {
+    @DisplayName("CREATED 주문을 결제 완료 처리하면 주문 · 예약 · 좌석 상태가 결제완료 상태로 변경된다.")
+    void completeOrder_changesOrderReservationAndGameSeatToPaidStatus() {
 
-        Order order = createdOrder();
+        // given
+        CompleteOrderFixture fixture = givenCompletableOrder(1);
+        Order order = fixture.order();
+        Reservation reservation = fixture.reservation();
+        GameSeat gameSeat = fixture.gameSeat();
+        List<OrderItem> orderItems = fixture.orderItems();
 
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        given(orderItemRepository.findByOrder_Id(ORDER_ID)).willReturn(orderItems);
 
+        // when
         orderService.completeOrder(ORDER_ID);
 
+        // then
+        // 결제 완료가 확정되면 연결된 예약과 좌석도 같은 처리에서 함께 전이되어야한다.
         assertThat(order.getStatus()).isEqualTo(OrderStatus.PAID);
+        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
+        assertThat(gameSeat.getStatus()).isEqualTo(GameSeatStatus.SOLD);
+        assertThat(gameSeat.getHoldExpiresAt()).isNull();
+        assertThat(gameSeat.getSoldAt()).isNotNull();
 
-        verify(orderRepository).findById(ORDER_ID);
+        // 만료 처리와 경합할 때 CREATED 상태와 결제 기한을 함께 검사하는 조건부 UPDATE가 호출돼야 한다.
+        then(orderRepository)
+            .should()
+            .completeCreatedOrder(
+                eq(ORDER_ID),
+                any(LocalDateTime.class),
+                eq(OrderStatus.CREATED),
+                eq(OrderStatus.PAID)
+            );
+        then(orderItemRepository).should().findByOrder_Id(ORDER_ID);
+    }
+
+    @Test
+    @DisplayName("결제 기한이 지난 CREATED 주문을 결제 완료 처리하면 예외가 발생 한다.")
+    void completeOrder_throwsExceptionWhenPaymentDeadlineExpired() {
+
+        // given
+        LocalDateTime paymentDeadline = LocalDateTime.now().minusMinutes(1);
+        Order order = createdOrder(mock(Reservation.class), paymentDeadline);
+        given(orderRepository.findById(ORDER_ID)).willReturn(Optional.of(order));
+
+        // when & then
+        assertThatThrownBy(() -> orderService.completeOrder(ORDER_ID)).isInstanceOf(OrderExpiredException.class);
+
+        // then
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.CREATED);
+
+        // 결제 기한이 지난 주문은 조건부 UPDATE와 연관 상태 전이를 시작하지 않는다.
+        then(orderRepository)
+            .should(never())
+            .completeCreatedOrder(
+                eq(ORDER_ID),
+                any(LocalDateTime.class),
+                eq(OrderStatus.CREATED),
+                eq(OrderStatus.PAID)
+            );
+        then(orderItemRepository).shouldHaveNoMoreInteractions();
+    }
+
+    @Test
+    @DisplayName("결제 완료 조건부 UPDATE가 실패하면 예외가 발생한다.")
+    void completeOrder_throwsExceptionWhenConditionalUpdateFails() {
+
+        // given
+        CompleteOrderFixture fixture = givenCompletableOrder(0);
+        Order order = fixture.order();
+        Reservation reservation = fixture.reservation();
+        GameSeat gameSeat = fixture.gameSeat();
+
+        // when & then
+        assertThatThrownBy(() -> orderService.completeOrder(ORDER_ID)).isInstanceOf(InvalidOrderStatusException.class);
+
+        // then
+        // 조건부 UPDATE가 실패하면 이미 다른 상태 전이가 확정된 것으로 보고 예약과 좌석을 변경하지 않는다.
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.CREATED);
+        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.HOLDING);
+        assertThat(gameSeat.getStatus()).isEqualTo(GameSeatStatus.HELD);
+        assertThat(gameSeat.getHoldExpiresAt()).isNotNull();
+
+        then(orderRepository)
+            .should()
+            .completeCreatedOrder(
+                eq(ORDER_ID),
+                any(LocalDateTime.class),
+                eq(OrderStatus.CREATED),
+                eq(OrderStatus.PAID)
+            );
+        then(orderItemRepository).shouldHaveNoInteractions();
     }
 
     // ---------- 주문 상태 전이 ----------
@@ -137,7 +286,7 @@ public class OrderServiceTest {
     @DisplayName("CREATED 주문을 결제 기한 만료 처리하면 EXPIRED 상태로 변경된다.")
     void expireOrder_changesStatusToExpired() {
 
-        Order order = createdOrder();
+        Order order = createdOrder(mock(Reservation.class), PAYMENT_DEADLINE);
 
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
 
@@ -152,7 +301,7 @@ public class OrderServiceTest {
     @DisplayName("CREATED 주문을 종결 결제 실패 처리하면 CANCELED 상태로 변경된다.")
     void failOrder_changesStatusToCanceled() {
 
-        Order order = createdOrder();
+        Order order = createdOrder(mock(Reservation.class), PAYMENT_DEADLINE);
 
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
 
@@ -290,9 +439,5 @@ public class OrderServiceTest {
         verify(orderRepository, never()).save(any(Order.class));
         verify(orderItemRepository, never()).saveAll(any());
         verify(orderReservationRepository, never()).updateHoldExpiresAtById(any(), any(LocalDateTime.class));
-    }
-
-    private record CreateOrderFixture(List<GameSeat> gameSeats) {
-
     }
 }
