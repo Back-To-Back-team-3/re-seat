@@ -1,5 +1,13 @@
 package com.backtoback.reseat.domain.order.service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.backtoback.reseat.domain.order.dto.response.OrderCancelResponse;
 import com.backtoback.reseat.domain.order.dto.response.OrderResponse;
 import com.backtoback.reseat.domain.order.entity.Order;
@@ -15,20 +23,19 @@ import com.backtoback.reseat.domain.order.repository.OrderReservationRepository;
 import com.backtoback.reseat.domain.reservation.entity.Reservation;
 import com.backtoback.reseat.domain.reservation.entity.ReservationSeat;
 import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
-import com.backtoback.reseat.domain.reservation.exception.*;
+import com.backtoback.reseat.domain.reservation.exception.InvalidReservationStatusException;
+import com.backtoback.reseat.domain.reservation.exception.PreReservationExpiredException;
+import com.backtoback.reseat.domain.reservation.exception.ReservationAccessDeniedException;
+import com.backtoback.reseat.domain.reservation.exception.ReservationAlreadyOrderedException;
+import com.backtoback.reseat.domain.reservation.exception.ReservationNotFoundException;
+import com.backtoback.reseat.domain.reservation.exception.ReservationSeatNotFoundException;
 import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 주문을 담당하는 서비스
@@ -219,6 +226,7 @@ public class OrderService {
             // 결제 완료가 확정된 예약과 좌석을 함께 확정한다.
             Reservation reservation = order.getReservation();
             reservation.confirm();
+
             orderItemRepository.findByOrder_Id(orderId).forEach(orderItem -> {
                 GameSeat gameSeat = orderItem.getGameSeat();
                 gameSeat.sell();
@@ -228,7 +236,7 @@ public class OrderService {
 
     /**
      * 결제 기한이 만료된 주문을 만료 상태로 변경한다.
-     * <p>CREATED 상태의 주문을 EXPIRED 상태로 변경한다.</p>
+     * <p>CREATED 상태와 결제 기한을 조건으로 주문을 원자적으로 EXPIRED 상태로 전이한다.</p>
      *
      * @param orderId 만료 처리할 주문 ID
      */
@@ -236,7 +244,17 @@ public class OrderService {
     public void expireOrder(Long orderId) {
 
         Order order = findOrderById(orderId);
-        order.expired();
+        LocalDateTime now = LocalDateTime.now();
+
+        // 주문 상태와 결제 기한을 함께 검증해 결제 완료 처리와의 경합을 막는다.
+        int orderCount = orderRepository.expireCreatedOrder(orderId, now, OrderStatus.CREATED, OrderStatus.EXPIRED);
+
+        if (orderCount == 0) {
+            throw new InvalidOrderStatusException();
+        } else if (orderCount == 1) {
+            // 벌크 UPDATE가 우회한 영속성 컨텍스트의 Order 상태를 DB와 맞춘다.
+            order.expired();
+        }
     }
 
     /**
