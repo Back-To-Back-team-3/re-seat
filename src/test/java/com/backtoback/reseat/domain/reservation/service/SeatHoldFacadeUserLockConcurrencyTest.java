@@ -55,7 +55,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * - 예상 외 예외 0건
  * </p>
  */
-@Disabled("테스트 제외")
+
 @Slf4j
 @EnabledIfEnvironmentVariable(
     named = "RUN_CONCURRENCY_TESTS",
@@ -265,6 +265,11 @@ class SeatHoldFacadeUserLockConcurrencyTest {
         log.info("==================================================");
 
         assertThat(finished).as("15초 내에 모든 스레드가 종료되지 않았다 — 데드락 또는 타임아웃 의심").isTrue();
+
+        // 락 획득 실패(타임아웃)와 수량 초과(정상 차단)를 구분해서 검증한다.
+        // lockFailedCount가 섞이면 아래 successCount·maxSeatCountExceededCount 검증이 왜곡되어
+        // 실패 원인이 "락 설계 문제"인지 "수량 게이트가 정상 동작"인지 구분이 안 된다.
+        assertThat(lockFailedCount.get()).as("락 획득 실패는 0건이어야 한다 — 대기 시간 초과 시 상한 검증이 왜곡된다").isZero();
 
         // 사용자 락이 없다면 검증 시점에 heldSeatCount=0으로 3건 모두 통과할 수 있다(over-booking).
         // 이 테스트의 핵심 assertion: 상한(2매)을 초과하는 성공은 발생하지 않는다.
