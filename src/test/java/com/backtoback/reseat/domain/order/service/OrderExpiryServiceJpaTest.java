@@ -1,18 +1,5 @@
 package com.backtoback.reseat.domain.order.service;
 
-import static org.assertj.core.api.Assertions.*;
-
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.context.annotation.Import;
-
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.order.entity.Order;
@@ -32,8 +19,19 @@ import com.backtoback.reseat.domain.user.entity.UserRole;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
 import com.backtoback.reseat.global.config.JpaConfig;
 import com.backtoback.reseat.global.config.QuerydslConfig;
-
 import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * 주문 만료 처리의 JPQL 벌크 UPDATE와 연계 상태 전이를 검증한다.
@@ -159,7 +157,15 @@ public class OrderExpiryServiceJpaTest {
             entityManager.persist(seat);
 
             GameSeat gameSeat
-                = GameSeat.builder().game(game).seat(seat).price(PRICE).status(GameSeatStatus.AVAILABLE).build();
+                = GameSeat
+                    .builder()
+                    .game(game)
+                    .seat(seat)
+                    .price(PRICE)
+                    .status(
+                        gameSeatStatus[i] == GameSeatStatus.BLOCKED ? GameSeatStatus.BLOCKED : GameSeatStatus.AVAILABLE
+                    )
+                    .build();
 
             changeGameSeatStatus(gameSeat, gameSeatStatus[i]);
             entityManager.persist(gameSeat);
@@ -436,14 +442,13 @@ public class OrderExpiryServiceJpaTest {
     private void changeGameSeatStatus(GameSeat gameSeat, GameSeatStatus gameSeatStatus) {
 
         switch (gameSeatStatus) {
-            case AVAILABLE -> {}
+            case AVAILABLE, BLOCKED -> {}
             case HELD -> gameSeat.hold(HOLD_EXPIRES_AT);
             case SOLD -> {
                 gameSeat.hold(HOLD_EXPIRES_AT);
                 // HELD -> SOLD 상태를 거쳐야 하므로 선점 후 판매 완료 처리를 한다.
                 gameSeat.sell();
             }
-            case BLOCKED -> gameSeat.updateStatus(GameSeatStatus.BLOCKED);
         }
     }
 
