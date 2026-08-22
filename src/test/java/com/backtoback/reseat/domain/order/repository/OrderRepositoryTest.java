@@ -28,7 +28,7 @@ import com.backtoback.reseat.global.config.QuerydslConfig;
 import jakarta.persistence.EntityManager;
 
 /**
- * OrderRepository의 결제 완료 조건부 UPDATE를 검증한다.
+ * OrderRepository의 결제 완료와 만료 조건부 UPDATE를 검증한다.
  * <p>상태와 결제 기한 조건에 따른 DB 변경 결과를 확인한다.</p>
  */
 @DataJpaTest
@@ -102,6 +102,15 @@ class OrderRepositoryTest {
     }
 
     /**
+     * 영속성 컨텍스트의 변경 사항을 DB에 반영하고 초기화한다.
+     */
+    private void flushAndClear() {
+
+        entityManager.flush();
+        entityManager.clear();
+    }
+
+    /**
      * 조건부 UPDATE 결과를 DB에서 다시 조회할 주문 ID를 전달한다.
      *
      * @param orderId DB에서 다시 조회할 주문 ID
@@ -126,7 +135,7 @@ class OrderRepositoryTest {
     }
 
     /**
-     * 결제 완료 조건부 UPDATE 검증에 필요한 주문과 연관 데이터를 저장한다.
+     * 결제 완료와 만료 조건부 UPDATE 검증에 필요한 주문과 연관 데이터를 저장한다.
      *
      * @param paymentDeadline 주문 결제 기한
      * @param orderStatus 저장할 주문 상태
@@ -165,21 +174,19 @@ class OrderRepositoryTest {
         OrderFixture orderFixture = createOrderFixture(FUTURE_PAYMENT_DEADLINE, OrderStatus.CREATED);
         Long orderId = orderFixture.orderId();
 
-        entityManager.flush();
-        entityManager.clear();
+        flushAndClear();
 
         // when
         int updatedOrderCount
             = orderRepository.completeCreatedOrder(orderId, NOW, OrderStatus.CREATED, OrderStatus.PAID);
 
-        entityManager.flush();
-        entityManager.clear();
+        flushAndClear();
 
         // then
         assertThat(updatedOrderCount).isEqualTo(1);
 
         // 벌크 UPDATE는 영속성 컨텍스트를 우회하므로 DB에서 다시 조회해 변경 결과를 확인한다.
-        Order paidOrder = entityManager.find(Order.class, orderFixture.orderId());
+        Order paidOrder = entityManager.find(Order.class, orderId);
         assertThat(paidOrder.getStatus()).isEqualTo(OrderStatus.PAID);
     }
 
@@ -191,21 +198,19 @@ class OrderRepositoryTest {
         OrderFixture orderFixture = createOrderFixture(EXPIRED_PAYMENT_DEADLINE, OrderStatus.CREATED);
         Long orderId = orderFixture.orderId();
 
-        entityManager.flush();
-        entityManager.clear();
+        flushAndClear();
 
         // when
         int updatedOrderCount
             = orderRepository.completeCreatedOrder(orderId, NOW, OrderStatus.CREATED, OrderStatus.PAID);
 
-        entityManager.flush();
-        entityManager.clear();
+        flushAndClear();
 
         // then
         assertThat(updatedOrderCount).isEqualTo(0);
 
         // 결제 기한이 지난 주문은 PAID 전이 대상에서 제외돼 만료 처리와의 경합을 막는다.
-        Order createdOrder = entityManager.find(Order.class, orderFixture.orderId());
+        Order createdOrder = entityManager.find(Order.class, orderId);
         assertThat(createdOrder.getStatus()).isEqualTo(OrderStatus.CREATED);
     }
 
@@ -217,21 +222,19 @@ class OrderRepositoryTest {
         OrderFixture orderFixture = createOrderFixture(FUTURE_PAYMENT_DEADLINE, OrderStatus.PAID);
         Long orderId = orderFixture.orderId();
 
-        entityManager.flush();
-        entityManager.clear();
+        flushAndClear();
 
         // when
         int updatedOrderCount
             = orderRepository.completeCreatedOrder(orderId, NOW, OrderStatus.CREATED, OrderStatus.PAID);
 
-        entityManager.flush();
-        entityManager.clear();
+        flushAndClear();
 
         // then
         assertThat(updatedOrderCount).isEqualTo(0);
 
         // 이미 PAID 상태인 주문은 결제 완료 대상에서 제외돼 중복 상태 전이를 막는다.
-        Order paidOrder = entityManager.find(Order.class, orderFixture.orderId());
+        Order paidOrder = entityManager.find(Order.class, orderId);
         assertThat(paidOrder.getStatus()).isEqualTo(OrderStatus.PAID);
     }
 
@@ -243,21 +246,99 @@ class OrderRepositoryTest {
         OrderFixture orderFixture = createOrderFixture(PAYMENT_DEADLINE_AT_NOW, OrderStatus.CREATED);
         Long orderId = orderFixture.orderId();
 
-        entityManager.flush();
-        entityManager.clear();
+        flushAndClear();
 
         // when
         int updatedOrderCount
             = orderRepository.completeCreatedOrder(orderId, NOW, OrderStatus.CREATED, OrderStatus.PAID);
 
-        entityManager.flush();
-        entityManager.clear();
+        flushAndClear();
 
         // then
         assertThat(updatedOrderCount).isEqualTo(0);
 
         // 결제 기한이 기준 시각과 같으면 만료 대상이므로 PAID 전이에서 제외된다.
-        Order createdOrder = entityManager.find(Order.class, orderFixture.orderId());
+        Order createdOrder = entityManager.find(Order.class, orderId);
         assertThat(createdOrder.getStatus()).isEqualTo(OrderStatus.CREATED);
+    }
+
+    @Test
+    @DisplayName("결제 기한이 지난 CREATED 주문을 만료 처리하면 EXPIRED 상태로 변경된다.")
+    void expireCreatedOrder_updatesEligibleOrderToExpired() {
+
+        // given
+        OrderFixture orderFixture = createOrderFixture(EXPIRED_PAYMENT_DEADLINE, OrderStatus.CREATED);
+        Long orderId = orderFixture.orderId();
+
+        flushAndClear();
+
+        // when
+        int updatedOrderCount
+            = orderRepository.expireCreatedOrder(orderId, NOW, OrderStatus.CREATED, OrderStatus.EXPIRED);
+
+        flushAndClear();
+
+        // then
+        assertThat(updatedOrderCount).isEqualTo(1);
+
+        // 벌크 UPDATE는 영속성 컨텍스트를 우회하므로 DB에서 다시 조회해 변경 결과를 확인한다.
+        Order expiredOrder = entityManager.find(Order.class, orderId);
+        assertThat(expiredOrder.getStatus()).isEqualTo(OrderStatus.EXPIRED);
+    }
+
+    @Test
+    @DisplayName("이미 PAID 상태인 주문은 만료 처리하지 않는다.")
+    void expireCreatedOrder_keepsOrderWhenOrderStatusIsNotCreated() {
+
+        // given
+        OrderFixture orderFixture = createOrderFixture(EXPIRED_PAYMENT_DEADLINE, OrderStatus.PAID);
+        Long orderId = orderFixture.orderId();
+
+        flushAndClear();
+
+        // when
+        int updatedOrderCount
+            = orderRepository.expireCreatedOrder(orderId, NOW, OrderStatus.CREATED, OrderStatus.EXPIRED);
+
+        flushAndClear();
+
+        // then
+        assertThat(updatedOrderCount).isEqualTo(0);
+
+        // 이미 PAID 상태인 주문은 만료 대상에서 제외돼 결제 완료 상태를 유지해야 한다.
+        Order paidOrder = entityManager.find(Order.class, orderId);
+        assertThat(paidOrder.getStatus()).isEqualTo(OrderStatus.PAID);
+    }
+
+    @Test
+    @DisplayName("만료 처리가 주문을 조회한 뒤 결제가 완료되면 PAID 상태를 EXPIRED로 덮어쓰지 않는다.")
+    void expireCreatedOrder_keepsPaidOrderWhenPaymentCompletesAfterExpirationRead() {
+
+        // given
+        OrderFixture orderFixture = createOrderFixture(PAYMENT_DEADLINE_AT_NOW, OrderStatus.CREATED);
+        Long orderId = orderFixture.orderId();
+
+        // 만료 처리가 CREATED 상태를 먼저 조회한 상황을 재현한다.
+        Order readOrder = entityManager.find(Order.class, orderId);
+        entityManager.flush();
+
+        // when
+        // 조회 이후 결제 완료 조건부 UPDATE가 먼저 PAID 전이를 확정한다.
+        int completedOrderCount
+            = orderRepository.completeCreatedOrder(orderId, NOW.minusNanos(1), OrderStatus.CREATED, OrderStatus.PAID);
+        assertThat(readOrder.getStatus()).isEqualTo(OrderStatus.CREATED);
+
+        // 만료 조건부 UPDATE는 DB의 PAID 상태를 확인해 EXPIRED 전이를 거부해야한다.
+        int expiredOrderCount
+            = orderRepository.expireCreatedOrder(orderId, NOW, OrderStatus.CREATED, OrderStatus.EXPIRED);
+
+        flushAndClear();
+
+        // then
+        assertThat(completedOrderCount).isEqualTo(1);
+        assertThat(expiredOrderCount).isEqualTo(0);
+
+        Order paidOrder = entityManager.find(Order.class, orderId);
+        assertThat(paidOrder.getStatus()).isEqualTo(OrderStatus.PAID);
     }
 }

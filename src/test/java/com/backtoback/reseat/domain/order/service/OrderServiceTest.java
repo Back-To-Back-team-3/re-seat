@@ -184,6 +184,30 @@ public class OrderServiceTest {
         return new CompleteOrderFixture(order, reservation, gameSeat, orderItems);
     }
 
+    /**
+     * 주문 만료 조건부 UPDATE 결과에 따른 주문과 Repository 응답을 준비한다.
+     *
+     * @param expiredOrderCount 만료 조건부 UPDATE가 반환할 변경 주문 수
+     * @return 만료 처리 후 상태를 검증할 주문
+     */
+    private Order givenExpirableOrder(int expiredOrderCount) {
+
+        Order order = createdOrder(mock(Reservation.class), PAYMENT_DEADLINE);
+
+        given(orderRepository.findById(ORDER_ID)).willReturn(Optional.of(order));
+        given(
+            orderRepository
+                .expireCreatedOrder(
+                    eq(ORDER_ID),
+                    any(LocalDateTime.class),
+                    eq(OrderStatus.CREATED),
+                    eq(OrderStatus.EXPIRED)
+                )
+        ).willReturn(expiredOrderCount);
+
+        return order;
+    }
+
     // ---------- 결제 완료 ----------
 
     @Test
@@ -283,18 +307,54 @@ public class OrderServiceTest {
     // ---------- 주문 상태 전이 ----------
 
     @Test
-    @DisplayName("CREATED 주문을 결제 기한 만료 처리하면 EXPIRED 상태로 변경된다.")
+    @DisplayName("결제 기한이 지난 CREATED 주문을 만료 처리하면 EXPIRED 상태로 변경된다.")
     void expireOrder_changesStatusToExpired() {
 
-        Order order = createdOrder(mock(Reservation.class), PAYMENT_DEADLINE);
+        // given
+        // 조건부 UPDATE가 성공한 경우에만 영속성 컨텍스트의 주문 상태를 동기화 한다.
+        Order order = givenExpirableOrder(1);
 
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
-
+        // when
         orderService.expireOrder(ORDER_ID);
 
+        // then
         assertThat(order.getStatus()).isEqualTo(OrderStatus.EXPIRED);
 
-        verify(orderRepository).findById(ORDER_ID);
+        then(orderRepository).should().findById(ORDER_ID);
+
+        // 만료 처리도 CREATED 상태와 결제 기한을 함께 확인하는 조건부 UPDATE를 호출해야 한다.
+        then(orderRepository)
+            .should()
+            .expireCreatedOrder(
+                eq(ORDER_ID),
+                any(LocalDateTime.class),
+                eq(OrderStatus.CREATED),
+                eq(OrderStatus.EXPIRED)
+            );
+    }
+
+    @Test
+    @DisplayName("주문 만료 조건부 UPDATE가 실패하면 예외가 발생하고 주문 상태를 변경하지 않는다.")
+    void expireOrder_throwsExceptionWhenConditionalUpdateFails() {
+
+        // given
+        Order order = givenExpirableOrder(0);
+
+        // when & then
+        assertThatThrownBy(() -> orderService.expireOrder(ORDER_ID)).isInstanceOf(InvalidOrderStatusException.class);
+
+        // then
+        // 결제 완료 처리와 경합해 조건부 UPDATE가 실패하면 주문 상태를 덮어쓰지 않는다.
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.CREATED);
+
+        then(orderRepository)
+            .should()
+            .expireCreatedOrder(
+                eq(ORDER_ID),
+                any(LocalDateTime.class),
+                eq(OrderStatus.CREATED),
+                eq(OrderStatus.EXPIRED)
+            );
     }
 
     @Test
