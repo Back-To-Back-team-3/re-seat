@@ -35,6 +35,7 @@ import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentFailRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentRequest;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentActionResponse;
+import com.backtoback.reseat.domain.payment.dto.response.PaymentCancelResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCompleteResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCreateResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentResponse;
@@ -579,9 +580,12 @@ class PaymentServiceTest {
             when(tossPaymentClient.cancel(PAYMENT_KEY, request.getCancelReason())).thenReturn(tossResponse);
             when(tossResponse.isCancelCompleted()).thenReturn(true);
 
-            PaymentActionResponse response = paymentService.cancelPayment(USER_ID, PAYMENT_ID, request);
+            PaymentCancelResponse response = paymentService.cancelPayment(USER_ID, PAYMENT_ID, request);
 
-            assertThat(response.getStatus()).isEqualTo(PaymentStatus.CANCELED);
+            assertThat(response.getRefundAmount()).isEqualTo(AMOUNT);
+            assertThat(response.getCanceledAmount()).isEqualTo(AMOUNT);
+            assertThat(response.getRemainingAmount()).isZero();
+            assertThat(response.getPaymentStatus()).isEqualTo(PaymentStatus.CANCELED);
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.CANCELED);
             verify(paymentValidator).validateOwner(payment, USER_ID);
             verify(paymentValidator).validateCancelable(payment);
@@ -596,9 +600,12 @@ class PaymentServiceTest {
             PaymentCancelRequest request = new PaymentCancelRequest("중복 요청");
             when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
 
-            PaymentActionResponse response = paymentService.cancelPayment(USER_ID, PAYMENT_ID, request);
+            PaymentCancelResponse response = paymentService.cancelPayment(USER_ID, PAYMENT_ID, request);
 
-            assertThat(response.getStatus()).isEqualTo(PaymentStatus.CANCELED);
+            assertThat(response.getRefundAmount()).isEqualTo(AMOUNT);
+            assertThat(response.getCanceledAmount()).isEqualTo(AMOUNT);
+            assertThat(response.getRemainingAmount()).isZero();
+            assertThat(response.getPaymentStatus()).isEqualTo(PaymentStatus.CANCELED);
             verify(paymentValidator).validateOwner(payment, USER_ID);
             verify(paymentValidator, never()).validateCancelable(any());
             verifyNoInteractions(tossPaymentClient, orderService);

@@ -22,6 +22,7 @@ import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentFailRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentRequest;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentActionResponse;
+import com.backtoback.reseat.domain.payment.dto.response.PaymentCancelResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCompleteResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCreateResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentResponse;
@@ -239,11 +240,11 @@ public class PaymentService {
      * @return 취소 처리된 결제 결과
      */
     @Transactional
-    public PaymentActionResponse cancelPayment(Long userId, Long paymentId, PaymentCancelRequest request) {
+    public PaymentCancelResponse cancelPayment(Long userId, Long paymentId, PaymentCancelRequest request) {
         // 로컬 결제를 잠그고 이미 취소된 요청은 기존 결과를 반환해 멱등하게 처리한다.
         Payment payment = getOwnedPaymentWithPessimisticWriteLock(userId, paymentId);
         if (payment.isCanceled()) {
-            return PaymentActionResponse.from(payment);
+            return PaymentCancelResponse.from(payment);
         }
         paymentValidator.validateCancelable(payment);
 
@@ -269,7 +270,7 @@ public class PaymentService {
         payment.cancel();
         orderService.cancelPaidOrder(payment.getOrder().getId());
 
-        return PaymentActionResponse.from(payment);
+        return PaymentCancelResponse.from(payment);
     }
 
     /**

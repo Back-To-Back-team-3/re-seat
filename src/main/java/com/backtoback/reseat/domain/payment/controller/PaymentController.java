@@ -15,6 +15,7 @@ import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentFailRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentRequest;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentActionResponse;
+import com.backtoback.reseat.domain.payment.dto.response.PaymentCancelResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCompleteResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCreateResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentResponse;
@@ -74,14 +75,14 @@ public class PaymentController implements PaymentControllerDocs {
 
     @Override
     @PostMapping("/{paymentId}/cancel")
-    public ResponseEntity<ApiResponse<PaymentActionResponse>> cancelPayment(
+    public ResponseEntity<ApiResponse<PaymentCancelResponse>> cancelPayment(
         @AuthenticationPrincipal CustomUserDetails userDetails,
         @PathVariable Long paymentId,
         @Valid @RequestBody PaymentCancelRequest request
     ) {
-        PaymentActionResponse response = paymentService.cancelPayment(userDetails.getId(), paymentId, request);
+        PaymentCancelResponse response = paymentService.cancelPayment(userDetails.getId(), paymentId, request);
 
-        return ResponseEntity.ok(ApiResponse.success("결제 취소 처리 완료", response));
+        return ResponseEntity.ok(ApiResponse.success("결제 취소 완료", response));
     }
 
     @Override
