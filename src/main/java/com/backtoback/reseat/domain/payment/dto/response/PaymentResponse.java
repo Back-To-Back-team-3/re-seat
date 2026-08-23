@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
 import com.backtoback.reseat.domain.payment.entity.PgProvider;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
@@ -66,16 +67,18 @@ public class PaymentResponse {
 
     @Schema(
         description = "결제 승인 시각. 승인되지 않았다면 null",
-        example = "2026-07-25T12:00:00",
+        example = "2026-07-25 12:00:00",
         nullable = true
     )
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private final LocalDateTime approvedAt;
 
     @Schema(
         description = "결제 실패 시각. 실패하지 않았다면 null",
-        example = "2026-07-25T12:00:00",
+        example = "2026-07-25 12:00:00",
         nullable = true
     )
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private final LocalDateTime failedAt;
 
     public static PaymentResponse from(Payment payment) {
