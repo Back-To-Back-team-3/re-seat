@@ -26,6 +26,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.entity.OrderItem;
+import com.backtoback.reseat.domain.order.entity.OrderStatus;
 import com.backtoback.reseat.domain.order.exception.OrderExpiredException;
 import com.backtoback.reseat.domain.order.repository.OrderItemRepository;
 import com.backtoback.reseat.domain.order.service.OrderService;
@@ -283,6 +284,7 @@ class PaymentServiceTest {
             PaymentCompleteRequest request = completeRequest();
             TossPaymentResponse tossResponse = mock(TossPaymentResponse.class);
             when(payment.getOrder().getId()).thenReturn(ORDER_ID);
+            when(payment.getOrder().getStatus()).thenReturn(OrderStatus.PAID);
             when(ticketServiceProvider.getObject()).thenReturn(ticketService);
             when(orderItemRepository.findByOrder_Id(ORDER_ID)).thenReturn(List.of(orderItem));
             when(ticketRepository.findByOrderItemId(ORDER_ITEM_ID)).thenReturn(Optional.empty());
@@ -298,6 +300,10 @@ class PaymentServiceTest {
                 = paymentService.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
 
             assertThat(response.getStatus()).isEqualTo(PaymentStatus.APPROVED);
+            assertThat(response.getPaymentNo()).isEqualTo(payment.getPaymentNo());
+            assertThat(response.getMethod()).isEqualTo("CARD");
+            assertThat(response.getOrderId()).isEqualTo(ORDER_ID);
+            assertThat(response.getOrderStatus()).isEqualTo(OrderStatus.PAID);
             assertThat(response.getTickets()).isNotEmpty();
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED);
             assertThat(payment.getPgPaymentKey()).isEqualTo(PAYMENT_KEY);
