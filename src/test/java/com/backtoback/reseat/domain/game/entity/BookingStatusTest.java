@@ -50,9 +50,10 @@ class BookingStatusTest {
     @DisplayName("allowedTransitions는 호출자가 변경해도 원본 규칙을 오염시키지 않는다")
     void should_returnDefensiveCopy_when_allowedTransitionsCalled(BookingStatus status) {
         Set<BookingStatus> first = status.allowedTransitions();
+        Set<BookingStatus> snapshot = Set.copyOf(first);
         first.clear();
 
-        assertThat(status.allowedTransitions()).isEqualTo(BookingStatus.valueOf(status.name()).allowedTransitions());
+        assertThat(status.allowedTransitions()).isEqualTo(snapshot);
     }
 
     @ParameterizedTest
