@@ -75,10 +75,8 @@ class GameRepositoryTest {
         Statistics statistics = entityManager.getEntityManagerFactory().unwrap(SessionFactory.class).getStatistics();
         statistics.clear();
 
-        Page<Game> result = gameRepository.searchGames(
-            new GameSearchCondition(null, null, null, null, null),
-            PageRequest.of(0, 20)
-        );
+        Page<Game> result
+            = gameRepository.searchGames(new GameSearchCondition(null, null, null, null, null), PageRequest.of(0, 20));
 
         List<Game> content = result.getContent();
 
