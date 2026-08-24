@@ -28,7 +28,7 @@ public record GameDetailResponse(
     /**
      * Game 엔티티를 경기 상세 응답 DTO로 변환한다.
      *
-     * @paramgame 조회된 경기 엔티티 (homeTeam, awayTeam, stadium이 fetch join된 상태여야 한다)
+     * @param game 조회된 경기 엔티티 (homeTeam, awayTeam, stadium이 fetch join된 상태여야 한다)
      * @return 경기 상세 응답 DTO
      */
     public static GameDetailResponse from(Game game) {
