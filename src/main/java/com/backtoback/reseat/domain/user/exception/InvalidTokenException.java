@@ -5,6 +5,7 @@ import com.backtoback.reseat.global.exception.ErrorCode;
 
 public class InvalidTokenException extends BusinessException {
 
-    public InvalidTokenException() { super(ErrorCode.UNAUTHORIZED);
+    public InvalidTokenException() {
+        super(ErrorCode.UNAUTHORIZED);
     }
 }

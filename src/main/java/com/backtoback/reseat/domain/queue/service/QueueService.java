@@ -164,9 +164,7 @@ public class QueueService {
         String queueKey = queueKey(gameId, userId);
 
         // 대기 취소와 다른 경기 진입이 동시에 처리되지 않도록 사용자 행을 잠근다.
-        queueUserRepository
-            .findByIdWithPessimisticWriteLock(userId)
-            .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
+        queueUserRepository.findByIdWithPessimisticWriteLock(userId).orElseThrow(UserNotFoundException::new);
 
         // 대기 취소와 입장 허용이 동시에 상태를 변경하지 않도록 대기 이력을 비관적 락으로 조회한다.
         QueueEntryHistory queueEntryHistory
@@ -221,7 +219,7 @@ public class QueueService {
         }
 
         if (!userRepository.existsById(userId)) {
-            throw new UserNotFoundException("사용자를 찾을 수 없습니다.");
+            throw new UserNotFoundException();
         }
 
         // eventId는 이벤트 로그 추적에 사용하고, requestedAt은 Redis ZSet의 대기 순서를 결정하는 기준으로 사용한다.
@@ -252,7 +250,7 @@ public class QueueService {
         User user
             = queueUserRepository
                 .findByIdWithPessimisticWriteLock(event.userId())
-                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
+                .orElseThrow(UserNotFoundException::new);
 
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime requestedAt = event.requestedAt().atZone(ZoneId.systemDefault()).toLocalDateTime();

@@ -5,6 +5,7 @@ import com.backtoback.reseat.global.exception.ErrorCode;
 
 public class DuplicateEmailException extends BusinessException {
 
-    public DuplicateEmailException() { super(ErrorCode.DUPLICATE_LOGIN_ID);
+    public DuplicateEmailException() {
+        super(ErrorCode.DUPLICATE_LOGIN_ID);
     }
 }

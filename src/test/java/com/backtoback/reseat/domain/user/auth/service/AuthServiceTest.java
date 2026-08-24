@@ -20,6 +20,7 @@ import com.backtoback.reseat.domain.user.entity.UserRole;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
 import com.backtoback.reseat.domain.user.exception.DeleteUserException;
 import com.backtoback.reseat.domain.user.exception.InvalidPasswordException;
+import com.backtoback.reseat.domain.user.exception.InvalidTokenException;
 import com.backtoback.reseat.domain.user.exception.SuspendedUserException;
 import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
 import com.backtoback.reseat.domain.user.repository.RefreshTokenRepository;
