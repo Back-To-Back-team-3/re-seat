@@ -85,7 +85,7 @@ class GameBookingOpenConcurrencyTest {
                 .bookingOpenAt(LocalDateTime.now().minusHours(1))
                 .bookingCloseAt(LocalDateTime.now().plusDays(6))
                 .bookingStatus(BookingStatus.SCHEDULED)
-                .title("[C-9-6] 예매 오픈 동시성 테스트 경기")
+                .title("[이슈 #272] 예매 오픈 동시성 테스트 경기")
                 .build();
         gameRepository.save(game);
         gameId = game.getId();
@@ -152,13 +152,13 @@ class GameBookingOpenConcurrencyTest {
 
         Game reloaded = gameRepository.findById(gameId).orElseThrow();
 
-        log.info("=====================================================");
-        log.info("[C-9-6] 예매 오픈 동시성 테스트 수치");
+        log.info("=========================================");
+        log.info("[이슈 #272] 예매 오픈 동시성 테스트 수치");
         log.info("  동시 스레드 수      : {}", THREAD_COUNT);
         log.info("  성공(1 반환) 건수   : {}", successCount.get());
         log.info("  실패(0 반환) 건수   : {}", failCount.get());
         log.info("  최종 booking_status : {}", reloaded.getBookingStatus());
-        log.info("=====================================================");
+        log.info("=========================================");
 
         assertThat(successCount.get() + failCount.get()).as("모든 스레드가 경합에 참여해야 한다.").isEqualTo(THREAD_COUNT);
         assertThat(successCount.get()).as("정확히 1건만 성공해야 한다.").isEqualTo(1);
