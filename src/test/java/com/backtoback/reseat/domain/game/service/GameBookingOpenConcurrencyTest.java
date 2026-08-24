@@ -1,22 +1,6 @@
 package com.backtoback.reseat.domain.game.service;
 
-import com.backtoback.reseat.domain.game.entity.BookingStatus;
-import com.backtoback.reseat.domain.game.entity.Game;
-import com.backtoback.reseat.domain.game.repository.GameRepository;
-import com.backtoback.reseat.domain.stadium.entity.Stadium;
-import com.backtoback.reseat.domain.stadium.repository.StadiumRepository;
-import com.backtoback.reseat.domain.team.entity.Team;
-import com.backtoback.reseat.domain.team.repository.TeamRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
+import static org.assertj.core.api.Assertions.*;
 
 import java.time.LocalDateTime;
 import java.util.concurrent.CountDownLatch;
@@ -25,7 +9,29 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.backtoback.reseat.domain.game.entity.BookingStatus;
+import com.backtoback.reseat.domain.game.entity.Game;
+import com.backtoback.reseat.domain.game.repository.GameRepository;
+import com.backtoback.reseat.domain.stadium.entity.Stadium;
+import com.backtoback.reseat.domain.stadium.repository.StadiumRepository;
+import com.backtoback.reseat.domain.team.entity.Team;
+import com.backtoback.reseat.domain.team.repository.TeamRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 경기 예매 오픈 동시성 테스트.
@@ -137,7 +143,7 @@ class GameBookingOpenConcurrencyTest {
                     }
                 } catch (Exception e) {
                     log.error("스레드 실행 중 예외 발생", e);
-                    failCount.incrementAndGet();
+                    errorCount.incrementAndGet();
                 }
             });
         }
