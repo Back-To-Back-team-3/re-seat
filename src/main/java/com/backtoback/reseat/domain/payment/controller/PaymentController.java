@@ -14,10 +14,10 @@ import com.backtoback.reseat.domain.payment.dto.request.PaymentCancelRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentFailRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentRequest;
-import com.backtoback.reseat.domain.payment.dto.response.PaymentActionResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCancelResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCompleteResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCreateResponse;
+import com.backtoback.reseat.domain.payment.dto.response.PaymentFailResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentResponse;
 import com.backtoback.reseat.domain.payment.service.PaymentService;
 import com.backtoback.reseat.global.common.ApiResponse;
@@ -61,13 +61,13 @@ public class PaymentController implements PaymentControllerDocs {
 
     @Override
     @PostMapping("/{paymentId}/fail")
-    public ResponseEntity<ApiResponse<PaymentActionResponse>> failPayment(
+    public ResponseEntity<ApiResponse<PaymentFailResponse>> failPayment(
         @AuthenticationPrincipal CustomUserDetails userDetails,
         @PathVariable Long paymentId,
         @RequestHeader("Idempotency-Key") String idempotencyKey,
         @Valid @RequestBody PaymentFailRequest request
     ) {
-        PaymentActionResponse response
+        PaymentFailResponse response
             = paymentService.failPayment(userDetails.getId(), paymentId, idempotencyKey, request);
 
         return ResponseEntity.ok(ApiResponse.success("결제 실패 처리 완료", response));

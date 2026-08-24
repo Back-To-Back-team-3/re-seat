@@ -21,10 +21,10 @@ import com.backtoback.reseat.domain.payment.dto.request.PaymentCancelRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentFailRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentRequest;
-import com.backtoback.reseat.domain.payment.dto.response.PaymentActionResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCancelResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCompleteResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCreateResponse;
+import com.backtoback.reseat.domain.payment.dto.response.PaymentFailResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentResponse;
 import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
@@ -209,7 +209,7 @@ public class PaymentService {
      * @return 실패 처리된 결제 결과
      */
     @Transactional
-    public PaymentActionResponse failPayment(
+    public PaymentFailResponse failPayment(
         Long userId,
         Long paymentId,
         String idempotencyKey,
@@ -218,7 +218,7 @@ public class PaymentService {
         Payment payment = getOwnedPaymentWithPessimisticWriteLock(userId, paymentId);
         paymentValidator.validateActiveIdempotencyKey(payment, idempotencyKey);
         if (!payment.isReady()) {
-            return PaymentActionResponse.from(payment);
+            return PaymentFailResponse.from(payment);
         }
 
         paymentValidator.validateFailable(payment);
@@ -227,7 +227,7 @@ public class PaymentService {
         payment.fail("[" + request.getCode() + "] " + request.getMessage(), LocalDateTime.now());
         orderService.failOrder(payment.getOrder().getId());
 
-        return PaymentActionResponse.from(payment);
+        return PaymentFailResponse.from(payment);
     }
 
     /**

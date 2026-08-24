@@ -6,10 +6,10 @@ import com.backtoback.reseat.domain.payment.dto.request.PaymentCancelRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentFailRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentRequest;
-import com.backtoback.reseat.domain.payment.dto.response.PaymentActionResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCancelResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCompleteResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCreateResponse;
+import com.backtoback.reseat.domain.payment.dto.response.PaymentFailResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentResponse;
 import com.backtoback.reseat.global.security.CustomUserDetails;
 
@@ -186,7 +186,7 @@ public interface PaymentControllerDocs {
             )
         }
     )
-    ResponseEntity<com.backtoback.reseat.global.common.ApiResponse<PaymentActionResponse>> failPayment(
+    ResponseEntity<com.backtoback.reseat.global.common.ApiResponse<PaymentFailResponse>> failPayment(
         @Parameter(hidden = true) CustomUserDetails userDetails,
         @Parameter(
             description = "결제 ID",

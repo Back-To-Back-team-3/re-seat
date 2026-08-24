@@ -34,10 +34,10 @@ import com.backtoback.reseat.domain.payment.dto.request.PaymentCancelRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentFailRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentRequest;
-import com.backtoback.reseat.domain.payment.dto.response.PaymentActionResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCancelResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCompleteResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCreateResponse;
+import com.backtoback.reseat.domain.payment.dto.response.PaymentFailResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentResponse;
 import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
@@ -507,7 +507,7 @@ class PaymentServiceTest {
             when(request.getMessage()).thenReturn("사용자가 결제를 취소했습니다.");
             when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
 
-            PaymentActionResponse response = paymentService.failPayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
+            PaymentFailResponse response = paymentService.failPayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
 
             assertThat(response.getStatus()).isEqualTo(PaymentStatus.FAILED);
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.FAILED);
@@ -532,7 +532,7 @@ class PaymentServiceTest {
             PaymentFailRequest request = mock(PaymentFailRequest.class);
             when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
 
-            PaymentActionResponse response = paymentService.failPayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
+            PaymentFailResponse response = paymentService.failPayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
 
             assertThat(response.getStatus()).isEqualTo(status);
             assertThat(payment.getStatus()).isEqualTo(status);
