@@ -1,10 +1,13 @@
 package com.backtoback.reseat.domain.queue.entity;
 
+import java.time.LocalDateTime;
+
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.queue.exception.QueueEntryAdmissionNotAllowedException;
 import com.backtoback.reseat.domain.queue.exception.QueueEntryCancellationNotAllowedException;
 import com.backtoback.reseat.domain.queue.exception.QueueEntryReentryNotAllowedException;
 import com.backtoback.reseat.domain.user.entity.User;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -22,8 +25,6 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 /**
  * 경기별 사용자 대기열의 처리 상태와 상태 전환 시간을 저장하는 Entity

@@ -11,6 +11,10 @@ import com.backtoback.reseat.domain.user.entity.User;
 
 public record CustomUserDetails(Long id, String email, String role) implements UserDetails {
 
+    public CustomUserDetails(User user) {
+        this(user.getId(), user.getEmail(), user.getRole() != null ? user.getRole().name() : "USER");
+    }
+
     public static CustomUserDetails of(Long id, String email, String role) {
         return new CustomUserDetails(id, email, role);
     }
@@ -21,10 +25,6 @@ public record CustomUserDetails(Long id, String email, String role) implements U
             user.getEmail(),
             user.getRole() != null ? user.getRole().name() : "USER"
         );
-    }
-
-    public CustomUserDetails(User user) {
-        this(user.getId(), user.getEmail(), user.getRole() != null ? user.getRole().name() : "USER");
     }
 
     public Long getId() {

@@ -12,11 +12,11 @@ import org.springframework.security.core.Authentication;
 
 class JwtTokenProviderTest {
 
-    private JwtTokenProvider jwtTokenProvider;
     private final String secretKeyString
         = Base64
             .getEncoder()
             .encodeToString("test-jwt-secret-key-must-be-at-least-256-bits-long-secure-random".getBytes());
+    private JwtTokenProvider jwtTokenProvider;
 
     @BeforeEach
     void setUp() throws Exception {

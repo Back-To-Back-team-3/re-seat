@@ -1,8 +1,10 @@
 package com.backtoback.reseat.domain.reservation.service.port;
 
-import com.backtoback.reseat.domain.user.verification.service.VerificationService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+
+import com.backtoback.reseat.domain.user.verification.service.VerificationService;
+
+import lombok.RequiredArgsConstructor;
 
 /**
  * UserVerificationPort의 기본 구현체.
