@@ -5,9 +5,7 @@ import java.util.Set;
 
 /**
  * 경기 예매 상태.
- *
  * <p>SCHEDULED→OPEN, OPEN→CLOSED, SCHEDULED/OPEN/CLOSED→CANCELLED.
- *
  * <p>CLOSED→CANCELLED를 허용하는 이유:
  * 시드 데이터상 booking_close_at과 game_at이 같아 경기 시작 시점의 상태는 이미 CLOSED다.
  * 우천 취소는 그 이후 발생하므로 CLOSED를 종단 상태로 두면 취소된 경기를 표현할 수단이 없어진다.
