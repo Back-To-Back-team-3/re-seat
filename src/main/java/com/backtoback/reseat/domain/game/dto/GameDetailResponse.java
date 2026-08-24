@@ -1,10 +1,12 @@
 package com.backtoback.reseat.domain.game.dto;
 
-import java.time.LocalDateTime;
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.stadium.dto.StadiumDetailResponse;
+import com.backtoback.reseat.domain.team.dto.TeamSummaryResponse;
 import com.fasterxml.jackson.annotation.JsonFormat;
+
+import java.time.LocalDateTime;
 
 /**
  * 경기 상세 조회 응답 DTO.

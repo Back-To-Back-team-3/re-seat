@@ -3,6 +3,7 @@ package com.backtoback.reseat.domain.game.dto;
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.stadium.dto.StadiumSummaryResponse;
+import com.backtoback.reseat.domain.team.dto.TeamSummaryResponse;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.time.LocalDateTime;
@@ -37,15 +38,5 @@ public record GameListResponse(
             game.getBookingCloseAt(),
             game.getBookingStatus()
         );
-    }
-
-    /**
-     * 경기 응답 내부에서 사용하는 구단 요약 응답 DTO.
-     */
-    public record TeamResponse(Long teamId, String name) {
-
-        public static TeamResponse from(Long teamId, String name) {
-            return new TeamResponse(teamId, name);
-        }
     }
 }
