@@ -1,18 +1,6 @@
 package com.backtoback.reseat.domain.seatinventory.service;
 
-import static org.assertj.core.api.Assertions.*;
-
-import java.util.List;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.transaction.annotation.Transactional;
-
+import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
 import com.backtoback.reseat.domain.seatinventory.dto.GameSeatOpenResponse;
@@ -20,20 +8,50 @@ import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
 import com.backtoback.reseat.domain.seatinventory.exception.SeatInventoryAlreadyOpenedException;
 import com.backtoback.reseat.domain.seatinventory.repository.GameSeatRepository;
+import com.backtoback.reseat.domain.stadium.entity.Seat;
+import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
+import com.backtoback.reseat.domain.stadium.entity.SeatZone;
+import com.backtoback.reseat.domain.stadium.entity.Stadium;
+import com.backtoback.reseat.domain.team.entity.Team;
+import com.backtoback.reseat.global.common.BaseIntegrationTest;
 import com.backtoback.reseat.global.config.QuerydslConfig;
-
 import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.redisson.Redisson;
+import org.redisson.api.RedissonClient;
+import org.redisson.config.Config;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * 좌석 재고 생성 서비스 통합 테스트.
+ * <p>
+ * 시드 데이터(teams.csv 등)에 의존하지 않고, 각 테스트가 필요한 구장·좌석·경기를
+ *
+ * @BeforeEach에서 직접 만든다. Testcontainers(BaseIntegrationTest)로 매번 빈 DB에서
+ * 시작하므로 "이미 시드가 있다"는 가정을 두지 않는다.
  */
-@Disabled("테스트 제외")
-@SpringBootTest
+@Import(
+    {
+        QuerydslConfig.class,
+        GameSeatCreateServiceTest.RedissonTestConfig.class
+    }
+)
 @Transactional
-@Import(QuerydslConfig.class)
-class GameSeatCreateServiceTest {
+class GameSeatCreateServiceTest extends BaseIntegrationTest {
 
-    private static final long SEEDED_STADIUM_ID = 1L;
     private static final int EXPECTED_SEAT_COUNT = 500;
     private static final long NOT_EXISTING_GAME_ID = 999_999L;
 
@@ -50,10 +68,23 @@ class GameSeatCreateServiceTest {
     private EntityManager entityManager;
 
     private Long gameIdWithSeats;
+    private Long stadiumIdWithoutSeats;
 
     @BeforeEach
     void setUp() {
-        gameIdWithSeats = findFirstGameIdOfStadium(SEEDED_STADIUM_ID);
+        Stadium stadiumWithSeats = persistStadium("테스트구장");
+        SeatZone zone = persistSeatZone(stadiumWithSeats, "내야존", SeatGrade.INFIELD, 15000);
+        persistActiveSeats(stadiumWithSeats, zone, EXPECTED_SEAT_COUNT);
+
+        Team homeTeam = persistTeam("테스트홈팀", stadiumWithSeats);
+        Team awayTeam = persistTeam("테스트원정팀", stadiumWithSeats);
+
+        Game gameWithSeats = persistGame(homeTeam, awayTeam, stadiumWithSeats);
+        gameIdWithSeats = gameWithSeats.getId();
+
+        // 좌석을 하나도 만들지 않은 구장 — "좌석 0건" 테스트 전용
+        Stadium stadiumWithoutSeats = persistStadium("좌석없는구장");
+        stadiumIdWithoutSeats = stadiumWithoutSeats.getId();
     }
 
     @DisplayName("재고를 오픈하면 구장 좌석 수만큼 GameSeat이 생성된다")
@@ -138,20 +169,14 @@ class GameSeatCreateServiceTest {
             .isInstanceOf(SeatInventoryAlreadyOpenedException.class);
     }
 
-    /**
-     * 좌석 기준 데이터가 없는 구장(stadium_id != 1)의 경기.
-     * 현재 시드에서는 110건 중 88건이 여기에 해당한다.
-     */
     @DisplayName("좌석이 없는 구장의 경기는 기준 데이터 결함으로 IllegalStateException이 발생한다")
     @Test
     void should_throwIllegalState_when_stadiumHasNoSeat() {
         // given
-        Long gameIdWithoutSeats
-            = entityManager
-                .createQuery("select g.id from Game g where g.stadium.id <> :stadiumId order by g.id asc", Long.class)
-                .setParameter("stadiumId", SEEDED_STADIUM_ID)
-                .setMaxResults(1)
-                .getSingleResult();
+        Stadium stadiumWithoutSeats = entityManager.find(Stadium.class, stadiumIdWithoutSeats);
+        Team homeTeam = persistTeam("좌석없음홈팀", stadiumWithoutSeats);
+        Team awayTeam = persistTeam("좌석없음원정팀", stadiumWithoutSeats);
+        Long gameIdWithoutSeats = persistGame(homeTeam, awayTeam, stadiumWithoutSeats).getId();
 
         // when & then
         assertThatThrownBy(() -> gameSeatCreateService.openInventory(gameIdWithoutSeats))
@@ -159,12 +184,50 @@ class GameSeatCreateServiceTest {
             .hasMessageContaining("활성 좌석이 없습니다");
     }
 
-    private Long findFirstGameIdOfStadium(Long stadiumId) {
-        return entityManager
-            .createQuery("select g.id from Game g where g.stadium.id = :stadiumId order by g.id asc", Long.class)
-            .setParameter("stadiumId", stadiumId)
-            .setMaxResults(1)
-            .getSingleResult();
+    private Team persistTeam(String name, Stadium homeStadium) {
+        Team team = Team.of(name, homeStadium);
+        entityManager.persist(team);
+        return team;
+    }
+
+    private Stadium persistStadium(String name) {
+        Stadium stadium = Stadium.of(name, "테스트주소", 30000);
+        entityManager.persist(stadium);
+        return stadium;
+    }
+
+    private SeatZone persistSeatZone(Stadium stadium, String name, SeatGrade grade, int basePrice) {
+        SeatZone zone = SeatZone.of(stadium, name, grade, basePrice);
+        entityManager.persist(zone);
+        return zone;
+    }
+
+    private void persistActiveSeats(Stadium stadium, SeatZone zone, int count) {
+        // uk_seats_location(stadium_id, zone_id, seat_block, seat_row, seat_number) 유니크 제약을 만족하도록
+        // 블록 25석 단위로 행(row)을 나눠 조합이 겹치지 않게 한다.
+        for (int i = 0; i < count; i++) {
+            String seatRow = String.valueOf((i / 25) + 1);
+            String seatNumber = String.valueOf((i % 25) + 1);
+            Seat seat = Seat.of(stadium, zone, "A", seatRow, seatNumber);
+            entityManager.persist(seat);
+        }
+    }
+
+    private Game persistGame(Team homeTeam, Team awayTeam, Stadium stadium) {
+        LocalDateTime gameAt = LocalDateTime.now().plusDays(1);
+        Game game
+            = Game
+                .builder()
+                .homeTeam(homeTeam)
+                .awayTeam(awayTeam)
+                .stadium(stadium)
+                .gameAt(gameAt)
+                .bookingOpenAt(gameAt.minusDays(7))
+                .bookingCloseAt(gameAt.minusHours(1))
+                .bookingStatus(BookingStatus.SCHEDULED)
+                .build();
+        entityManager.persist(game);
+        return game;
     }
 
     private List<GameSeat> findGameSeats(Long gameId) {
@@ -175,5 +238,19 @@ class GameSeatCreateServiceTest {
             join fetch s.zone
             where gs.game.id = :gameId
             """, GameSeat.class).setParameter("gameId", gameId).getResultList();
+    }
+
+    @TestConfiguration
+    static class RedissonTestConfig {
+
+        @Bean(destroyMethod = "shutdown")
+        RedissonClient redissonClient(
+            @Value("${spring.data.redis.host}") String host,
+            @Value("${spring.data.redis.port}") int port
+        ) {
+            Config config = new Config();
+            config.useSingleServer().setAddress("redis://" + host + ":" + port);
+            return Redisson.create(config);
+        }
     }
 }

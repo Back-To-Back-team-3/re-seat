@@ -1,5 +1,19 @@
 package com.backtoback.reseat.domain.queue.service;
 
+import java.time.LocalDateTime;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
@@ -18,20 +32,8 @@ import com.backtoback.reseat.domain.queue.repository.QueueEntryHistoryRepository
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import org.redisson.api.RLock;
-import org.redisson.api.RedissonClient;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ZSetOperations;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import java.time.LocalDateTime;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 대기열 통과 대상자에게 입장 토큰을 발급하는 서비스
@@ -166,8 +168,7 @@ public class AdmissionTokenService {
                     continue;
                 }
 
-                User user
-                    = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
+                User user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
 
                 // 활성 토큰이 없는 정상 대기 사용자에게만 새로운 Queue-Token을 발급한다.
                 String token = createQueueToken();

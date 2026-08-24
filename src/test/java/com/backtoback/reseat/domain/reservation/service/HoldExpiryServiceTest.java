@@ -1,9 +1,11 @@
 package com.backtoback.reseat.domain.reservation.service;
 
-import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
-import com.backtoback.reseat.domain.reservation.repository.ReservationRepository;
-import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
-import com.backtoback.reseat.domain.seatinventory.repository.GameSeatRepository;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.BDDMockito.*;
+
+import java.time.LocalDateTime;
+
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,11 +14,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.BDDMockito.*;
+import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
+import com.backtoback.reseat.domain.reservation.repository.ReservationRepository;
+import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
+import com.backtoback.reseat.domain.seatinventory.repository.GameSeatRepository;
 
 /**
  * HoldExpiryService 단위 테스트.
