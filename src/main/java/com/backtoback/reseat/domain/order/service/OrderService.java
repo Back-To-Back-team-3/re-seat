@@ -68,7 +68,7 @@ public class OrderService {
     @Transactional
     public OrderResponse createOrder(Long userId, Long reservationId) {
 
-        User user = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
+        User user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
 
         // 만료 스케줄러와의 경합을 막기 위해 주문 생성 대상으로 한 예약 행을 비관적 락으로 조회한다.
         Reservation reservation
