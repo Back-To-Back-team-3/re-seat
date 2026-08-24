@@ -118,6 +118,7 @@ class GameBookingOpenConcurrencyTest {
         CountDownLatch startLatch = new CountDownLatch(1);
         AtomicInteger successCount = new AtomicInteger(0);
         AtomicInteger failCount = new AtomicInteger(0);
+        AtomicInteger errorCount = new AtomicInteger(0);
         ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
 
         // when
@@ -157,9 +158,11 @@ class GameBookingOpenConcurrencyTest {
         log.info("  동시 스레드 수      : {}", THREAD_COUNT);
         log.info("  성공(1 반환) 건수   : {}", successCount.get());
         log.info("  실패(0 반환) 건수   : {}", failCount.get());
+        log.info("  예외 발생 건수      : {}", errorCount.get());
         log.info("  최종 booking_status : {}", reloaded.getBookingStatus());
         log.info("=========================================");
 
+        assertThat(errorCount.get()).as("스레드 실행 중 예외가 발생하면 안 된다.").isZero();
         assertThat(successCount.get() + failCount.get()).as("모든 스레드가 경합에 참여해야 한다.").isEqualTo(THREAD_COUNT);
         assertThat(successCount.get()).as("정확히 1건만 성공해야 한다.").isEqualTo(1);
         assertThat(failCount.get()).as("나머지는 전부 0 반환(경합 실패)이어야 한다.").isEqualTo(THREAD_COUNT - 1);
