@@ -166,8 +166,7 @@ public class AdmissionTokenService {
                     continue;
                 }
 
-                User user
-                    = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
+                User user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
 
                 // 활성 토큰이 없는 정상 대기 사용자에게만 새로운 Queue-Token을 발급한다.
                 String token = createQueueToken();

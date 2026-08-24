@@ -8,8 +8,4 @@ public class InactiveUserException extends BusinessException {
     public InactiveUserException() {
         super(ErrorCode.USER_INACTIVE);
     }
-
-    public InactiveUserException(String message) {
-        super(ErrorCode.USER_INACTIVE, message);
-    }
 }
