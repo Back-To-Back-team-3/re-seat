@@ -1,18 +1,18 @@
 package com.backtoback.reseat.domain.queue.entity;
 
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import java.time.LocalDateTime;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenAlreadyUsedException;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenExpiredException;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenNotExpiredException;
 import com.backtoback.reseat.domain.user.entity.User;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
-import java.time.LocalDateTime;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
 
 @DisplayName("AdmissionToken 상태 전이")
 public class AdmissionTokenTest {

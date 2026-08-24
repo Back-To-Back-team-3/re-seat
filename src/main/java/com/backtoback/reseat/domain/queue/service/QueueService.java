@@ -1,5 +1,21 @@
 package com.backtoback.reseat.domain.queue.service;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
@@ -27,22 +43,8 @@ import com.backtoback.reseat.domain.queue.repository.QueueUserRepository;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ZSetOperations;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 대기열 진입, 상태 조회, 취소, 입장 허용 이벤트 조회를 담당하는 서비스
@@ -164,9 +166,7 @@ public class QueueService {
         String queueKey = queueKey(gameId, userId);
 
         // 대기 취소와 다른 경기 진입이 동시에 처리되지 않도록 사용자 행을 잠근다.
-        queueUserRepository
-            .findByIdWithPessimisticWriteLock(userId)
-            .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
+        queueUserRepository.findByIdWithPessimisticWriteLock(userId).orElseThrow(UserNotFoundException::new);
 
         // 대기 취소와 입장 허용이 동시에 상태를 변경하지 않도록 대기 이력을 비관적 락으로 조회한다.
         QueueEntryHistory queueEntryHistory
@@ -221,7 +221,7 @@ public class QueueService {
         }
 
         if (!userRepository.existsById(userId)) {
-            throw new UserNotFoundException("사용자를 찾을 수 없습니다.");
+            throw new UserNotFoundException();
         }
 
         // eventId는 이벤트 로그 추적에 사용하고, requestedAt은 Redis ZSet의 대기 순서를 결정하는 기준으로 사용한다.
@@ -252,7 +252,7 @@ public class QueueService {
         User user
             = queueUserRepository
                 .findByIdWithPessimisticWriteLock(event.userId())
-                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
+                .orElseThrow(UserNotFoundException::new);
 
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime requestedAt = event.requestedAt().atZone(ZoneId.systemDefault()).toLocalDateTime();

@@ -1,13 +1,13 @@
 package com.backtoback.reseat.domain.reservation.service;
 
-import com.backtoback.reseat.domain.queue.service.AdmissionTokenService;
-import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
-import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse;
-import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
-import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
-import com.backtoback.reseat.domain.reservation.service.lock.SeatLockStrategy;
-import com.backtoback.reseat.domain.reservation.service.port.TicketCountPort;
-import com.backtoback.reseat.domain.reservation.service.port.UserVerificationPort;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.function.Supplier;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
@@ -16,13 +16,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.function.Supplier;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import com.backtoback.reseat.domain.queue.service.AdmissionTokenService;
+import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
+import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse;
+import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
+import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
+import com.backtoback.reseat.domain.reservation.service.lock.SeatLockStrategy;
+import com.backtoback.reseat.domain.reservation.service.lock.UserGameLockStrategy;
+import com.backtoback.reseat.domain.reservation.service.port.TicketCountPort;
+import com.backtoback.reseat.domain.reservation.service.port.UserVerificationPort;
 
 @Disabled("테스트 제외")
 @ExtendWith(MockitoExtension.class)
@@ -44,6 +46,8 @@ class SeatHoldFacadeBrowsingTest {
     private TicketCountPort ticketCountPort;
     @Mock
     private UserVerificationPort userVerificationPort;
+    @Mock
+    private UserGameLockStrategy userGameLockStrategy;
 
     private SeatHoldFacade seatHoldFacade;
     private SeatHoldRequest request;
@@ -57,12 +61,14 @@ class SeatHoldFacadeBrowsingTest {
                 admissionTokenService,
                 reservationSeatRepository,
                 ticketCountPort,
-                userVerificationPort
+                userVerificationPort,
+                userGameLockStrategy
             );
 
         request = new SeatHoldRequest(GAME_ID, List.of(101L));
 
         when(userVerificationPort.isVerified(USER_ID)).thenReturn(true);
+        stubUserGameLockPassthrough();
 
         when(reservationSeatRepository.countActiveHoldingSeats(eq(USER_ID), eq(GAME_ID), any(LocalDateTime.class)))
             .thenReturn(0);
@@ -84,6 +90,12 @@ class SeatHoldFacadeBrowsingTest {
     private void stubLockPassthrough() {
         when(seatLockStrategy.executeWithLocks(anyList(), any(Supplier.class)))
             .thenAnswer(invocation -> ((Supplier<ReservationResponse>)invocation.getArgument(1)).get());
+    }
+
+    @SuppressWarnings("unchecked")
+    private void stubUserGameLockPassthrough() {
+        when(userGameLockStrategy.executeWithLock(anyLong(), anyLong(), any(Supplier.class)))
+            .thenAnswer(invocation -> ((Supplier<ReservationResponse>)invocation.getArgument(2)).get());
     }
 
     @Test

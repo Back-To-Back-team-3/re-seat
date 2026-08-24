@@ -1,10 +1,13 @@
 package com.backtoback.reseat.domain.reservation.controller;
 
+import org.springframework.http.ResponseEntity;
+
 import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
 import com.backtoback.reseat.domain.reservation.dto.response.HoldTimeResponse;
 import com.backtoback.reseat.domain.reservation.dto.response.ReservationCancelResponse;
 import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse;
 import com.backtoback.reseat.global.security.CustomUserDetails;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -12,7 +15,6 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.http.ResponseEntity;
 
 /**
  * 좌석 선점(HOLD)·남은시간 조회·해제 API Swagger 문서화 인터페이스.
@@ -145,18 +147,30 @@ public interface ReservationControllerDocs {
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                 responseCode = "410",
-                description = "QUEUE_TOKEN_EXPIRED — 만료된 Queue-Token",
+                description = "QUEUE_TOKEN_EXPIRED — 만료된 Queue-Token / QUEUE_TOKEN_REVOKED — 대기 취소 또는 SSE 재연결 유예시간 만료로 취소된 Queue-Token",
                 content = @Content(
-                    examples = @ExampleObject(
-                        name = "토큰 만료 예시",
-                        value = """
-                            {
-                                "success": false,
-                                "errorCode": "QUEUE_TOKEN_EXPIRED",
-                                "message": "만료된 입장 토큰입니다."
-                            }
-                            """
-                    )
+                    examples = {
+                        @ExampleObject(
+                            name = "토큰 만료 예시",
+                            value = """
+                                {
+                                    "success": false,
+                                    "errorCode": "QUEUE_TOKEN_EXPIRED",
+                                    "message": "만료된 입장 토큰입니다."
+                                }
+                                """
+                        ),
+                        @ExampleObject(
+                            name = "토큰 폐기 예시",
+                            value = """
+                                {
+                                    "success": false,
+                                    "errorCode": "QUEUE_TOKEN_REVOKED",
+                                    "message": "취소된 입장 토큰입니다."
+                                }
+                                """
+                        )
+                    }
                 )
             )
         }

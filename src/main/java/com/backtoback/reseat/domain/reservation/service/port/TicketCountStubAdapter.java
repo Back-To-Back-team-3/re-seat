@@ -1,7 +1,8 @@
 package com.backtoback.reseat.domain.reservation.service.port;
 
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * TicketCountPort의 임시 구현체.

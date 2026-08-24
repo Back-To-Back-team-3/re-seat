@@ -1,15 +1,5 @@
 package com.backtoback.reseat.domain.queue.service;
 
-import com.backtoback.reseat.domain.queue.dto.response.QueueStatusResponse;
-import com.backtoback.reseat.domain.queue.exception.QueueEntryCancellationNotAllowedException;
-import com.backtoback.reseat.domain.queue.exception.QueueEntryCancellationTokenRequiredException;
-import com.backtoback.reseat.domain.queue.exception.QueueEntryNotFoundException;
-import jakarta.annotation.PreDestroy;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -19,6 +9,18 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+
+import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import com.backtoback.reseat.domain.queue.dto.response.QueueStatusResponse;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryCancellationNotAllowedException;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryCancellationTokenRequiredException;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryNotFoundException;
+
+import jakarta.annotation.PreDestroy;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 대기열 상태와 입장 허용 이벤트를 SSE로 주기적으로 전송하고 연결을 관리하는 서비스

@@ -4,4 +4,6 @@
         "http://www.puppycrawl.com/dtds/suppressions_1_1.dtd">
 
 <suppressions>
+    <!-- 들여쓰기(Indentation) 판정은 Spotless에 위임하고 Checkstyle에서는 예외 처리 -->
+    <suppress checks="Indentation" files=".*"/>
 </suppressions>
