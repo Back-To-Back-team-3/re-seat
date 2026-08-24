@@ -11,7 +11,7 @@ checkstyle {
     toolVersion = '10.12.5'
     configFile = file("config/naver-checkstyle-rules.xml")
     configProperties = [
-            'suppressionFile': file("config/naver-checkstyle-suppressions.xml")
+        'suppressionFile': file("config/naver-checkstyle-suppressions.xml")
     ]
     ignoreFailures = true
     maxWarnings = 0
@@ -135,8 +135,4 @@ spotless {
         targetExclude '**/node_modules/**'
         endWithNewline()
     }
-}
-
-tasks.named('compileJava') {
-    dependsOn 'spotlessApply'
 }

@@ -1,13 +1,13 @@
 package com.backtoback.reseat.domain.reservation.service;
 
-import com.backtoback.reseat.domain.queue.service.AdmissionTokenService;
-import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
-import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse;
-import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
-import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
-import com.backtoback.reseat.domain.reservation.service.lock.SeatLockStrategy;
-import com.backtoback.reseat.domain.reservation.service.port.TicketCountPort;
-import com.backtoback.reseat.domain.reservation.service.port.UserVerificationPort;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.function.Supplier;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
@@ -16,13 +16,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.function.Supplier;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import com.backtoback.reseat.domain.queue.service.AdmissionTokenService;
+import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
+import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse;
+import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
+import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
+import com.backtoback.reseat.domain.reservation.service.lock.SeatLockStrategy;
+import com.backtoback.reseat.domain.reservation.service.port.TicketCountPort;
+import com.backtoback.reseat.domain.reservation.service.port.UserVerificationPort;
 
 @Disabled("테스트 제외")
 @ExtendWith(MockitoExtension.class)

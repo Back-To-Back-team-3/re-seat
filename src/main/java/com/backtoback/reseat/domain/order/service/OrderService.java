@@ -1,5 +1,13 @@
 package com.backtoback.reseat.domain.order.service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.backtoback.reseat.domain.order.dto.response.OrderCancelResponse;
 import com.backtoback.reseat.domain.order.dto.response.OrderResponse;
 import com.backtoback.reseat.domain.order.entity.Order;
@@ -12,20 +20,19 @@ import com.backtoback.reseat.domain.order.repository.OrderReservationRepository;
 import com.backtoback.reseat.domain.reservation.entity.Reservation;
 import com.backtoback.reseat.domain.reservation.entity.ReservationSeat;
 import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
-import com.backtoback.reseat.domain.reservation.exception.*;
+import com.backtoback.reseat.domain.reservation.exception.InvalidReservationStatusException;
+import com.backtoback.reseat.domain.reservation.exception.PreReservationExpiredException;
+import com.backtoback.reseat.domain.reservation.exception.ReservationAccessDeniedException;
+import com.backtoback.reseat.domain.reservation.exception.ReservationAlreadyOrderedException;
+import com.backtoback.reseat.domain.reservation.exception.ReservationNotFoundException;
+import com.backtoback.reseat.domain.reservation.exception.ReservationSeatNotFoundException;
 import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 주문을 담당하는 서비스

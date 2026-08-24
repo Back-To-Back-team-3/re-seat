@@ -1,16 +1,5 @@
 package com.backtoback.reseat.domain.queue.service;
 
-import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
-import com.backtoback.reseat.domain.queue.dto.event.QueueEntryRequestedEvent;
-import com.backtoback.reseat.domain.queue.exception.QueueEntryEventGameIdInvalidException;
-import com.backtoback.reseat.domain.queue.exception.QueueEntryEventIdRequiredException;
-import com.backtoback.reseat.domain.queue.exception.QueueEntryEventRequestedAtRequiredException;
-import com.backtoback.reseat.domain.queue.exception.QueueEntryEventRequiredException;
-import com.backtoback.reseat.domain.queue.exception.QueueEntryEventUserIdInvalidException;
-import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
-import com.backtoback.reseat.global.config.KafkaConfig;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -20,6 +9,19 @@ import org.springframework.kafka.retrytopic.TopicSuffixingStrategy;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Service;
+
+import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
+import com.backtoback.reseat.domain.queue.dto.event.QueueEntryRequestedEvent;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryEventGameIdInvalidException;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryEventIdRequiredException;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryEventRequestedAtRequiredException;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryEventRequiredException;
+import com.backtoback.reseat.domain.queue.exception.QueueEntryEventUserIdInvalidException;
+import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
+import com.backtoback.reseat.global.config.KafkaConfig;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Kafka 대기열 진입 요청 이벤트를 소비하여 실제 대기열 등록을 처리한다.

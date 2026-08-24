@@ -1,5 +1,9 @@
 package com.backtoback.reseat.domain.reservation.service;
 
+import java.time.LocalDateTime;
+
+import org.springframework.stereotype.Component;
+
 import com.backtoback.reseat.domain.queue.service.AdmissionTokenService;
 import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
 import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse;
@@ -8,11 +12,9 @@ import com.backtoback.reseat.domain.reservation.service.lock.SeatLockStrategy;
 import com.backtoback.reseat.domain.reservation.service.port.TicketCountPort;
 import com.backtoback.reseat.domain.reservation.service.port.UserVerificationPort;
 import com.backtoback.reseat.domain.user.exception.UserNotVerifiedException;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-
-import java.time.LocalDateTime;
 
 /**
  * 좌석 선점 흐름을 조율하는 Facade.
