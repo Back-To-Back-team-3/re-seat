@@ -127,7 +127,7 @@ class GameBookingOpenConcurrencyTest {
                 try {
                     startLatch.await();
                     int updated
-                        = gameRepository
+                        = transactionHelper
                             .compareAndSetBookingStatus(gameId, BookingStatus.SCHEDULED, BookingStatus.OPEN);
                     if (updated == 1) {
                         successCount.incrementAndGet();
