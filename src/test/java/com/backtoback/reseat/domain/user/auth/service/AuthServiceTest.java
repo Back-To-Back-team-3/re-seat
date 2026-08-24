@@ -20,11 +20,13 @@ import com.backtoback.reseat.domain.user.entity.UserRole;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
 import com.backtoback.reseat.domain.user.exception.DeleteUserException;
 import com.backtoback.reseat.domain.user.exception.InvalidPasswordException;
+import com.backtoback.reseat.domain.user.exception.InvalidTokenException;
 import com.backtoback.reseat.domain.user.exception.SuspendedUserException;
 import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
 import com.backtoback.reseat.domain.user.repository.RefreshTokenRepository;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
 import com.backtoback.reseat.global.common.BaseUnitTest;
+import com.backtoback.reseat.global.exception.ErrorCode;
 import com.backtoback.reseat.global.security.JwtTokenProvider;
 
 class AuthServiceTest extends BaseUnitTest {
@@ -84,7 +86,7 @@ class AuthServiceTest extends BaseUnitTest {
         // when & then
         assertThatThrownBy(() -> authService.login(request))
             .isInstanceOf(UserNotFoundException.class)
-            .hasMessage("존재하지 않는 회원입니다.");
+            .hasMessage(ErrorCode.USER_NOT_FOUND.getMessage());
     }
 
     @Test
@@ -108,7 +110,7 @@ class AuthServiceTest extends BaseUnitTest {
         // when & then
         assertThatThrownBy(() -> authService.login(request))
             .isInstanceOf(InvalidPasswordException.class)
-            .hasMessage("비밀번호가 올바르지 않습니다.");
+            .hasMessage(ErrorCode.INVALID_PASSWORD.getMessage());
     }
 
     @Test
@@ -132,7 +134,7 @@ class AuthServiceTest extends BaseUnitTest {
         // when & then
         assertThatThrownBy(() -> authService.login(request))
             .isInstanceOf(SuspendedUserException.class)
-            .hasMessage("이용이 정지된 계정입니다.");
+            .hasMessage(ErrorCode.FORBIDDEN.getMessage());
     }
 
     @Test
@@ -156,7 +158,7 @@ class AuthServiceTest extends BaseUnitTest {
         // when & then
         assertThatThrownBy(() -> authService.login(request))
             .isInstanceOf(DeleteUserException.class)
-            .hasMessage("탈퇴 처리된 계정입니다.");
+            .hasMessage(ErrorCode.UNAUTHORIZED.getMessage());
     }
 
     @Test
@@ -213,8 +215,8 @@ class AuthServiceTest extends BaseUnitTest {
 
         // when & then
         assertThatThrownBy(() -> authService.reissue(request))
-            .isInstanceOf(com.backtoback.reseat.domain.user.exception.InvalidTokenException.class)
-            .hasMessage("토큰 정보가 일치하지 않습니다.");
+            .isInstanceOf(InvalidTokenException.class)
+            .hasMessage(ErrorCode.UNAUTHORIZED.getMessage());
     }
 
     @Test

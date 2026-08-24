@@ -38,12 +38,12 @@ public class UserService {
     public UserSignUpResponse signUp(UserSignUpRequest request) {
         // 1. 이메일 중복 검증
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new DuplicateEmailException("이미 존재하는 이메일입니다.");
+            throw new DuplicateEmailException();
         }
 
         // 1-2. 전화번호 중복 검증
         if (userRepository.existsByPhone(request.getPhone())) {
-            throw new DuplicatePhoneException("이미 사용 중인 전화번호입니다.");
+            throw new DuplicatePhoneException();
         }
 
         // 2. 비밀번호 암호화
@@ -66,8 +66,7 @@ public class UserService {
 
     // 내 정보 조회
     public UserProfileResponse getMyProfile(Long userId) {
-        User user
-            = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(String.valueOf(userId)));
+        User user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
 
         return UserProfileResponse.from(user);
     }
@@ -75,22 +74,20 @@ public class UserService {
     // 회원 정보 수정
     @Transactional
     public void updateProfile(Long userId, UserUpdateRequest request) {
-        User user
-            = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(String.valueOf(userId)));
+        User user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
 
         if (!user.getPhone().equals(request.getPhone()) && userRepository.existsByPhone(request.getPhone())) {
-            throw new DuplicatePhoneException(request.getPhone());
+            throw new DuplicatePhoneException();
         }
         user.updateProfile(request.getName(), request.getPhone());
     }
 
     @Transactional
     public void changePassword(Long userId, PasswordChangeRequest request) {
-        User user
-            = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(String.valueOf(userId)));
+        User user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
-            throw new InvalidPasswordException("현재 비밀번호가 일치하지 않습니다.");
+            throw new InvalidPasswordException();
         }
 
         if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
@@ -105,8 +102,7 @@ public class UserService {
     @Transactional
     public void withdraw(Long userId) {
         // 사용자 조회 및 404 예외 처리
-        User user
-            = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(String.valueOf(userId)));
+        User user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
 
         // 이미 탈퇴한 회원인 경우 중복 처리 방지
         if (user.getStatus() == UserStatus.DELETED) {

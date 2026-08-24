@@ -1,36 +1,34 @@
 package com.backtoback.reseat.domain.reservation.service;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.function.Supplier;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
+import com.backtoback.reseat.domain.queue.exception.QueueTokenRevokedException;
 import com.backtoback.reseat.domain.queue.service.AdmissionTokenService;
 import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
 import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse;
 import com.backtoback.reseat.domain.reservation.exception.MaxSeatCountExceededException;
 import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
 import com.backtoback.reseat.domain.reservation.service.lock.SeatLockStrategy;
+import com.backtoback.reseat.domain.reservation.service.lock.UserGameLockStrategy;
 import com.backtoback.reseat.domain.reservation.service.port.TicketCountPort;
 import com.backtoback.reseat.domain.reservation.service.port.UserVerificationPort;
 import com.backtoback.reseat.domain.user.exception.UserNotVerifiedException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.function.Supplier;
+
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 /**
  * SeatHoldFacade 수량·토큰 게이트 통합 테스트.
- * <p>본인인증 케이스는 이슈 #315 에서 추가한다(이번 범위에서 검증 순서는 토큰 → 수량만 고정 대상).
  */
-@Disabled("테스트 제외")
 @ExtendWith(MockitoExtension.class)
 class SeatHoldFacadeGateTest {
 
@@ -50,6 +48,8 @@ class SeatHoldFacadeGateTest {
     private TicketCountPort ticketCountPort;
     @Mock
     private UserVerificationPort userVerificationPort;
+    @Mock
+    private UserGameLockStrategy userGameLockStrategy;
 
     private SeatHoldFacade seatHoldFacade;
 
@@ -62,7 +62,8 @@ class SeatHoldFacadeGateTest {
                 admissionTokenService,
                 reservationSeatRepository,
                 ticketCountPort,
-                userVerificationPort
+                userVerificationPort,
+                userGameLockStrategy
             );
     }
 
@@ -71,6 +72,13 @@ class SeatHoldFacadeGateTest {
     private void stubLockPassthrough() {
         when(seatLockStrategy.executeWithLocks(anyList(), any(Supplier.class)))
             .thenAnswer(invocation -> ((Supplier<ReservationResponse>)invocation.getArgument(1)).get());
+    }
+
+    /** executeWithLock(사용자·경기 락)이 실제 락 없이 action을 즉시 실행하도록 스텁한다. */
+    @SuppressWarnings("unchecked")
+    private void stubUserGameLockPassthrough() {
+        when(userGameLockStrategy.executeWithLock(anyLong(), anyLong(), any(Supplier.class)))
+            .thenAnswer(invocation -> ((Supplier<ReservationResponse>)invocation.getArgument(2)).get());
     }
 
     @Test
@@ -84,8 +92,8 @@ class SeatHoldFacadeGateTest {
         assertThatThrownBy(() -> seatHoldFacade.holdSeats(USER_ID, TOKEN, request))
             .isInstanceOf(UserNotVerifiedException.class);
 
-        // 본인인증 게이트에서 이미 차단됐으므로 토큰 검증 자체가 호출되지 않아야 한다
-        verifyNoInteractions(admissionTokenService);
+        // 본인인증 게이트에서 이미 차단됐으므로 토큰 검증·사용자 락 모두 호출되지 않아야 한다.
+        verifyNoInteractions(admissionTokenService, userGameLockStrategy);
     }
 
     @Test
@@ -94,6 +102,7 @@ class SeatHoldFacadeGateTest {
         // given
         SeatHoldRequest request = new SeatHoldRequest(GAME_ID, List.of(101L));
         when(userVerificationPort.isVerified(USER_ID)).thenReturn(true);
+        stubUserGameLockPassthrough();
         when(reservationSeatRepository.countActiveHoldingSeats(eq(USER_ID), eq(GAME_ID), any(LocalDateTime.class)))
             .thenReturn(1);
         when(ticketCountPort.countActiveTickets(USER_ID, GAME_ID)).thenReturn(0);
@@ -113,6 +122,7 @@ class SeatHoldFacadeGateTest {
         // given
         SeatHoldRequest request = new SeatHoldRequest(GAME_ID, List.of(101L, 102L));
         when(userVerificationPort.isVerified(USER_ID)).thenReturn(true);
+        stubUserGameLockPassthrough();
         when(reservationSeatRepository.countActiveHoldingSeats(eq(USER_ID), eq(GAME_ID), any(LocalDateTime.class)))
             .thenReturn(1);
         when(ticketCountPort.countActiveTickets(USER_ID, GAME_ID)).thenReturn(0);
@@ -131,6 +141,7 @@ class SeatHoldFacadeGateTest {
         // given
         SeatHoldRequest request = new SeatHoldRequest(GAME_ID, List.of(101L));
         when(userVerificationPort.isVerified(USER_ID)).thenReturn(true);
+        stubUserGameLockPassthrough();
         when(reservationSeatRepository.countActiveHoldingSeats(eq(USER_ID), eq(GAME_ID), any(LocalDateTime.class)))
             .thenReturn(2);
         when(ticketCountPort.countActiveTickets(USER_ID, GAME_ID)).thenReturn(0);
@@ -146,6 +157,7 @@ class SeatHoldFacadeGateTest {
         // given
         SeatHoldRequest request = new SeatHoldRequest(GAME_ID, List.of(101L));
         when(userVerificationPort.isVerified(USER_ID)).thenReturn(true);
+        stubUserGameLockPassthrough();
         when(reservationSeatRepository.countActiveHoldingSeats(eq(USER_ID), eq(GAME_ID), any(LocalDateTime.class)))
             .thenReturn(0);
         when(ticketCountPort.countActiveTickets(USER_ID, GAME_ID)).thenReturn(2);
@@ -173,11 +185,28 @@ class SeatHoldFacadeGateTest {
     }
 
     @Test
+    @DisplayName("폐기된(REVOKED) Queue-Token으로 요청하면 QueueTokenRevokedException이 전파되고 수량 검증을 시도하지 않는다")
+    void should_propagateRevoked_when_tokenRevoked() {
+        // given
+        SeatHoldRequest request = new SeatHoldRequest(GAME_ID, List.of(101L));
+        when(userVerificationPort.isVerified(USER_ID)).thenReturn(true);
+        doThrow(new QueueTokenRevokedException()).when(admissionTokenService).validateToken(USER_ID, GAME_ID, TOKEN);
+
+        // when & then
+        assertThatThrownBy(() -> seatHoldFacade.holdSeats(USER_ID, TOKEN, request))
+            .isInstanceOf(QueueTokenRevokedException.class);
+
+        // 토큰 검증에서 이미 차단됐으므로 수량 검증·락 획득을 시도하면 안 된다
+        verifyNoInteractions(reservationSeatRepository, ticketCountPort, seatLockStrategy);
+    }
+
+    @Test
     @DisplayName("1좌석씩 반복 선점 — 두 번째 요청 시점의 누적 보유 수가 상한을 초과하면 차단된다")
     void should_throwMaxSeatCountExceeded_when_repeatedSingleSeatHoldsExceedLimit() {
         // given: 이미 1좌석을 보유한 상태에서(첫 요청 이후) 다시 1좌석 요청 → 누적 2좌석까지는 통과해야 함
         SeatHoldRequest secondRequest = new SeatHoldRequest(GAME_ID, List.of(102L));
         when(userVerificationPort.isVerified(USER_ID)).thenReturn(true);
+        stubUserGameLockPassthrough();
         when(reservationSeatRepository.countActiveHoldingSeats(eq(USER_ID), eq(GAME_ID), any(LocalDateTime.class)))
             .thenReturn(1);
         when(ticketCountPort.countActiveTickets(USER_ID, GAME_ID)).thenReturn(0);
