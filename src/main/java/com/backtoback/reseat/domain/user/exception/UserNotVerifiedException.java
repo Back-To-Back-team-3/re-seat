@@ -8,8 +8,4 @@ public class UserNotVerifiedException extends BusinessException {
     public UserNotVerifiedException() {
         super(ErrorCode.USER_NOT_VERIFIED);
     }
-
-    public UserNotVerifiedException(String message) {
-        super(ErrorCode.USER_NOT_VERIFIED, message);
-    }
 }

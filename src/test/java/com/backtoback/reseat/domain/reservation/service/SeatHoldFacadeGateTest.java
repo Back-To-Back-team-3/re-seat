@@ -7,6 +7,7 @@ import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse
 import com.backtoback.reseat.domain.reservation.exception.MaxSeatCountExceededException;
 import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
 import com.backtoback.reseat.domain.reservation.service.lock.SeatLockStrategy;
+import com.backtoback.reseat.domain.reservation.service.lock.UserGameLockStrategy;
 import com.backtoback.reseat.domain.reservation.service.port.TicketCountPort;
 import com.backtoback.reseat.domain.reservation.service.port.UserVerificationPort;
 import com.backtoback.reseat.domain.user.exception.UserNotVerifiedException;
@@ -27,7 +28,6 @@ import static org.mockito.Mockito.*;
 
 /**
  * SeatHoldFacade 수량·토큰 게이트 통합 테스트.
- * <p>본인인증 케이스는 이슈 #315 에서 추가한다(이번 범위에서 검증 순서는 토큰 → 수량만 고정 대상).
  */
 @ExtendWith(MockitoExtension.class)
 class SeatHoldFacadeGateTest {
@@ -48,6 +48,8 @@ class SeatHoldFacadeGateTest {
     private TicketCountPort ticketCountPort;
     @Mock
     private UserVerificationPort userVerificationPort;
+    @Mock
+    private UserGameLockStrategy userGameLockStrategy;
 
     private SeatHoldFacade seatHoldFacade;
 
@@ -60,7 +62,8 @@ class SeatHoldFacadeGateTest {
                 admissionTokenService,
                 reservationSeatRepository,
                 ticketCountPort,
-                userVerificationPort
+                userVerificationPort,
+                userGameLockStrategy
             );
     }
 
@@ -69,6 +72,13 @@ class SeatHoldFacadeGateTest {
     private void stubLockPassthrough() {
         when(seatLockStrategy.executeWithLocks(anyList(), any(Supplier.class)))
             .thenAnswer(invocation -> ((Supplier<ReservationResponse>)invocation.getArgument(1)).get());
+    }
+
+    /** executeWithLock(사용자·경기 락)이 실제 락 없이 action을 즉시 실행하도록 스텁한다. */
+    @SuppressWarnings("unchecked")
+    private void stubUserGameLockPassthrough() {
+        when(userGameLockStrategy.executeWithLock(anyLong(), anyLong(), any(Supplier.class)))
+            .thenAnswer(invocation -> ((Supplier<ReservationResponse>)invocation.getArgument(2)).get());
     }
 
     @Test
@@ -82,8 +92,8 @@ class SeatHoldFacadeGateTest {
         assertThatThrownBy(() -> seatHoldFacade.holdSeats(USER_ID, TOKEN, request))
             .isInstanceOf(UserNotVerifiedException.class);
 
-        // 본인인증 게이트에서 이미 차단됐으므로 토큰 검증 자체가 호출되지 않아야 한다
-        verifyNoInteractions(admissionTokenService);
+        // 본인인증 게이트에서 이미 차단됐으므로 토큰 검증·사용자 락 모두 호출되지 않아야 한다.
+        verifyNoInteractions(admissionTokenService, userGameLockStrategy);
     }
 
     @Test
@@ -92,6 +102,7 @@ class SeatHoldFacadeGateTest {
         // given
         SeatHoldRequest request = new SeatHoldRequest(GAME_ID, List.of(101L));
         when(userVerificationPort.isVerified(USER_ID)).thenReturn(true);
+        stubUserGameLockPassthrough();
         when(reservationSeatRepository.countActiveHoldingSeats(eq(USER_ID), eq(GAME_ID), any(LocalDateTime.class)))
             .thenReturn(1);
         when(ticketCountPort.countActiveTickets(USER_ID, GAME_ID)).thenReturn(0);
@@ -111,6 +122,7 @@ class SeatHoldFacadeGateTest {
         // given
         SeatHoldRequest request = new SeatHoldRequest(GAME_ID, List.of(101L, 102L));
         when(userVerificationPort.isVerified(USER_ID)).thenReturn(true);
+        stubUserGameLockPassthrough();
         when(reservationSeatRepository.countActiveHoldingSeats(eq(USER_ID), eq(GAME_ID), any(LocalDateTime.class)))
             .thenReturn(1);
         when(ticketCountPort.countActiveTickets(USER_ID, GAME_ID)).thenReturn(0);
@@ -129,6 +141,7 @@ class SeatHoldFacadeGateTest {
         // given
         SeatHoldRequest request = new SeatHoldRequest(GAME_ID, List.of(101L));
         when(userVerificationPort.isVerified(USER_ID)).thenReturn(true);
+        stubUserGameLockPassthrough();
         when(reservationSeatRepository.countActiveHoldingSeats(eq(USER_ID), eq(GAME_ID), any(LocalDateTime.class)))
             .thenReturn(2);
         when(ticketCountPort.countActiveTickets(USER_ID, GAME_ID)).thenReturn(0);
@@ -144,6 +157,7 @@ class SeatHoldFacadeGateTest {
         // given
         SeatHoldRequest request = new SeatHoldRequest(GAME_ID, List.of(101L));
         when(userVerificationPort.isVerified(USER_ID)).thenReturn(true);
+        stubUserGameLockPassthrough();
         when(reservationSeatRepository.countActiveHoldingSeats(eq(USER_ID), eq(GAME_ID), any(LocalDateTime.class)))
             .thenReturn(0);
         when(ticketCountPort.countActiveTickets(USER_ID, GAME_ID)).thenReturn(2);
@@ -192,6 +206,7 @@ class SeatHoldFacadeGateTest {
         // given: 이미 1좌석을 보유한 상태에서(첫 요청 이후) 다시 1좌석 요청 → 누적 2좌석까지는 통과해야 함
         SeatHoldRequest secondRequest = new SeatHoldRequest(GAME_ID, List.of(102L));
         when(userVerificationPort.isVerified(USER_ID)).thenReturn(true);
+        stubUserGameLockPassthrough();
         when(reservationSeatRepository.countActiveHoldingSeats(eq(USER_ID), eq(GAME_ID), any(LocalDateTime.class)))
             .thenReturn(1);
         when(ticketCountPort.countActiveTickets(USER_ID, GAME_ID)).thenReturn(0);

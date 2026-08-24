@@ -6,6 +6,7 @@ import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse
 import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
 import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
 import com.backtoback.reseat.domain.reservation.service.lock.SeatLockStrategy;
+import com.backtoback.reseat.domain.reservation.service.lock.UserGameLockStrategy;
 import com.backtoback.reseat.domain.reservation.service.port.TicketCountPort;
 import com.backtoback.reseat.domain.reservation.service.port.UserVerificationPort;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +45,8 @@ class SeatHoldFacadeBrowsingTest {
     private TicketCountPort ticketCountPort;
     @Mock
     private UserVerificationPort userVerificationPort;
+    @Mock
+    private UserGameLockStrategy userGameLockStrategy;
 
     private SeatHoldFacade seatHoldFacade;
     private SeatHoldRequest request;
@@ -57,12 +60,14 @@ class SeatHoldFacadeBrowsingTest {
                 admissionTokenService,
                 reservationSeatRepository,
                 ticketCountPort,
-                userVerificationPort
+                userVerificationPort,
+                userGameLockStrategy
             );
 
         request = new SeatHoldRequest(GAME_ID, List.of(101L));
 
         when(userVerificationPort.isVerified(USER_ID)).thenReturn(true);
+        stubUserGameLockPassthrough();
 
         when(reservationSeatRepository.countActiveHoldingSeats(eq(USER_ID), eq(GAME_ID), any(LocalDateTime.class)))
             .thenReturn(0);
@@ -84,6 +89,12 @@ class SeatHoldFacadeBrowsingTest {
     private void stubLockPassthrough() {
         when(seatLockStrategy.executeWithLocks(anyList(), any(Supplier.class)))
             .thenAnswer(invocation -> ((Supplier<ReservationResponse>)invocation.getArgument(1)).get());
+    }
+
+    @SuppressWarnings("unchecked")
+    private void stubUserGameLockPassthrough() {
+        when(userGameLockStrategy.executeWithLock(anyLong(), anyLong(), any(Supplier.class)))
+            .thenAnswer(invocation -> ((Supplier<ReservationResponse>)invocation.getArgument(2)).get());
     }
 
     @Test
