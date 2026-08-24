@@ -145,18 +145,30 @@ public interface ReservationControllerDocs {
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                 responseCode = "410",
-                description = "QUEUE_TOKEN_EXPIRED — 만료된 Queue-Token",
+                description = "QUEUE_TOKEN_EXPIRED — 만료된 Queue-Token / QUEUE_TOKEN_REVOKED — 대기 취소 또는 SSE 재연결 유예시간 만료로 취소된 Queue-Token",
                 content = @Content(
-                    examples = @ExampleObject(
-                        name = "토큰 만료 예시",
-                        value = """
-                            {
-                                "success": false,
-                                "errorCode": "QUEUE_TOKEN_EXPIRED",
-                                "message": "만료된 입장 토큰입니다."
-                            }
-                            """
-                    )
+                    examples = {
+                        @ExampleObject(
+                            name = "토큰 만료 예시",
+                            value = """
+                                {
+                                    "success": false,
+                                    "errorCode": "QUEUE_TOKEN_EXPIRED",
+                                    "message": "만료된 입장 토큰입니다."
+                                }
+                                """
+                        ),
+                        @ExampleObject(
+                            name = "토큰 폐기 예시",
+                            value = """
+                                {
+                                    "success": false,
+                                    "errorCode": "QUEUE_TOKEN_REVOKED",
+                                    "message": "취소된 입장 토큰입니다."
+                                }
+                                """
+                        )
+                    }
                 )
             )
         }

@@ -1,5 +1,6 @@
 package com.backtoback.reseat.domain.reservation.service;
 
+import com.backtoback.reseat.domain.queue.exception.QueueTokenRevokedException;
 import com.backtoback.reseat.domain.queue.service.AdmissionTokenService;
 import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
 import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse;
@@ -11,7 +12,6 @@ import com.backtoback.reseat.domain.reservation.service.port.TicketCountPort;
 import com.backtoback.reseat.domain.reservation.service.port.UserVerificationPort;
 import com.backtoback.reseat.domain.user.exception.UserNotVerifiedException;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,7 +29,6 @@ import static org.mockito.Mockito.*;
 /**
  * SeatHoldFacade 수량·토큰 게이트 통합 테스트.
  */
-@Disabled("테스트 제외")
 @ExtendWith(MockitoExtension.class)
 class SeatHoldFacadeGateTest {
 
@@ -182,6 +181,22 @@ class SeatHoldFacadeGateTest {
         assertThatThrownBy(() -> seatHoldFacade.holdSeats(USER_ID, TOKEN, request))
             .isInstanceOf(RuntimeException.class);
 
+        verifyNoInteractions(reservationSeatRepository, ticketCountPort, seatLockStrategy);
+    }
+
+    @Test
+    @DisplayName("폐기된(REVOKED) Queue-Token으로 요청하면 QueueTokenRevokedException이 전파되고 수량 검증을 시도하지 않는다")
+    void should_propagateRevoked_when_tokenRevoked() {
+        // given
+        SeatHoldRequest request = new SeatHoldRequest(GAME_ID, List.of(101L));
+        when(userVerificationPort.isVerified(USER_ID)).thenReturn(true);
+        doThrow(new QueueTokenRevokedException()).when(admissionTokenService).validateToken(USER_ID, GAME_ID, TOKEN);
+
+        // when & then
+        assertThatThrownBy(() -> seatHoldFacade.holdSeats(USER_ID, TOKEN, request))
+            .isInstanceOf(QueueTokenRevokedException.class);
+
+        // 토큰 검증에서 이미 차단됐으므로 수량 검증·락 획득을 시도하면 안 된다
         verifyNoInteractions(reservationSeatRepository, ticketCountPort, seatLockStrategy);
     }
 
