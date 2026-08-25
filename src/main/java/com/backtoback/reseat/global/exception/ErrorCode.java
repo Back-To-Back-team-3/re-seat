@@ -41,6 +41,7 @@ public enum ErrorCode {
     GAME_NOT_FOUND(HttpStatus.NOT_FOUND, "경기를 찾을 수 없습니다."),
     SAME_TEAM_MATCH(HttpStatus.BAD_REQUEST, "홈팀과 원정팀이 동일할 수 없습니다."),
     BOOKING_NOT_OPEN(HttpStatus.CONFLICT, "예매 가능한 상태가 아닙니다."),
+    INVALID_BOOKING_STATUS_TRANSITION(HttpStatus.CONFLICT, "허용되지 않은 예매 상태 전이입니다."),
 
     // 대기열 (queue)
     ALREADY_IN_QUEUE(HttpStatus.CONFLICT, "이미 해당 경기의 대기열에 진입해 있습니다."),

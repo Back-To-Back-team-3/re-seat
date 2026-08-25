@@ -1,12 +1,13 @@
 package com.backtoback.reseat.domain.game.repository;
 
-import java.util.Optional;
-
+import com.backtoback.reseat.domain.game.entity.BookingStatus;
+import com.backtoback.reseat.domain.game.entity.Game;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import com.backtoback.reseat.domain.game.entity.Game;
+import java.util.Optional;
 
 /**
  * 경기 Repository.
@@ -32,4 +33,26 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
         where g.id = :gameId
         """)
     Optional<Game> findDetailById(@Param("gameId") Long gameId);
+
+    /**
+     * 현재 상태가 기대값과 같을 때만 지정한 상태로 바꾼다(compare-and-set).
+     * 동시에 여러 요청이 와도 하나만 성공하도록 만들 때 쓴다.
+     *
+     * @param gameId 대상 경기 ID
+     * @param expectedCurrent 호출 시점에 읽은 현재 상태
+     * @param target 전이할 상태
+     * @return 변경된 행 수 (성공 1, 경합 실패 0)
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("""
+        UPDATE Game g
+        SET g.bookingStatus = :target
+        WHERE g.id = :gameId
+        AND g.bookingStatus = :expectedCurrent
+        """)
+    int compareAndSetBookingStatus(
+        @Param("gameId") Long gameId,
+        @Param("expectedCurrent") BookingStatus expectedCurrent,
+        @Param("target") BookingStatus target
+    );
 }

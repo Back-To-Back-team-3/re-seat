@@ -1,8 +1,11 @@
 package com.backtoback.reseat.domain.payment.dto.response;
 
+import java.time.LocalDateTime;
+
 import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
 import com.backtoback.reseat.domain.payment.entity.PgProvider;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
@@ -62,6 +65,13 @@ public class PaymentCreateResponse {
     )
     private final String pgOrderId;
 
+    @Schema(
+        description = "결제 가능 기한",
+        example = "2026-07-11 14:29:00"
+    )
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private final LocalDateTime paymentDeadline;
+
     public static PaymentCreateResponse from(Payment payment) {
         return PaymentCreateResponse
             .builder()
@@ -73,6 +83,7 @@ public class PaymentCreateResponse {
             .status(payment.getStatus())
             .pgProvider(payment.getPgProvider())
             .pgOrderId(payment.getPgOrderId())
+            .paymentDeadline(payment.getOrder().getPaymentDeadline())
             .build();
     }
 }

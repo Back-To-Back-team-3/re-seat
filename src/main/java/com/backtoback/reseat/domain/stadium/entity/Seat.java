@@ -98,13 +98,13 @@ public class Seat extends BaseEntity {
     private SeatStatus status = SeatStatus.ACTIVE;
 
     public static Seat of(Stadium stadium, SeatZone zone, String seatBlock, String seatRow, String seatNumber) {
-        Seat s = new Seat();
-        s.stadium = stadium;
-        s.zone = zone;
-        s.seatBlock = seatBlock;
-        s.seatRow = seatRow;
-        s.seatNumber = seatNumber;
-        s.status = SeatStatus.ACTIVE;
-        return s;
+        Seat seat = new Seat();
+        seat.stadium = stadium;
+        seat.zone = zone;
+        seat.seatBlock = seatBlock;
+        seat.seatRow = seatRow;
+        seat.seatNumber = seatNumber;
+        seat.status = SeatStatus.ACTIVE;
+        return seat;
     }
 }
