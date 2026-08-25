@@ -118,8 +118,8 @@ public class UserService {
         // 엔티티 메서드를 호출하여 상태 변경 및 개인정보 마스킹
         user.withdraw();
 
-        // DB 내 저장되어 있는 사용자의 리프레시 토큰 제거
-        refreshTokenRepository.findByUser(user).ifPresent(refreshTokenRepository::delete);
+        // Redis 내 저장되어 있는 사용자의 리프레시 토큰 제거
+        refreshTokenRepository.deleteByUserId(userId);
     }
 
 }
