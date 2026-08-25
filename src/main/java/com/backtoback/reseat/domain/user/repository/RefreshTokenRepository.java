@@ -1,15 +1,36 @@
-package com.backtoback.reseat.domain.user.repository; // 🎯 실제 프로젝트 패키지 경로에 맞추세요
+package com.backtoback.reseat.domain.user.repository;
 
+import java.time.Duration;
 import java.util.Optional;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Repository;
 
-import com.backtoback.reseat.domain.user.entity.RefreshToken;
-import com.backtoback.reseat.domain.user.entity.User;
+import lombok.RequiredArgsConstructor;
 
 @Repository
-public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
+@RequiredArgsConstructor
+public class RefreshTokenRepository {
 
-    Optional<RefreshToken> findByUser(User user);
+    private final StringRedisTemplate redisTemplate;
+    private static final String KEY_PREFIX = "RT:";
+
+    // RefreshToken 저장 (TTL 설정 14일)
+    public void save(Long userId, String refreshToken, Duration ttl) {
+        String key = KEY_PREFIX + userId;
+        redisTemplate.opsForValue().set(key, refreshToken, ttl);
+    }
+
+    // Refresh Token 조회
+    public Optional<String> findByUserId(Long userId) {
+        String key = KEY_PREFIX + userId;
+        String token = redisTemplate.opsForValue().get(key);
+        return Optional.ofNullable(token);
+    }
+
+    // Token 삭제
+    public void deleteByUserId(Long userId) {
+        String key = KEY_PREFIX + userId;
+        redisTemplate.delete(key);
+    }
 }

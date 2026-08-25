@@ -5,6 +5,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,9 +31,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = resolveToken(request);
 
-        if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
-            Authentication authentication = jwtTokenProvider.getAuthentication(token);
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+        if (StringUtils.hasText(token)) {
+            Claims claims = jwtTokenProvider.getClaimsIfValid(token);
+            if (claims != null) {
+                Authentication authentication = jwtTokenProvider.getAuthentication(claims, token);
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
         }
         filterChain.doFilter(request, response);
     }

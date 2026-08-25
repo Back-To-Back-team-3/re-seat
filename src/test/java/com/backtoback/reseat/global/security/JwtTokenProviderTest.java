@@ -55,6 +55,47 @@ class JwtTokenProviderTest {
     }
 
     @Test
+    @DisplayName("getClaimsIfValid: 유효한 토큰 전달 시 Claims를 반환하고, Claims로 Authentication 및 userId를 추출한다")
+    void getClaimsIfValid_ValidToken_Success() {
+        // given
+        Long userId = 1L;
+        String email = "user@test.com";
+        String role = "USER";
+
+        String accessToken = jwtTokenProvider.createAccessToken(userId, email, role);
+        String refreshToken = jwtTokenProvider.createRefreshToken(userId);
+
+        // when
+        io.jsonwebtoken.Claims accessClaims = jwtTokenProvider.getClaimsIfValid(accessToken);
+        io.jsonwebtoken.Claims refreshClaims = jwtTokenProvider.getClaimsIfValid(refreshToken);
+        Authentication authentication = jwtTokenProvider.getAuthentication(accessClaims, accessToken);
+
+        // then
+        assertThat(accessClaims).isNotNull();
+        assertThat(jwtTokenProvider.getUserId(accessClaims)).isEqualTo(userId);
+        assertThat(jwtTokenProvider.getUserId(accessToken)).isEqualTo(userId);
+        assertThat(jwtTokenProvider.getEmail(accessToken)).isEqualTo(email);
+
+        assertThat(refreshClaims).isNotNull();
+        assertThat(jwtTokenProvider.getUserId(refreshClaims)).isEqualTo(userId);
+
+        assertThat(authentication).isNotNull();
+        assertThat(authentication.getPrincipal()).isInstanceOf(CustomUserDetails.class);
+        CustomUserDetails userDetails = (CustomUserDetails)authentication.getPrincipal();
+        assertThat(userDetails.getId()).isEqualTo(userId);
+        assertThat(userDetails.getUsername()).isEqualTo(email);
+    }
+
+    @Test
+    @DisplayName("getClaimsIfValid: 유효하지 않거나 빈 토큰 전달 시 null을 반환한다")
+    void getClaimsIfValid_InvalidToken_ReturnsNull() {
+        // when & then
+        assertThat(jwtTokenProvider.getClaimsIfValid(null)).isNull();
+        assertThat(jwtTokenProvider.getClaimsIfValid("")).isNull();
+        assertThat(jwtTokenProvider.getClaimsIfValid("invalid.jwt.token")).isNull();
+    }
+
+    @Test
     @DisplayName("잘못된 형식 또는 변조된 토큰 검증 시 false를 반환하고 로그를 남긴다")
     void validateToken_MalformedToken_ReturnsFalse() {
         // given

@@ -60,7 +60,7 @@ public class AdminUserService {
 
         if (status == UserStatus.DELETED) {
             user.withdraw();
-            refreshTokenRepository.findByUser(user).ifPresent(refreshTokenRepository::delete);
+            refreshTokenRepository.deleteByUserId(userId);
         } else {
             user.updateStatus(status);
         }
