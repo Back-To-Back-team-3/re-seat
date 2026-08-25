@@ -13,7 +13,9 @@ import com.backtoback.reseat.domain.reservation.exception.HoldExtensionLimitExce
  */
 public final class HoldExtensionPolicy {
 
-    private HoldExtensionPolicy() {}
+    private HoldExtensionPolicy() {
+
+    }
 
     /**
      * 재선점 시 Queue-Token 잔여 TTL과 HOLD 상한을 검증한다.
