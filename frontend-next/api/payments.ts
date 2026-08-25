@@ -1,6 +1,11 @@
 import {apiRequest, unwrap} from "@/api/client";
 import type {ApiResponse} from "@/types/api";
-import type {PaymentActionResponse, PaymentCreateResponse, PaymentResponse,} from "@/types/payment";
+import type {
+    PaymentCompleteResponse,
+    PaymentCreateResponse,
+    PaymentFailResponse,
+    PaymentResponse,
+} from "@/types/payment";
 
 export async function requestPayment(orderId: number, idempotencyKey: string) {
     const response = await apiRequest<ApiResponse<PaymentCreateResponse>>(
@@ -19,7 +24,7 @@ export async function completePayment(
     idempotencyKey: string,
     payload: { paymentKey: string; orderId: string; amount: number },
 ) {
-    const response = await apiRequest<ApiResponse<PaymentActionResponse>>(
+    const response = await apiRequest<ApiResponse<PaymentCompleteResponse>>(
         `/payments/${paymentId}/complete`,
         {
             method: "POST",
@@ -35,7 +40,7 @@ export async function failPayment(
     idempotencyKey: string,
     payload: { code: string; message: string; orderId: string },
 ) {
-    const response = await apiRequest<ApiResponse<PaymentActionResponse>>(
+    const response = await apiRequest<ApiResponse<PaymentFailResponse>>(
         `/payments/${paymentId}/fail`,
         {
             method: "POST",
