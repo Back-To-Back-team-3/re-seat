@@ -12,6 +12,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import io.jsonwebtoken.Claims;
+
 import com.backtoback.reseat.domain.user.auth.dto.request.ReissueRequest;
 import com.backtoback.reseat.domain.user.auth.dto.request.UserLoginRequest;
 import com.backtoback.reseat.domain.user.auth.dto.response.TokenResponse;
@@ -168,9 +170,10 @@ class AuthServiceTest extends BaseUnitTest {
         String oldRefreshToken = "old-refresh-token";
         ReissueRequest request = new ReissueRequest(oldRefreshToken);
         User user = User.builder().id(1L).email("user@test.com").role(UserRole.USER).status(UserStatus.ACTIVE).build();
+        Claims claims = mock(Claims.class);
 
-        when(jwtTokenProvider.validateToken(oldRefreshToken)).thenReturn(true);
-        when(jwtTokenProvider.getUserId(oldRefreshToken)).thenReturn(1L);
+        when(jwtTokenProvider.getClaimsIfValid(oldRefreshToken)).thenReturn(claims);
+        when(jwtTokenProvider.getUserId(claims)).thenReturn(1L);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(refreshTokenRepository.findByUserId(1L)).thenReturn(Optional.of(oldRefreshToken));
         when(jwtTokenProvider.createAccessToken(1L, "user@test.com", "USER")).thenReturn("new-access-token");
@@ -187,15 +190,31 @@ class AuthServiceTest extends BaseUnitTest {
     }
 
     @Test
+    @DisplayName("유효하지 않거나 만료된 RefreshToken으로 재발급 시 예외가 발생한다")
+    void reissue_InvalidToken() {
+        // given
+        String invalidToken = "invalid-token";
+        ReissueRequest request = new ReissueRequest(invalidToken);
+
+        when(jwtTokenProvider.getClaimsIfValid(invalidToken)).thenReturn(null);
+
+        // when & then
+        assertThatThrownBy(() -> authService.reissue(request))
+            .isInstanceOf(InvalidTokenException.class)
+            .hasMessage(ErrorCode.UNAUTHORIZED.getMessage());
+    }
+
+    @Test
     @DisplayName("DB의 RefreshToken과 클라이언트가 보낸 토큰이 불일치하면 예외가 발생한다")
     void reissue_TokenMismatch() {
         // given
         String clientToken = "client-token";
         ReissueRequest request = new ReissueRequest(clientToken);
         User user = User.builder().id(1L).email("user@test.com").role(UserRole.USER).status(UserStatus.ACTIVE).build();
+        Claims claims = mock(Claims.class);
 
-        when(jwtTokenProvider.validateToken(clientToken)).thenReturn(true);
-        when(jwtTokenProvider.getUserId(clientToken)).thenReturn(1L);
+        when(jwtTokenProvider.getClaimsIfValid(clientToken)).thenReturn(claims);
+        when(jwtTokenProvider.getUserId(claims)).thenReturn(1L);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(refreshTokenRepository.findByUserId(1L)).thenReturn(Optional.of("different-redis-token"));
 

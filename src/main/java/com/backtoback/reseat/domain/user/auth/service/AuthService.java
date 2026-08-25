@@ -6,6 +6,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import io.jsonwebtoken.Claims;
+
 import com.backtoback.reseat.domain.user.auth.dto.request.ReissueRequest;
 import com.backtoback.reseat.domain.user.auth.dto.request.UserLoginRequest;
 import com.backtoback.reseat.domain.user.auth.dto.response.TokenResponse;
@@ -66,13 +68,21 @@ public class AuthService {
     public TokenResponse reissue(ReissueRequest request) {
         String refreshToken = request.getRefreshToken();
 
-        // 1. Refresh Token 유효성 및 만료 검증 (포맷 자체가 깨진 경우)
-        if (refreshToken == null || !jwtTokenProvider.validateToken(refreshToken)) {
+        // 1. Refresh Token 유효성 및 만료 검증 (Claims 파싱 및 검증을 1회로 처리)
+        if (refreshToken == null) {
             throw new InvalidTokenException();
         }
 
-        // 2. Refresh Token에서 사용자 식별 정보(userId) 추출
-        Long userId = jwtTokenProvider.getUserId(refreshToken);
+        Claims claims = jwtTokenProvider.getClaimsIfValid(refreshToken);
+        if (claims == null) {
+            throw new InvalidTokenException();
+        }
+
+        // 2. Refresh Token Claims에서 사용자 식별 정보(userId) 추출
+        Long userId = jwtTokenProvider.getUserId(claims);
+        if (userId == null) {
+            throw new InvalidTokenException();
+        }
 
         // 3. 존재하지 않는 회원 404 예외 처리 연동
         User user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
