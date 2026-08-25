@@ -321,6 +321,8 @@ public class PaymentService {
      * 같은 주문에 속한 나머지 ISSUED 티켓을 결제 취소 사유로 일괄 취소
      * <p>주문 단위 전액 취소만 지원하는 동안, 방금 취소된 티켓 외 나머지 티켓이
      * "좌석은 반환됐는데 티켓은 ISSUED로 남는" 상태가 되는 것을 막기 위한 임시 방어 로직
+     * <p>Ticket.cancel()은 티켓 상태만 변경하므로, 좌석 반환은 여기서 같은 트랜잭션 안에
+     * 명시적으로 함께 처리한다(다른 메서드의 좌석 반환 로직에 암묵적으로 의존하지 않는다).
      */
     private void cancelRemainingIssuedTickets(Long orderId) {
         orderItemRepository
@@ -329,7 +331,10 @@ public class PaymentService {
             .map(orderItem -> ticketRepository.findByOrderItemId(orderItem.getId()))
             .flatMap(Optional::stream)
             .filter(ticket -> ticket.getStatus() == TicketStatus.ISSUED)
-            .forEach(ticket -> ticket.cancel(TicketCancelReason.PAYMENT_CANCELED));
+            .forEach(ticket -> {
+                ticket.cancel(TicketCancelReason.PAYMENT_CANCELED);
+                ticket.getGameSeat().available();
+            });
     }
 
     /**
