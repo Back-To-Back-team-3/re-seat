@@ -54,11 +54,11 @@ public class Stadium extends BaseEntity {
     private StadiumStatus status = StadiumStatus.ACTIVE;
 
     public static Stadium of(String name, String address, int totalCapacity) {
-        Stadium s = new Stadium();
-        s.name = name;
-        s.address = address;
-        s.totalCapacity = totalCapacity;
-        s.status = StadiumStatus.ACTIVE;
-        return s;
+        Stadium stadium = new Stadium();
+        stadium.name = name;
+        stadium.address = address;
+        stadium.totalCapacity = totalCapacity;
+        stadium.status = StadiumStatus.ACTIVE;
+        return stadium;
     }
 }
