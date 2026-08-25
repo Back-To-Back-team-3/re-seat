@@ -1,11 +1,10 @@
 package com.backtoback.reseat.domain.seatinventory.controller;
 
-import com.backtoback.reseat.domain.queue.exception.QueueTokenRevokedException;
-import com.backtoback.reseat.domain.queue.service.AdmissionTokenService;
-import com.backtoback.reseat.domain.seatinventory.dto.SeatStatusResponse;
-import com.backtoback.reseat.domain.seatinventory.service.SeatQueryService;
-import com.backtoback.reseat.global.common.ApiResponse;
-import com.backtoback.reseat.global.security.CustomUserDetails;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import java.util.List;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,11 +12,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 
-import java.util.List;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.*;
+import com.backtoback.reseat.domain.queue.exception.QueueTokenRevokedException;
+import com.backtoback.reseat.domain.queue.service.AdmissionTokenService;
+import com.backtoback.reseat.domain.seatinventory.dto.SeatStatusResponse;
+import com.backtoback.reseat.domain.seatinventory.service.SeatQueryService;
+import com.backtoback.reseat.global.common.ApiResponse;
+import com.backtoback.reseat.global.security.CustomUserDetails;
 
 /**
  * GameSeatController의 Queue-Token 검증 위임 여부만 검증하는 단위 테스트.

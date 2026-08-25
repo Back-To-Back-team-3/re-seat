@@ -1,10 +1,15 @@
 package com.backtoback.reseat.domain.seatinventory.controller;
 
+import java.util.List;
+
+import org.springframework.http.ResponseEntity;
+
 import com.backtoback.reseat.domain.seatinventory.dto.SeatStatusResponse;
 import com.backtoback.reseat.domain.seatinventory.dto.ZoneSummaryResponse;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
 import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
 import com.backtoback.reseat.global.security.CustomUserDetails;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -12,9 +17,6 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.http.ResponseEntity;
-
-import java.util.List;
 
 /**
  * 경기 좌석 현황·구역 조회 API Swagger 문서화 인터페이스.
@@ -142,7 +144,8 @@ public interface GameSeatControllerDocs {
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                 responseCode = "410",
-                description = "QUEUE_TOKEN_EXPIRED — 만료된 Queue-Token / QUEUE_TOKEN_REVOKED — 대기 취소 또는 SSE 재연결 유예시간 만료로 취소된 Queue-Token",
+                description = "QUEUE_TOKEN_EXPIRED — 만료된 Queue-Token "
+                    + "/ QUEUE_TOKEN_REVOKED — 대기 취소 또는 SSE 재연결 유예시간 만료로 취소된 Queue-Token",
                 content = @Content(
                     examples = {
                         @ExampleObject(
