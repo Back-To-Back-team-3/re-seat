@@ -5,10 +5,12 @@ import java.time.LocalDateTime;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.order.entity.OrderItem;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
+import com.backtoback.reseat.domain.ticket.exception.InvalidTicketStateException;
+import com.backtoback.reseat.domain.ticket.exception.TicketAlreadyUsedException;
+import com.backtoback.reseat.domain.ticket.exception.TicketCanceledByAdminException;
+import com.backtoback.reseat.domain.ticket.exception.TicketCanceledByUserException;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.global.common.BaseEntity;
-import com.backtoback.reseat.global.exception.BusinessException;
-import com.backtoback.reseat.global.exception.ErrorCode;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -257,16 +259,20 @@ public class Ticket extends BaseEntity {
     }
 
     // 현재 티켓 상태가 기대 상태와 같은지 검증
+    // 구체적인 예외 클래스명으로 원인을 구분할 수 있게 한다.
+    // 이미 취소된 티켓이면 cancelReason(취소 주체)에 따라 관리자 취소/사용자 취소 예외를 구분해서 던진다.
     private void validateStatus(TicketStatus expected) {
         if (this.status == TicketStatus.CANCELED) {
-            throw new BusinessException(ErrorCode.TICKET_ALREADY_CANCELED);
+            if (this.cancelReason == TicketCancelReason.ADMIN_FORCE_CANCEL) {
+                throw new TicketCanceledByAdminException();
+            }
+            throw new TicketCanceledByUserException();
         }
         if (this.status == TicketStatus.USED) {
-            throw new BusinessException(ErrorCode.TICKET_ALREADY_USED);
+            throw new TicketAlreadyUsedException();
         }
         if (this.status != expected) {
-            throw new BusinessException(
-                ErrorCode.INVALID_REQUEST,
+            throw new InvalidTicketStateException(
                 "티켓 상태가 올바르지 않습니다. expected=" + expected + ", current=" + this.status
             );
         }
