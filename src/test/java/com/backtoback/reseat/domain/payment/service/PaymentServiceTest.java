@@ -26,6 +26,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.entity.OrderItem;
+import com.backtoback.reseat.domain.order.entity.OrderStatus;
 import com.backtoback.reseat.domain.order.exception.OrderExpiredException;
 import com.backtoback.reseat.domain.order.repository.OrderItemRepository;
 import com.backtoback.reseat.domain.order.service.OrderService;
@@ -33,9 +34,10 @@ import com.backtoback.reseat.domain.payment.dto.request.PaymentCancelRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentFailRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentRequest;
-import com.backtoback.reseat.domain.payment.dto.response.PaymentActionResponse;
+import com.backtoback.reseat.domain.payment.dto.response.PaymentCancelResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCompleteResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCreateResponse;
+import com.backtoback.reseat.domain.payment.dto.response.PaymentFailResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentResponse;
 import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
@@ -283,6 +285,7 @@ class PaymentServiceTest {
             PaymentCompleteRequest request = completeRequest();
             TossPaymentResponse tossResponse = mock(TossPaymentResponse.class);
             when(payment.getOrder().getId()).thenReturn(ORDER_ID);
+            when(payment.getOrder().getStatus()).thenReturn(OrderStatus.PAID);
             when(ticketServiceProvider.getObject()).thenReturn(ticketService);
             when(orderItemRepository.findByOrder_Id(ORDER_ID)).thenReturn(List.of(orderItem));
             when(ticketRepository.findByOrderItemId(ORDER_ITEM_ID)).thenReturn(Optional.empty());
@@ -298,6 +301,10 @@ class PaymentServiceTest {
                 = paymentService.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
 
             assertThat(response.getStatus()).isEqualTo(PaymentStatus.APPROVED);
+            assertThat(response.getPaymentNo()).isEqualTo(payment.getPaymentNo());
+            assertThat(response.getMethod()).isEqualTo("CARD");
+            assertThat(response.getOrderId()).isEqualTo(ORDER_ID);
+            assertThat(response.getOrderStatus()).isEqualTo(OrderStatus.PAID);
             assertThat(response.getTickets()).isNotEmpty();
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED);
             assertThat(payment.getPgPaymentKey()).isEqualTo(PAYMENT_KEY);
@@ -500,7 +507,7 @@ class PaymentServiceTest {
             when(request.getMessage()).thenReturn("사용자가 결제를 취소했습니다.");
             when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
 
-            PaymentActionResponse response = paymentService.failPayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
+            PaymentFailResponse response = paymentService.failPayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
 
             assertThat(response.getStatus()).isEqualTo(PaymentStatus.FAILED);
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.FAILED);
@@ -525,7 +532,7 @@ class PaymentServiceTest {
             PaymentFailRequest request = mock(PaymentFailRequest.class);
             when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
 
-            PaymentActionResponse response = paymentService.failPayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
+            PaymentFailResponse response = paymentService.failPayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
 
             assertThat(response.getStatus()).isEqualTo(status);
             assertThat(payment.getStatus()).isEqualTo(status);
@@ -573,9 +580,12 @@ class PaymentServiceTest {
             when(tossPaymentClient.cancel(PAYMENT_KEY, request.getCancelReason())).thenReturn(tossResponse);
             when(tossResponse.isCancelCompleted()).thenReturn(true);
 
-            PaymentActionResponse response = paymentService.cancelPayment(USER_ID, PAYMENT_ID, request);
+            PaymentCancelResponse response = paymentService.cancelPayment(USER_ID, PAYMENT_ID, request);
 
-            assertThat(response.getStatus()).isEqualTo(PaymentStatus.CANCELED);
+            assertThat(response.getRefundAmount()).isEqualTo(AMOUNT);
+            assertThat(response.getCanceledAmount()).isEqualTo(AMOUNT);
+            assertThat(response.getRemainingAmount()).isZero();
+            assertThat(response.getPaymentStatus()).isEqualTo(PaymentStatus.CANCELED);
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.CANCELED);
             verify(paymentValidator).validateOwner(payment, USER_ID);
             verify(paymentValidator).validateCancelable(payment);
@@ -590,9 +600,12 @@ class PaymentServiceTest {
             PaymentCancelRequest request = new PaymentCancelRequest("중복 요청");
             when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
 
-            PaymentActionResponse response = paymentService.cancelPayment(USER_ID, PAYMENT_ID, request);
+            PaymentCancelResponse response = paymentService.cancelPayment(USER_ID, PAYMENT_ID, request);
 
-            assertThat(response.getStatus()).isEqualTo(PaymentStatus.CANCELED);
+            assertThat(response.getRefundAmount()).isEqualTo(AMOUNT);
+            assertThat(response.getCanceledAmount()).isEqualTo(AMOUNT);
+            assertThat(response.getRemainingAmount()).isZero();
+            assertThat(response.getPaymentStatus()).isEqualTo(PaymentStatus.CANCELED);
             verify(paymentValidator).validateOwner(payment, USER_ID);
             verify(paymentValidator, never()).validateCancelable(any());
             verifyNoInteractions(tossPaymentClient, orderService);
