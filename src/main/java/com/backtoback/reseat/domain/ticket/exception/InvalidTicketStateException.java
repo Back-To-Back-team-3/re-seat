@@ -8,8 +8,4 @@ public class InvalidTicketStateException extends BusinessException {
     public InvalidTicketStateException() {
         super(ErrorCode.INVALID_STATE_TRANSITION);
     }
-
-    public InvalidTicketStateException(String detailMessage) {
-        super(ErrorCode.INVALID_STATE_TRANSITION, detailMessage);
-    }
 }

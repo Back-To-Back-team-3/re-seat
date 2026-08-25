@@ -20,7 +20,6 @@ import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
 import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
 import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
 import com.backtoback.reseat.domain.payment.service.PaymentService;
-import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.ticket.dto.response.TicketCancelResponse;
 import com.backtoback.reseat.domain.ticket.dto.response.TicketDetailResponse;
 import com.backtoback.reseat.domain.ticket.dto.response.TicketListResponse;
@@ -100,9 +99,6 @@ public class TicketService {
             = paymentService.cancelPayment(userId, payment.getId(), new PaymentCancelRequest("사용자 티켓 취소"));
 
         boolean refunded = paymentResponse.getStatus() == PaymentStatus.CANCELED;
-
-        GameSeat gameSeat = ticket.getGameSeat();
-        gameSeat.available();
 
         return TicketCancelResponse.of(ticket, refunded, null);
     }

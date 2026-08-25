@@ -145,17 +145,11 @@ public class Ticket extends BaseEntity {
     private TicketCancelReason cancelReason;
 
     // 티켓 상세 취소 사유 (관리자 입력 상세 사유 등)
-    @Column(
-        name = "cancel_detail",
-        length = 255
-    )
+    @Column(name = "cancel_detail")
     private String cancelDetail;
 
     // 입장 검증용 QR 토큰
-    @Column(
-        name = "qr_token",
-        length = 255
-    )
+    @Column(name = "qr_token")
     private String qrToken;
 
     // 티켓 발급 시간
@@ -245,19 +239,6 @@ public class Ticket extends BaseEntity {
         this.canceledAt = LocalDateTime.now();
     }
 
-    // 재판매 완료 시 소유자 변경
-    public void changeOwner(User newOwner) {
-        if (newOwner == null) {
-            throw new IllegalArgumentException("newOwner는 필수입니다.");
-        }
-        validateStatus(TicketStatus.ISSUED);
-        if (java.util.Objects.equals(this.user.getId(), newOwner.getId())) {
-            throw new IllegalArgumentException("현재 소유자와 동일한 사용자로 변경할 수 없습니다.");
-        }
-
-        this.user = newOwner;
-    }
-
     // 현재 티켓 상태가 기대 상태와 같은지 검증
     // 구체적인 예외 클래스명으로 원인을 구분할 수 있게 한다.
     // 이미 취소된 티켓이면 cancelReason(취소 주체)에 따라 관리자 취소/사용자 취소 예외를 구분해서 던진다.
@@ -272,9 +253,7 @@ public class Ticket extends BaseEntity {
             throw new TicketAlreadyUsedException();
         }
         if (this.status != expected) {
-            throw new InvalidTicketStateException(
-                "티켓 상태가 올바르지 않습니다. expected=" + expected + ", current=" + this.status
-            );
+            throw new InvalidTicketStateException();
         }
     }
 }

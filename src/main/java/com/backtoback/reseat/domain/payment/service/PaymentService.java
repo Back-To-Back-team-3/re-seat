@@ -38,6 +38,8 @@ import com.backtoback.reseat.domain.payment.pg.toss.exception.TossPaymentStatusU
 import com.backtoback.reseat.domain.payment.repository.PaymentRecoveryTaskRepository;
 import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
 import com.backtoback.reseat.domain.ticket.dto.response.TicketListResponse;
+import com.backtoback.reseat.domain.ticket.entity.TicketCancelReason;
+import com.backtoback.reseat.domain.ticket.entity.TicketStatus;
 import com.backtoback.reseat.domain.ticket.repository.TicketRepository;
 import com.backtoback.reseat.domain.ticket.service.TicketService;
 
@@ -257,16 +259,15 @@ public class PaymentService {
      *
      * @param orderId 취소 대상 결제가 속한 주문 ID
      * @param request 취소 사유 등 취소 요청 정보
-     * @return 취소 처리된 결제 결과. 해당 주문에 APPROVED 상태의 결제가 없으면 Optional.empty()
      */
     @Transactional
-    public Optional<PaymentActionResponse> cancelPaymentByAdmin(Long orderId, PaymentCancelRequest request) {
-        return paymentRepository
+    public void cancelPaymentByAdmin(Long orderId, PaymentCancelRequest request) {
+        paymentRepository
             .findByOrder_IdAndStatus(orderId, PaymentStatus.APPROVED)
             // 위 조회는 락 없이 존재 여부만 확인하므로, 실제 취소 처리 전에 비관적 쓰기 락으로 다시 잠가
             // 사용자 취소(getOwnedPaymentWithPessimisticWriteLock)와 동일한 동시성 안전성을 보장한다.
             .flatMap(payment -> paymentRepository.findByIdWithPessimisticWriteLock(payment.getId()))
-            .map(payment -> cancelApprovedPayment(payment, request));
+            .ifPresent(payment -> cancelApprovedPayment(payment, request));
     }
 
     /**
@@ -308,7 +309,26 @@ public class PaymentService {
         payment.cancel();
         orderService.cancelPaidOrder(payment.getOrder().getId());
 
+        // 같은 주문에 남아있는 나머지 ISSUED 티켓도 함께 취소 (티켓 ISSUED로 남는 불일치 해결)
+        // 3차 : 좌석 단위 부분 환불 도입 시 이 일괄 취소는 제거하고 취소 대상 티켓만 처리하도록 변경.
+        cancelRemainingIssuedTickets(payment.getOrder().getId());
+
         return PaymentActionResponse.from(payment);
+    }
+
+    /**
+     * 같은 주문에 속한 나머지 ISSUED 티켓을 결제 취소 사유로 일괄 취소
+     * <p>주문 단위 전액 취소만 지원하는 동안, 방금 취소된 티켓 외 나머지 티켓이
+     * "좌석은 반환됐는데 티켓은 ISSUED로 남는" 상태가 되는 것을 막기 위한 임시 방어 로직
+     */
+    private void cancelRemainingIssuedTickets(Long orderId) {
+        orderItemRepository
+            .findByOrder_Id(orderId)
+            .stream()
+            .map(orderItem -> ticketRepository.findByOrderItemId(orderItem.getId()))
+            .flatMap(Optional::stream)
+            .filter(ticket -> ticket.getStatus() == TicketStatus.ISSUED)
+            .forEach(ticket -> ticket.cancel(TicketCancelReason.PAYMENT_CANCELED));
     }
 
     /**
