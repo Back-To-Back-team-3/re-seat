@@ -86,12 +86,15 @@ class GameRepositoryTest {
 
         if (!content.isEmpty()) {
             content.forEach(game -> {
-                if (game.getHomeTeam() != null)
+                if (game.getHomeTeam() != null) {
                     game.getHomeTeam().getName();
-                if (game.getAwayTeam() != null)
+                }
+                if (game.getAwayTeam() != null) {
                     game.getAwayTeam().getName();
-                if (game.getStadium() != null)
+                }
+                if (game.getStadium() != null) {
                     game.getStadium().getName();
+                }
             });
 
             // content 1번 쿼리 + count 1번 쿼리 도합 2번으로 제어되는지 확인
