@@ -189,6 +189,7 @@ describe("결제 상세 페이지", () => {
                 status: "READY",
                 pgProvider: "TOSS",
                 pgOrderId: "PG-1",
+                paymentDeadline: "2026-08-30 18:40:00",
             },
             idempotencyKey: "test-key",
         });

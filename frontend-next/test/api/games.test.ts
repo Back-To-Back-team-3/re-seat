@@ -2,7 +2,7 @@ import {http, HttpResponse} from "msw";
 import {describe, expect, it} from "vitest";
 
 import {API_BASE_URL} from "@/api/client";
-import {getGames} from "@/api/games";
+import {getGame, getGames} from "@/api/games";
 import {server} from "@/test/mocks/server";
 import type {GameSummary} from "@/types/game";
 
@@ -68,5 +68,33 @@ describe("경기 목록 API", () => {
         );
 
         await expect(getGames()).resolves.toEqual([games[1], games[0]]);
+    });
+});
+
+describe("경기 상세 API", () => {
+    it("구장 주소와 수용 인원을 포함한 상세 정보를 반환한다", async () => {
+        server.use(
+            http.get(`${API_BASE_URL}/games/1`, () =>
+                HttpResponse.json({
+                    success: true,
+                    errorCode: null,
+                    message: "경기 상세 조회 성공",
+                    data: {
+                        ...games[1],
+                        stadium: {
+                            stadiumId: 1,
+                            name: "테스트 구장",
+                            address: "서울시 테스트구",
+                            totalCapacity: 25000,
+                        },
+                    },
+                }),
+            ),
+        );
+
+        const game = await getGame(1);
+
+        expect(game.stadium.address).toBe("서울시 테스트구");
+        expect(game.stadium.totalCapacity).toBe(25000);
     });
 });
