@@ -28,6 +28,7 @@ import com.backtoback.reseat.domain.payment.dto.response.PaymentFailResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentResponse;
 import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
+import com.backtoback.reseat.domain.payment.entity.PaymentStatus; // [신규] 관리자 강제취소 시 APPROVED 결제 조회용
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentLockFailedException;
@@ -38,6 +39,8 @@ import com.backtoback.reseat.domain.payment.pg.toss.exception.TossPaymentStatusU
 import com.backtoback.reseat.domain.payment.repository.PaymentRecoveryTaskRepository;
 import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
 import com.backtoback.reseat.domain.ticket.dto.response.TicketListResponse;
+import com.backtoback.reseat.domain.ticket.entity.TicketCancelReason;
+import com.backtoback.reseat.domain.ticket.entity.TicketStatus;
 import com.backtoback.reseat.domain.ticket.repository.TicketRepository;
 import com.backtoback.reseat.domain.ticket.service.TicketService;
 
@@ -231,8 +234,10 @@ public class PaymentService {
     }
 
     /**
-     * 승인된 결제를 전액 취소한다.
+     * 승인된 결제를 전액 취소한다. (사용자 본인 취소 전용)
      * <p>Toss 취소 API가 성공한 뒤에만 로컬 결제와 주문을 취소 상태로 변경한다.
+     * <p>실제 취소 처리는 {@link #cancelApprovedPayment(Payment, PaymentCancelRequest)}에 위임
+     * 이 메서드는 "본인 소유 결제인지" 조회·검증하는 책임만 가진다.
      *
      * @param userId 현재 사용자 ID
      * @param paymentId 결제 ID
@@ -241,8 +246,43 @@ public class PaymentService {
      */
     @Transactional
     public PaymentCancelResponse cancelPayment(Long userId, Long paymentId, PaymentCancelRequest request) {
-        // 로컬 결제를 잠그고 이미 취소된 요청은 기존 결과를 반환해 멱등하게 처리한다.
+        // 로컬 결제를 잠그고 소유자를 검증한다. (사용자는 본인 결제만 취소 가능)
         Payment payment = getOwnedPaymentWithPessimisticWriteLock(userId, paymentId);
+        return cancelApprovedPayment(payment, request);
+    }
+
+    /**
+     * 관리자 강제취소 전용
+     * <p>사용자 취소({@link #cancelPayment(Long, Long, PaymentCancelRequest)})와 달리 결제 소유자 검증을 하지 않음
+     * 관리자는 특정 회원 본인이 아니라 "주문" 단위로 강제취소를 수행, paymentId 대신 orderId로 APPROVED 상태의 결제를 찾아 취소
+     * <p>PG 취소 성공 확인, 로컬 결제/주문 상태 동기화 등 취소의 핵심 로직은 사용자 취소와 완전히 동일하게
+     * {@link #cancelApprovedPayment(Payment, PaymentCancelRequest)}를 재사용한다.
+     *
+     * @param orderId 취소 대상 결제가 속한 주문 ID
+     * @param request 취소 사유 등 취소 요청 정보
+     */
+    @Transactional
+    public void cancelPaymentByAdmin(Long orderId, PaymentCancelRequest request) {
+        paymentRepository
+            .findByOrder_IdAndStatus(orderId, PaymentStatus.APPROVED)
+            // 위 조회는 락 없이 존재 여부만 확인하므로, 실제 취소 처리 전에 비관적 쓰기 락으로 다시 잠가
+            // 사용자 취소(getOwnedPaymentWithPessimisticWriteLock)와 동일한 동시성 안전성을 보장한다.
+            .flatMap(payment -> paymentRepository.findByIdWithPessimisticWriteLock(payment.getId()))
+            .ifPresent(payment -> cancelApprovedPayment(payment, request));
+    }
+
+    /**
+     * 결제 취소의 공통 핵심 로직.
+     * <p>PG 취소 API 호출 → 취소 완료 여부 확인 → (성공 시에만) 로컬 결제/주문 상태 반영 순서로 처리한다.
+     * 사용자 취소와 관리자 강제취소가 이 메서드를 공유함으로써, 관리자 경로에서 PG 호출을 생략해
+     * "DB는 취소인데 실제 환불은 되지 않는" 정합성 문제가 재발하지 않도록 한다.
+     *
+     * @param payment 비관적 쓰기 락으로 조회된, 취소 대상 결제
+     * @param request 취소 사유 등 취소 요청 정보
+     * @return 취소 처리된 결제 결과
+     */
+    private PaymentCancelResponse cancelApprovedPayment(Payment payment, PaymentCancelRequest request) {
+        // 이미 취소된 요청은 기존 결과를 반환해 멱등하게 처리한다.
         if (payment.isCanceled()) {
             return PaymentCancelResponse.from(payment);
         }
@@ -253,7 +293,7 @@ public class PaymentService {
         try {
             response = tossPaymentClient.cancel(payment.getPgPaymentKey(), request.getCancelReason());
         } catch (TossPaymentStatusUnknownException e) {
-            log.warn("토스 결제 취소 상태 확인 불가 (paymentId={}, paymentKey={})", paymentId, payment.getPgPaymentKey(), e);
+            log.warn("토스 결제 취소 상태 확인 불가 (paymentId={}, paymentKey={})", payment.getId(), payment.getPgPaymentKey(), e);
             throw new PaymentCancelFailedException("토스 결제 취소 상태를 확인할 수 없습니다.");
         }
 
@@ -270,7 +310,31 @@ public class PaymentService {
         payment.cancel();
         orderService.cancelPaidOrder(payment.getOrder().getId());
 
+        // 같은 주문에 남아있는 나머지 ISSUED 티켓도 함께 취소 (티켓 ISSUED로 남는 불일치 해결)
+        // 3차 : 좌석 단위 부분 환불 도입 시 이 일괄 취소는 제거하고 취소 대상 티켓만 처리하도록 변경.
+        cancelRemainingIssuedTickets(payment.getOrder().getId());
+
         return PaymentCancelResponse.from(payment);
+    }
+
+    /**
+     * 같은 주문에 속한 나머지 ISSUED 티켓을 결제 취소 사유로 일괄 취소
+     * <p>주문 단위 전액 취소만 지원하는 동안, 방금 취소된 티켓 외 나머지 티켓이
+     * "좌석은 반환됐는데 티켓은 ISSUED로 남는" 상태가 되는 것을 막기 위한 임시 방어 로직
+     * <p>Ticket.cancel()은 티켓 상태만 변경하므로, 좌석 반환은 여기서 같은 트랜잭션 안에
+     * 명시적으로 함께 처리한다(다른 메서드의 좌석 반환 로직에 암묵적으로 의존하지 않는다).
+     */
+    private void cancelRemainingIssuedTickets(Long orderId) {
+        orderItemRepository
+            .findByOrder_Id(orderId)
+            .stream()
+            .map(orderItem -> ticketRepository.findByOrderItemId(orderItem.getId()))
+            .flatMap(Optional::stream)
+            .filter(ticket -> ticket.getStatus() == TicketStatus.ISSUED)
+            .forEach(ticket -> {
+                ticket.cancel(TicketCancelReason.PAYMENT_CANCELED);
+                ticket.getGameSeat().available();
+            });
     }
 
     /**
