@@ -4,8 +4,6 @@ import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {useEffect, useRef} from "react";
 
 import {completePayment, failPayment, getPayment, requestPayment,} from "@/api/payments";
-import {getGame} from "@/api/games";
-import {getOrder} from "@/api/orders";
 import {orderKeys} from "@/api/query-keys/orders";
 import {paymentKeys} from "@/api/query-keys/payments";
 import {ticketKeys} from "@/api/query-keys/tickets";
@@ -18,7 +16,6 @@ import {
     getPendingPayment,
     resetPaymentCallback,
 } from "@/lib/payment-storage";
-import {createMockTickets, saveMockTickets} from "@/lib/mock-tickets";
 import {useBookingStore} from "@/providers/booking-store-provider";
 
 export function usePayment(paymentId?: number) {
@@ -80,18 +77,6 @@ export function usePayment(paymentId?: number) {
                     );
                     if (action.status === "APPROVED" && pending!.gameId) {
                         rememberCompletedGame(pending!.gameId);
-                        // 결제 완료가 확정된 뒤의 경기·주문 재조회 실패는 callback 자체를 재실행시키지 않는다.
-                        try {
-                            const [game, order] = await Promise.all([
-                                getGame(pending!.gameId),
-                                getOrder(pending!.orderId),
-                            ]);
-                            saveMockTickets(
-                                createMockTickets(game, order, pending!.seats ?? []),
-                            );
-                        } catch {
-                            // 서버 티켓 조회가 우선이며 임시 티켓 생성 실패는 결제 완료를 되돌리지 않는다.
-                        }
                     }
                 } else if (code && message && pgOrderId) {
                     await failPayment(paymentId!, pending!.idempotencyKey, {

@@ -19,13 +19,11 @@ const STATUS_PILL_CLASSES: Record<TicketSummary["status"], string> = {
 export function TicketList({
                                tickets,
                                games,
-                               source,
                                reloading,
                                onReload,
                            }: {
     tickets: TicketSummary[];
     games: GameSummary[];
-    source: "api" | "mock";
     reloading: boolean;
     onReload: () => void;
 }) {
@@ -53,16 +51,6 @@ export function TicketList({
                     ↻ 티켓 새로고침
                 </button>
             </div>
-
-            {source === "mock" && (
-                <div
-                    className="my-[18px] flex items-center gap-2.5 rounded-control border border-[rgba(245,166,35,0.35)] bg-[rgba(245,166,35,0.08)] px-[14px] py-3 text-xs text-muted-foreground">
-          <span className="rounded-[4px] bg-accent px-1.5 py-[3px] font-mono text-[9px] font-black text-[#201606]">
-            MOCK
-          </span>
-                    결제 완료 데이터를 바탕으로 만든 임시 티켓입니다.
-                </div>
-            )}
 
             {tickets.length === 0 ? (
                 <EmptyState
