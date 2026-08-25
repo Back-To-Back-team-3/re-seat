@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import com.backtoback.reseat.domain.ticket.entity.Ticket;
 import com.backtoback.reseat.domain.ticket.entity.TicketStatus;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,14 +20,54 @@ import lombok.Getter;
 @Getter
 @Builder
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Schema(description = "내 티켓 목록 항목")
 public class TicketListResponse {
 
+    @Schema(
+        description = "티켓 ID",
+        example = "1001"
+    )
     private Long ticketId;
+
+    @Schema(
+        description = "외부 노출용 티켓 번호",
+        example = "TKT-20260711-3F2A9C"
+    )
     private String ticketNo;
+
+    @Schema(
+        description = "경기 ID",
+        example = "1"
+    )
     private Long gameId;
+
+    @Schema(
+        description = "좌석 표시 문자열",
+        example = "1루 A-3-12"
+    )
     private String seat;
+
+    @Schema(
+        description = "티켓 상태",
+        example = "ISSUED",
+        allowableValues = {
+            "ISSUED",
+            "USED",
+            "CANCELED"
+        }
+    )
     private TicketStatus status;
+
+    @Schema(
+        description = "입장 검증용 QR 토큰",
+        example = "8f14e45f-ea5e-4a2f-b3d2-09bcdb51f321"
+    )
     private String qrToken;
+
+    @Schema(
+        description = "경기 일시",
+        example = "2026-07-11T18:30:00"
+    )
     private LocalDateTime gameAt;
 
     /**

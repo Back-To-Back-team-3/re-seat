@@ -28,11 +28,12 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/v1/admin/tickets")
 @RequiredArgsConstructor
-public class AdminTicketController {
+public class AdminTicketController implements AdminTicketControllerDocs {
 
     private final AdminTicketService adminTicketService;
 
     // 관리자 전용: 특정 사용자별 티켓 소유 목록 조회
+    @Override
     @GetMapping("/users/{userId}")
     public ResponseEntity<ApiResponse<PageResponse<AdminUserTicketResponse>>> getUserTickets(
         @PathVariable Long userId,
@@ -52,6 +53,7 @@ public class AdminTicketController {
     }
 
     // 관리자 전용: 특정 티켓 강제 취소
+    @Override
     @PostMapping("/{ticketId}/cancel")
     public ResponseEntity<ApiResponse<AdminTicketCancelResponse>> cancelTicketByAdmin(
         @PathVariable Long ticketId,

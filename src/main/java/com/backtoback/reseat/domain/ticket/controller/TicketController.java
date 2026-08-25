@@ -38,7 +38,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/v1/tickets")
 @RequiredArgsConstructor
-public class TicketController {
+public class TicketController implements TicketControllerDocs {
 
     private final TicketService ticketService;
 
@@ -52,6 +52,7 @@ public class TicketController {
      * @param pageable 페이지 정보
      * @return 페이지 형태의 내 티켓 목록
      */
+    @Override
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<TicketListResponse>>> getMyTickets(
         @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -72,6 +73,7 @@ public class TicketController {
      * @param ticketId 티켓 ID
      * @return 티켓 상세 응답
      */
+    @Override
     @GetMapping("/{ticketId}")
     public ResponseEntity<ApiResponse<TicketDetailResponse>> getTicket(
         @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -91,6 +93,7 @@ public class TicketController {
      * @param ticketId 취소할 티켓 ID
      * @return 티켓 취소 응답
      */
+    @Override
     @PostMapping("/{ticketId}/cancel")
     public ResponseEntity<ApiResponse<TicketCancelResponse>> cancelTicket(
         @AuthenticationPrincipal CustomUserDetails userDetails,
