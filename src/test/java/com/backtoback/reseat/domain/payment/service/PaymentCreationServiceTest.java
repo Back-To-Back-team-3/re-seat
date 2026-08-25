@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
@@ -37,6 +38,7 @@ class PaymentCreationServiceTest {
     private static final String NEW_IDEMPOTENCY_KEY = "new-idempotency-key";
     private static final String ORDER_NO = "ORD-20260727-000001";
     private static final int AMOUNT = 10000;
+    private static final LocalDateTime PAYMENT_DEADLINE = LocalDateTime.of(2026, 7, 27, 1, 8);
 
     @Mock
     private PaymentRepository paymentRepository;
@@ -86,6 +88,7 @@ class PaymentCreationServiceTest {
             PaymentRequest request = request();
             Order order = order();
             Payment payment = payment(order, PaymentStatus.READY, IDEMPOTENCY_KEY);
+            when(order.getPaymentDeadline()).thenReturn(PAYMENT_DEADLINE);
             when(paymentRepository.findByIdempotencyKeyWithPessimisticWriteLock(IDEMPOTENCY_KEY))
                 .thenReturn(Optional.of(payment));
 
@@ -93,6 +96,7 @@ class PaymentCreationServiceTest {
 
             assertThat(response.getStatus()).isEqualTo(PaymentStatus.READY);
             assertThat(response.getOrderId()).isEqualTo(ORDER_ID);
+            assertThat(response.getPaymentDeadline()).isEqualTo(PAYMENT_DEADLINE);
             verify(paymentValidator).validateOwner(payment, USER_ID);
             verify(paymentValidator).validateIdempotencyRequest(payment, ORDER_ID);
             verify(paymentOrderPolicy).ensurePayable(payment, order);
@@ -208,6 +212,7 @@ class PaymentCreationServiceTest {
             when(order.getUser()).thenReturn(user);
             when(order.getTotalAmount()).thenReturn(AMOUNT);
             when(order.getOrderNo()).thenReturn(ORDER_NO);
+            when(order.getPaymentDeadline()).thenReturn(PAYMENT_DEADLINE);
             when(paymentRepository.findByIdempotencyKeyWithPessimisticWriteLock(IDEMPOTENCY_KEY))
                 .thenReturn(Optional.empty());
             when(paymentOrderPolicy.getOwnedOrder(USER_ID, ORDER_ID)).thenReturn(order);
@@ -221,6 +226,7 @@ class PaymentCreationServiceTest {
             assertThat(response.getAmount()).isEqualTo(AMOUNT);
             assertThat(response.getPgProvider()).isEqualTo(PgProvider.TOSS);
             assertThat(response.getPgOrderId()).isEqualTo(ORDER_NO);
+            assertThat(response.getPaymentDeadline()).isEqualTo(PAYMENT_DEADLINE);
             verify(paymentOrderPolicy).ensurePayable(null, order);
             verify(paymentRepository).save(any(Payment.class));
         }

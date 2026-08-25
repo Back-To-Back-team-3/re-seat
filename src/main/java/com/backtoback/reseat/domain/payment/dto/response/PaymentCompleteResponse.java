@@ -2,6 +2,7 @@ package com.backtoback.reseat.domain.payment.dto.response;
 
 import java.util.List;
 
+import com.backtoback.reseat.domain.order.entity.OrderStatus;
 import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
 import com.backtoback.reseat.domain.ticket.dto.response.TicketListResponse;
@@ -21,10 +22,35 @@ public class PaymentCompleteResponse {
     private final Long paymentId;
 
     @Schema(
+        description = "서비스 내부 결제 번호",
+        example = "PAY-20260725120000-a1b2c3d4"
+    )
+    private final String paymentNo;
+
+    @Schema(
         description = "처리 후 결제 상태",
         example = "APPROVED"
     )
     private final PaymentStatus status;
+
+    @Schema(
+        description = "PG 승인 결과에 포함된 결제 수단. 승인 실패 시에는 null",
+        example = "간편결제",
+        nullable = true
+    )
+    private final String method;
+
+    @Schema(
+        description = "주문 ID",
+        example = "7001"
+    )
+    private final Long orderId;
+
+    @Schema(
+        description = "처리 후 주문 상태",
+        example = "PAID"
+    )
+    private final OrderStatus orderStatus;
 
     @Schema(
         description = "티켓 목록",
@@ -48,7 +74,11 @@ public class PaymentCompleteResponse {
         return PaymentCompleteResponse
             .builder()
             .paymentId(payment.getId())
+            .paymentNo(payment.getPaymentNo())
             .status(payment.getStatus())
+            .method(payment.getMethod())
+            .orderId(payment.getOrder().getId())
+            .orderStatus(payment.getOrder().getStatus())
             .tickets(List.copyOf(tickets))
             .build();
     }

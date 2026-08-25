@@ -1,9 +1,12 @@
 package com.backtoback.reseat.domain.game.repository;
 
-import static org.assertj.core.api.Assertions.*;
-
-import java.util.List;
-
+import com.backtoback.reseat.domain.game.entity.BookingStatus;
+import com.backtoback.reseat.domain.game.entity.Game;
+import com.backtoback.reseat.domain.game.service.GameSearchCondition;
+import com.backtoback.reseat.domain.stadium.entity.Stadium;
+import com.backtoback.reseat.domain.team.entity.Team;
+import com.querydsl.jpa.impl.JPAQueryFactory;
+import jakarta.persistence.EntityManager;
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.DisplayName;
@@ -15,12 +18,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
-import com.backtoback.reseat.domain.game.entity.Game;
-import com.backtoback.reseat.domain.game.service.GameSearchCondition;
-import com.querydsl.jpa.impl.JPAQueryFactory;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
 
-import jakarta.persistence.EntityManager;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * 경기 Repository 조회 테스트.
@@ -82,17 +86,74 @@ class GameRepositoryTest {
 
         if (!content.isEmpty()) {
             content.forEach(game -> {
-                if (game.getHomeTeam() != null)
+                if (game.getHomeTeam() != null) {
                     game.getHomeTeam().getName();
-                if (game.getAwayTeam() != null)
+                }
+                if (game.getAwayTeam() != null) {
                     game.getAwayTeam().getName();
-                if (game.getStadium() != null)
+                }
+                if (game.getStadium() != null) {
                     game.getStadium().getName();
+                }
             });
 
             // content 1번 쿼리 + count 1번 쿼리 도합 2번으로 제어되는지 확인
             assertThat(statistics.getPrepareStatementCount()).isEqualTo(2);
         }
+    }
+
+    @Test
+    @DisplayName("현재 상태가 기대값과 같으면 조건부 UPDATE가 1건을 반환하고 상태가 전이된다")
+    void should_returnOne_when_currentStatusMatches() {
+        Game saved = gameRepository.save(gameFixture(BookingStatus.SCHEDULED));
+        entityManager.flush();
+        int updated
+            = gameRepository.compareAndSetBookingStatus(saved.getId(), BookingStatus.SCHEDULED, BookingStatus.OPEN);
+        assertThat(updated).isEqualTo(1);
+        entityManager.clear(); // 벌크 UPDATE는 1차 캐시를 갱신하지 않으므로 재조회로 확인
+        assertThat(gameRepository.findById(saved.getId()).orElseThrow().getBookingStatus())
+            .isEqualTo(BookingStatus.OPEN);
+    }
+
+    @Test
+    @DisplayName("이미 다른 상태로 바뀐 경기는 조건부 UPDATE가 0건을 반환하고 상태가 유지된다")
+    void should_returnZero_when_currentStatusAlreadyChanged() {
+        Game saved = gameRepository.save(gameFixture(BookingStatus.OPEN));
+        entityManager.flush();
+        // 다른 트랜잭션이 먼저 OPEN으로 바꾼 뒤 도착한 요청을 재현: expectedCurrent를 SCHEDULED로 잘못 전달
+        int updated
+            = gameRepository.compareAndSetBookingStatus(saved.getId(), BookingStatus.SCHEDULED, BookingStatus.OPEN);
+        assertThat(updated).isZero();
+        entityManager.clear();
+        assertThat(gameRepository.findById(saved.getId()).orElseThrow().getBookingStatus())
+            .isEqualTo(BookingStatus.OPEN); // 변경 없이 유지
+    }
+
+    /** Team.of/Stadium.of 정적 팩터리를 그대로 사용해 다른 테스트와 컨벤션을 맞춘다. */
+    private Game gameFixture(BookingStatus bookingStatus) {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+
+        Stadium stadium = Stadium.of("테스트 구장-" + suffix, "서울시 테스트구", 10_000);
+        entityManager.persist(stadium);
+
+        Team homeTeam = Team.of("테스트 홈팀-" + suffix, stadium);
+        Team awayTeam = Team.of("테스트 원정팀-" + suffix, stadium);
+        entityManager.persist(homeTeam);
+        entityManager.persist(awayTeam);
+
+        LocalDateTime now = LocalDateTime.now();
+
+        return Game
+            .builder()
+            .homeTeam(homeTeam)
+            .awayTeam(awayTeam)
+            .stadium(stadium)
+            .gameAt(now.plusDays(7))
+            .bookingOpenAt(now)
+            .bookingCloseAt(now.plusDays(7))
+            .bookingStatus(bookingStatus)
+            .title("테스트 경기")
+            .build();
     }
 
     /**
@@ -101,6 +162,7 @@ class GameRepositoryTest {
      * JPAQueryFactory Bean을 테스트에서 직접 등록한다.</p>
      */
     @TestConfiguration
+    @EnableJpaAuditing
     static class QuerydslTestConfig {
 
         @Bean

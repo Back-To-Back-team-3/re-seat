@@ -118,6 +118,10 @@ class PaymentTicketIssuanceIntegrationTest extends BaseIntegrationTest {
 
         // 클라이언트가 추가 조회 없이 발급 결과를 확인할 수 있도록 승인 응답에도 같은 티켓이 포함되어야 한다.
         assertThat(response.getStatus()).isEqualTo(PaymentStatus.APPROVED);
+        assertThat(response.getPaymentNo()).isEqualTo(payment.getPaymentNo());
+        assertThat(response.getMethod()).isEqualTo("CARD");
+        assertThat(response.getOrderId()).isEqualTo(order.getId());
+        assertThat(response.getOrderStatus()).isEqualTo(OrderStatus.PAID);
         assertThat(response.getTickets()).hasSize(1);
         assertThat(response.getTickets().get(0).getTicketId()).isEqualTo(ticket.getId());
 

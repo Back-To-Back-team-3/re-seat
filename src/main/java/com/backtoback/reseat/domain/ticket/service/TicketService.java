@@ -14,7 +14,7 @@ import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.entity.OrderItem;
 import com.backtoback.reseat.domain.order.repository.OrderItemRepository;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentCancelRequest;
-import com.backtoback.reseat.domain.payment.dto.response.PaymentActionResponse;
+import com.backtoback.reseat.domain.payment.dto.response.PaymentCancelResponse;
 import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
 import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
@@ -95,10 +95,10 @@ public class TicketService {
 
         Payment payment = getApprovedPaymentByOrderId(ticket.getOrderItem().getOrder().getId());
 
-        PaymentActionResponse paymentResponse
+        PaymentCancelResponse paymentResponse
             = paymentService.cancelPayment(userId, payment.getId(), new PaymentCancelRequest("사용자 티켓 취소"));
 
-        boolean refunded = paymentResponse.getStatus() == PaymentStatus.CANCELED;
+        boolean refunded = paymentResponse.getPaymentStatus() == PaymentStatus.CANCELED;
 
         return TicketCancelResponse.of(ticket, refunded, null);
     }
