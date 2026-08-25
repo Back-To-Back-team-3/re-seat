@@ -145,18 +145,24 @@ class HoldExpiryConsistencyTest {
         }
         // FK 역순 삭제: game → team → seat → zone → user → stadium
         // Team이 stadium을 참조하므로 team을 stadium보다 먼저 삭제해야 한다
-        if (savedGameId != null)
+        if (savedGameId != null) {
             gameRepository.deleteById(savedGameId);
-        if (savedTeamId != null)
+        }
+        if (savedTeamId != null) {
             teamRepository.deleteById(savedTeamId);
-        if (savedSeatId != null)
+        }
+        if (savedSeatId != null) {
             seatRepository.deleteById(savedSeatId);
-        if (savedZoneId != null)
+        }
+        if (savedZoneId != null) {
             seatZoneRepository.deleteById(savedZoneId);
-        if (savedUserId != null)
+        }
+        if (savedUserId != null) {
             userRepository.deleteById(savedUserId);
-        if (savedStadiumId != null)
+        }
+        if (savedStadiumId != null) {
             stadiumRepository.deleteById(savedStadiumId);
+        }
     }
 
     // =============================================================================

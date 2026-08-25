@@ -11,7 +11,9 @@ import com.backtoback.reseat.domain.reservation.exception.MaxSeatCountExceededEx
  */
 public final class SeatCountPolicy {
 
-    /** 1인당 한 경기 최대 보유 좌석 수 */
+    /**
+     * 1인당 한 경기 최대 보유 좌석 수
+     */
     public static final int MAX_SEAT_COUNT_PER_GAME = 2;
 
     private SeatCountPolicy() {}

@@ -188,18 +188,24 @@ class SeatHoldFacadeConcurrencyTest {
         reservationRepository.deleteAll();
 
         gameSeatRepository.deleteAll();
-        if (gameId != null)
+        if (gameId != null) {
             gameRepository.deleteById(gameId);
-        if (seatId != null)
+        }
+        if (seatId != null) {
             seatRepository.deleteById(seatId);
-        if (seatZoneId != null)
+        }
+        if (seatZoneId != null) {
             seatZoneRepository.deleteById(seatZoneId);
-        if (homeTeamId != null)
+        }
+        if (homeTeamId != null) {
             teamRepository.deleteById(homeTeamId);
-        if (awayTeamId != null)
+        }
+        if (awayTeamId != null) {
             teamRepository.deleteById(awayTeamId);
-        if (stadiumId != null)
+        }
+        if (stadiumId != null) {
             stadiumRepository.deleteById(stadiumId);
+        }
 
         if (!userIds.isEmpty()) {
             userRepository.deleteAllById(userIds);

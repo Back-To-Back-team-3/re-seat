@@ -1,5 +1,26 @@
 package com.backtoback.reseat.domain.reservation.service;
 
+import static org.assertj.core.api.Assertions.*;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
@@ -26,23 +47,8 @@ import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserRole;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
+
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * 사용자·경기 단위 락 동시성 회귀 테스트.
@@ -183,8 +189,9 @@ class SeatHoldFacadeUserLockConcurrencyTest {
 
     @AfterEach
     void tearDown() {
-        if (tokenId != null)
+        if (tokenId != null) {
             admissionTokenRepository.deleteById(tokenId);
+        }
 
         reservationSeatRepository.deleteAll();
         reservationRepository.deleteAll();
@@ -193,18 +200,24 @@ class SeatHoldFacadeUserLockConcurrencyTest {
         for (Long seatId : seatIds) {
             seatRepository.deleteById(seatId);
         }
-        if (gameId != null)
+        if (gameId != null) {
             gameRepository.deleteById(gameId);
-        if (seatZoneId != null)
+        }
+        if (seatZoneId != null) {
             seatZoneRepository.deleteById(seatZoneId);
-        if (homeTeamId != null)
+        }
+        if (homeTeamId != null) {
             teamRepository.deleteById(homeTeamId);
-        if (awayTeamId != null)
+        }
+        if (awayTeamId != null) {
             teamRepository.deleteById(awayTeamId);
-        if (stadiumId != null)
+        }
+        if (stadiumId != null) {
             stadiumRepository.deleteById(stadiumId);
-        if (userId != null)
+        }
+        if (userId != null) {
             userRepository.deleteById(userId);
+        }
     }
 
     @Test

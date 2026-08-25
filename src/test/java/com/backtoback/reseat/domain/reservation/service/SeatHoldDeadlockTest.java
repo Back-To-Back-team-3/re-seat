@@ -223,27 +223,36 @@ class SeatHoldDeadlockTest {
         reservationRepository.deleteAll();
 
         // gameSeat → seat 순서로 ID 기준 삭제
-        if (seat1Id != null)
+        if (seat1Id != null) {
             gameSeatRepository.deleteById(seat1Id);
-        if (seat2Id != null)
+        }
+        if (seat2Id != null) {
             gameSeatRepository.deleteById(seat2Id);
+        }
 
-        if (gameId != null)
+        if (gameId != null) {
             gameRepository.deleteById(gameId);
+        }
 
-        if (physicalSeat1Id != null)
+        if (physicalSeat1Id != null) {
             seatRepository.deleteById(physicalSeat1Id);
-        if (physicalSeat2Id != null)
+        }
+        if (physicalSeat2Id != null) {
             seatRepository.deleteById(physicalSeat2Id);
+        }
 
-        if (seatZoneId != null)
+        if (seatZoneId != null) {
             seatZoneRepository.deleteById(seatZoneId);
-        if (homeTeamId != null)
+        }
+        if (homeTeamId != null) {
             teamRepository.deleteById(homeTeamId);
-        if (awayTeamId != null)
+        }
+        if (awayTeamId != null) {
             teamRepository.deleteById(awayTeamId);
-        if (stadiumId != null)
+        }
+        if (stadiumId != null) {
             stadiumRepository.deleteById(stadiumId);
+        }
 
         userRepository.deleteAllById(List.of(userId1, userId2));
     }
