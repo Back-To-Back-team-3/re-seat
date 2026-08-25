@@ -9,8 +9,8 @@ import lombok.Getter;
 
 @Getter
 @Builder
-@Schema(description = "결제 실패·취소 처리 응답")
-public class PaymentActionResponse {
+@Schema(description = "결제 실패 처리 응답")
+public class PaymentFailResponse {
 
     @Schema(
         description = "결제 ID",
@@ -24,7 +24,7 @@ public class PaymentActionResponse {
     )
     private final PaymentStatus status;
 
-    public static PaymentActionResponse from(Payment payment) {
-        return PaymentActionResponse.builder().paymentId(payment.getId()).status(payment.getStatus()).build();
+    public static PaymentFailResponse from(Payment payment) {
+        return PaymentFailResponse.builder().paymentId(payment.getId()).status(payment.getStatus()).build();
     }
 }

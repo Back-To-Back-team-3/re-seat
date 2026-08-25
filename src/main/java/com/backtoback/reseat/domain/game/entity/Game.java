@@ -1,28 +1,16 @@
 package com.backtoback.reseat.domain.game.entity;
 
-import java.time.LocalDateTime;
-
+import com.backtoback.reseat.domain.game.exception.InvalidBookingStatusTransitionException;
 import com.backtoback.reseat.domain.stadium.entity.Stadium;
 import com.backtoback.reseat.domain.team.entity.Team;
 import com.backtoback.reseat.global.common.BaseEntity;
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.ForeignKey;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Index;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
 
 @Getter
 @Entity
@@ -140,5 +128,43 @@ public class Game extends BaseEntity {
         this.bookingCloseAt = bookingCloseAt;
         this.bookingStatus = (bookingStatus != null) ? bookingStatus : BookingStatus.SCHEDULED;
         this.title = title;
+    }
+
+    /**
+     * 예매를 오픈한다.
+     *
+     * @throws InvalidBookingStatusTransitionException 현재 상태에서 OPEN으로 전이할 수 없는 경우
+     */
+    public void openBooking() {
+        transitionTo(BookingStatus.OPEN);
+    }
+
+    /**
+     * 예매를 마감한다.
+     *
+     * @throws InvalidBookingStatusTransitionException 현재 상태에서 CLOSED로 전이할 수 없는 경우
+     */
+    public void closeBooking() {
+        transitionTo(BookingStatus.CLOSED);
+    }
+
+    /**
+     * 경기를 취소한다. 종단 상태로 전이하며 되돌릴 수 없다.
+     *
+     * @throws InvalidBookingStatusTransitionException 이미 취소된 경기인 경우
+     */
+    public void cancelGame() {
+        transitionTo(BookingStatus.CANCELLED);
+    }
+
+    /**
+     * 허용된 전이인지 확인한 뒤 상태를 변경한다.
+     * <p>private으로 두어 호출부가 임의의 상태를 넘길 수 없게 한다.
+     */
+    private void transitionTo(BookingStatus target) {
+        if (!this.bookingStatus.canTransitionTo(target)) {
+            throw new InvalidBookingStatusTransitionException(this.bookingStatus, target);
+        }
+        this.bookingStatus = target;
     }
 }
