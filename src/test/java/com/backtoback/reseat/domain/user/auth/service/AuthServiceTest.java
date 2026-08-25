@@ -3,6 +3,7 @@ package com.backtoback.reseat.domain.user.auth.service;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import java.time.Duration;
 import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
@@ -14,7 +15,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import com.backtoback.reseat.domain.user.auth.dto.request.ReissueRequest;
 import com.backtoback.reseat.domain.user.auth.dto.request.UserLoginRequest;
 import com.backtoback.reseat.domain.user.auth.dto.response.TokenResponse;
-import com.backtoback.reseat.domain.user.entity.RefreshToken;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserRole;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
@@ -65,7 +65,6 @@ class AuthServiceTest extends BaseUnitTest {
         when(passwordEncoder.matches("password123!", "encodedPassword")).thenReturn(true);
         when(jwtTokenProvider.createAccessToken(1L, "user@test.com", "USER")).thenReturn("mock-access-token");
         when(jwtTokenProvider.createRefreshToken(1L)).thenReturn("mock-refresh-token");
-        when(refreshTokenRepository.findByUser(user)).thenReturn(Optional.empty());
 
         // when
         TokenResponse response = authService.login(request);
@@ -74,6 +73,7 @@ class AuthServiceTest extends BaseUnitTest {
         assertThat(response).isNotNull();
         assertThat(response.getAccessToken()).isEqualTo("mock-access-token");
         assertThat(response.getRefreshToken()).isEqualTo("mock-refresh-token");
+        verify(refreshTokenRepository, times(1)).save(1L, "mock-refresh-token", Duration.ofDays(14));
     }
 
     @Test
@@ -168,18 +168,11 @@ class AuthServiceTest extends BaseUnitTest {
         String oldRefreshToken = "old-refresh-token";
         ReissueRequest request = new ReissueRequest(oldRefreshToken);
         User user = User.builder().id(1L).email("user@test.com").role(UserRole.USER).status(UserStatus.ACTIVE).build();
-        RefreshToken dbRefreshToken
-            = RefreshToken
-                .builder()
-                .user(user)
-                .tokenValue(oldRefreshToken)
-                .expiredAt(java.time.LocalDateTime.now().plusDays(14))
-                .build();
 
         when(jwtTokenProvider.validateToken(oldRefreshToken)).thenReturn(true);
         when(jwtTokenProvider.getUserId(oldRefreshToken)).thenReturn(1L);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(refreshTokenRepository.findByUser(user)).thenReturn(Optional.of(dbRefreshToken));
+        when(refreshTokenRepository.findByUserId(1L)).thenReturn(Optional.of(oldRefreshToken));
         when(jwtTokenProvider.createAccessToken(1L, "user@test.com", "USER")).thenReturn("new-access-token");
         when(jwtTokenProvider.createRefreshToken(1L)).thenReturn("new-refresh-token");
 
@@ -190,7 +183,7 @@ class AuthServiceTest extends BaseUnitTest {
         assertThat(response).isNotNull();
         assertThat(response.getAccessToken()).isEqualTo("new-access-token");
         assertThat(response.getRefreshToken()).isEqualTo("new-refresh-token");
-        assertThat(dbRefreshToken.getTokenValue()).isEqualTo("new-refresh-token");
+        verify(refreshTokenRepository, times(1)).save(1L, "new-refresh-token", Duration.ofDays(14));
     }
 
     @Test
@@ -200,18 +193,11 @@ class AuthServiceTest extends BaseUnitTest {
         String clientToken = "client-token";
         ReissueRequest request = new ReissueRequest(clientToken);
         User user = User.builder().id(1L).email("user@test.com").role(UserRole.USER).status(UserStatus.ACTIVE).build();
-        RefreshToken dbRefreshToken
-            = RefreshToken
-                .builder()
-                .user(user)
-                .tokenValue("different-db-token")
-                .expiredAt(java.time.LocalDateTime.now().plusDays(14))
-                .build();
 
         when(jwtTokenProvider.validateToken(clientToken)).thenReturn(true);
         when(jwtTokenProvider.getUserId(clientToken)).thenReturn(1L);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(refreshTokenRepository.findByUser(user)).thenReturn(Optional.of(dbRefreshToken));
+        when(refreshTokenRepository.findByUserId(1L)).thenReturn(Optional.of("different-redis-token"));
 
         // when & then
         assertThatThrownBy(() -> authService.reissue(request))
@@ -220,25 +206,17 @@ class AuthServiceTest extends BaseUnitTest {
     }
 
     @Test
-    @DisplayName("로그아웃 시 DB의 RefreshToken을 삭제한다")
+    @DisplayName("로그아웃 시 Redis의 RefreshToken을 삭제한다")
     void logout_Success() {
         // given
         User user = User.builder().id(1L).email("user@test.com").role(UserRole.USER).status(UserStatus.ACTIVE).build();
-        RefreshToken refreshToken
-            = RefreshToken
-                .builder()
-                .user(user)
-                .tokenValue("refresh-token")
-                .expiredAt(java.time.LocalDateTime.now().plusDays(14))
-                .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(refreshTokenRepository.findByUser(user)).thenReturn(Optional.of(refreshToken));
 
         // when
         authService.logout(1L);
 
         // then
-        verify(refreshTokenRepository, times(1)).delete(refreshToken);
+        verify(refreshTokenRepository, times(1)).deleteByUserId(1L);
     }
 }

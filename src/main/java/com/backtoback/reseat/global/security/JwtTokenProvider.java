@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.UnsupportedJwtException;
@@ -33,12 +34,14 @@ public class JwtTokenProvider {
     @Value("${jwt.secret}")
     private String secretKeyString;
     private SecretKey secretKey;
+    private JwtParser jwtParser;
 
     // 객체 생성 후 주입받은 secretKey 문자열을 암호화 키 객체로 변환
     @PostConstruct
     protected void init() {
         byte[] keyBytes = Decoders.BASE64.decode(secretKeyString);
         this.secretKey = Keys.hmacShaKeyFor(keyBytes);
+        this.jwtParser = Jwts.parser().verifyWith(this.secretKey).build();
     }
 
     // access Token 생성
@@ -104,7 +107,40 @@ public class JwtTokenProvider {
         return false;
     }
 
-    private io.jsonwebtoken.Claims parseClaims(String token) {
-        return io.jsonwebtoken.Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload();
+    // 캐싱된 Parser로 Claims 파싱
+    public Claims parseClaims(String token) {
+        return jwtParser.parseSignedClaims(token).getPayload();
+    }
+
+    // Claims 파싱과 검증 동시 처리 Claims 객체 반환 실패 시 null
+    public Claims getClaimsIfValid(String token) {
+        try {
+            Claims claims = parseClaims(token);
+            if (!claims.getExpiration().before(new Date())) {
+                return claims;
+            }
+        } catch (SecurityException | MalformedJwtException e) {
+            log.warn("[보안 이벤트] 유효하지 않은 JWT서명 또는 잘못된 토큰 형식입니다. reason={}", e.getMessage());
+        } catch (ExpiredJwtException e) {
+            log.info("[보안 이벤트] 만료된 JWT 토큰입니다. reason={}", e.getMessage());
+        } catch (UnsupportedJwtException e) {
+            log.warn("[보안 이벤트] 지원되지 않는 JWT 토큰입니다. reason={}", e.getMessage());
+        } catch (IllegalArgumentException e) {
+            log.warn("[보안 이벤트] JWT 클레임이 비어있거나 잘못되었습니다. reason={}", e.getMessage());
+        } catch (Exception e) {
+            log.error("[보안 이벤트] JWT 검증 중 예기치 못한 오류가 발생했습니다.", e);
+        }
+        return null;
+    }
+
+    // Claims로 부터 Authentication 생성 (재파싱 방지)
+    public Authentication getAuthentication(Claims claims, String token) {
+        String email = claims.getSubject();
+        Object userIdObj = claims.get("userId");
+        Long userId = (userIdObj instanceof Number number) ? number.longValue() : null;
+        String userRole = claims.get("userRole", String.class);
+
+        CustomUserDetails userDetails = CustomUserDetails.of(userId, email, userRole);
+        return new UsernamePasswordAuthenticationToken(userDetails, token, userDetails.getAuthorities());
     }
 }

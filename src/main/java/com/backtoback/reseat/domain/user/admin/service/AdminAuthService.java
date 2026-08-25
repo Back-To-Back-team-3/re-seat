@@ -1,6 +1,6 @@
 package com.backtoback.reseat.domain.user.admin.service;
 
-import java.time.LocalDateTime;
+import java.time.Duration;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -8,7 +8,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.backtoback.reseat.domain.user.admin.dto.request.AdminLoginRequest;
 import com.backtoback.reseat.domain.user.admin.dto.response.AdminLoginResponse;
-import com.backtoback.reseat.domain.user.entity.RefreshToken;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserRole;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
@@ -50,17 +49,9 @@ public class AdminAuthService {
 
         String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail(), user.getRole().name());
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
-        LocalDateTime expiredAt = LocalDateTime.now().plusDays(14);
 
-        RefreshToken dbRefreshToken
-            = refreshTokenRepository
-                .findByUser(user)
-                .orElseGet(
-                    () -> RefreshToken.builder().user(user).tokenValue(refreshToken).expiredAt(expiredAt).build()
-                );
-
-        dbRefreshToken.updateTokenValue(refreshToken, expiredAt);
-        refreshTokenRepository.save(dbRefreshToken);
+        // Redis 저장 (14일 TTL 설정)
+        refreshTokenRepository.save(user.getId(), refreshToken, Duration.ofDays(14));
 
         return AdminLoginResponse.of(accessToken, refreshToken, user);
     }
