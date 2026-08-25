@@ -1,17 +1,15 @@
 package com.backtoback.reseat.domain.seatinventory.service;
 
-import com.backtoback.reseat.domain.game.entity.BookingStatus;
-import com.backtoback.reseat.domain.game.entity.Game;
-import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
-import com.backtoback.reseat.domain.seatinventory.exception.SeatInventoryAlreadyOpenedException;
-import com.backtoback.reseat.domain.seatinventory.repository.GameSeatRepository;
-import com.backtoback.reseat.domain.stadium.entity.Seat;
-import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
-import com.backtoback.reseat.domain.stadium.entity.SeatZone;
-import com.backtoback.reseat.domain.stadium.entity.Stadium;
-import com.backtoback.reseat.domain.team.entity.Team;
-import com.backtoback.reseat.global.common.BaseIntegrationTest;
-import jakarta.persistence.EntityManager;
+import static org.assertj.core.api.Assertions.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,15 +23,19 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import com.backtoback.reseat.domain.game.entity.BookingStatus;
+import com.backtoback.reseat.domain.game.entity.Game;
+import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
+import com.backtoback.reseat.domain.seatinventory.exception.SeatInventoryAlreadyOpenedException;
+import com.backtoback.reseat.domain.seatinventory.repository.GameSeatRepository;
+import com.backtoback.reseat.domain.stadium.entity.Seat;
+import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
+import com.backtoback.reseat.domain.stadium.entity.SeatZone;
+import com.backtoback.reseat.domain.stadium.entity.Stadium;
+import com.backtoback.reseat.domain.team.entity.Team;
+import com.backtoback.reseat.global.common.BaseIntegrationTest;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import jakarta.persistence.EntityManager;
 
 /**
  * 좌석 재고 오픈 동시성 테스트.

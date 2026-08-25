@@ -1,5 +1,10 @@
 package com.backtoback.reseat.domain.seatinventory.service;
 
+import java.util.List;
+
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
@@ -11,13 +16,10 @@ import com.backtoback.reseat.domain.stadium.entity.Seat;
 import com.backtoback.reseat.domain.stadium.entity.SeatStatus;
 import com.backtoback.reseat.domain.stadium.entity.SeatZone;
 import com.backtoback.reseat.domain.stadium.repository.SeatRepository;
+
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 /**
  * 경기 좌석 재고(game_seats) 생성 서비스.
