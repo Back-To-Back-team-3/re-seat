@@ -89,6 +89,7 @@ public enum ErrorCode {
     RESERVATION_ALREADY_ORDERED(HttpStatus.CONFLICT, "이미 주문이 생성된 예약입니다."),
     PRE_RESERVATION_EXPIRED(HttpStatus.GONE, "좌석 선점 시간이 만료되었습니다."),
     RESERVATION_SEAT_NOT_FOUND(HttpStatus.NOT_FOUND, "예약 좌석을 찾을 수 없습니다."),
+    HOLD_EXTENSION_LIMIT_EXCEEDED(HttpStatus.CONFLICT, "재선점 가능한 HOLD 상한을 초과했습니다."),
 
     // 주문 (orders)
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "주문을 찾을 수 없습니다."),
