@@ -3,7 +3,6 @@ package com.backtoback.reseat.global.security;
 
 import java.util.List;
 
-import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -69,7 +68,7 @@ public class SecurityConfig {
                     // 인증이 불필요한 경로 허용
                     .requestMatchers("/api/v1/auth/**", "/oauth2/**", "/login/**")
                     .permitAll()
-                    .requestMatchers(PathRequest.toH2Console())
+                    .requestMatchers("/h2-console/**")
                     .permitAll()
                     .requestMatchers("/swagger-ui/**", "/v3/api-docs/**")
                     .permitAll()
