@@ -55,6 +55,8 @@ jobs:
         env:
           REDIS_PASSWORD: ""
           KAFKA_BOOTSTRAP_SERVERS: localhost:9092
+          SPRING_PROFILES_ACTIVE: test
+          TEST_JWT_SECRET: ${{ secrets.TEST_JWT_SECRET }}
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
