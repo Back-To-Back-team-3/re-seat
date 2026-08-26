@@ -1,0 +1,43 @@
+# ===================================================================
+# [test] Gradle test 및 CI 환경 — H2 인메모리
+# ===================================================================
+spring:
+  config:
+    activate:
+      on-profile: test
+
+  datasource:
+    url: jdbc:h2:mem:reseat-test;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        generate_statistics: true
+
+  flyway:
+    enabled: false
+
+  kafka:
+    admin:
+      auto-create: false
+    listener:
+      auto-startup: false
+
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            client-id: test-kakao-client-id
+            client-secret: test-kakao-client-secret
+            redirect-uri: http://localhost/login/oauth2/code/kakao
+
+jwt:
+  secret: ${TEST_JWT_SECRET:${JWT_SECRET}}
+

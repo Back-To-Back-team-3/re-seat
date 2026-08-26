@@ -1,0 +1,59 @@
+:root {
+    color-scheme: light;
+    --background: #f7f8fc;
+    --surface: #ffffff;
+    --surface-soft: #f0f2f8;
+    --foreground: #0f1117;
+    --muted-foreground: #687083;
+    --border: rgb(15 17 23 / 10%);
+    --brand: #e03535;
+    --brand-dark: #b9232b;
+    --accent: #f5a623;
+    --success: #16815b;
+    --card-shadow: 0 20px 60px rgb(20 28 50 / 8%);
+    --control-radius: 8px;
+    --panel-radius: 12px;
+    --modal-radius: 16px;
+    --fast-duration: 160ms;
+    /* Vite frontend/src/styles.css의 .topbar, .footer, .flow-header, .page-content가
+       공유하는 셸 폭·여백 값. Header, Footer, Booking Layout이 같은 값을 쓰게 한다. */
+    --width-shell: 1440px;
+    --gutter-desktop: 5vw;
+    --gutter-mobile: 16px;
+}
+
+html[data-theme="dark"] {
+    color-scheme: dark;
+    --background: #101218;
+    --surface: #181b23;
+    --surface-soft: #222631;
+    --foreground: #f5f7fb;
+    --muted-foreground: #a0a8ba;
+    --border: rgb(255 255 255 / 11%);
+    --brand: #ef5555;
+    --brand-dark: #d93e46;
+    --accent: #ffb648;
+    --success: #50c895;
+    --card-shadow: 0 20px 60px rgb(0 0 0 / 28%);
+}
+
+@theme inline {
+    --color-background: var(--background);
+    --color-surface: var(--surface);
+    --color-surface-soft: var(--surface-soft);
+    --color-foreground: var(--foreground);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-border: var(--border);
+    --color-brand: var(--brand);
+    --color-brand-dark: var(--brand-dark);
+    --color-accent: var(--accent);
+    --color-success: var(--success);
+    --shadow-card: var(--card-shadow);
+    --radius-control: var(--control-radius);
+    --radius-panel: var(--panel-radius);
+    --radius-modal: var(--modal-radius);
+    --duration-fast: var(--fast-duration);
+    /* Vite frontend/src/styles.css의 .brand, .footer > div > strong이 공유하는
+       브랜드 워드마크 서체. Header, Footer가 같은 값을 쓰게 한다. */
+    --font-brand: "Arial Narrow", Impact, sans-serif;
+}

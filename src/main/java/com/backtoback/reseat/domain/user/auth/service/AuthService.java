@@ -1,0 +1,123 @@
+package com.backtoback.reseat.domain.user.auth.service;
+
+import java.time.Duration;
+
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import io.jsonwebtoken.Claims;
+
+import com.backtoback.reseat.domain.user.auth.dto.request.ReissueRequest;
+import com.backtoback.reseat.domain.user.auth.dto.request.UserLoginRequest;
+import com.backtoback.reseat.domain.user.auth.dto.response.TokenResponse;
+import com.backtoback.reseat.domain.user.entity.User;
+import com.backtoback.reseat.domain.user.entity.UserStatus;
+import com.backtoback.reseat.domain.user.exception.DeleteUserException;
+import com.backtoback.reseat.domain.user.exception.InactiveUserException;
+import com.backtoback.reseat.domain.user.exception.InvalidPasswordException;
+import com.backtoback.reseat.domain.user.exception.InvalidTokenException;
+import com.backtoback.reseat.domain.user.exception.SuspendedUserException;
+import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
+import com.backtoback.reseat.domain.user.repository.RefreshTokenRepository;
+import com.backtoback.reseat.domain.user.repository.UserRepository;
+import com.backtoback.reseat.global.security.JwtTokenProvider;
+
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class AuthService {
+
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final RefreshTokenRepository refreshTokenRepository;
+
+    @Transactional
+    public TokenResponse login(UserLoginRequest request) {
+        User user = userRepository.findByEmail(request.getEmail()).orElseThrow(UserNotFoundException::new);
+
+        // 비밀번호 일치 검증
+        if (user.getPassword() == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new InvalidPasswordException();
+        }
+
+        // 비밀번호 검증 성공 후 계정 상태 확인
+        if (user.getStatus() == UserStatus.SUSPENDED) {
+            throw new SuspendedUserException();
+        }
+        if (user.getStatus() == UserStatus.DELETED) {
+            throw new DeleteUserException();
+        }
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new InactiveUserException();
+        }
+
+        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail(), user.getRole().name());
+        String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
+
+        // Redis 저장 (14일 TTL 설정)
+        refreshTokenRepository.save(user.getId(), refreshToken, Duration.ofDays(14));
+
+        return TokenResponse.builder().accessToken(accessToken).refreshToken(refreshToken).build();
+    }
+
+    @Transactional
+    public TokenResponse reissue(ReissueRequest request) {
+        String refreshToken = request.getRefreshToken();
+
+        // 1. Refresh Token 유효성 및 만료 검증 (Claims 파싱 및 검증을 1회로 처리)
+        if (refreshToken == null) {
+            throw new InvalidTokenException();
+        }
+
+        Claims claims = jwtTokenProvider.getClaimsIfValid(refreshToken);
+        if (claims == null) {
+            throw new InvalidTokenException();
+        }
+
+        // 2. Refresh Token Claims에서 사용자 식별 정보(userId) 추출
+        Long userId = jwtTokenProvider.getUserId(claims);
+        if (userId == null) {
+            throw new InvalidTokenException();
+        }
+
+        // 3. 존재하지 않는 회원 404 예외 처리 연동
+        User user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
+
+        // 토큰 재발급을 받으려는 사용자 상태 체크
+        if (user.getStatus() == UserStatus.SUSPENDED) {
+            throw new SuspendedUserException();
+        }
+        if (user.getStatus() == UserStatus.DELETED) {
+            throw new DeleteUserException();
+        }
+
+        // Redis에 저장된 실제 토큰과 클라이언트가 보낸 토큰이 일치하는지 검증
+        String savedRefreshToken = refreshTokenRepository.findByUserId(userId).orElseThrow(InvalidTokenException::new);
+
+        if (!savedRefreshToken.equals(refreshToken)) {
+            throw new InvalidTokenException();
+        }
+
+        // 4. 새로운 토큰 쌍 생성 및 토큰 회전(Rotation)
+        String newAccessToken
+            = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail(), user.getRole().name());
+        String newRefreshToken = jwtTokenProvider.createRefreshToken(user.getId());
+
+        // Redis 최신화 (14일 TTL 갱신)
+        refreshTokenRepository.save(user.getId(), newRefreshToken, Duration.ofDays(14));
+
+        // 성공 시 기존 구형 토큰 대신 새로 교체된 newRefreshToken을 리턴
+        return TokenResponse.builder().accessToken(newAccessToken).refreshToken(newRefreshToken).build();
+    }
+
+    @Transactional
+    public void logout(Long userId) {
+        User user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
+
+        refreshTokenRepository.deleteByUserId(userId);
+    }
+}

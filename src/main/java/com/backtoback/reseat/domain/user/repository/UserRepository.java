@@ -1,0 +1,25 @@
+package com.backtoback.reseat.domain.user.repository;
+
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.backtoback.reseat.domain.user.entity.User;
+
+public interface UserRepository extends JpaRepository<User, Long>, UserRepositoryCustom {
+    // 이메일로 유저 정보 조회 (로그인 시 사용)
+    Optional<User> findByEmail(String email);
+
+    // 이메일 중복 여부 확인 (회원가입 시 검증용)
+    boolean existsByEmail(String email);
+
+    // 닉네임 중복 여부 확인
+
+    // 전화번호 중복 여부 확인
+    boolean existsByPhone(String phone);
+
+    Optional<User> findByCi(String ci);
+
+    // 소셜 공급자 및 공급자 고유 식별값으로 유저 조회 (OAuth2 로그인용)
+    Optional<User> findByProviderAndProviderId(String provider, String providerId);
+}

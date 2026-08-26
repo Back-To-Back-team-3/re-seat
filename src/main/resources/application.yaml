@@ -1,3 +1,193 @@
+# ===================================================================
+# 1. 공통 및 로컬(기본) 개발 환경 설정 블록 (active: local)
+# ===================================================================
 spring:
-  application:
-    name: re-seat
+  profiles:
+    active: local
+    default: local
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jackson:
+    time-zone: Asia/Seoul
+    date-format: yyyy-MM-dd HH:mm:ss
+
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: true
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      properties:
+        spring:
+          deserializer:
+            value:
+              delegate:
+                class: org.springframework.kafka.support.serializer.JsonDeserializer
+          json:
+            trusted:
+              packages: com.backtoback.reseat.domain.queue.dto.event
+    listener:
+      ack-mode: manual_immediate
+
+  data:
+    web:
+      pageable:
+        page-serialization-mode: via_dto
+    redis:
+      host: localhost
+      port: 6379
+      password: ${REDIS_PASSWORD:myredispassword}
+
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            client-id: ${KAKAO_CLIENT_ID:dummy-kakao-client-id}
+            client-secret: ${KAKAO_CLIENT_SECRET:dummy-kakao-client-secret}
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/kakao"
+            scope:
+              - profile_nickname
+              - account_email
+            client-name: Kakao
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+
+# -----------------------------------------------------------------
+# Actuator / Prometheus 메트릭 수집 엔드포인트 설정
+# -----------------------------------------------------------------
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus, health, info, metrics
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: re-seat
+
+jwt:
+  secret: ${JWT_SECRET}
+
+portone:
+  api-secret: "MOCK_PORTONE_SECRET_TOKEN"
+
+toss:
+  client-key: ${TOSS_CLIENT_KEY:test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq}
+  secret-key: ${TOSS_SECRET_KEY:test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R}
+  base-url: ${TOSS_BASE_URL:https://api.tosspayments.com}
+
+logging:
+  level:
+    org:
+      apache.kafka: INFO
+      springframework:
+        kafka: INFO
+
+---
+# ===================================================================
+# 2. 운영(prod) 환경 설정 블록 (AWS RDS & Docker/EC2 배포용)
+# ===================================================================
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  h2:
+    console:
+      enabled: false
+      settings:
+        web-allow-others: false
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: 6379
+      password: ${REDIS_PASSWORD}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:19092}
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+jwt:
+  secret: ${JWT_SECRET}
+
+# prod 프로필에서도 Actuator 엔드포인트가 유지되도록 재선언
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus, health, info, metrics
+  endpoint:
+    health:
+      show-details: always
+
+---
+# ===================================================================
+# 3. Gradle test 및 CI 환경을 위한 테스트(test) 전용 우회 블록
+# ===================================================================
+spring:
+  config:
+    activate:
+      on-profile: test
+
+  flyway:
+    enabled: false
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop

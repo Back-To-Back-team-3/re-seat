@@ -1,0 +1,241 @@
+package com.backtoback.reseat.domain.user.auth.service;
+
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import java.time.Duration;
+import java.util.Optional;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import io.jsonwebtoken.Claims;
+
+import com.backtoback.reseat.domain.user.auth.dto.request.ReissueRequest;
+import com.backtoback.reseat.domain.user.auth.dto.request.UserLoginRequest;
+import com.backtoback.reseat.domain.user.auth.dto.response.TokenResponse;
+import com.backtoback.reseat.domain.user.entity.User;
+import com.backtoback.reseat.domain.user.entity.UserRole;
+import com.backtoback.reseat.domain.user.entity.UserStatus;
+import com.backtoback.reseat.domain.user.exception.DeleteUserException;
+import com.backtoback.reseat.domain.user.exception.InvalidPasswordException;
+import com.backtoback.reseat.domain.user.exception.InvalidTokenException;
+import com.backtoback.reseat.domain.user.exception.SuspendedUserException;
+import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
+import com.backtoback.reseat.domain.user.repository.RefreshTokenRepository;
+import com.backtoback.reseat.domain.user.repository.UserRepository;
+import com.backtoback.reseat.global.common.BaseUnitTest;
+import com.backtoback.reseat.global.exception.ErrorCode;
+import com.backtoback.reseat.global.security.JwtTokenProvider;
+
+class AuthServiceTest extends BaseUnitTest {
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private JwtTokenProvider jwtTokenProvider;
+
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
+
+    @InjectMocks
+    private AuthService authService;
+
+    @Test
+    @DisplayName("올바른 이메일과 비밀번호로 로그인하면 토큰을 발급한다")
+    void login_Success() {
+        // given
+        UserLoginRequest request = new UserLoginRequest("user@test.com", "password123!");
+        User user
+            = User
+                .builder()
+                .id(1L)
+                .email("user@test.com")
+                .password("encodedPassword")
+                .role(UserRole.USER)
+                .status(UserStatus.ACTIVE)
+                .build();
+
+        when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("password123!", "encodedPassword")).thenReturn(true);
+        when(jwtTokenProvider.createAccessToken(1L, "user@test.com", "USER")).thenReturn("mock-access-token");
+        when(jwtTokenProvider.createRefreshToken(1L)).thenReturn("mock-refresh-token");
+
+        // when
+        TokenResponse response = authService.login(request);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getAccessToken()).isEqualTo("mock-access-token");
+        assertThat(response.getRefreshToken()).isEqualTo("mock-refresh-token");
+        verify(refreshTokenRepository, times(1)).save(1L, "mock-refresh-token", Duration.ofDays(14));
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 회원 이메일로 로그인 시 예외가 발생한다")
+    void login_UserNotFound() {
+        // given
+        UserLoginRequest request = new UserLoginRequest("none@test.com", "password123!");
+        when(userRepository.findByEmail("none@test.com")).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> authService.login(request))
+            .isInstanceOf(UserNotFoundException.class)
+            .hasMessage(ErrorCode.USER_NOT_FOUND.getMessage());
+    }
+
+    @Test
+    @DisplayName("비밀번호가 일치하지 않으면 예외가 발생한다")
+    void login_InvalidPassword() {
+        // given
+        UserLoginRequest request = new UserLoginRequest("user@test.com", "wrongPassword");
+        User user
+            = User
+                .builder()
+                .id(1L)
+                .email("user@test.com")
+                .password("encodedPassword")
+                .role(UserRole.USER)
+                .status(UserStatus.ACTIVE)
+                .build();
+
+        when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrongPassword", "encodedPassword")).thenReturn(false);
+
+        // when & then
+        assertThatThrownBy(() -> authService.login(request))
+            .isInstanceOf(InvalidPasswordException.class)
+            .hasMessage(ErrorCode.INVALID_PASSWORD.getMessage());
+    }
+
+    @Test
+    @DisplayName("정지된 계정으로 로그인 시 SuspendedUserException이 발생한다")
+    void login_SuspendedUser() {
+        // given
+        UserLoginRequest request = new UserLoginRequest("user@test.com", "password123!");
+        User user
+            = User
+                .builder()
+                .id(1L)
+                .email("user@test.com")
+                .password("encodedPassword")
+                .role(UserRole.USER)
+                .status(UserStatus.SUSPENDED)
+                .build();
+
+        when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("password123!", "encodedPassword")).thenReturn(true);
+
+        // when & then
+        assertThatThrownBy(() -> authService.login(request))
+            .isInstanceOf(SuspendedUserException.class)
+            .hasMessage(ErrorCode.FORBIDDEN.getMessage());
+    }
+
+    @Test
+    @DisplayName("탈퇴된 계정으로 로그인 시 DeleteUserException이 발생한다")
+    void login_DeletedUser() {
+        // given
+        UserLoginRequest request = new UserLoginRequest("user@test.com", "password123!");
+        User user
+            = User
+                .builder()
+                .id(1L)
+                .email("user@test.com")
+                .password("encodedPassword")
+                .role(UserRole.USER)
+                .status(UserStatus.DELETED)
+                .build();
+
+        when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("password123!", "encodedPassword")).thenReturn(true);
+
+        // when & then
+        assertThatThrownBy(() -> authService.login(request))
+            .isInstanceOf(DeleteUserException.class)
+            .hasMessage(ErrorCode.UNAUTHORIZED.getMessage());
+    }
+
+    @Test
+    @DisplayName("유효한 RefreshToken으로 재발급 시 새로운 토큰 쌍을 반환한다")
+    void reissue_Success() {
+        // given
+        String oldRefreshToken = "old-refresh-token";
+        ReissueRequest request = new ReissueRequest(oldRefreshToken);
+        User user = User.builder().id(1L).email("user@test.com").role(UserRole.USER).status(UserStatus.ACTIVE).build();
+        Claims claims = mock(Claims.class);
+
+        when(jwtTokenProvider.getClaimsIfValid(oldRefreshToken)).thenReturn(claims);
+        when(jwtTokenProvider.getUserId(claims)).thenReturn(1L);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(refreshTokenRepository.findByUserId(1L)).thenReturn(Optional.of(oldRefreshToken));
+        when(jwtTokenProvider.createAccessToken(1L, "user@test.com", "USER")).thenReturn("new-access-token");
+        when(jwtTokenProvider.createRefreshToken(1L)).thenReturn("new-refresh-token");
+
+        // when
+        TokenResponse response = authService.reissue(request);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getAccessToken()).isEqualTo("new-access-token");
+        assertThat(response.getRefreshToken()).isEqualTo("new-refresh-token");
+        verify(refreshTokenRepository, times(1)).save(1L, "new-refresh-token", Duration.ofDays(14));
+    }
+
+    @Test
+    @DisplayName("유효하지 않거나 만료된 RefreshToken으로 재발급 시 예외가 발생한다")
+    void reissue_InvalidToken() {
+        // given
+        String invalidToken = "invalid-token";
+        ReissueRequest request = new ReissueRequest(invalidToken);
+
+        when(jwtTokenProvider.getClaimsIfValid(invalidToken)).thenReturn(null);
+
+        // when & then
+        assertThatThrownBy(() -> authService.reissue(request))
+            .isInstanceOf(InvalidTokenException.class)
+            .hasMessage(ErrorCode.UNAUTHORIZED.getMessage());
+    }
+
+    @Test
+    @DisplayName("DB의 RefreshToken과 클라이언트가 보낸 토큰이 불일치하면 예외가 발생한다")
+    void reissue_TokenMismatch() {
+        // given
+        String clientToken = "client-token";
+        ReissueRequest request = new ReissueRequest(clientToken);
+        User user = User.builder().id(1L).email("user@test.com").role(UserRole.USER).status(UserStatus.ACTIVE).build();
+        Claims claims = mock(Claims.class);
+
+        when(jwtTokenProvider.getClaimsIfValid(clientToken)).thenReturn(claims);
+        when(jwtTokenProvider.getUserId(claims)).thenReturn(1L);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(refreshTokenRepository.findByUserId(1L)).thenReturn(Optional.of("different-redis-token"));
+
+        // when & then
+        assertThatThrownBy(() -> authService.reissue(request))
+            .isInstanceOf(InvalidTokenException.class)
+            .hasMessage(ErrorCode.UNAUTHORIZED.getMessage());
+    }
+
+    @Test
+    @DisplayName("로그아웃 시 Redis의 RefreshToken을 삭제한다")
+    void logout_Success() {
+        // given
+        User user = User.builder().id(1L).email("user@test.com").role(UserRole.USER).status(UserStatus.ACTIVE).build();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        // when
+        authService.logout(1L);
+
+        // then
+        verify(refreshTokenRepository, times(1)).deleteByUserId(1L);
+    }
+}
