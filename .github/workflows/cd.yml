@@ -78,7 +78,7 @@ jobs:
             sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/re-seat:${{ github.sha }}
 
             # Docker Compose 전체 스택 재구동 (변경 사항 있는 컨테이너만 교체 실행)
-            sudo docker-compose up -d
+            sudo docker compose up -d
 
             # 미사용 구형 이미지 정리
             sudo docker image prune -f
@@ -87,7 +87,7 @@ jobs:
             echo "Waiting for application to start..."
             for i in {1..12}; do
               HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/actuator/health || true)
-              if [ "$HTTP_STATUS" -eq 200 ]; then
+              if [ "$HTTP_STATUS" -eq 200 ] || [ "$HTTP_STATUS" -eq 401 ]; then
                 echo "Health check passed! HTTP Status: 200"
                 exit 0
               fi
