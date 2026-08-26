@@ -43,14 +43,16 @@ class OAuth2AuthenticationSuccessHandlerTest extends BaseUnitTest {
         OAuth2AuthenticationSuccessHandler handler
             = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, refreshTokenRepository, frontendUrl);
 
-        User user = User.builder()
-            .id(1L)
-            .email("test@kakao.com")
-            .name("홍길동")
-            .role(UserRole.USER)
-            .status(UserStatus.ACTIVE)
-            .isVerified(true)
-            .build();
+        User user
+            = User
+                .builder()
+                .id(1L)
+                .email("test@kakao.com")
+                .name("홍길동")
+                .role(UserRole.USER)
+                .status(UserStatus.ACTIVE)
+                .isVerified(true)
+                .build();
 
         CustomOAuth2User oAuth2User = new CustomOAuth2User(user, Map.of("id", "12345"));
         when(authentication.getPrincipal()).thenReturn(oAuth2User);
@@ -82,14 +84,16 @@ class OAuth2AuthenticationSuccessHandlerTest extends BaseUnitTest {
         OAuth2AuthenticationSuccessHandler handler
             = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, refreshTokenRepository, frontendUrl);
 
-        User user = User.builder()
-            .id(2L)
-            .email("local@kakao.com")
-            .name("로컬유저")
-            .role(UserRole.USER)
-            .status(UserStatus.ACTIVE)
-            .isVerified(false)
-            .build();
+        User user
+            = User
+                .builder()
+                .id(2L)
+                .email("local@kakao.com")
+                .name("로컬유저")
+                .role(UserRole.USER)
+                .status(UserStatus.ACTIVE)
+                .isVerified(false)
+                .build();
 
         CustomOAuth2User oAuth2User = new CustomOAuth2User(user, Map.of("id", "67890"));
         when(authentication.getPrincipal()).thenReturn(oAuth2User);
