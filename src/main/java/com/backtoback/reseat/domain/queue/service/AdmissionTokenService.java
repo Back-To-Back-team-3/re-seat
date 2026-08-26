@@ -267,6 +267,28 @@ public class AdmissionTokenService {
         admissionToken.completeSeatBrowsing(now);
     }
 
+    /**
+     * 재선점 상한 검사에 필요한 Queue-Token의 타이밍 정보를 조회한다.
+     * <p>상태 변경 부수효과 없는 읽기 전용 조회이며, validateToken()이 검증을 마친 뒤 호출하는 것을 전제로 한다.</p>
+     *
+     * @param userId 요청한 사용자 ID
+     * @param gameId 조회할 경기 ID
+     * @param token 조회할 Queue-Token 값
+     * @return 토큰의 만료 시각과 최초 좌석 탐색 완료 시각
+     */
+    @Transactional(readOnly = true)
+    public AdmissionTokenTiming getTokenTiming(Long userId, Long gameId, String token) {
+
+        validateRequiredToken(token);
+
+        AdmissionToken admissionToken
+            = admissionTokenRepository.findByToken(token).orElseThrow(QueueTokenInvalidException::new);
+
+        validateTokenContext(admissionToken, userId, gameId);
+
+        return new AdmissionTokenTiming(admissionToken.getExpiresAt(), admissionToken.getSeatBrowsingCompletedAt());
+    }
+
     private ZSetOperations<String, String> getZSetOperations() {
         return redisTemplate.opsForZSet();
     }
