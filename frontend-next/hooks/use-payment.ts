@@ -17,6 +17,7 @@ import {
     resetPaymentCallback,
 } from "@/lib/payment-storage";
 import {useBookingStore} from "@/providers/booking-store-provider";
+import type {TicketSummary} from "@/types/ticket";
 
 export function usePayment(paymentId?: number) {
     const queryClient = useQueryClient();
@@ -75,8 +76,31 @@ export function usePayment(paymentId?: number) {
                             amount,
                         },
                     );
-                    if (action.status === "APPROVED" && pending!.gameId) {
+                    if (action.status === "APPROVED") {
                         rememberCompletedGame(pending!.gameId);
+
+                        /*
+                         * 승인 응답에는 이번 결제로 발급된 실제 티켓이 포함됩니다.
+                         * 기존 캐시의 과거 티켓은 유지하고 같은 ticketId는 최신 승인
+                         * 응답으로 교체해 callback이 중복되어도 한 장만 남깁니다.
+                         */
+                        queryClient.setQueryData<TicketSummary[]>(
+                            ticketKeys.list(),
+                            (current = []) => {
+                                const byId = new Map(
+                                    [...current, ...action.tickets].map((ticket) => [
+                                        ticket.ticketId,
+                                        ticket,
+                                    ]),
+                                );
+
+                                return [...byId.values()].sort(
+                                    (left, right) =>
+                                        right.gameAt.localeCompare(left.gameAt) ||
+                                        right.ticketId - left.ticketId,
+                                );
+                            },
+                        );
                     }
                 } else if (code && message && pgOrderId) {
                     await failPayment(paymentId!, pending!.idempotencyKey, {
@@ -85,7 +109,8 @@ export function usePayment(paymentId?: number) {
                         orderId: pgOrderId,
                     });
                 }
-                // 3. 성공한 콜백은 주문·결제·티켓 서버 상태를 명시적으로 다시 읽게 한다.
+                // 3. 성공한 콜백은 주문·결제 서버 상태를 명시적으로 다시 읽게 한다.
+                // 티켓은 승인 응답을 바로 캐시에 저장했으므로 여기서 다시 요청하지 않는다.
                 await Promise.all([
                     queryClient.invalidateQueries({
                         queryKey: orderKeys.detail(pending!.orderId),
@@ -93,7 +118,6 @@ export function usePayment(paymentId?: number) {
                     queryClient.invalidateQueries({
                         queryKey: paymentKeys.detail(paymentId!),
                     }),
-                    queryClient.invalidateQueries({queryKey: ticketKeys.list()}),
                 ]);
                 completePaymentCallback(paymentId!);
                 window.history.replaceState({}, "", window.location.pathname);
