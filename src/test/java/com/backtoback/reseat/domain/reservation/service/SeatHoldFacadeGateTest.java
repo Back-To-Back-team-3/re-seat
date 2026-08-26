@@ -15,10 +15,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.backtoback.reseat.domain.queue.exception.QueueTokenExpiredException;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenRevokedException;
 import com.backtoback.reseat.domain.queue.service.AdmissionTokenService;
+import com.backtoback.reseat.domain.queue.service.AdmissionTokenTiming;
 import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
 import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse;
+import com.backtoback.reseat.domain.reservation.exception.HoldExtensionLimitExceededException;
 import com.backtoback.reseat.domain.reservation.exception.MaxSeatCountExceededException;
 import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
 import com.backtoback.reseat.domain.reservation.service.lock.SeatLockStrategy;
@@ -86,6 +89,15 @@ class SeatHoldFacadeGateTest {
             .thenAnswer(invocation -> ((Supplier<ReservationResponse>)invocation.getArgument(2)).get());
     }
 
+    /**
+     * getTokenTiming이 최초 선점(재선점 아님) 상황의 유효한 타이밍 정보를 반환하도록 스텁한다.
+     * HOLD 상한 게이트 자체를 검증하는 테스트가 아닌 다른 테스트의 기본값으로 사용한다.
+     */
+    private void stubValidTokenTiming() {
+        when(admissionTokenService.getTokenTiming(anyLong(), anyLong(), anyString()))
+            .thenReturn(new AdmissionTokenTiming(LocalDateTime.now().plusMinutes(20), null));
+    }
+
     @Test
     @DisplayName("미인증 사용자가 만료된 토큰으로 요청해도 403이 우선 반환된다")
     void should_throw403First_when_userNotVerifiedAndTokenExpired() {
@@ -107,6 +119,7 @@ class SeatHoldFacadeGateTest {
         // given
         SeatHoldRequest request = new SeatHoldRequest(GAME_ID, List.of(101L));
         when(userVerificationPort.isVerified(USER_ID)).thenReturn(true);
+        stubValidTokenTiming();
         stubUserGameLockPassthrough();
         when(reservationSeatRepository.countActiveHoldingSeats(eq(USER_ID), eq(GAME_ID), any(LocalDateTime.class)))
             .thenReturn(1);
@@ -127,6 +140,7 @@ class SeatHoldFacadeGateTest {
         // given
         SeatHoldRequest request = new SeatHoldRequest(GAME_ID, List.of(101L, 102L));
         when(userVerificationPort.isVerified(USER_ID)).thenReturn(true);
+        stubValidTokenTiming();
         stubUserGameLockPassthrough();
         when(reservationSeatRepository.countActiveHoldingSeats(eq(USER_ID), eq(GAME_ID), any(LocalDateTime.class)))
             .thenReturn(1);
@@ -146,6 +160,7 @@ class SeatHoldFacadeGateTest {
         // given
         SeatHoldRequest request = new SeatHoldRequest(GAME_ID, List.of(101L));
         when(userVerificationPort.isVerified(USER_ID)).thenReturn(true);
+        stubValidTokenTiming();
         stubUserGameLockPassthrough();
         when(reservationSeatRepository.countActiveHoldingSeats(eq(USER_ID), eq(GAME_ID), any(LocalDateTime.class)))
             .thenReturn(2);
@@ -162,6 +177,7 @@ class SeatHoldFacadeGateTest {
         // given
         SeatHoldRequest request = new SeatHoldRequest(GAME_ID, List.of(101L));
         when(userVerificationPort.isVerified(USER_ID)).thenReturn(true);
+        stubValidTokenTiming();
         stubUserGameLockPassthrough();
         when(reservationSeatRepository.countActiveHoldingSeats(eq(USER_ID), eq(GAME_ID), any(LocalDateTime.class)))
             .thenReturn(0);
@@ -211,6 +227,7 @@ class SeatHoldFacadeGateTest {
         // given: 이미 1좌석을 보유한 상태에서(첫 요청 이후) 다시 1좌석 요청 → 누적 2좌석까지는 통과해야 함
         SeatHoldRequest secondRequest = new SeatHoldRequest(GAME_ID, List.of(102L));
         when(userVerificationPort.isVerified(USER_ID)).thenReturn(true);
+        stubValidTokenTiming();
         stubUserGameLockPassthrough();
         when(reservationSeatRepository.countActiveHoldingSeats(eq(USER_ID), eq(GAME_ID), any(LocalDateTime.class)))
             .thenReturn(1);
@@ -232,5 +249,41 @@ class SeatHoldFacadeGateTest {
         // when & then
         assertThatThrownBy(() -> seatHoldFacade.holdSeats(USER_ID, TOKEN, thirdRequest))
             .isInstanceOf(MaxSeatCountExceededException.class);
+    }
+
+    @Test
+    @DisplayName("재선점 시각이 최초 선점 완료 시각 기준 HOLD 상한을 넘으면 HOLD_EXTENSION_LIMIT_EXCEEDED가 발생하고 수량 검증을 시도하지 않는다")
+    void should_throwHoldExtensionLimitExceeded_when_reHoldExceedsCap() {
+        // given
+        SeatHoldRequest request = new SeatHoldRequest(GAME_ID, List.of(101L));
+        when(userVerificationPort.isVerified(USER_ID)).thenReturn(true);
+        LocalDateTime seatBrowsingCompletedAt = LocalDateTime.now().minusMinutes(11);
+        when(admissionTokenService.getTokenTiming(USER_ID, GAME_ID, TOKEN))
+            .thenReturn(new AdmissionTokenTiming(LocalDateTime.now().plusMinutes(10), seatBrowsingCompletedAt));
+
+        // when & then
+        assertThatThrownBy(() -> seatHoldFacade.holdSeats(USER_ID, TOKEN, request))
+            .isInstanceOf(HoldExtensionLimitExceededException.class);
+
+        // HOLD 상한 게이트에서 차단되면 수량 검증·락 획득 단계까지 가면 안 된다
+        verifyNoInteractions(reservationSeatRepository, ticketCountPort, seatLockStrategy);
+    }
+
+    @Test
+    @DisplayName("조회한 Queue-Token의 잔여 TTL이 0 이하면 QueueTokenExpiredException이 발생하고 수량 검증을 시도하지 않는다")
+    void should_throwQueueTokenExpired_when_tokenTimingTtlExhausted() {
+        // given
+        SeatHoldRequest request = new SeatHoldRequest(GAME_ID, List.of(101L));
+        when(userVerificationPort.isVerified(USER_ID)).thenReturn(true);
+        when(admissionTokenService.getTokenTiming(USER_ID, GAME_ID, TOKEN))
+            .thenReturn(
+                new AdmissionTokenTiming(LocalDateTime.now().minusSeconds(1), LocalDateTime.now().minusMinutes(5))
+            );
+
+        // when & then
+        assertThatThrownBy(() -> seatHoldFacade.holdSeats(USER_ID, TOKEN, request))
+            .isInstanceOf(QueueTokenExpiredException.class);
+
+        verifyNoInteractions(reservationSeatRepository, ticketCountPort, seatLockStrategy);
     }
 }

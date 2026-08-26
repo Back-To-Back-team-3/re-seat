@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import org.springframework.stereotype.Component;
 
 import com.backtoback.reseat.domain.queue.service.AdmissionTokenService;
+import com.backtoback.reseat.domain.queue.service.AdmissionTokenTiming;
 import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
 import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse;
 import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
@@ -25,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
  * <pre>
  * 1. isVerified — 본인 인증 완료 여부 검증, USER_NOT_VERIFIED(403)
  * 2. validateToken — Queue-Token 검증(소비하지 않음)
+ *    2-1. validateExtensionLimit — 재선점 HOLD 상한 보정, HOLD_EXTENSION_LIMIT_EXCEEDED(409)
  * 3. userGameLock 진입 — 아래 3-1, 3-2를 원자적 구간으로 묶는다.
  *    3-1. 수량 검증 — 누적 보유 좌석 수 기준, MAX_SEAT_COUNT_EXCEEDED(400)
  *    3-2. executeWithLocks → holdSeats (좌석 락 + 트랜잭션·커밋)
@@ -48,7 +50,7 @@ public class SeatHoldFacade {
 
     /**
      * 좌석 선점 요청을 처리한다.
-     * 본인 인증 검증 → Queue-Token 검증 → 수량 검증 → 분산 락 획득 → 좌석 선점 트랜잭션 → 좌석 탐색 완료 기록 순으로 처리한다.
+     * 본인 인증 검증 → Queue-Token 검증 → 재선점 HOLD 상한 보정 → 수량 검증 → 분산 락 획득 → 좌석 선점 트랜잭션 → 좌석 탐색 완료 기록 순으로 처리한다.
      *
      * @param userId 인증 사용자 ID
      * @param token Queue-Token 헤더 값
@@ -61,8 +63,12 @@ public class SeatHoldFacade {
             throw new UserNotVerifiedException();
         }
 
-        // 2단계: 락 획득 전 토큰 사전 검증 — 유효하지 않은 요청이 락까지 진입하는 것을 차단
+        // 2단계: 락 획득 전 Queue-Token 사전 검증 — 유효하지 않은 요청이 락까지 진입하는 것을 차단
         admissionTokenService.validateToken(userId, request.gameId(), token);
+
+        // 2-1단계: 재선점 HOLD 상한 보정
+        AdmissionTokenTiming timing = admissionTokenService.getTokenTiming(userId, request.gameId(), token);
+        HoldExtensionPolicy.validateExtensionLimit(timing, LocalDateTime.now());
 
         // 3단계: 사용자·경기 단위 락으로 "수량 검증 → 좌석 락·선점"을 원자적으로 묶는다.
         ReservationResponse response = userGameLockStrategy.executeWithLock(userId, request.gameId(), () -> {
