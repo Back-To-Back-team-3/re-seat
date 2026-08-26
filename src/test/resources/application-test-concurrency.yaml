@@ -45,3 +45,8 @@ spring:
             client-id: test-kakao-client-id
             client-secret: test-kakao-client-secret
             redirect-uri: http://localhost/login/oauth2/code/kakao
+
+oauth2:
+  redirect:
+    frontend-url: http://localhost:5173
+

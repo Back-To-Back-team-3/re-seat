@@ -98,8 +98,9 @@ jobs:
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             JWT_SECRET=${{ secrets.JWT_SECRET }}
             KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID}}
-            KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET}}
+            KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
             REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+            FRONTEND_REDIRECT_URL=${{ secrets.FRONTEND_REDIRECT_URL }}
             EOF
 
             # 최신 백엔드 이미지 Pull
