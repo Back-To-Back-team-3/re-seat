@@ -102,7 +102,7 @@ jobs:
             KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID}}
             KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET}}
             REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
-            GRAFANA_ADMIN_PASSWORD=${{ secrests.GRAFANA_ADMIN_PASSWORD}}
+            GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD}}
             EOF
 
             # 최신 백엔드 이미지 Pull
