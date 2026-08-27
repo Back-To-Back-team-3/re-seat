@@ -48,8 +48,9 @@ import com.backtoback.reseat.domain.payment.exception.IdempotencyKeyRequiredExce
 import com.backtoback.reseat.domain.payment.exception.PaymentAccessDeniedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCallbackMismatchException;
-import com.backtoback.reseat.domain.payment.exception.PaymentCancelFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelNotAllowedException;
+import com.backtoback.reseat.domain.payment.exception.PaymentCancelResponseInvalidException;
+import com.backtoback.reseat.domain.payment.exception.PaymentCancelStatusUnknownException;
 import com.backtoback.reseat.domain.payment.exception.PaymentLockFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
@@ -644,7 +645,7 @@ class PaymentServiceTest {
                 .thenThrow(new TossPaymentStatusUnknownException("취소", new RuntimeException("Toss 응답 없음")));
 
             assertThatThrownBy(() -> paymentService.cancelPayment(USER_ID, PAYMENT_ID, request))
-                .isInstanceOf(PaymentCancelFailedException.class);
+                .isInstanceOf(PaymentCancelStatusUnknownException.class);
 
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED);
             verifyNoInteractions(orderService);
@@ -663,7 +664,7 @@ class PaymentServiceTest {
             when(tossResponse.getStatus()).thenReturn("DONE");
 
             assertThatThrownBy(() -> paymentService.cancelPayment(USER_ID, PAYMENT_ID, request))
-                .isInstanceOf(PaymentCancelFailedException.class);
+                .isInstanceOf(PaymentCancelResponseInvalidException.class);
 
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED);
             verifyNoInteractions(orderService);

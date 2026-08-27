@@ -237,12 +237,12 @@ public interface PaymentControllerDocs {
             ),
             @ApiResponse(
                 responseCode = "409",
-                description = "PAYMENT_CANCEL_NOT_ALLOWED",
+                description = "PAYMENT_CANCEL_NOT_ALLOWED, PAYMENT_PG_KEY_MISSING",
                 content = @Content
             ),
             @ApiResponse(
                 responseCode = "502",
-                description = "PAYMENT_CANCEL_FAILED",
+                description = "PAYMENT_CANCEL_STATUS_UNKNOWN, PAYMENT_CANCEL_RESPONSE_INVALID",
                 content = @Content
             )
         }

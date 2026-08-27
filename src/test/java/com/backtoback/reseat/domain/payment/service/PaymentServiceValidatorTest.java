@@ -20,6 +20,8 @@ import com.backtoback.reseat.domain.payment.exception.PaymentAccessDeniedExcepti
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCallbackMismatchException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelNotAllowedException;
+import com.backtoback.reseat.domain.payment.exception.PaymentPgKeyMissingException;
+import com.backtoback.reseat.global.exception.ErrorCode;
 import com.backtoback.reseat.domain.user.entity.User;
 
 @DisplayName("PaymentServiceValidator 결제 검증")
@@ -233,8 +235,8 @@ class PaymentServiceValidatorTest {
             Payment payment = payment(PaymentStatus.APPROVED, null);
 
             assertThatThrownBy(() -> validator.validateCancelable(payment))
-                .isInstanceOf(PaymentCancelNotAllowedException.class)
-                .hasMessage("PG 결제 키가 없어 결제를 취소할 수 없습니다.");
+                .isInstanceOf(PaymentPgKeyMissingException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PAYMENT_PG_KEY_MISSING);
         }
     }
 
