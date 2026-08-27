@@ -107,7 +107,9 @@ jwt:
   secret: ${JWT_SECRET}
 
 portone:
-  api-secret: "MOCK_PORTONE_SECRET_TOKEN"
+  base-url: ${PORTONE_BASE_URL:https://api.iamport.kr}
+  api-key: ${PORTONE_API_KEY:}
+  api-secret: ${PORTONE_API_SECRET:}
 
 toss:
   client-key: ${TOSS_CLIENT_KEY:test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq}
