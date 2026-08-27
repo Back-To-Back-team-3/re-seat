@@ -10,6 +10,7 @@ import com.backtoback.reseat.domain.payment.exception.PaymentAccessDeniedExcepti
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCallbackMismatchException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelNotAllowedException;
+import com.backtoback.reseat.domain.payment.exception.PaymentPgKeyMissingException;
 
 @Component
 public class PaymentServiceValidator {
@@ -80,7 +81,7 @@ public class PaymentServiceValidator {
         }
 
         if (payment.getPgPaymentKey() == null || payment.getPgPaymentKey().isBlank()) {
-            throw new PaymentCancelNotAllowedException("PG 결제 키가 없어 결제를 취소할 수 없습니다.");
+            throw new PaymentPgKeyMissingException();
         }
     }
 

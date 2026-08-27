@@ -30,7 +30,8 @@ import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
 import com.backtoback.reseat.domain.payment.entity.PaymentStatus; // [신규] 관리자 강제취소 시 APPROVED 결제 조회용
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
-import com.backtoback.reseat.domain.payment.exception.PaymentCancelFailedException;
+import com.backtoback.reseat.domain.payment.exception.PaymentCancelResponseInvalidException;
+import com.backtoback.reseat.domain.payment.exception.PaymentCancelStatusUnknownException;
 import com.backtoback.reseat.domain.payment.exception.PaymentLockFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
@@ -294,16 +295,19 @@ public class PaymentService {
             response = tossPaymentClient.cancel(payment.getPgPaymentKey(), request.getCancelReason());
         } catch (TossPaymentStatusUnknownException e) {
             log.warn("토스 결제 취소 상태 확인 불가 (paymentId={}, paymentKey={})", payment.getId(), payment.getPgPaymentKey(), e);
-            throw new PaymentCancelFailedException("토스 결제 취소 상태를 확인할 수 없습니다.");
+            throw new PaymentCancelStatusUnknownException();
         }
 
         // Toss 응답에서도 취소 완료가 확인돼야 로컬 상태를 변경할 수 있다.
         if (!response.isCancelCompleted()) {
-            String status = response.getStatus();
-            String failReason
-                = status == null || status.isBlank() ? "토스 결제 취소 상태가 비어 있습니다."
-                    : "토스 결제 취소 상태가 완료가 아닙니다. status=" + status;
-            throw new PaymentCancelFailedException(failReason);
+            log
+                .warn(
+                    "토스 결제 취소 응답 상태 불일치 (paymentId={}, paymentKey={}, status={})",
+                    payment.getId(),
+                    payment.getPgPaymentKey(),
+                    response.getStatus()
+                );
+            throw new PaymentCancelResponseInvalidException();
         }
 
         // 토스 취소가 확인된 뒤에만 로컬 결제와 주문을 함께 취소 상태로 변경한다.
