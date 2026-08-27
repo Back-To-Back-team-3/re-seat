@@ -38,18 +38,28 @@ public class PortoneClient {
         }
 
         Map<String, String> body = Map.of("imp_key", apiKey, "imp_secret", apiSecret);
-        PortoneTokenResponse tokenRes = webClient.post()
-            .uri("/users/getToken")
-            .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(body)
-            .retrieve()
-            .onStatus(
-                HttpStatusCode::isError,
-                res -> res.bodyToMono(String.class)
-                    .flatMap(errorBody -> Mono.error(new IllegalStateException("포트원 토큰 발급 HTTP 오류 (" + res.statusCode() + "): " + errorBody)))
-            )
-            .bodyToMono(PortoneTokenResponse.class)
-            .block(Duration.ofSeconds(5));
+        PortoneTokenResponse tokenRes
+            = webClient
+                .post()
+                .uri("/users/getToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(body)
+                .retrieve()
+                .onStatus(
+                    HttpStatusCode::isError,
+                    res -> res
+                        .bodyToMono(String.class)
+                        .flatMap(
+                            errorBody -> Mono
+                                .error(
+                                    new IllegalStateException(
+                                        "포트원 토큰 발급 HTTP 오류 (" + res.statusCode() + "): " + errorBody
+                                    )
+                                )
+                        )
+                )
+                .bodyToMono(PortoneTokenResponse.class)
+                .block(Duration.ofSeconds(5));
 
         if (tokenRes == null || tokenRes.getCode() != 0 || tokenRes.getResponse() == null) {
             String errorMsg = tokenRes != null ? tokenRes.getMessage() : "응답 없음";
@@ -69,8 +79,16 @@ public class PortoneClient {
             .retrieve()
             .onStatus(
                 HttpStatusCode::isError,
-                response -> response.bodyToMono(String.class)
-                    .flatMap(errorBody -> Mono.error(new IllegalStateException("포트원 외부 API 호출 실패 (" + response.statusCode() + "): " + errorBody)))
+                response -> response
+                    .bodyToMono(String.class)
+                    .flatMap(
+                        errorBody -> Mono
+                            .error(
+                                new IllegalStateException(
+                                    "포트원 외부 API 호출 실패 (" + response.statusCode() + "): " + errorBody
+                                )
+                            )
+                    )
             )
             .bodyToMono(PortoneVerificationResponse.class)
             .block(Duration.ofSeconds(5));

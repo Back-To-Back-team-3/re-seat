@@ -142,7 +142,15 @@ class VerificationServiceTest extends BaseUnitTest {
         String duplicateCi = "DUPLICATE_CI_KEY";
 
         User currentUser = User.builder().id(userId).email("user1@test.com").name("유저1").isVerified(false).build();
-        User existingUser = User.builder().id(otherUserId).email("user2@test.com").name("유저2").ci(duplicateCi).isVerified(true).build();
+        User existingUser
+            = User
+                .builder()
+                .id(otherUserId)
+                .email("user2@test.com")
+                .name("유저2")
+                .ci(duplicateCi)
+                .isVerified(true)
+                .build();
 
         PortoneVerificationResponse portoneResponse = createPortoneResponse(0, duplicateCi, "유저1", "01012345678");
 

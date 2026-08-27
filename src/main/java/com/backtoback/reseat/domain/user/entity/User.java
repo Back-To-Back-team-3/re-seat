@@ -143,7 +143,6 @@ public class User extends BaseEntity {
         this.providerId = providerId;
     }
 
-
     public void updateProfile(String name, String phone) {
         this.name = name;
         this.phone = phone;
