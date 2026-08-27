@@ -143,14 +143,6 @@ public class User extends BaseEntity {
         this.providerId = providerId;
     }
 
-    public void completeVerification(String ci, String realName) {
-        if (this.isVerified) {
-            throw new IllegalStateException("이미 본인인증이 완료된 회원입니다.");
-        }
-        this.ci = ci;
-        this.name = realName;
-        this.isVerified = true;
-    }
 
     public void updateProfile(String name, String phone) {
         this.name = name;
