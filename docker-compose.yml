@@ -44,6 +44,8 @@ services:
       - TZ=Asia/Seoul
       - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
       - MYSQL_DATABASE=reseat
+    volumes:
+      - mysql-data:/var/lib/mysql
     command:
       - --default-time-zone=+09:00
       - --log-timestamps=SYSTEM
@@ -115,10 +117,16 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD environment variable must be set}
+    volumes:
+      - grafana-data:/var/lib/grafana
     depends_on:
       - prometheus
     networks:
       - reseat-network
+
+volumes:
+  mysql-data:
+  grafana-data:
 
 networks:
   reseat-network:
