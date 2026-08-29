@@ -41,3 +41,7 @@ spring:
 jwt:
   secret: ${TEST_JWT_SECRET:${JWT_SECRET}}
 
+oauth2:
+  redirect:
+    frontend-url: http://localhost:5173
+

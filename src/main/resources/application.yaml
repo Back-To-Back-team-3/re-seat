@@ -106,6 +106,10 @@ management:
 jwt:
   secret: ${JWT_SECRET}
 
+oauth2:
+  redirect:
+    frontend-url: ${FRONTEND_REDIRECT_URL:http://localhost:5173}
+
 portone:
   base-url: ${PORTONE_BASE_URL:https://api.iamport.kr}
   api-key: ${PORTONE_API_KEY:}
@@ -166,6 +170,10 @@ spring:
 
 jwt:
   secret: ${JWT_SECRET}
+
+oauth2:
+  redirect:
+    frontend-url: ${FRONTEND_REDIRECT_URL}
 
 # prod 프로필에서도 Actuator 엔드포인트가 유지되도록 재선언
 management:
