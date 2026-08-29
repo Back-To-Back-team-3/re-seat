@@ -30,7 +30,6 @@ function renderTicketList(
             games={GAMES}
             onReload={vi.fn()}
             reloading={false}
-            source="api"
             tickets={[]}
             {...overrides}
         />,
@@ -39,27 +38,6 @@ function renderTicketList(
 
 describe("티켓 목록", () => {
     afterEach(cleanup);
-
-    it("MOCK fallback임을 사용자에게 알리고 티켓 정보를 표시한다", () => {
-        renderTicketList({
-            source: "mock",
-            tickets: [
-                {
-                    ticketId: -1,
-                    ticketNo: "MOCK-ORDER-1",
-                    gameId: 1,
-                    seat: "내야 1열 2번",
-                    status: "ISSUED",
-                    qrToken: "MOCK-QR-1-1",
-                    gameAt: "2026-08-08T18:00:00",
-                },
-            ],
-        });
-
-        expect(screen.getByText(/임시 티켓/)).toBeInTheDocument();
-        expect(screen.getByText("MOCK-ORDER-1")).toBeInTheDocument();
-        expect(screen.getByText(/내야 1열 2번/)).toBeInTheDocument();
-    });
 
     it("티켓 카드가 경기, 좌석, 티켓번호, QR, 상태를 함께 보여준다", () => {
         renderTicketList({

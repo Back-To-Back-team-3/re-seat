@@ -64,7 +64,6 @@ export default function OrderPage() {
                             gameId,
                             payment: prepared,
                             idempotencyKey,
-                            seats,
                         });
                         router.push(`/payments/${prepared.paymentId}`);
                     },
