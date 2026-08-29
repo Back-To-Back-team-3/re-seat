@@ -73,8 +73,13 @@ public class TossPaymentClient {
      * 취소 응답을 받지 못하면 결제를 재조회해 Toss의 취소 완료 상태를 반환한다.
      */
     public TossPaymentResponse cancel(String paymentKey, String cancelReason) {
+        return cancel(paymentKey, cancelReason, null);
+    }
+
+    /** 취소 금액을 지정해 Toss에 부분 취소를 요청한다. */
+    public TossPaymentResponse cancel(String paymentKey, String cancelReason, Integer cancelAmount) {
         try {
-            return requestCancel(paymentKey, cancelReason);
+            return requestCancel(paymentKey, cancelReason, cancelAmount);
         } catch (RuntimeException cancelException) {
             return requeryAfterFailure(paymentKey, cancelException, "취소");
         }
@@ -83,13 +88,13 @@ public class TossPaymentClient {
     /**
      * Toss 결제 취소 API를 한 번 호출한다.
      */
-    private TossPaymentResponse requestCancel(String paymentKey, String cancelReason) {
+    private TossPaymentResponse requestCancel(String paymentKey, String cancelReason, Integer cancelAmount) {
         return webClient
             .post()
             .uri(baseUrl + CANCEL_PATH, paymentKey)
             .header(HttpHeaders.AUTHORIZATION, authorizationHeader())
             .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(new TossCancelRequest(cancelReason))
+            .bodyValue(new TossCancelRequest(cancelReason, cancelAmount))
             .retrieve()
             .onStatus(
                 HttpStatusCode::isError,
