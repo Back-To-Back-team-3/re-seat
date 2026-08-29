@@ -1,14 +1,14 @@
 ﻿# 로컬 Docker 환경에서 대기열 진입 부하 테스트용 사용자와 Access Token 데이터를 준비합니다.
 # 대상 경기의 기존 대기열과 queue-load-* 테스트 사용자를 초기화합니다.
 # 02-seed-demo-queue.ps1를 수정해서 작성했으므로 01-setup-demo-data.ps1를 미리 실행해야 합니다.
-# Windows: powershell.exe -ExecutionPolicy Bypass -File "./scripts/load-test/prepare-queue-entry-users.ps1" -GameId 117 -UserCount 500
-# macOS: pwsh -NoProfile -File "./scripts/load-test/prepare-queue-entry-users.ps1" -GameId 117 -UserCount 500
+# Windows: powershell.exe -ExecutionPolicy Bypass -File "./scripts/load-test/prepare-queue-entry-users.ps1" -GameId 117 -UserCount 1600
+# macOS: pwsh -NoProfile -File "./scripts/load-test/prepare-queue-entry-users.ps1" -GameId 117 -UserCount 1600
 
 param(
     [long]$GameId = 117,
 
     [ValidateRange(1, 2000)]
-    [int]$UserCount = 500,
+    [int]$UserCount = 1600,
 
     [ValidateNotNullOrEmpty()]
     [string]$BaseUrl = "http://localhost:8080",
@@ -18,6 +18,25 @@ param(
 )
 
 . "$PSScriptRoot/../demo-data/common.ps1"
+
+$parsedBaseUrl = $null
+
+if (-not [Uri]::TryCreate($BaseUrl, [UriKind]::Absolute, [ref]$parsedBaseUrl)) {
+    throw "BaseUrl은 올바른 절대 URI여야 합니다. 주소: $BaseUrl"
+}
+
+$isHttp = $parsedBaseUrl.Scheme -eq [Uri]::UriSchemeHttp
+$isHttps = $parsedBaseUrl.Scheme -eq [Uri]::UriSchemeHttps
+
+if (-not $isHttp -and -not $isHttps) {
+    throw "BaseUrl은 HTTP 또는 HTTPS 주소여야 합니다. 주소: $BaseUrl"
+}
+
+if ($isHttp -and -not $parsedBaseUrl.IsLoopback) {
+    throw "HTTP는 로컬 주소에서만 사용할 수 있습니다. 외부 주소는 HTTPS를 사용해주세요. 주소: $BaseUrl"
+}
+
+$BaseUrl = $BaseUrl.TrimEnd('/')
 
 # Docker Compose 서비스 실행 상태 및 백엔드 서버 상태를 확인합니다.
 Assert-DemoServices
@@ -88,6 +107,7 @@ $usersToCreate = 1..$UserCount | ForEach-Object {
 
 $progressInterval = [Math]::Max(1, [int][Math]::Ceiling($UserCount / 10.0))
 $signupCount = 0
+$signupUrl = "$BaseUrl/api/v1/auth/signup"
 foreach ($user in $usersToCreate) {
     $signupBody = @{
         email    = $user.email
@@ -99,7 +119,7 @@ foreach ($user in $usersToCreate) {
 
     try {
         Invoke-RestMethod `
-            -Uri "$($BaseUrl.TrimEnd('/'))/api/v1/auth/signup" `
+            -Uri $signupUrl `
             -Method Post `
             -ContentType "application/json" `
             -Body $signupBody | Out-Null
@@ -150,6 +170,7 @@ $users = $userRows | ForEach-Object {
 # 각 VU가 독립된 사용자로 요청할 수 있도록 사용자별 Access Token을 발급받습니다.
 $progressInterval = [Math]::Max(1, [int][Math]::Ceiling($UserCount / 10.0))
 $loginCount = 0
+$loginUrl = "$BaseUrl/api/v1/auth/login"
 $authenticatedUsers = @($users | ForEach-Object {
     $loginBody = @{
         email    = $_.email
@@ -158,7 +179,7 @@ $authenticatedUsers = @($users | ForEach-Object {
 
     try {
         $loginResponse = Invoke-RestMethod `
-            -Uri "$($BaseUrl.TrimEnd('/'))/api/v1/auth/login" `
+            -Uri $loginUrl `
             -Method Post `
             -ContentType "application/json" `
             -Body $loginBody
