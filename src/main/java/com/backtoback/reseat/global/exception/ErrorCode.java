@@ -107,7 +107,9 @@ public enum ErrorCode {
     PAYMENT_CALLBACK_MISMATCH(HttpStatus.BAD_REQUEST, "결제 콜백 정보가 결제 내역과 일치하지 않습니다."),
     PAYMENT_TIMEOUT(HttpStatus.REQUEST_TIMEOUT, "결제 제한 시간이 초과되었습니다."),
     PAYMENT_CANCEL_NOT_ALLOWED(HttpStatus.CONFLICT, "취소할 수 없는 결제 상태입니다."),
-    PAYMENT_CANCEL_FAILED(HttpStatus.BAD_GATEWAY, "결제 취소 처리에 실패했습니다."),
+    PAYMENT_PG_KEY_MISSING(HttpStatus.CONFLICT, "PG 결제 키가 없어 결제를 취소할 수 없습니다."),
+    PAYMENT_CANCEL_STATUS_UNKNOWN(HttpStatus.BAD_GATEWAY, "PG 결제 취소 상태를 확인할 수 없습니다."),
+    PAYMENT_CANCEL_RESPONSE_INVALID(HttpStatus.BAD_GATEWAY, "PG 결제 취소 응답이 올바르지 않습니다."),
 
     // 티켓 (tickets)
     TICKET_NOT_FOUND(HttpStatus.NOT_FOUND, "티켓을 찾을 수 없습니다."),
