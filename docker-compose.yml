@@ -126,7 +126,9 @@ services:
 
 volumes:
   mysql-data:
+    name: re-seat_mysql-data
   grafana-data:
+    name: re-seat_grafana-data
 
 networks:
   reseat-network:
