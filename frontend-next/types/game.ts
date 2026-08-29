@@ -39,6 +39,7 @@ export type QueueAdmitEvent = {
     admitted: true;
     queueToken: string;
     tokenExpiresAt: string;
+    tokenSeatBrowsingExpiresAt: string;
 };
 
 export type QueueCancelResponse = {
