@@ -39,7 +39,7 @@ spring:
             redirect-uri: http://localhost/login/oauth2/code/kakao
 
 jwt:
-  secret: ${TEST_JWT_SECRET:${JWT_SECRET}}
+  secret: ${TEST_JWT_SECRET:${JWT_SECRET:dGVzdC1kdW1teS1qd3Qtc2VjcmV0LWtleS1mb3ItdGVzdGluZy0xMjM0NTY3ODkw}}
 
 oauth2:
   redirect:
