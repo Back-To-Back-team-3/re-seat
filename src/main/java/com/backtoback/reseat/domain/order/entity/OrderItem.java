@@ -6,6 +6,8 @@ import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
@@ -62,6 +64,14 @@ public class OrderItem {
     @Column(nullable = false)
     private int price;
 
+    @Enumerated(EnumType.STRING)
+    @Column(
+        name = "status",
+        nullable = false,
+        length = 20
+    )
+    private OrderItemStatus status;
+
     @Column(
         name = "created_at",
         updatable = false,
@@ -82,7 +92,26 @@ public class OrderItem {
         orderItem.order = order;
         orderItem.gameSeat = gameSeat;
         orderItem.price = price;
+        orderItem.status = OrderItemStatus.ACTIVE;
         orderItem.createdAt = LocalDateTime.now();
         return orderItem;
+    }
+
+    /**
+     * 주문 항목을 취소 상태로 변경한다.
+     */
+    public void cancel() {
+
+        this.status = OrderItemStatus.CANCELED;
+    }
+
+    /**
+     * 주문 항목의 취소 여부를 확인한다.
+     *
+     * @return 취소 상태이면 true, 아니면 false
+     */
+    public boolean isCanceled() {
+
+        return this.status == OrderItemStatus.CANCELED;
     }
 }
