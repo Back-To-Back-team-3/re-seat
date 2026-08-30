@@ -12,10 +12,12 @@ import com.backtoback.reseat.domain.order.dto.response.OrderCancelResponse;
 import com.backtoback.reseat.domain.order.dto.response.OrderResponse;
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.entity.OrderItem;
+import com.backtoback.reseat.domain.order.entity.OrderItemStatus;
 import com.backtoback.reseat.domain.order.entity.OrderStatus;
 import com.backtoback.reseat.domain.order.exception.InvalidOrderStatusException;
 import com.backtoback.reseat.domain.order.exception.OrderAccessDeniedException;
 import com.backtoback.reseat.domain.order.exception.OrderExpiredException;
+import com.backtoback.reseat.domain.order.exception.OrderItemNotFoundException;
 import com.backtoback.reseat.domain.order.exception.OrderNotFoundException;
 import com.backtoback.reseat.domain.order.repository.OrderItemRepository;
 import com.backtoback.reseat.domain.order.repository.OrderRepository;
@@ -30,7 +32,9 @@ import com.backtoback.reseat.domain.reservation.exception.ReservationAlreadyOrde
 import com.backtoback.reseat.domain.reservation.exception.ReservationNotFoundException;
 import com.backtoback.reseat.domain.reservation.exception.ReservationSeatNotFoundException;
 import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
+import com.backtoback.reseat.domain.reservation.service.ReservationService;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
+import com.backtoback.reseat.domain.seatinventory.service.GameSeatStatusService;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
@@ -53,6 +57,8 @@ public class OrderService {
     private final OrderReservationRepository orderReservationRepository;
     private final ReservationSeatRepository reservationSeatRepository;
     private final UserRepository userRepository;
+    private final ReservationService reservationService;
+    private final GameSeatStatusService gameSeatStatusService;
 
     /**
      * 예약 선점 정보를 기반으로 주문을 생성한다.
@@ -198,6 +204,46 @@ public class OrderService {
     }
 
     /**
+     * 티켓 환불 완료 후 주문 항목과 후속 도메인의 상태를 변경한다.
+     * <p>대상 경기 좌석을 예매 가능 상태로 변경하고,
+     * 남은 주문 항목이 있으면 주문을 부분 취소하며, 없으면 주문과 예약을 취소한다.</p>
+     *
+     * @param orderItemId 환불 처리할 주문 항목 ID
+     */
+    @Transactional
+    public void refundOrder(Long orderItemId) {
+
+        OrderItem orderItem = findOrderItemById(orderItemId);
+        if (orderItem.isCanceled()) {
+           return;
+        }
+
+        // 환불 대상 주문 항목과 연결된 경기 좌석만 취소 · 해제한다.
+        orderItem.cancel();
+        GameSeat gameSeat = orderItem.getGameSeat();
+        gameSeatStatusService.releaseSeat(gameSeat.getId());
+
+        // 대상 취소 후 같은 주문에 취소되지 않은 주문 항목이 남아 있는지 확인한다.
+        Order order = orderItem.getOrder();
+        boolean hasRemainingOrderItems = orderItemRepository
+                .existsByOrder_IdAndStatus(
+                        order.getId(),
+                        OrderItemStatus.ACTIVE
+                );
+
+        // 취소되지 않은 주문 항목이 남아 있으면 주문을 부분 취소 상태로 변경한다.
+        if (hasRemainingOrderItems) {
+            order.partiallyCancel();
+            return;
+        }
+
+        // 마지막 주문 항목이면 주문과 결제 완료 예약을 함께 취소한다.
+        order.cancelAfterPayment();
+        Reservation reservation = order.getReservation();
+        reservationService.cancelConfirmed(reservation.getId());
+    }
+
+    /**
      * 결제 승인 성공 주문과 연결된 예약 · 좌석을 결제 완료 상태로 변경한다.
      * <p>CREATED 상태와 결제 기한을 조건으로 주문을 원자적으로 PAID 상태로 전이하고,
      * 연결된 Reservation과 GameSeat를 각각 CONFIRMED, SOLD 상태로 변경한다.</p>
@@ -321,6 +367,17 @@ public class OrderService {
      */
     private Order findOrderById(Long orderId) {
         return orderRepository.findById(orderId).orElseThrow(OrderNotFoundException::new);
+    }
+
+    /**
+     * 주문 항목 ID로 주문 항목을 조회한다.
+     *
+     * @param orderItemId 조회할 주문 항목 ID
+     * @return 조회된 주문 항목
+     */
+    private OrderItem findOrderItemById(Long orderItemId) {
+
+        return orderItemRepository.findById(orderItemId).orElseThrow(OrderItemNotFoundException::new);
     }
 
     /**
