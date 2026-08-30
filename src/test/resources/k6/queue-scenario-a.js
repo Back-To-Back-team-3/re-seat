@@ -58,6 +58,7 @@ const thresholds = {
     http_req_duration: ['p(99)<2000'],            // p99 지연 2초 이하
     queue_entry_server_error_rate: ['rate<0.01'], // 5xx 서버 에러율 1% 미만
     queue_entry_success_rate: ['rate>0.99'],      // 202 응답 성공률 99% 초과
+    dropped_iterations: ['count==0'],             // 모든 사용자의 대기열 진입 실행 완료
 };
 
 // 현재 부하 단계의 응답시간과 성공 · 서버 오류율을 집계한다.

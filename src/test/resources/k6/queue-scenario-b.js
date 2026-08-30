@@ -50,6 +50,14 @@ if (!Number.isFinite(pollIntervalSeconds) || pollIntervalSeconds <= 0) {
     throw new Error('POLL_INTERVAL_SECONDS는 0보다 큰 숫자여야 합니다.');
 }
 
+// 반복 대기 시간과 상태 조회 응답시간 및 종료 여유를 포함해 실행 제한 시간을 계산한다.
+const queueStatusRequestBudgetSeconds = 2;
+const scenarioShutdownBufferSeconds = 30;
+const scenarioMaxDurationSeconds = Math.ceil(
+    pollCount * (pollIntervalSeconds + queueStatusRequestBudgetSeconds) +
+    scenarioShutdownBufferSeconds
+);
+
 // Queue 진입 병목이 상태 조회 측정에 포함되지 않도록 준비 단계의 동시 요청수를 제한한다.
 const prepareBatchSize = parseInt(__ENV.PREPARE_BATCH_SIZE || '10', 10);
 const preparePollIntervalSeconds = parseFloat(__ENV.PREPARE_POLL_INTERVAL_SECONDS || '1');
@@ -88,6 +96,7 @@ const thresholds = {
     'http_req_duration{name:queue_status}': ['p(99)<2000'], // p99 지연 2초 이하
     queue_status_server_error_rate: ['rate<0.01'],          // 5xx 서버 에러율 1% 미만
     queue_status_success_rate: ['rate>0.99'],               // 200 응답 성공률 99% 초과
+    dropped_iterations: ['count==0'],                       // 모든 사용자의 상태 조회 반복 실행 완료
 };
 
 // 현재 부하 단계의 상태 조회 응답시간과 성공 · 서버 오류율을 집계한다.
@@ -103,7 +112,7 @@ export const options = {
             executor: 'per-vu-iterations',
             vus: stageUserCount,
             iterations: 1,
-            maxDuration: '60s',
+            maxDuration: `${scenarioMaxDurationSeconds}s`,
             tags: {
                 load_stage: `${stageUserCount}_users`,
             },
