@@ -202,7 +202,10 @@ public class ReservationService {
     @Transactional
     public void cancelConfirmed(Long reservationId) {
 
-        Reservation reservation = reservationRepository.findById(reservationId).orElseThrow(() -> new ReservationNotFoundException(reservationId));
+        Reservation reservation
+            = reservationRepository
+                .findById(reservationId)
+                .orElseThrow(() -> new ReservationNotFoundException(reservationId));
 
         if (reservation.isCanceled()) {
             return;

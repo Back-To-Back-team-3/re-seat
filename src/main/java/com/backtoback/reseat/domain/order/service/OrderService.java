@@ -215,7 +215,7 @@ public class OrderService {
 
         OrderItem orderItem = findOrderItemById(orderItemId);
         if (orderItem.isCanceled()) {
-           return;
+            return;
         }
 
         // 환불 대상 주문 항목과 연결된 경기 좌석만 취소 · 해제한다.
@@ -225,11 +225,8 @@ public class OrderService {
 
         // 대상 취소 후 같은 주문에 취소되지 않은 주문 항목이 남아 있는지 확인한다.
         Order order = orderItem.getOrder();
-        boolean hasRemainingOrderItems = orderItemRepository
-                .existsByOrder_IdAndStatus(
-                        order.getId(),
-                        OrderItemStatus.ACTIVE
-                );
+        boolean hasRemainingOrderItems
+            = orderItemRepository.existsByOrder_IdAndStatus(order.getId(), OrderItemStatus.ACTIVE);
 
         // 취소되지 않은 주문 항목이 남아 있으면 주문을 부분 취소 상태로 변경한다.
         if (hasRemainingOrderItems) {
