@@ -180,8 +180,8 @@ public class OrderService {
     }
 
     /**
-     * 결제 취소 시 주문, 예약과 좌석의 상태를 변경한다.
-     * <p>주문과 예약은 CANCELED, 주문에 포함된 모든 경기 좌석은 AVAILABLE 상태로 변경한다.</p>
+     * 결제 취소 시 주문, 주문 항목, 예약과 좌석의 상태를 변경한다.
+     * <p>주문, 주문 항목과 예약은 CANCELED, 주문에 포함된 모든 경기 좌석은 AVAILABLE 상태로 변경한다.</p>
      *
      * @param orderId 취소 처리할 주문 ID
      */
@@ -194,10 +194,12 @@ public class OrderService {
         order.cancelAfterPayment();
         order.getReservation().cancelConfirmed();
 
-        // 주문 항목의 경기 좌석을 다시 예매 가능 상태로 되돌린다.
+        // 모든 주문 항목을 취소하고 연결된 경기 좌석을 다시 예매 가능 상태로 되돌린다.
         List<OrderItem> orderItems = orderItemRepository.findByOrder_Id(orderId);
 
         orderItems.forEach(orderItem -> {
+            orderItem.cancel();
+
             GameSeat gameSeat = orderItem.getGameSeat();
             gameSeat.available();
         });
@@ -205,6 +207,7 @@ public class OrderService {
 
     /**
      * 티켓 환불 완료 후 주문 항목과 후속 도메인의 상태를 변경한다.
+     * <p>동일 주문의 환불 처리를 순서대로 진행하기 위해 주문을 비관적 락으로 조회한다.</p>
      * <p>대상 경기 좌석을 예매 가능 상태로 변경하고,
      * 남은 주문 항목이 있으면 주문을 부분 취소하며, 없으면 주문과 예약을 취소한다.</p>
      *
@@ -212,6 +215,12 @@ public class OrderService {
      */
     @Transactional
     public void refundOrder(Long orderItemId) {
+
+        // 동일 주문의 티켓 환불이 동시에 처리되지 않도록 주문 행을 비관적 락으로 조회한다.
+        Order order
+            = orderRepository
+                .findByOrderItemIdWithPessimisticWriteLock(orderItemId)
+                .orElseThrow(OrderItemNotFoundException::new);
 
         OrderItem orderItem = findOrderItemById(orderItemId);
         if (orderItem.isCanceled()) {
@@ -224,7 +233,6 @@ public class OrderService {
         gameSeatStatusService.releaseSeat(gameSeat.getId());
 
         // 대상 취소 후 같은 주문에 취소되지 않은 주문 항목이 남아 있는지 확인한다.
-        Order order = orderItem.getOrder();
         boolean hasRemainingOrderItems
             = orderItemRepository.existsByOrder_IdAndStatus(order.getId(), OrderItemStatus.ACTIVE);
 
