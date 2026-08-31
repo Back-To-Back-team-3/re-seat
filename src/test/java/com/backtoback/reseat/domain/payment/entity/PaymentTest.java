@@ -106,8 +106,11 @@ class PaymentTest {
 
             assertThat(payment.isReady()).isEqualTo(status == PaymentStatus.READY);
             assertThat(payment.isApproved()).isEqualTo(status == PaymentStatus.APPROVED);
+            assertThat(payment.isPartiallyCanceled()).isEqualTo(status == PaymentStatus.PARTIALLY_CANCELED);
             assertThat(payment.isFailed()).isEqualTo(status == PaymentStatus.FAILED);
             assertThat(payment.isCanceled()).isEqualTo(status == PaymentStatus.CANCELED);
+            assertThat(payment.isCancelable())
+                .isEqualTo(status == PaymentStatus.APPROVED || status == PaymentStatus.PARTIALLY_CANCELED);
         }
     }
 
@@ -150,6 +153,38 @@ class PaymentTest {
     }
 
     @Nested
+    @DisplayName("결제를 부분 취소한다")
+    class PartialCancel {
+
+        @Test
+        @DisplayName("승인된 결제를 부분 취소하면 PARTIALLY_CANCELED 상태가 된다.")
+        void marksPartiallyCanceled() {
+            Payment payment = payment(PaymentStatus.APPROVED);
+
+            payment.partiallyCancel();
+
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PARTIALLY_CANCELED);
+        }
+
+        @ParameterizedTest(name = "{0} 상태의 결제는 부분 취소할 수 없다")
+        @EnumSource(
+            value = PaymentStatus.class,
+            mode = EnumSource.Mode.EXCLUDE,
+            names = {
+                "APPROVED",
+                "PARTIALLY_CANCELED"
+            }
+        )
+        @DisplayName("취소 가능한 상태가 아닌 결제는 부분 취소 불가 예외가 발생한다.")
+        void rejectsUncancelablePayment(PaymentStatus status) {
+            Payment payment = payment(status);
+
+            assertThatThrownBy(payment::partiallyCancel).isInstanceOf(PaymentCancelNotAllowedException.class);
+            assertThat(payment.getStatus()).isEqualTo(status);
+        }
+    }
+
+    @Nested
     @DisplayName("결제를 취소한다")
     class Cancel {
 
@@ -164,13 +199,27 @@ class PaymentTest {
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.CANCELED);
         }
 
+        @Test
+        @DisplayName("부분 취소된 결제의 나머지를 취소하면 CANCELED 상태가 된다.")
+        void cancelsPartiallyCanceledPayment() {
+            // 앞선 티켓 취소로 일부 금액이 환불된 결제를 준비한다.
+            Payment payment = payment(PaymentStatus.PARTIALLY_CANCELED);
+
+            payment.cancel();
+
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.CANCELED);
+        }
+
         @ParameterizedTest(name = "{0} 상태의 결제는 취소할 수 없다")
         @EnumSource(
             value = PaymentStatus.class,
             mode = EnumSource.Mode.EXCLUDE,
-            names = "APPROVED"
+            names = {
+                "APPROVED",
+                "PARTIALLY_CANCELED"
+            }
         )
-        @DisplayName("APPROVED가 아닌 모든 결제는 취소 불가 예외가 발생한다.")
+        @DisplayName("취소 가능한 상태가 아닌 결제는 취소 불가 예외가 발생한다.")
         void rejectsUnapprovedPayment(PaymentStatus status) {
             Payment payment = payment(status);
 
