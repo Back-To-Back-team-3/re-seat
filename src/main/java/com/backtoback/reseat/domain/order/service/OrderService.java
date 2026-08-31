@@ -166,14 +166,14 @@ public class OrderService {
 
         // 주문 생성의 근거가 된 예약도 취소해 선점 상태 정합성을 맞춘다.
         order.cancel();
-        reservation.cancel();
+        reservationService.cancel(reservation.getId());
 
         List<OrderItem> orderItems = orderItemRepository.findByOrder_Id(orderId);
 
         // 주문 항목의 경기 좌석을 다시 예매 가능 상태로 되돌린다.
         orderItems.forEach(orderItem -> {
             GameSeat gameSeat = orderItem.getGameSeat();
-            gameSeat.available();
+            gameSeatStatusService.releaseSeat(gameSeat.getId());
         });
 
         return OrderCancelResponse.from(order);
@@ -190,9 +190,11 @@ public class OrderService {
 
         Order order = findOrderById(orderId);
 
+        Reservation reservation = order.getReservation();
+
         // 주문 · 예약을 취소 상태로 변경한다.
         order.cancelAfterPayment();
-        order.getReservation().cancelConfirmed();
+        reservationService.cancelConfirmed(reservation.getId());
 
         // 모든 주문 항목을 취소하고 연결된 경기 좌석을 다시 예매 가능 상태로 되돌린다.
         List<OrderItem> orderItems = orderItemRepository.findByOrder_Id(orderId);
@@ -201,7 +203,7 @@ public class OrderService {
             orderItem.cancel();
 
             GameSeat gameSeat = orderItem.getGameSeat();
-            gameSeat.available();
+            gameSeatStatusService.releaseSeat(gameSeat.getId());
         });
     }
 
