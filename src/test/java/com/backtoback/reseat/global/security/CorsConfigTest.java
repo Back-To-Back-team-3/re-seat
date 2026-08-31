@@ -55,7 +55,7 @@ class CorsConfigTest {
     }
 
     @Test
-    @DisplayName("허용되지 않은 Origin으로 Preflight 요청 시 Access-Control-Allow-Origin 헤더가 반환되지 않는다")
+    @DisplayName("허용되지 않은 Origin으로 Preflight 요청 시 403 Forbidden과 함께 Access-Control-Allow-Origin 헤더가 반환되지 않는다")
     void should_notAllowCors_when_disallowedOrigin() throws Exception {
         mockMvc
             .perform(
@@ -63,6 +63,7 @@ class CorsConfigTest {
                     .header(HttpHeaders.ORIGIN, "http://untrusted-domain.com")
                     .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET")
             )
+            .andExpect(status().isForbidden())
             .andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
     }
 }

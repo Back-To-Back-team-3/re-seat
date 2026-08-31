@@ -114,9 +114,7 @@ public class SecurityConfig {
     // 프론트엔드 연동대비 CORS 설정 (환경변수 주입)
     @Bean
     public CorsConfigurationSource corsConfigurationSource(
-        @Value(
-            "${cors.allowed-origins:http://localhost:3000,http://localhost:5173,https://re-seat.netlify.app}"
-        ) List<String> allowedOrigins
+        @Value("${cors.allowed-origins}") List<String> allowedOrigins
     ) {
         CorsConfiguration configuration = new CorsConfiguration();
 

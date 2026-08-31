@@ -18,7 +18,7 @@ public class OAuth2AuthenticationFailureHandler extends SimpleUrlAuthenticationF
     private final String redirectUrl;
 
     public OAuth2AuthenticationFailureHandler(
-        @Value("${oauth2.redirect.frontend-url:http://localhost:5173}") String redirectUrl
+        @Value("${oauth2.redirect.frontend-url}") String redirectUrl
     ) {
         this.redirectUrl = redirectUrl;
     }
