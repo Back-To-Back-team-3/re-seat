@@ -19,6 +19,7 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - KAFKA_BOOTSTRAP_SERVERS=kafka:19092
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:19092
+      - SEOUL_CITYDATA_API_KEY=${SEOUL_CITYDATA_API_KEY:-sample_key}
     depends_on:
       mysql-db:
         condition: service_healthy

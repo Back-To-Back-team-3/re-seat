@@ -87,6 +87,15 @@ spring:
             token-uri: https://kauth.kakao.com/oauth/token
             user-info-uri: https://kapi.kakao.com/v2/user/me
             user-name-attribute: id
+# ===================================================================
+# 4. 실시간 도시데이터 (서울시 OpenAPI & Redis Cache) 설정
+# ===================================================================
+citydata:
+  seoul:
+    base-url: ${SEOUL_CITYDATA_BASE_URL:?}
+    api-key: ${SEOUL_CITYDATA_API_KEY:?}
+  cache:
+    ttl-minutes: 10
 
 # -----------------------------------------------------------------
 # Actuator / Prometheus 메트릭 수집 엔드포인트 설정
@@ -191,3 +200,6 @@ spring:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: create-drop
+
+
+
