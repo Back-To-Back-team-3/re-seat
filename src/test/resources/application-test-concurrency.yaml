@@ -50,3 +50,6 @@ oauth2:
   redirect:
     frontend-url: http://localhost:5173
 
+cors:
+  allowed-origins: http://localhost:3000,http://localhost:5173,https://re-seat.netlify.app
+

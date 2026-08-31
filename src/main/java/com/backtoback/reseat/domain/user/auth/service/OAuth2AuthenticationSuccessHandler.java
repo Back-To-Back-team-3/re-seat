@@ -29,7 +29,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     public OAuth2AuthenticationSuccessHandler(
         JwtTokenProvider jwtTokenProvider,
         RefreshTokenRepository refreshTokenRepository,
-        @Value("${oauth2.redirect.frontend-url:http://localhost:5173}") String redirectUrl
+        @Value("${oauth2.redirect.frontend-url}") String redirectUrl
     ) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.refreshTokenRepository = refreshTokenRepository;
