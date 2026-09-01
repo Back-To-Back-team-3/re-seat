@@ -92,8 +92,8 @@ spring:
 # ===================================================================
 citydata:
   seoul:
-    base-url: ${SEOUL_CITYDATA_BASE_URL:?}
-    api-key: ${SEOUL_CITYDATA_API_KEY:?}
+    base-url: ${SEOUL_CITYDATA_BASE_URL:http://openapi.seoul.go.kr:8088}
+    api-key: ${SEOUL_CITYDATA_API_KEY:sample_key}
   cache:
     ttl-minutes: 10
 

@@ -72,6 +72,7 @@ jobs:
             KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
             REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
             GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+            SEOUL_CITYDATA_BASE_URL=http://openapi.seoul.go.kr:8088
             SEOUL_CITYDATA_API_KEY=${{ secrets.SEOUL_CITYDATA_API_KEY }}
             FRONTEND_REDIRECT_URL=${{ secrets.FRONTEND_REDIRECT_URL }}
             CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS }}
