@@ -32,7 +32,7 @@ public interface GameControllerDocs {
         summary = "경기 목록 조회",
         description = """
             예매 대상 경기 목록을 조회한다.
-
+            
             - 인증 없이 접근 가능한 공개 API
             - 홈팀, 원정팀, 날짜 범위, 예매 상태로 필터링 가능
             - 기본 페이지 크기: 20
@@ -139,9 +139,10 @@ public interface GameControllerDocs {
         summary = "경기 상세 조회",
         description = """
             특정 경기의 상세 정보를 조회한다.
-
+            
             - 인증 없이 접근 가능한 공개 API
-            - 목록 응답과 달리 stadium에 address, totalCapacity를 추가로 포함
+            - 목록 응답과 달리 stadium에 address, totalCapacity, latitude, longitude를 추가로 포함
+            - 좌표가 등록되지 않은 구장은 latitude/longitude가 null로 내려간다
             - 좌석 재고와 가격 정보는 포함하지 않음
             """,
         security = {}
@@ -165,9 +166,11 @@ public interface GameControllerDocs {
                                     "awayTeam": { "teamId": 2, "name": "한화" },
                                     "stadium": {
                                         "stadiumId": 1,
-                                        "name": "잠실야구장",
-                                        "address": "서울특별시 송파구 올림픽로 25",
-                                        "totalCapacity": 25000
+                                        "name": "서울종합운동장 야구장",
+                                        "address": "서울 송파구",
+                                        "totalCapacity": 23750,
+                                        "latitude": 37.5121631,
+                                        "longitude": 127.0719372
                                     },
                                     "gameAt": "2026-07-11 18:30:00",
                                     "bookingOpenAt": "2026-07-04 14:00:00",
