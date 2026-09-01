@@ -17,7 +17,7 @@ class PaymentRecoveryTaskTest {
     private static final LocalDateTime BASE_TIME = LocalDateTime.of(2026, 7, 25, 12, 0);
 
     private PaymentRecoveryTask pendingTask() {
-        return new PaymentRecoveryTask(mock(Payment.class));
+        return PaymentRecoveryTask.create(mock(Payment.class), PaymentRecoveryType.CONFIRM_UNKNOWN);
     }
 
     private PaymentRecoveryTask taskInStatus(PaymentRecoveryStatus status) {
@@ -52,8 +52,18 @@ class PaymentRecoveryTaskTest {
         void startsAsPending() {
             PaymentRecoveryTask task = pendingTask();
 
+            assertThat(task.getType()).isEqualTo(PaymentRecoveryType.CONFIRM_UNKNOWN);
             assertThat(task.getStatus()).isEqualTo(PaymentRecoveryStatus.PENDING);
             assertThat(task.getAttemptCount()).isZero();
+        }
+
+        @Test
+        @DisplayName("요청한 복구 유형으로 작업을 생성한다.")
+        void createsRequestedType() {
+            PaymentRecoveryTask task
+                = PaymentRecoveryTask.create(mock(Payment.class), PaymentRecoveryType.PARTIAL_CANCEL);
+
+            assertThat(task.getType()).isEqualTo(PaymentRecoveryType.PARTIAL_CANCEL);
         }
     }
 
