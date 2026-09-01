@@ -112,11 +112,20 @@ management:
     tags:
       application: re-seat
 
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,https://re-seat.netlify.app}
+
 jwt:
   secret: ${JWT_SECRET}
 
+oauth2:
+  redirect:
+    frontend-url: ${FRONTEND_REDIRECT_URL:http://localhost:5173}
+
 portone:
-  api-secret: "MOCK_PORTONE_SECRET_TOKEN"
+  base-url: ${PORTONE_BASE_URL:https://api.iamport.kr}
+  api-key: ${PORTONE_API_KEY:}
+  api-secret: ${PORTONE_API_SECRET:}
 
 toss:
   client-key: ${TOSS_CLIENT_KEY:test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq}
@@ -173,6 +182,13 @@ spring:
 
 jwt:
   secret: ${JWT_SECRET}
+
+oauth2:
+  redirect:
+    frontend-url: ${FRONTEND_REDIRECT_URL}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:https://re-seat.netlify.app}
 
 # prod 프로필에서도 Actuator 엔드포인트가 유지되도록 재선언
 management:

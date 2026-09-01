@@ -46,8 +46,7 @@ export default function TicketsPage() {
                         void tickets.refetch();
                     }}
                     reloading={tickets.isFetching}
-                    source={tickets.data?.source ?? "api"}
-                    tickets={tickets.data?.tickets ?? []}
+                    tickets={tickets.data ?? []}
                 />
             )}
         </main>

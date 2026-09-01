@@ -1,6 +1,6 @@
 import {apiRequest, unwrap} from "@/api/client";
 import type {ApiResponse, PageResponse} from "@/types/api";
-import type {GameSummary} from "@/types/game";
+import type {GameDetail, GameSummary} from "@/types/game";
 
 const GAME_STATUSES: GameSummary["bookingStatus"][] = [
     "SCHEDULED",
@@ -61,7 +61,7 @@ export async function getGames() {
 }
 
 export async function getGame(gameId: number) {
-    const response = await apiRequest<ApiResponse<GameSummary>>(
+    const response = await apiRequest<ApiResponse<GameDetail>>(
         `/games/${gameId}`,
     );
 

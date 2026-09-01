@@ -3,8 +3,11 @@ import {describe, expect, it} from "vitest";
 import {formatGameDate, parseApiDateTime} from "@/lib/date";
 
 describe("parseApiDateTime", () => {
-    it("오프셋 없는 백엔드 일시를 KST로 해석한다", () => {
-        expect(parseApiDateTime("2026-07-11 18:30:00")?.toISOString()).toBe(
+    it.each([
+        "2026-07-11 18:30:00",
+        "2026-07-11T18:30:00",
+    ])("오프셋 없는 백엔드 일시 %s를 KST로 해석한다", (value) => {
+        expect(parseApiDateTime(value)?.toISOString()).toBe(
             "2026-07-11T09:30:00.000Z",
         );
     });

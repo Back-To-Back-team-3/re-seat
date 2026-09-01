@@ -92,6 +92,7 @@ public enum ErrorCode {
 
     // 주문 (orders)
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "주문을 찾을 수 없습니다."),
+    ORDER_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "주문 항목을 찾을 수 없습니다."),
     INVALID_ORDER_STATUS(HttpStatus.CONFLICT, "결제 가능한 주문 상태가 아닙니다."),
     ORDER_EXPIRED(HttpStatus.GONE, "결제 제한 시각이 경과했습니다."),
 
