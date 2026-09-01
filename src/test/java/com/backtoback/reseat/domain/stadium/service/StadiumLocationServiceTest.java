@@ -3,6 +3,7 @@ package com.backtoback.reseat.domain.stadium.service;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
@@ -25,15 +26,20 @@ class StadiumLocationServiceTest {
     private StadiumLocationService stadiumLocationService;
 
     @Test
-    @DisplayName("존재하는 구장 ID로 조회하면 좌표를 반환한다")
+    @DisplayName("존재하는 구장 ID로 조회하면 이름과 좌표를 함께 반환한다")
     void getLocation_returnsCoordinates_whenStadiumExists() {
         stadiumLocationService = new StadiumLocationService(stadiumRepository);
         Stadium stadium = Stadium.of("서울종합운동장 야구장", "서울 송파구", 23750);
+        BigDecimal latitude = new BigDecimal("37.5121676");
+        BigDecimal longitude = new BigDecimal("127.0719084");
+        stadium.registerCoordinates(latitude, longitude);
         when(stadiumRepository.findById(1L)).thenReturn(Optional.of(stadium));
 
         StadiumLocationResponse response = stadiumLocationService.getLocation(1L);
 
         assertThat(response.name()).isEqualTo("서울종합운동장 야구장");
+        assertThat(response.latitude()).isEqualByComparingTo(latitude);
+        assertThat(response.longitude()).isEqualByComparingTo(longitude);
     }
 
     @Test
