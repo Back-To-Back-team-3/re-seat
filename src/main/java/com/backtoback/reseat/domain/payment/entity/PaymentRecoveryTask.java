@@ -15,7 +15,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
@@ -27,8 +27,11 @@ import lombok.NoArgsConstructor;
     name = "payment_recovery_tasks",
     uniqueConstraints = {
         @UniqueConstraint(
-            name = "uk_payment_recovery_tasks_payment",
-            columnNames = "payment_id"
+            name = "uk_payment_recovery_tasks_payment_type",
+            columnNames = {
+                "payment_id",
+                "type"
+            }
         )
     },
     indexes = {
@@ -46,7 +49,7 @@ public class PaymentRecoveryTask extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(
+    @ManyToOne(
         fetch = FetchType.LAZY,
         optional = false
     )
@@ -56,6 +59,14 @@ public class PaymentRecoveryTask extends BaseEntity {
         foreignKey = @ForeignKey(name = "fk_payment_recovery_tasks_payment")
     )
     private Payment payment;
+
+    /** 복구 작업이 처리할 PG 연동 상황. */
+    @Enumerated(EnumType.STRING)
+    @Column(
+        nullable = false,
+        length = 40
+    )
+    private PaymentRecoveryType type;
 
     @Enumerated(EnumType.STRING)
     @Column(
@@ -85,10 +96,18 @@ public class PaymentRecoveryTask extends BaseEntity {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
-    public PaymentRecoveryTask(Payment payment) {
-        this.payment = payment;
-        this.status = PaymentRecoveryStatus.PENDING;
-        this.attemptCount = 0;
+    /** 결제와 복구 유형을 기준으로 대기 중인 작업을 생성한다. */
+    public static PaymentRecoveryTask create(Payment payment, PaymentRecoveryType type) {
+        if (payment == null || type == null) {
+            throw new IllegalArgumentException("결제와 복구 유형은 필수입니다.");
+        }
+
+        PaymentRecoveryTask task = new PaymentRecoveryTask();
+        task.payment = payment;
+        task.type = type;
+        task.status = PaymentRecoveryStatus.PENDING;
+        task.attemptCount = 0;
+        return task;
     }
 
     /**
