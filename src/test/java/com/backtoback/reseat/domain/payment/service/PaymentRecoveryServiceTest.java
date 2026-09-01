@@ -4,13 +4,14 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -21,6 +22,7 @@ import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryType;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
 import com.backtoback.reseat.domain.payment.repository.PaymentRecoveryTaskRepository;
+import com.backtoback.reseat.domain.payment.schedule.ConfirmUnknownRecoveryHandler;
 import com.backtoback.reseat.domain.payment.schedule.PaymentRecoveryService;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,8 +40,16 @@ class PaymentRecoveryServiceTest {
     @Mock
     private TossPaymentClient tossPaymentClient;
 
-    @InjectMocks
     private PaymentRecoveryService paymentRecoveryService;
+
+    @BeforeEach
+    void setUp() {
+        paymentRecoveryService
+            = new PaymentRecoveryService(
+                paymentRecoveryTaskRepository,
+                List.of(new ConfirmUnknownRecoveryHandler(tossPaymentClient))
+            );
+    }
 
     private PaymentRecoveryTask pendingTask() {
         Payment payment = mock(Payment.class);
@@ -89,6 +99,20 @@ class PaymentRecoveryServiceTest {
 
             assertThat(task.getStatus()).isEqualTo(PaymentRecoveryStatus.RETRY);
             assertThat(task.getAttemptCount()).isEqualTo(1);
+            verifyNoInteractions(tossPaymentClient);
+        }
+
+        @Test
+        @DisplayName("등록된 처리기가 없는 복구 유형은 최종 실패 처리한다.")
+        void failsTaskWhenHandlerIsMissing() {
+            PaymentRecoveryTask task
+                = PaymentRecoveryTask.create(mock(Payment.class), PaymentRecoveryType.PARTIAL_CANCEL);
+            when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID)).thenReturn(Optional.of(task));
+
+            paymentRecoveryService.recover(TASK_ID, NOW);
+
+            assertThat(task.getStatus()).isEqualTo(PaymentRecoveryStatus.FAILED);
+            assertThat(task.getLastError()).isEqualTo("지원하지 않는 결제 복구 유형입니다: PARTIAL_CANCEL");
             verifyNoInteractions(tossPaymentClient);
         }
 
