@@ -52,6 +52,7 @@ class PaymentRecoveryTaskTest {
         void startsAsPending() {
             PaymentRecoveryTask task = pendingTask();
 
+            assertThat(task.getType()).isEqualTo(PaymentRecoveryType.CONFIRM_UNKNOWN);
             assertThat(task.getStatus()).isEqualTo(PaymentRecoveryStatus.PENDING);
             assertThat(task.getAttemptCount()).isZero();
         }

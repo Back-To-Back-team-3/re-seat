@@ -27,8 +27,11 @@ import lombok.NoArgsConstructor;
     name = "payment_recovery_tasks",
     uniqueConstraints = {
         @UniqueConstraint(
-            name = "uk_payment_recovery_tasks_payment",
-            columnNames = "payment_id"
+            name = "uk_payment_recovery_tasks_payment_type",
+            columnNames = {
+                "payment_id",
+                "type"
+            }
         )
     },
     indexes = {
@@ -56,6 +59,14 @@ public class PaymentRecoveryTask extends BaseEntity {
         foreignKey = @ForeignKey(name = "fk_payment_recovery_tasks_payment")
     )
     private Payment payment;
+
+    /** 복구 작업이 처리할 PG 연동 상황. */
+    @Enumerated(EnumType.STRING)
+    @Column(
+        nullable = false,
+        length = 40
+    )
+    private PaymentRecoveryType type;
 
     @Enumerated(EnumType.STRING)
     @Column(
@@ -87,6 +98,7 @@ public class PaymentRecoveryTask extends BaseEntity {
 
     public PaymentRecoveryTask(Payment payment) {
         this.payment = payment;
+        this.type = PaymentRecoveryType.CONFIRM_UNKNOWN;
         this.status = PaymentRecoveryStatus.PENDING;
         this.attemptCount = 0;
     }
