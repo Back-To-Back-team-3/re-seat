@@ -1,4 +1,4 @@
--- V26__stadiums_add_coordinates.sql
+-- V28__stadiums_add_coordinates.sql
 -- 구장 좌표 컬럼 추가 (T3-14)
 
 ALTER TABLE stadiums
