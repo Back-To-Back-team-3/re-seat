@@ -70,7 +70,7 @@ public class TicketService {
     public Page<TicketListResponse> getMyTickets(Long userId, TicketStatus status, Pageable pageable) {
         Page<Ticket> tickets
             = (status == null) ? ticketRepository.findByUserId(userId, pageable)
-            : ticketRepository.findByUserIdAndStatus(userId, status, pageable);
+                : ticketRepository.findByUserIdAndStatus(userId, status, pageable);
 
         return tickets.map(TicketListResponse::from);
     }
@@ -93,7 +93,6 @@ public class TicketService {
      * 결제가 성공하면 티켓을 REFUNDED로 확정
      * 이미 병합된 {@link OrderService#refundOrder(Long)}로 주문 항목·좌석·주문 상태를 반영
      * 결제 호출이 실패하면 티켓을 REFUND_FAILED로 되돌린다(이 경우 좌석·주문은 변경하지 않는다).</p>
-     *
      * <p>결제 패키지({@code PaymentService#cancelPayment})가 아직 "주문 전체" 취소만 지원하는 동안
      * 같은 주문에 다른 ISSUED 티켓이 남아 있어도 함께 전액 환불된다(기존 동작과 동일).
      * 결제 패키지가 티켓 단위 부분 취소(ticketId, cancelAmount)를 지원하도록 바뀌면
@@ -123,7 +122,8 @@ public class TicketService {
 
         PaymentCancelResponse paymentResponse;
         try {
-            paymentResponse = paymentService.cancelPayment(userId, payment.getId(), new PaymentCancelRequest("사용자 티켓 취소"));
+            paymentResponse
+                = paymentService.cancelPayment(userId, payment.getId(), new PaymentCancelRequest("사용자 티켓 취소"));
         } catch (RuntimeException e) {
             ticket.failRefund();
             throw e;
@@ -168,7 +168,8 @@ public class TicketService {
     /**
      * REFUND_FAILED 상태의 티켓 취소를 재시도한다.
      * <p>새 이력을 만들지 않고 같은 티켓을 다시 REFUND_PENDING으로 되돌린 뒤 결제를 다시 호출한다.
-     * REFUND_FAILED가 아닌 티켓에 호출하면 {@link com.backtoback.reseat.domain.ticket.exception.InvalidTicketStateException}이 발생한다.</p>
+     * REFUND_FAILED가 아닌 티켓에 호출하면 {@link com.backtoback.reseat.domain.ticket.exception.InvalidTicketStateException}이
+     * 발생한다.</p>
      *
      * @param userId 현재 사용자 ID
      * @param ticketId 재시도할 티켓 ID

@@ -119,8 +119,7 @@ public enum ErrorCode {
     TICKET_CANCEL_DEADLINE_PASSED(HttpStatus.CONFLICT, "취소 가능 시점이 경과했습니다."),
     TICKET_REFUND_IN_PROGRESS(HttpStatus.CONFLICT, "환불 처리가 진행 중입니다."),
     TICKET_ALREADY_REFUNDED(HttpStatus.CONFLICT, "이미 환불 완료된 티켓입니다."),
-    TICKET_REFUND_FAILED_RETRY_REQUIRED(HttpStatus.CONFLICT, "환불 처리에 실패한 티켓입니다. "
-        + "재시도 또는 고객센터 문의가 필요합니다.");
+    TICKET_REFUND_FAILED_RETRY_REQUIRED(HttpStatus.CONFLICT, "환불 처리에 실패한 티켓입니다. " + "재시도 또는 고객센터 문의가 필요합니다.");
 
     private final HttpStatus httpStatus;
     private final String message;
