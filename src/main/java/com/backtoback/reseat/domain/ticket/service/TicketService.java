@@ -35,6 +35,8 @@ import com.backtoback.reseat.domain.ticket.exception.TicketCancelDeadlinePassedE
 import com.backtoback.reseat.domain.ticket.exception.TicketNotFoundException;
 import com.backtoback.reseat.domain.ticket.repository.TicketRepository;
 
+import jakarta.persistence.EntityManager;
+
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -47,6 +49,10 @@ public class TicketService {
     private final PaymentService paymentService;
     // Order 패키지가 이미 병합한 티켓 단위 부분 환불 엔트리 포인트(OrderService#refundOrder)를 그대로 재사용한다.
     private final OrderService orderService;
+    // REFUND_PENDING/REFUND_FAILED 기록을 이 메서드의 트랜잭션과 분리해서 즉시 커밋하기 위한 지원 빈.
+    private final TicketRefundTransactionService ticketRefundTransactionService;
+    // beginRefund()가 별도 트랜잭션에서 커밋한 변경을 현재 영속성 컨텍스트에 반영(refresh)하기 위해 필요하다.
+    private final EntityManager entityManager;
 
     @Transactional
     public List<Ticket> issue(Order order) {
@@ -115,7 +121,12 @@ public class TicketService {
             throw new TicketCancelDeadlinePassedException();
         }
 
-        ticket.requestRefund(TicketCancelReason.USER_REFUND, null);
+        // PG 호출 전 REFUND_PENDING 기록을 별도(REQUIRES_NEW) 트랜잭션으로 즉시 커밋한다.
+        // 이 메서드의 트랜잭션이 나중에 롤백되더라도 이 기록은 살아남아야 한다.
+        ticketRefundTransactionService.beginRefund(ticketId, TicketCancelReason.USER_REFUND, null);
+        // 방금 별도 트랜잭션에서 커밋된 내용을 현재 영속성 컨텍스트에 반영한다.
+        // (1차 캐시가 아직 이전 값을 들고 있으므로 강제로 다시 읽어온다.)
+        entityManager.refresh(ticket);
 
         Order order = ticket.getOrderItem().getOrder();
         Payment payment = getApprovedPaymentByOrderId(order.getId());
@@ -125,7 +136,9 @@ public class TicketService {
             paymentResponse
                 = paymentService.cancelPayment(userId, payment.getId(), new PaymentCancelRequest("사용자 티켓 취소"));
         } catch (RuntimeException e) {
-            ticket.failRefund();
+            // 이 메서드는 예외를 다시 던져 자신의 트랜잭션을 롤백시키므로,
+            // REFUND_FAILED 기록은 별도 트랜잭션(REQUIRES_NEW)으로 미리 커밋해둬야 살아남는다.
+            ticketRefundTransactionService.recordFailure(ticketId);
             throw e;
         }
 
@@ -138,6 +151,8 @@ public class TicketService {
 
     /**
      * 관리자 강제 취소 전용. 소유자·환불 기한 검증 없이 지정한 티켓을 강제로 환불 파이프라인에 태운다.
+     * <p>REFUND_PENDING/REFUND_FAILED 기록을 별도 트랜잭션으로 분리하는 이유는
+     * {@link #cancelTicket(Long, Long)} 문서를 참고한다.</p>
      *
      * @param ticketId 강제 취소할 티켓 ID
      * @param detail 관리자가 입력한 취소 상세 사유
@@ -147,7 +162,8 @@ public class TicketService {
     public AdminTicketCancelResponse cancelTicketByAdmin(Long ticketId, String detail) {
         Ticket ticket = ticketRepository.findById(ticketId).orElseThrow(TicketNotFoundException::new);
 
-        ticket.requestRefund(TicketCancelReason.ADMIN_FORCE_CANCEL, detail);
+        ticketRefundTransactionService.beginRefund(ticketId, TicketCancelReason.ADMIN_FORCE_CANCEL, detail);
+        entityManager.refresh(ticket);
 
         Long orderId = ticket.getOrderItem().getOrder().getId();
         String reason = (detail != null && !detail.isBlank()) ? detail : "관리자 직권 취소";
@@ -155,7 +171,7 @@ public class TicketService {
         try {
             paymentService.cancelPaymentByAdmin(orderId, new PaymentCancelRequest(reason));
         } catch (RuntimeException e) {
-            ticket.failRefund();
+            ticketRefundTransactionService.recordFailure(ticketId);
             throw e;
         }
 

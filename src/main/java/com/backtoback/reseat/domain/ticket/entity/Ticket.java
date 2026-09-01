@@ -249,7 +249,8 @@ public class Ticket extends BaseEntity {
     /**
      * 환불(취소) 요청을 접수한다. ISSUED -> REFUND_PENDING.
      * <p>PG 호출 전에 먼저 호출해 "환불 진행 중" 상태를 기록한다.
-     * cancelReason이 ADMIN_FORCE_CANCEL이면 관리자 강제 취소 집행 시각(canceledAt)도 함께 기록한다.</p>
+     * 관리자 강제 취소 집행 시각(canceledAt)은 여기서 기록하지 않고,
+     * 환불이 실제로 확정되는 {@link #completeRefund()}에서만 기록한다.</p>
      *
      * @param cancelReason 취소 사유 유형
      * @param cancelDetail 취소 상세 사유 (선택)
@@ -264,9 +265,6 @@ public class Ticket extends BaseEntity {
         this.cancelReason = cancelReason;
         this.cancelDetail = cancelDetail;
         this.refundRequestedAt = LocalDateTime.now();
-        if (cancelReason == TicketCancelReason.ADMIN_FORCE_CANCEL) {
-            this.canceledAt = LocalDateTime.now();
-        }
     }
 
     /**
@@ -278,6 +276,10 @@ public class Ticket extends BaseEntity {
         }
         this.status = TicketStatus.REFUNDED;
         this.refundedAt = LocalDateTime.now();
+        // 관리자 강제 취소 집행 시각은 환불이 실제로 확정된 이 시점에만 기록한다.
+        if (this.cancelReason == TicketCancelReason.ADMIN_FORCE_CANCEL) {
+            this.canceledAt = LocalDateTime.now();
+        }
     }
 
     /**
