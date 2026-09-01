@@ -207,10 +207,17 @@ class PaymentServiceValidatorTest {
     @DisplayName("결제 취소 가능 여부를 검증한다")
     class ValidateCancelable {
 
-        @Test
-        @DisplayName("PG 결제 키가 있는 APPROVED 결제는 취소할 수 있다.")
-        void acceptsApprovedPaymentWithPgKey() {
-            Payment payment = payment(PaymentStatus.APPROVED, PG_PAYMENT_KEY);
+        @ParameterizedTest(name = "{0} 상태의 결제는 취소할 수 있다")
+        @EnumSource(
+            value = PaymentStatus.class,
+            names = {
+                "APPROVED",
+                "PARTIALLY_CANCELED"
+            }
+        )
+        @DisplayName("PG 결제 키가 있는 승인 및 부분 취소 결제는 취소할 수 있다.")
+        void acceptsCancelablePaymentWithPgKey(PaymentStatus status) {
+            Payment payment = payment(status, PG_PAYMENT_KEY);
 
             assertThatCode(() -> validator.validateCancelable(payment)).doesNotThrowAnyException();
         }
@@ -219,9 +226,12 @@ class PaymentServiceValidatorTest {
         @EnumSource(
             value = PaymentStatus.class,
             mode = EnumSource.Mode.EXCLUDE,
-            names = "APPROVED"
+            names = {
+                "APPROVED",
+                "PARTIALLY_CANCELED"
+            }
         )
-        @DisplayName("APPROVED가 아닌 모든 결제는 취소할 수 없다.")
+        @DisplayName("승인 또는 부분 취소 상태가 아닌 결제는 취소할 수 없다.")
         void rejectsUnapprovedPayment(PaymentStatus status) {
             Payment payment = payment(status, PG_PAYMENT_KEY);
 
@@ -229,10 +239,17 @@ class PaymentServiceValidatorTest {
                 .isInstanceOf(PaymentCancelNotAllowedException.class);
         }
 
-        @Test
-        @DisplayName("PG 결제 키가 없는 APPROVED 결제는 취소할 수 없다.")
-        void rejectsPaymentWithoutPgKey() {
-            Payment payment = payment(PaymentStatus.APPROVED, null);
+        @ParameterizedTest(name = "{0} 상태라도 PG 결제 키가 없으면 취소할 수 없다")
+        @EnumSource(
+            value = PaymentStatus.class,
+            names = {
+                "APPROVED",
+                "PARTIALLY_CANCELED"
+            }
+        )
+        @DisplayName("취소 가능한 상태라도 PG 결제 키가 없으면 취소할 수 없다.")
+        void rejectsPaymentWithoutPgKey(PaymentStatus status) {
+            Payment payment = payment(status, null);
 
             assertThatThrownBy(() -> validator.validateCancelable(payment))
                 .isInstanceOf(PaymentPgKeyMissingException.class)

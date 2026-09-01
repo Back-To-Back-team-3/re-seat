@@ -73,26 +73,52 @@ public class TossPaymentClient {
      * 취소 응답을 받지 못하면 결제를 재조회해 Toss의 취소 완료 상태를 반환한다.
      */
     public TossPaymentResponse cancel(String paymentKey, String cancelReason) {
-        return cancel(paymentKey, cancelReason, null);
+        return cancelWithoutIdempotencyKey(paymentKey, cancelReason, null);
     }
 
     /** 취소 금액을 지정해 Toss에 부분 취소를 요청한다. */
     public TossPaymentResponse cancel(String paymentKey, String cancelReason, Integer cancelAmount) {
+        return cancelWithoutIdempotencyKey(paymentKey, cancelReason, cancelAmount);
+    }
+
+    /** 기존 취소 요청은 응답이 불명확하면 결제 단건 조회로 상태를 확인한다. */
+    private TossPaymentResponse cancelWithoutIdempotencyKey(
+        String paymentKey,
+        String cancelReason,
+        Integer cancelAmount
+    ) {
         try {
-            return requestCancel(paymentKey, cancelReason, cancelAmount);
+            return requestCancel(paymentKey, cancelReason, cancelAmount, null);
         } catch (RuntimeException cancelException) {
             return requeryAfterFailure(paymentKey, cancelException, "취소");
         }
     }
 
+    /** PG 멱등키를 사용해 Toss에 부분 취소를 요청한다. */
+    public TossPaymentResponse cancel(
+        String paymentKey,
+        String cancelReason,
+        Integer cancelAmount,
+        String idempotencyKey
+    ) {
+        return requestCancel(paymentKey, cancelReason, cancelAmount, idempotencyKey);
+    }
+
     /**
      * Toss 결제 취소 API를 한 번 호출한다.
      */
-    private TossPaymentResponse requestCancel(String paymentKey, String cancelReason, Integer cancelAmount) {
-        return webClient
-            .post()
-            .uri(baseUrl + CANCEL_PATH, paymentKey)
-            .header(HttpHeaders.AUTHORIZATION, authorizationHeader())
+    private TossPaymentResponse requestCancel(
+        String paymentKey,
+        String cancelReason,
+        Integer cancelAmount,
+        String idempotencyKey
+    ) {
+        return webClient.post().uri(baseUrl + CANCEL_PATH, paymentKey).headers(headers -> {
+            headers.set(HttpHeaders.AUTHORIZATION, authorizationHeader());
+            if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+                headers.set("Idempotency-Key", idempotencyKey);
+            }
+        })
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue(new TossCancelRequest(cancelReason, cancelAmount))
             .retrieve()

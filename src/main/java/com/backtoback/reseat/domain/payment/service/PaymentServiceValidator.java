@@ -76,7 +76,7 @@ public class PaymentServiceValidator {
      * 결제가 취소 가능한 상태이고 PG 결제 키를 가지고 있는지 검증한다.
      */
     public void validateCancelable(Payment payment) {
-        if (!payment.isApproved()) {
+        if (!payment.isCancelable()) {
             throw new PaymentCancelNotAllowedException();
         }
 
