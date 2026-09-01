@@ -29,33 +29,32 @@ public class PaymentRecoveryService {
         List<PaymentRecoveryHandler> handlers
     ) {
         this.paymentRecoveryTaskRepository = paymentRecoveryTaskRepository;
+        // 복구 유형별 Handler를 미리 등록해 실행 시 switch 없이 알맞은 구현체를 바로 조회한다.
         this.handlers = new EnumMap<>(PaymentRecoveryType.class);
-        // 복구 유형을 키로 사용하는 전용 Map에 각 처리기를 등록해 handlers.get(PaymentRecoveryType.getType())으로 알맞은 구현체를 조회한다.
         handlers.forEach(handler -> this.handlers.put(handler.getType(), handler));
     }
 
-    /**
-     * 실행 가능한 승인 복구 작업을 선점해 Toss 상태 확인과 필요 시 전액 취소를 수행한다.
-     */
+    /** 실행 가능한 결제 복구 작업을 선점하고 유형별 Handler의 결과에 따라 상태를 전이한다. */
     @Transactional
     public void recover(Long taskId, LocalDateTime now) {
         PaymentRecoveryTask task = paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(taskId).orElse(null);
         if (task == null) {
-            // 복구 작업이 없으므로 종료
+            // 스케줄러 조회 이후 작업이 삭제됐다면 별도 처리 없이 종료한다.
             return;
         }
 
-        // 복구 작업 Status가 Pending인 경우
+        // 최초 실행을 기다리는 작업은 즉시 처리할 수 있다.
         boolean pending = task.getStatus() == PaymentRecoveryStatus.PENDING;
-        // 복구 작업 Status가 Retry인 경우 && 다음 재시도 시간을 넘어간 경우
+        // 재시도 작업은 예약 시각이 지난 경우에만 처리한다.
         boolean retryDue
             = task.getStatus() == PaymentRecoveryStatus.RETRY && task.getNextRetryAt() != null
                 && !task.getNextRetryAt().isAfter(now);
         if (!pending && !retryDue) {
-            // 둘다 해당하지 않으면 종료
+            // 현재 실행할 수 있는 상태가 아니면 종료한다.
             return;
         }
 
+        // 트랜잭션 종료 전까지 비관적 락을 유지하므로 같은 작업은 동시에 실행되지 않는다.
         task.startProcessing(now);
         PaymentRecoveryHandler handler = handlers.get(task.getType());
         if (handler == null) {

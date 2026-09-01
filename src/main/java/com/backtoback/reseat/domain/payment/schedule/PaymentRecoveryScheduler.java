@@ -30,6 +30,7 @@ public class PaymentRecoveryScheduler {
     )
     public void recoverPaymentTasks() {
         LocalDateTime now = LocalDateTime.now();
+        // 최초 실행을 기다리는 작업과 재시도 시각이 지난 작업을 조회한다.
         List<Long> taskIds
             = paymentRecoveryTaskRepository
                 .findRecoverableTaskIds(
