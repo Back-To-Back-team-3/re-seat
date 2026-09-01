@@ -32,7 +32,7 @@ public interface GameControllerDocs {
         summary = "경기 목록 조회",
         description = """
             예매 대상 경기 목록을 조회한다.
-            
+
             - 인증 없이 접근 가능한 공개 API
             - 홈팀, 원정팀, 날짜 범위, 예매 상태로 필터링 가능
             - 기본 페이지 크기: 20
@@ -139,7 +139,7 @@ public interface GameControllerDocs {
         summary = "경기 상세 조회",
         description = """
             특정 경기의 상세 정보를 조회한다.
-            
+
             - 인증 없이 접근 가능한 공개 API
             - 목록 응답과 달리 stadium에 address, totalCapacity, latitude, longitude를 추가로 포함
             - 좌표가 등록되지 않은 구장은 latitude/longitude가 null로 내려간다
