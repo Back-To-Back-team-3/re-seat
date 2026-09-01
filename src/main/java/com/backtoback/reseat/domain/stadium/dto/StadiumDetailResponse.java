@@ -3,13 +3,16 @@ package com.backtoback.reseat.domain.stadium.dto;
 import java.math.BigDecimal;
 
 import com.backtoback.reseat.domain.stadium.entity.Stadium;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * 구장 상세 정보 응답.
  * <p>경기 상세 조회 응답에 중첩된다.
+ * 좌표가 등록되지 않은 구장은 latitude·longitude 필드 자체가 JSON에서 생략된다.
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "구장 상세 정보")
 public record StadiumDetailResponse(
     @Schema(
