@@ -141,12 +141,22 @@ public class Order extends BaseEntity {
 
     /**
      * 결제 완료 주문을 취소 상태로 변경한다.
-     * <p>PAID 상태의 주문만 CANCELED 상태로 변경할 수 있다.</p>
+     * <p>PAID 또는 PARTIALLY_CANCELED 상태의 주문만 CANCELED 상태로 변경할 수있다.</p>
      */
     public void cancelAfterPayment() {
 
-        validatePaidStatus();
+        validateCancelableStatus();
         this.status = OrderStatus.CANCELED;
+    }
+
+    /**
+     * 결제 완료 주문을 부분 취소 상태로 변경한다.
+     * <p>PAID 상태의 주문만 PARTIALLY_CANCELED 상태로 변경할 수 있다.</p>
+     */
+    public void partiallyCancel() {
+
+        validatePaidStatus();
+        this.status = OrderStatus.PARTIALLY_CANCELED;
     }
 
     /**
@@ -180,12 +190,23 @@ public class Order extends BaseEntity {
     }
 
     /**
-     * 주문이 결제 완료 취소 가능한 상태인지 검증한다.
+     * 주문이 부분 취소 가능한 상태인지 검증한다.
      * <p>PAID 상태가 아닌 경우 예외가 발생한다.</p>
      */
     private void validatePaidStatus() {
 
         if (this.status != OrderStatus.PAID) {
+            throw new InvalidOrderStatusException();
+        }
+    }
+
+    /**
+     * 주문이 결제 완료 후 취소 가능한 상태인지 검증한다.
+     * <p>PAID 또는 PARTIALLY_CANCELED 상태가 아닌 경우 예외가 발생한다.</p>
+     */
+    private void validateCancelableStatus() {
+
+        if (this.status != OrderStatus.PAID && this.status != OrderStatus.PARTIALLY_CANCELED) {
             throw new InvalidOrderStatusException();
         }
     }

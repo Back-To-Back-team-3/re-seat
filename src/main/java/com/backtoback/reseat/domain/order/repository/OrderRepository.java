@@ -1,8 +1,10 @@
 package com.backtoback.reseat.domain.order.repository;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -10,9 +12,29 @@ import org.springframework.data.repository.query.Param;
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.entity.OrderStatus;
 
+import jakarta.persistence.LockModeType;
+
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
     boolean existsByReservation_Id(Long reservationId);
+
+    /**
+     * 동일 주문의 티켓 단위 환불을 순서대로 처리하기 위해 주문을 비관적 락으로 조회한다.
+     *
+     * @param orderItemId 환불 대상 주문 항목 ID
+     * @return 주문 항목이 속한 주문
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        SELECT o
+        FROM Order o
+        WHERE o.id = (
+            SELECT oi.order.id
+            FROM OrderItem oi
+            WHERE oi.id = :orderItemId
+        )
+        """)
+    Optional<Order> findByOrderItemIdWithPessimisticWriteLock(@Param("orderItemId") Long orderItemId);
 
     /**
      * CREATED 상태이면서 결제 기한이 지난 주문을 EXPIRED로 벌크 전이한다.

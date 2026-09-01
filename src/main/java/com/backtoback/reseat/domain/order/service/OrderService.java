@@ -12,10 +12,12 @@ import com.backtoback.reseat.domain.order.dto.response.OrderCancelResponse;
 import com.backtoback.reseat.domain.order.dto.response.OrderResponse;
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.entity.OrderItem;
+import com.backtoback.reseat.domain.order.entity.OrderItemStatus;
 import com.backtoback.reseat.domain.order.entity.OrderStatus;
 import com.backtoback.reseat.domain.order.exception.InvalidOrderStatusException;
 import com.backtoback.reseat.domain.order.exception.OrderAccessDeniedException;
 import com.backtoback.reseat.domain.order.exception.OrderExpiredException;
+import com.backtoback.reseat.domain.order.exception.OrderItemNotFoundException;
 import com.backtoback.reseat.domain.order.exception.OrderNotFoundException;
 import com.backtoback.reseat.domain.order.repository.OrderItemRepository;
 import com.backtoback.reseat.domain.order.repository.OrderRepository;
@@ -30,7 +32,9 @@ import com.backtoback.reseat.domain.reservation.exception.ReservationAlreadyOrde
 import com.backtoback.reseat.domain.reservation.exception.ReservationNotFoundException;
 import com.backtoback.reseat.domain.reservation.exception.ReservationSeatNotFoundException;
 import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
+import com.backtoback.reseat.domain.reservation.service.ReservationService;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
+import com.backtoback.reseat.domain.seatinventory.service.GameSeatStatusService;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.exception.UserNotFoundException;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
@@ -53,6 +57,8 @@ public class OrderService {
     private final OrderReservationRepository orderReservationRepository;
     private final ReservationSeatRepository reservationSeatRepository;
     private final UserRepository userRepository;
+    private final ReservationService reservationService;
+    private final GameSeatStatusService gameSeatStatusService;
 
     /**
      * 예약 선점 정보를 기반으로 주문을 생성한다.
@@ -160,22 +166,23 @@ public class OrderService {
 
         // 주문 생성의 근거가 된 예약도 취소해 선점 상태 정합성을 맞춘다.
         order.cancel();
-        reservation.cancel();
+        reservationService.cancel(reservation.getId());
 
         List<OrderItem> orderItems = orderItemRepository.findByOrder_Id(orderId);
 
         // 주문 항목의 경기 좌석을 다시 예매 가능 상태로 되돌린다.
         orderItems.forEach(orderItem -> {
+            orderItem.cancel();
             GameSeat gameSeat = orderItem.getGameSeat();
-            gameSeat.available();
+            gameSeatStatusService.releaseSeat(gameSeat.getId());
         });
 
         return OrderCancelResponse.from(order);
     }
 
     /**
-     * 결제 취소 시 주문, 예약과 좌석의 상태를 변경한다.
-     * <p>주문과 예약은 CANCELED, 주문에 포함된 모든 경기 좌석은 AVAILABLE 상태로 변경한다.</p>
+     * 결제 취소 시 주문, 주문 항목, 예약과 좌석의 상태를 변경한다.
+     * <p>주문, 주문 항목과 예약은 CANCELED, 주문에 포함된 모든 경기 좌석은 AVAILABLE 상태로 변경한다.</p>
      *
      * @param orderId 취소 처리할 주문 ID
      */
@@ -184,17 +191,64 @@ public class OrderService {
 
         Order order = findOrderById(orderId);
 
+        Reservation reservation = order.getReservation();
+
         // 주문 · 예약을 취소 상태로 변경한다.
         order.cancelAfterPayment();
-        order.getReservation().cancelConfirmed();
+        reservationService.cancelConfirmed(reservation.getId());
 
-        // 주문 항목의 경기 좌석을 다시 예매 가능 상태로 되돌린다.
+        // 모든 주문 항목을 취소하고 연결된 경기 좌석을 다시 예매 가능 상태로 되돌린다.
         List<OrderItem> orderItems = orderItemRepository.findByOrder_Id(orderId);
 
         orderItems.forEach(orderItem -> {
+            orderItem.cancel();
+
             GameSeat gameSeat = orderItem.getGameSeat();
-            gameSeat.available();
+            gameSeatStatusService.releaseSeat(gameSeat.getId());
         });
+    }
+
+    /**
+     * 티켓 환불 완료 후 주문 항목과 후속 도메인의 상태를 변경한다.
+     * <p>동일 주문의 환불 처리를 순서대로 진행하기 위해 주문을 비관적 락으로 조회한다.</p>
+     * <p>대상 경기 좌석을 예매 가능 상태로 변경하고,
+     * 남은 주문 항목이 있으면 주문을 부분 취소하며, 없으면 주문과 예약을 취소한다.</p>
+     *
+     * @param orderItemId 환불 처리할 주문 항목 ID
+     */
+    @Transactional
+    public void refundOrder(Long orderItemId) {
+
+        // 동일 주문의 티켓 환불이 동시에 처리되지 않도록 주문 행을 비관적 락으로 조회한다.
+        Order order
+            = orderRepository
+                .findByOrderItemIdWithPessimisticWriteLock(orderItemId)
+                .orElseThrow(OrderItemNotFoundException::new);
+
+        OrderItem orderItem = findOrderItemById(orderItemId);
+        if (orderItem.isCanceled()) {
+            return;
+        }
+
+        // 환불 대상 주문 항목과 연결된 경기 좌석만 취소 · 해제한다.
+        orderItem.cancel();
+        GameSeat gameSeat = orderItem.getGameSeat();
+        gameSeatStatusService.releaseSeat(gameSeat.getId());
+
+        // 대상 취소 후 같은 주문에 취소되지 않은 주문 항목이 남아 있는지 확인한다.
+        boolean hasRemainingOrderItems
+            = orderItemRepository.existsByOrder_IdAndStatus(order.getId(), OrderItemStatus.ACTIVE);
+
+        // 취소되지 않은 주문 항목이 남아 있으면 주문을 부분 취소 상태로 변경한다.
+        if (hasRemainingOrderItems) {
+            order.partiallyCancel();
+            return;
+        }
+
+        // 마지막 주문 항목이면 주문과 결제 완료 예약을 함께 취소한다.
+        order.cancelAfterPayment();
+        Reservation reservation = order.getReservation();
+        reservationService.cancelConfirmed(reservation.getId());
     }
 
     /**
@@ -321,6 +375,17 @@ public class OrderService {
      */
     private Order findOrderById(Long orderId) {
         return orderRepository.findById(orderId).orElseThrow(OrderNotFoundException::new);
+    }
+
+    /**
+     * 주문 항목 ID로 주문 항목을 조회한다.
+     *
+     * @param orderItemId 조회할 주문 항목 ID
+     * @return 조회된 주문 항목
+     */
+    private OrderItem findOrderItemById(Long orderItemId) {
+
+        return orderItemRepository.findById(orderItemId).orElseThrow(OrderItemNotFoundException::new);
     }
 
     /**

@@ -194,6 +194,50 @@ public class ReservationService {
     }
 
     /**
+     * 결제 전 예약을 취소 상태로 변경한다.
+     * <p>HOLDING 상태의 예약을 취소하고,
+     * 이미 취소된 예약은 상태를 다시 변경하지 않는다.</p>
+     *
+     * @param reservationId 취소 처리할 예약 ID
+     */
+    @Transactional
+    public void cancel(Long reservationId) {
+
+        Reservation reservation
+            = reservationRepository
+                .findById(reservationId)
+                .orElseThrow(() -> new ReservationNotFoundException(reservationId));
+
+        if (reservation.isCanceled()) {
+            return;
+        }
+
+        reservation.cancel();
+    }
+
+    /**
+     * 결재 완료 후 환불이 확정된 예약을 취소 상태로 변경한다.
+     * <p>CONFIRMED 상태의 예약을 취소하고,
+     * 이미 취소된 예약은 상태를 다시 변경하지 않는다.</p>
+     *
+     * @param reservationId 취소 처리할 예약 ID
+     */
+    @Transactional
+    public void cancelConfirmed(Long reservationId) {
+
+        Reservation reservation
+            = reservationRepository
+                .findById(reservationId)
+                .orElseThrow(() -> new ReservationNotFoundException(reservationId));
+
+        if (reservation.isCanceled()) {
+            return;
+        }
+
+        reservation.cancelConfirmed();
+    }
+
+    /**
      * 예약 소유자를 검증한다.
      * <p>
      * 요청자(requesterId)가 예약 소유자(reservation.user.id)와 다르면
