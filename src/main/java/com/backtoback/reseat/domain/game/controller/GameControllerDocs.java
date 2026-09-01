@@ -142,7 +142,7 @@ public interface GameControllerDocs {
 
             - 인증 없이 접근 가능한 공개 API
             - 목록 응답과 달리 stadium에 address, totalCapacity, latitude, longitude를 추가로 포함
-            - 좌표가 등록되지 않은 구장은 latitude/longitude가 null로 내려간다
+            - 좌표가 등록되지 않은 구장은 응답에서 latitude/longitude 필드 자체가 생략된다
             - 좌석 재고와 가격 정보는 포함하지 않음
             """,
         security = {}

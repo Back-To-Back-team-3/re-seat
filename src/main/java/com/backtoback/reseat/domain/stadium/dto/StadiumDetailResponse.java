@@ -29,12 +29,12 @@ public record StadiumDetailResponse(
         example = "23750"
     ) int totalCapacity,
     @Schema(
-        description = "위도. 좌표 미등록 구장은 null",
+        description = "위도. 좌표 미등록 구장은 응답에서 필드가 생략됨",
         example = "37.5121631",
         nullable = true
     ) BigDecimal latitude,
     @Schema(
-        description = "경도. 좌표 미등록 구장은 null",
+        description = "경도. 좌표 미등록 구장은 응답에서 필드가 생략됨",
         example = "127.0719372",
         nullable = true
     ) BigDecimal longitude
