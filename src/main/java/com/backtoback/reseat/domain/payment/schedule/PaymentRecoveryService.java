@@ -48,9 +48,9 @@ public class PaymentRecoveryService {
         // 복구 작업 Status가 Pending인 경우
         boolean pending = task.getStatus() == PaymentRecoveryStatus.PENDING;
         // 복구 작업 Status가 Retry인 경우 && 다음 재시도 시간을 넘어간 경우
-        boolean retryDue = task.getStatus() == PaymentRecoveryStatus.RETRY && task.getNextRetryAt() != null && !task
-            .getNextRetryAt()
-            .isAfter(now);
+        boolean retryDue
+            = task.getStatus() == PaymentRecoveryStatus.RETRY && task.getNextRetryAt() != null
+                && !task.getNextRetryAt().isAfter(now);
         if (!pending && !retryDue) {
             // 둘다 해당하지 않으면 종료
             return;
@@ -71,36 +71,39 @@ public class PaymentRecoveryService {
             }
 
             task.complete(now);
-            log.info(
-                "결제 복구 작업 완료 (taskId={}, paymentId={}, type={})",
-                taskId,
-                task.getPayment().getId(),
-                task.getType()
-            );
+            log
+                .info(
+                    "결제 복구 작업 완료 (taskId={}, paymentId={}, type={})",
+                    taskId,
+                    task.getPayment().getId(),
+                    task.getType()
+                );
         } catch (RuntimeException exception) {
             retryOrFail(task, "결제 복구 처리 중 예기치 않은 오류가 발생했습니다.", now);
-            log.warn(
-                "결제 복구 작업 실패 (taskId={}, paymentId={}, type={}, attemptCount={})",
-                taskId,
-                task.getPayment().getId(),
-                task.getType(),
-                task.getAttemptCount(),
-                exception
-            );
+            log
+                .warn(
+                    "결제 복구 작업 실패 (taskId={}, paymentId={}, type={}, attemptCount={})",
+                    taskId,
+                    task.getPayment().getId(),
+                    task.getType(),
+                    task.getAttemptCount(),
+                    exception
+                );
         }
     }
 
     private void retryOrFail(PaymentRecoveryTask task, String error, LocalDateTime now) {
         if (task.getAttemptCount() >= MAX_RETRY_COUNT) {
             task.fail(error);
-            log.error(
-                "결제 복구 작업 최종 실패 (taskId={}, paymentId={}, type={}, retryCount={}, reason={})",
-                task.getId(),
-                task.getPayment().getId(),
-                task.getType(),
-                task.getAttemptCount(),
-                error
-            );
+            log
+                .error(
+                    "결제 복구 작업 최종 실패 (taskId={}, paymentId={}, type={}, retryCount={}, reason={})",
+                    task.getId(),
+                    task.getPayment().getId(),
+                    task.getType(),
+                    task.getAttemptCount(),
+                    error
+                );
             return;
         }
 

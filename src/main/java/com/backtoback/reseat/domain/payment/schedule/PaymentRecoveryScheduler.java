@@ -23,14 +23,12 @@ public class PaymentRecoveryScheduler {
     private final PaymentRecoveryTaskRepository paymentRecoveryTaskRepository;
     private final PaymentRecoveryService paymentRecoveryService;
 
-    /**
-     * 승인 상태가 불명확한 결제 복구 작업을 주기적으로 실행한다.
-     */
+    /** 실행 가능한 모든 유형의 결제 복구 작업을 주기적으로 실행한다. */
     @Scheduled(
         fixedDelay = 30_000,
         initialDelay = 30_000
     )
-    public void recoverUnknownConfirmPayments() {
+    public void recoverPaymentTasks() {
         LocalDateTime now = LocalDateTime.now();
         List<Long> taskIds
             = paymentRecoveryTaskRepository
@@ -44,8 +42,8 @@ public class PaymentRecoveryScheduler {
         for (Long taskId : taskIds) {
             try {
                 paymentRecoveryService.recover(taskId, now);
-            } catch (RuntimeException e) {
-                log.error("결제 승인 복구 작업 실행 중 예기치 않은 오류 (taskId={})", taskId, e);
+            } catch (RuntimeException exception) {
+                log.error("결제 복구 작업 실행 중 예기치 않은 오류 (taskId={})", taskId, exception);
             }
         }
     }
