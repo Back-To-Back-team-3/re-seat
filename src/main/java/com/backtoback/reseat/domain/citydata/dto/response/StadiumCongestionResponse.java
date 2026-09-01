@@ -18,6 +18,8 @@ public class StadiumCongestionResponse {
     private String congestionMessage;
     private Integer populationMin;
     private Integer populationMax;
+    private Double latitude;
+    private Double longitude;
     private String observedAt;
 
     public static StadiumCongestionResponse of(
@@ -28,9 +30,12 @@ public class StadiumCongestionResponse {
         String congestionMessage,
         Integer populationMin,
         Integer populationMax,
+        Double latitude,
+        Double longitude,
         String observedAt
-    ){
-        return StadiumCongestionResponse.builder()
+    ) {
+        return StadiumCongestionResponse
+            .builder()
             .stadiumNum(stadiumNum)
             .stadiumName(stadiumName)
             .areaName(areaName)
@@ -38,6 +43,8 @@ public class StadiumCongestionResponse {
             .congestionMessage(congestionMessage)
             .populationMin(populationMin)
             .populationMax(populationMax)
+            .latitude(latitude)
+            .longitude(longitude)
             .observedAt(observedAt)
             .build();
     }
