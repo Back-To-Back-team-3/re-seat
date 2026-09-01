@@ -23,6 +23,7 @@ import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
 import com.backtoback.reseat.domain.payment.repository.PaymentRecoveryTaskRepository;
 import com.backtoback.reseat.domain.payment.schedule.ConfirmUnknownRecoveryHandler;
+import com.backtoback.reseat.domain.payment.schedule.PaymentRecoveryHandler;
 import com.backtoback.reseat.domain.payment.schedule.PaymentRecoveryService;
 
 @ExtendWith(MockitoExtension.class)
@@ -55,6 +56,24 @@ class PaymentRecoveryServiceTest {
         Payment payment = mock(Payment.class);
         when(payment.getPgPaymentKey()).thenReturn(PAYMENT_KEY);
         return PaymentRecoveryTask.create(payment, PaymentRecoveryType.CONFIRM_UNKNOWN);
+    }
+
+    @Nested
+    @DisplayName("복구 유형별 Handler를 등록한다")
+    class RegisterHandlers {
+
+        @Test
+        @DisplayName("같은 복구 유형을 지원하는 Handler가 중복되면 예외가 발생한다.")
+        void rejectsDuplicateHandlerType() {
+            PaymentRecoveryHandler firstHandler = mock(PaymentRecoveryHandler.class);
+            PaymentRecoveryHandler secondHandler = mock(PaymentRecoveryHandler.class);
+            when(firstHandler.getType()).thenReturn(PaymentRecoveryType.CONFIRM_UNKNOWN);
+            when(secondHandler.getType()).thenReturn(PaymentRecoveryType.CONFIRM_UNKNOWN);
+
+            assertThatThrownBy(
+                () -> new PaymentRecoveryService(paymentRecoveryTaskRepository, List.of(firstHandler, secondHandler))
+            ).isInstanceOf(IllegalStateException.class).hasMessage("결제 복구 Handler가 중복 등록되었습니다: CONFIRM_UNKNOWN");
+        }
     }
 
     @Nested

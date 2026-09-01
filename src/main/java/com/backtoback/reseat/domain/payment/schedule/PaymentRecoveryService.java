@@ -31,7 +31,15 @@ public class PaymentRecoveryService {
         this.paymentRecoveryTaskRepository = paymentRecoveryTaskRepository;
         // 복구 유형별 Handler를 미리 등록해 실행 시 switch 없이 알맞은 구현체를 바로 조회한다.
         this.handlers = new EnumMap<>(PaymentRecoveryType.class);
-        handlers.forEach(handler -> this.handlers.put(handler.getType(), handler));
+        handlers.forEach(this::registerHandler);
+    }
+
+    /** 복구 유형별 Handler를 한 개만 등록한다. */
+    private void registerHandler(PaymentRecoveryHandler handler) {
+        PaymentRecoveryHandler registered = handlers.putIfAbsent(handler.getType(), handler);
+        if (registered != null) {
+            throw new IllegalStateException("결제 복구 Handler가 중복 등록되었습니다: " + handler.getType());
+        }
     }
 
     /** 실행 가능한 결제 복구 작업을 선점하고 유형별 Handler의 결과에 따라 상태를 전이한다. */
