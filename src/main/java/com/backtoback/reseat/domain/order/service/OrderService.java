@@ -172,6 +172,7 @@ public class OrderService {
 
         // 주문 항목의 경기 좌석을 다시 예매 가능 상태로 되돌린다.
         orderItems.forEach(orderItem -> {
+            orderItem.cancel();
             GameSeat gameSeat = orderItem.getGameSeat();
             gameSeatStatusService.releaseSeat(gameSeat.getId());
         });
