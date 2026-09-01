@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
+import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryType;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
 import com.backtoback.reseat.domain.payment.repository.PaymentRecoveryTaskRepository;
@@ -43,7 +44,7 @@ class PaymentRecoveryServiceTest {
     private PaymentRecoveryTask pendingTask() {
         Payment payment = mock(Payment.class);
         when(payment.getPgPaymentKey()).thenReturn(PAYMENT_KEY);
-        return new PaymentRecoveryTask(payment);
+        return PaymentRecoveryTask.create(payment, PaymentRecoveryType.CONFIRM_UNKNOWN);
     }
 
     @Nested
@@ -63,7 +64,8 @@ class PaymentRecoveryServiceTest {
         @Test
         @DisplayName("이미 완료된 작업은 다시 처리하지 않는다.")
         void ignoresCompletedTask() {
-            PaymentRecoveryTask task = new PaymentRecoveryTask(mock(Payment.class));
+            PaymentRecoveryTask task
+                = PaymentRecoveryTask.create(mock(Payment.class), PaymentRecoveryType.CONFIRM_UNKNOWN);
             task.startProcessing(NOW.minusMinutes(2));
             task.complete(NOW.minusMinutes(1));
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID)).thenReturn(Optional.of(task));
@@ -77,7 +79,8 @@ class PaymentRecoveryServiceTest {
         @Test
         @DisplayName("재시도 시각이 지나지 않은 작업은 처리하지 않는다.")
         void ignoresRetryTaskBeforeDueTime() {
-            PaymentRecoveryTask task = new PaymentRecoveryTask(mock(Payment.class));
+            PaymentRecoveryTask task
+                = PaymentRecoveryTask.create(mock(Payment.class), PaymentRecoveryType.CONFIRM_UNKNOWN);
             task.startProcessing(NOW.minusMinutes(1));
             task.scheduleRetry("토스 조회 실패", NOW.plusMinutes(1));
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID)).thenReturn(Optional.of(task));

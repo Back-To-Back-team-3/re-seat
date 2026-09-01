@@ -15,7 +15,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
@@ -49,7 +49,7 @@ public class PaymentRecoveryTask extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(
+    @ManyToOne(
         fetch = FetchType.LAZY,
         optional = false
     )
@@ -96,11 +96,18 @@ public class PaymentRecoveryTask extends BaseEntity {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
-    public PaymentRecoveryTask(Payment payment) {
-        this.payment = payment;
-        this.type = PaymentRecoveryType.CONFIRM_UNKNOWN;
-        this.status = PaymentRecoveryStatus.PENDING;
-        this.attemptCount = 0;
+    /** 결제와 복구 유형을 기준으로 대기 중인 작업을 생성한다. */
+    public static PaymentRecoveryTask create(Payment payment, PaymentRecoveryType type) {
+        if (payment == null || type == null) {
+            throw new IllegalArgumentException("결제와 복구 유형은 필수입니다.");
+        }
+
+        PaymentRecoveryTask task = new PaymentRecoveryTask();
+        task.payment = payment;
+        task.type = type;
+        task.status = PaymentRecoveryStatus.PENDING;
+        task.attemptCount = 0;
+        return task;
     }
 
     /**
