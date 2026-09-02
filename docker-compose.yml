@@ -26,6 +26,8 @@ services:
 
       - KAFKA_BOOTSTRAP_SERVERS=kafka:19092
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:19092
+      - SEOUL_CITYDATA_BASE_URL=${SEOUL_CITYDATA_BASE_URL:-http://openapi.seoul.go.kr:8088}
+      - SEOUL_CITYDATA_API_KEY=${SEOUL_CITYDATA_API_KEY:-sample_key}
     depends_on:
       mysql-db:
         condition: service_healthy
