@@ -83,6 +83,7 @@ class PartialCancelRecoveryHandlerTest {
         TossPaymentResponse response = mock(TossPaymentResponse.class);
         TossCancelResponse cancel = mock(TossCancelResponse.class);
         when(response.getCancels()).thenReturn(List.of(cancel));
+        when(response.getLastTransactionKey()).thenReturn("transaction-key");
         when(cancel.isDone()).thenReturn(true);
         when(cancel.getCancelAmount()).thenReturn(cancelAmount);
         when(cancel.getTransactionKey()).thenReturn("transaction-key");
@@ -127,6 +128,29 @@ class PartialCancelRecoveryHandlerTest {
             assertThat(task.getPayment().getStatus()).isEqualTo(PaymentStatus.CANCELED);
             assertThat(task.getPayment().getRemainingAmount()).isZero();
             verify(orderService).refundOrder(ORDER_ITEM_ID);
+        }
+
+        @Test
+        @DisplayName("취소 목록 순서와 관계없이 마지막 거래 키와 일치하는 취소 결과를 반영한다.")
+        void selectsCancelByLastTransactionKey() {
+            int cancelAmount = 4000;
+            PaymentRecoveryTask task = partialCancelTask(cancelAmount);
+            TossPaymentResponse response = mock(TossPaymentResponse.class);
+            TossCancelResponse completedCancel = mock(TossCancelResponse.class);
+            TossCancelResponse anotherCancel = mock(TossCancelResponse.class);
+            when(response.getLastTransactionKey()).thenReturn("completed-transaction-key");
+            when(response.getCancels()).thenReturn(List.of(completedCancel, anotherCancel));
+            when(completedCancel.getTransactionKey()).thenReturn("completed-transaction-key");
+            when(completedCancel.isDone()).thenReturn(true);
+            when(completedCancel.getCancelAmount()).thenReturn(cancelAmount);
+            when(completedCancel.getCanceledAt()).thenReturn("2026-09-02T12:00:00+09:00");
+            when(tossPaymentClient.cancel(PAYMENT_KEY, "사용자 티켓 취소", cancelAmount, PG_IDEMPOTENCY_KEY))
+                .thenReturn(response);
+
+            PaymentRecoveryResult result = handler.recover(task);
+
+            assertThat(result.successful()).isTrue();
+            assertThat(task.getPaymentCancel().getPgTransactionKey()).isEqualTo("completed-transaction-key");
         }
 
         @Test

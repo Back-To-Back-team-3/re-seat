@@ -96,16 +96,22 @@ public class PartialCancelRecoveryHandler implements PaymentRecoveryHandler {
         return exception.getStatusCode() >= 400 && exception.getStatusCode() < 500;
     }
 
-    /** Toss 응답의 마지막 취소 거래가 이번 부분 취소 요청과 일치하는지 확인한다. */
+    /** Toss의 마지막 거래 키와 일치하는 취소 거래가 정상 완료되었는지 확인한다. */
     private TossCancelResponse findCompletedCancel(TossPaymentResponse response, int cancelAmount) {
         List<TossCancelResponse> cancels = response.getCancels();
-        if (cancels == null || cancels.isEmpty()) {
+        String lastTransactionKey = response.getLastTransactionKey();
+        if (cancels == null || cancels.isEmpty() || isBlank(lastTransactionKey)) {
             return null;
         }
 
-        TossCancelResponse cancel = cancels.get(cancels.size() - 1);
+        TossCancelResponse cancel
+            = cancels
+                .stream()
+                .filter(candidate -> candidate != null && lastTransactionKey.equals(candidate.getTransactionKey()))
+                .findFirst()
+                .orElse(null);
         if (cancel == null || !cancel.isDone() || !Integer.valueOf(cancelAmount).equals(cancel.getCancelAmount())
-            || isBlank(cancel.getTransactionKey()) || isBlank(cancel.getCanceledAt())) {
+            || isBlank(cancel.getCanceledAt())) {
             return null;
         }
         return cancel;

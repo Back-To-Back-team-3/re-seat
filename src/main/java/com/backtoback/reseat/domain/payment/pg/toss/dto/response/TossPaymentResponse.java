@@ -21,6 +21,7 @@ public class TossPaymentResponse {
     private Integer totalAmount;
     private String approvedAt;
     private String method;
+    private String lastTransactionKey;
 
     /** Toss가 반환한 결제 취소 거래 목록. */
     private List<TossCancelResponse> cancels;

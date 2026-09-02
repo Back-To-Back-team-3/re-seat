@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.InOrder;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.backtoback.reseat.domain.payment.entity.Payment;
@@ -22,6 +23,7 @@ import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryType;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
+import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
 import com.backtoback.reseat.domain.payment.repository.PaymentRecoveryTaskRepository;
 import com.backtoback.reseat.domain.payment.schedule.ConfirmUnknownRecoveryHandler;
 import com.backtoback.reseat.domain.payment.schedule.PaymentRecoveryHandler;
@@ -41,6 +43,9 @@ class PaymentRecoveryServiceTest {
     private PaymentRecoveryTaskRepository paymentRecoveryTaskRepository;
 
     @Mock
+    private PaymentRepository paymentRepository;
+
+    @Mock
     private TossPaymentClient tossPaymentClient;
 
     private PaymentRecoveryService paymentRecoveryService;
@@ -50,6 +55,7 @@ class PaymentRecoveryServiceTest {
         paymentRecoveryService
             = new PaymentRecoveryService(
                 paymentRecoveryTaskRepository,
+                paymentRepository,
                 List.of(new ConfirmUnknownRecoveryHandler(tossPaymentClient))
             );
     }
@@ -69,6 +75,7 @@ class PaymentRecoveryServiceTest {
     private PaymentRecoveryTask partialCancelTask() {
         Payment payment = mock(Payment.class);
         PaymentCancel paymentCancel = mock(PaymentCancel.class);
+        lenient().when(payment.getId()).thenReturn(2L);
         when(paymentCancel.getId()).thenReturn(1L);
         when(paymentCancel.getPayment()).thenReturn(payment);
         return PaymentRecoveryTask.createPartialCancel(paymentCancel);
@@ -87,7 +94,11 @@ class PaymentRecoveryServiceTest {
             when(secondHandler.getType()).thenReturn(PaymentRecoveryType.CONFIRM_UNKNOWN);
 
             assertThatThrownBy(
-                () -> new PaymentRecoveryService(paymentRecoveryTaskRepository, List.of(firstHandler, secondHandler))
+                () -> new PaymentRecoveryService(
+                    paymentRecoveryTaskRepository,
+                    paymentRepository,
+                    List.of(firstHandler, secondHandler)
+                )
             ).isInstanceOf(IllegalStateException.class).hasMessage("결제 복구 Handler가 중복 등록되었습니다: CONFIRM_UNKNOWN");
         }
     }
@@ -156,8 +167,9 @@ class PaymentRecoveryServiceTest {
             when(handler.getType()).thenReturn(PaymentRecoveryType.PARTIAL_CANCEL);
             when(handler.recover(task)).thenReturn(PaymentRecoveryResult.failure("Toss가 취소 요청을 거절했습니다."));
             PaymentRecoveryService service
-                = new PaymentRecoveryService(paymentRecoveryTaskRepository, List.of(handler));
+                = new PaymentRecoveryService(paymentRecoveryTaskRepository, paymentRepository, List.of(handler));
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID)).thenReturn(Optional.of(task));
+            when(paymentRepository.findByIdWithPessimisticWriteLock(2L)).thenReturn(Optional.of(task.getPayment()));
 
             service.recover(TASK_ID, NOW);
 
@@ -165,6 +177,25 @@ class PaymentRecoveryServiceTest {
             assertThat(task.getAttemptCount()).isZero();
             assertThat(task.getNextRetryAt()).isNull();
             assertThat(task.getLastError()).isEqualTo("Toss가 취소 요청을 거절했습니다.");
+        }
+
+        @Test
+        @DisplayName("부분 취소 복구는 공유 결제를 잠근 뒤 처리기를 실행한다.")
+        void locksPaymentBeforePartialCancelRecovery() {
+            PaymentRecoveryTask task = partialCancelTask();
+            PaymentRecoveryHandler handler = mock(PaymentRecoveryHandler.class);
+            when(handler.getType()).thenReturn(PaymentRecoveryType.PARTIAL_CANCEL);
+            when(handler.recover(task)).thenReturn(PaymentRecoveryResult.success());
+            PaymentRecoveryService service
+                = new PaymentRecoveryService(paymentRecoveryTaskRepository, paymentRepository, List.of(handler));
+            when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID)).thenReturn(Optional.of(task));
+            when(paymentRepository.findByIdWithPessimisticWriteLock(2L)).thenReturn(Optional.of(task.getPayment()));
+
+            service.recover(TASK_ID, NOW);
+
+            InOrder inOrder = inOrder(paymentRepository, handler);
+            inOrder.verify(paymentRepository).findByIdWithPessimisticWriteLock(2L);
+            inOrder.verify(handler).recover(task);
         }
 
         @Test

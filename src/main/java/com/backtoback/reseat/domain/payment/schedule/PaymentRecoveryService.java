@@ -11,6 +11,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryType;
+import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
+import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
 import com.backtoback.reseat.domain.payment.repository.PaymentRecoveryTaskRepository;
 
 import lombok.extern.slf4j.Slf4j;
@@ -22,13 +24,16 @@ public class PaymentRecoveryService {
     private static final int MAX_RETRY_COUNT = 5;
     private static final long RETRY_DELAY_MINUTES = 1L;
     private final PaymentRecoveryTaskRepository paymentRecoveryTaskRepository;
+    private final PaymentRepository paymentRepository;
     private final Map<PaymentRecoveryType, PaymentRecoveryHandler> handlers;
 
     public PaymentRecoveryService(
         PaymentRecoveryTaskRepository paymentRecoveryTaskRepository,
+        PaymentRepository paymentRepository,
         List<PaymentRecoveryHandler> handlers
     ) {
         this.paymentRecoveryTaskRepository = paymentRecoveryTaskRepository;
+        this.paymentRepository = paymentRepository;
         // 복구 유형별 Handler를 미리 등록해 실행 시 switch 없이 알맞은 구현체를 바로 조회한다.
         this.handlers = new EnumMap<>(PaymentRecoveryType.class);
         handlers.forEach(this::registerHandler);
@@ -71,6 +76,7 @@ public class PaymentRecoveryService {
         }
 
         try {
+            lockPaymentForPartialCancel(task);
             PaymentRecoveryResult result = handler.recover(task);
             if (!result.successful()) {
                 if (result.retryable()) {
@@ -101,6 +107,17 @@ public class PaymentRecoveryService {
                     exception
                 );
         }
+    }
+
+    /** 같은 결제의 여러 부분 취소가 잔액과 상태를 동시에 갱신하지 못하도록 결제를 잠근다. */
+    private void lockPaymentForPartialCancel(PaymentRecoveryTask task) {
+        if (task.getType() != PaymentRecoveryType.PARTIAL_CANCEL) {
+            return;
+        }
+
+        paymentRepository
+            .findByIdWithPessimisticWriteLock(task.getPayment().getId())
+            .orElseThrow(PaymentNotFoundException::new);
     }
 
     private void retryOrFail(PaymentRecoveryTask task, String error, LocalDateTime now) {
