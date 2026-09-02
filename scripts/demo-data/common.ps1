@@ -114,7 +114,7 @@ function Invoke-DemoMySql {
 function Clear-DemoRedisQueues {
     param([long[]]$GameIds = $script:DemoGameIds)
 
-    $keys = $GameIds | ForEach-Object { "queue:game:$_" }
+    $keys = $GameIds | ForEach-Object { "queue:waiting:game:$_" }
     if ($keys.Count -gt 0) {
         Invoke-DemoRedis -Arguments (@("DEL") + $keys) | Out-Null
     }
