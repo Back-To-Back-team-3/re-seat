@@ -419,7 +419,11 @@ public class QueueService {
      * @param currentTime 만료 여부를 판단할 시간
      * @return 사용 가능한 활성 토큰과 현재 요청 경기의 이력 취소 여부
      */
-    private ActiveTokenCheckResult checkActiveTokens(Long userId, String currentQueueEntryKey, LocalDateTime currentTime) {
+    private ActiveTokenCheckResult checkActiveTokens(
+        Long userId,
+        String currentQueueEntryKey,
+        LocalDateTime currentTime
+    ) {
         List<AdmissionToken> activeTokens
             = admissionTokenRepository
                 .findByUser_IdAndStatusWithPessimisticWriteLock(userId, AdmissionTokenStatus.ACTIVE);

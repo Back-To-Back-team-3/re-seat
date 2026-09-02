@@ -255,7 +255,8 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
         assertThat(reenteredHistory.getCanceledAt()).isNull();
 
         assertThat(queueEntryHistoryRepository.count()).isEqualTo(1);
-        assertThat(queueScore(waitingQueueRedisKey, waitingQueueRedisMember)).isEqualTo(reentryRequestedAt.toEpochMilli());
+        assertThat(queueScore(waitingQueueRedisKey, waitingQueueRedisMember))
+            .isEqualTo(reentryRequestedAt.toEpochMilli());
     }
 
     @Test
@@ -344,7 +345,8 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
         assertThat(admissionTokenRepository.count()).isEqualTo(1);
 
         // Redis 대기열에는 재진입 요청시간을 점수로 등록해야 한다.
-        assertThat(queueScore(waitingQueueRedisKey, waitingQueueRedisMember)).isEqualTo(reentryRequestedAt.toEpochMilli());
+        assertThat(queueScore(waitingQueueRedisKey, waitingQueueRedisMember))
+            .isEqualTo(reentryRequestedAt.toEpochMilli());
     }
 
     @Test
@@ -400,6 +402,7 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
         assertThat(admissionTokenRepository.count()).isEqualTo(1);
 
         // Redis 대기열에는 재진입 요청시간을 점수로 등록해야 한다.
-        assertThat(queueScore(waitingQueueRedisKey, waitingQueueRedisMember)).isEqualTo(reentryRequestedAt.toEpochMilli());
+        assertThat(queueScore(waitingQueueRedisKey, waitingQueueRedisMember))
+            .isEqualTo(reentryRequestedAt.toEpochMilli());
     }
 }
