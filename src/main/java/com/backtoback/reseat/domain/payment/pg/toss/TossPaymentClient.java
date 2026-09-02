@@ -1,5 +1,6 @@
 package com.backtoback.reseat.domain.payment.pg.toss;
 
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
@@ -27,12 +28,24 @@ public class TossPaymentClient {
     private static final String CONFIRM_PATH = "/v1/payments/confirm";
     private static final String CANCEL_PATH = "/v1/payments/{paymentKey}/cancel";
     private static final String PAYMENT_PATH = "/v1/payments/{paymentKey}";
-    private final WebClient webClient = WebClient.builder().build();
-    // 하드코딩 유출 방지를 위해 application.yaml 또는 환경변수에서 키 주입
-    @Value("${toss.secret-key}")
-    private String secretKey;
-    @Value("${toss.base-url}")
-    private String baseUrl;
+    private final WebClient webClient;
+    private final String secretKey;
+    private final String baseUrl;
+
+    /** Toss 인증 정보와 HTTPS API 주소로 클라이언트를 생성한다. */
+    public TossPaymentClient(@Value("${toss.secret-key}") String secretKey, @Value("${toss.base-url}") String baseUrl) {
+        validateBaseUrl(baseUrl);
+        this.webClient = WebClient.builder().build();
+        this.secretKey = secretKey;
+        this.baseUrl = baseUrl;
+    }
+
+    /** Toss 인증 정보가 평문으로 전송되지 않도록 HTTPS 주소만 허용한다. */
+    private void validateBaseUrl(String baseUrl) {
+        if (baseUrl == null || !"https".equalsIgnoreCase(URI.create(baseUrl).getScheme())) {
+            throw new IllegalArgumentException("Toss API Base URL은 HTTPS만 사용할 수 있습니다.");
+        }
+    }
 
     /**
      * 승인 응답을 받지 못하면 결제를 재조회해 Toss의 확정 상태를 반환한다.
