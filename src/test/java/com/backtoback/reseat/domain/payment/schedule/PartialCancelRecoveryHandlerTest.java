@@ -35,7 +35,7 @@ import com.backtoback.reseat.domain.user.entity.User;
 @DisplayName("PartialCancelRecoveryHandler 부분 취소 복구")
 class PartialCancelRecoveryHandlerTest {
 
-    private static final Long ORDER_ID = 10L;
+    private static final Long ORDER_ITEM_ID = 10L;
     private static final Long PAYMENT_ID = 100L;
     private static final Long PAYMENT_CANCEL_ID = 200L;
     private static final int PAYMENT_AMOUNT = 10000;
@@ -55,7 +55,7 @@ class PartialCancelRecoveryHandlerTest {
         Order order = mock(Order.class);
         OrderItem orderItem = mock(OrderItem.class);
         Ticket ticket = mock(Ticket.class);
-        lenient().when(order.getId()).thenReturn(ORDER_ID);
+        lenient().when(orderItem.getId()).thenReturn(ORDER_ITEM_ID);
         when(orderItem.getPrice()).thenReturn(cancelAmount);
         when(ticket.getOrderItem()).thenReturn(orderItem);
 
@@ -110,7 +110,7 @@ class PartialCancelRecoveryHandlerTest {
             assertThat(task.getPaymentCancel().getCompletedAt()).isEqualTo(LocalDateTime.of(2026, 9, 2, 12, 0));
             assertThat(task.getPayment().getStatus()).isEqualTo(PaymentStatus.PARTIALLY_CANCELED);
             assertThat(task.getPayment().getRemainingAmount()).isEqualTo(6000);
-            verifyNoInteractions(orderService);
+            verify(orderService).refundOrder(ORDER_ITEM_ID);
         }
 
         @Test
@@ -126,7 +126,7 @@ class PartialCancelRecoveryHandlerTest {
             assertThat(result.successful()).isTrue();
             assertThat(task.getPayment().getStatus()).isEqualTo(PaymentStatus.CANCELED);
             assertThat(task.getPayment().getRemainingAmount()).isZero();
-            verify(orderService).cancelPaidOrder(ORDER_ID);
+            verify(orderService).refundOrder(ORDER_ITEM_ID);
         }
 
         @Test

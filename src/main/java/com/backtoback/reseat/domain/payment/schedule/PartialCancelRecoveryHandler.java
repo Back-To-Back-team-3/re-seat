@@ -66,6 +66,8 @@ public class PartialCancelRecoveryHandler implements PaymentRecoveryHandler {
         }
 
         LocalDateTime canceledAt = resolveCanceledAt(completedCancel.getCanceledAt());
+        Long orderItemId = paymentCancel.getTicket().getOrderItem().getId();
+        orderService.refundOrder(orderItemId);
         updatePaymentStatus(payment, cancelAmount);
         paymentCancel.complete(completedCancel.getTransactionKey(), canceledAt);
         return PaymentRecoveryResult.success();
@@ -116,8 +118,6 @@ public class PartialCancelRecoveryHandler implements PaymentRecoveryHandler {
             return;
         }
 
-        // 주문 상태 전이가 실패하면 결제 취소 이력도 완료되지 않도록 로컬 상태 변경보다 먼저 호출한다.
-        orderService.cancelPaidOrder(payment.getOrder().getId());
         payment.cancel();
     }
 
