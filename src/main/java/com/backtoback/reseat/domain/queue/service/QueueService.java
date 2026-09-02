@@ -218,9 +218,7 @@ public class QueueService {
     public CompletableFuture<Void> requestQueueEntry(Long gameId, Long userId) {
 
         // 처리할 수 없는 이벤트가 Kafka에 발행되지 않도록 경기 존재 여부와 예매 가능 상태, 사용자의 존재 여부를 먼저 확인한다.
-        Game game = gameRepository
-            .findById(gameId)
-            .orElseThrow(() -> new GameNotFoundException(gameId));
+        Game game = gameRepository.findById(gameId).orElseThrow(() -> new GameNotFoundException(gameId));
 
         if (game.getBookingStatus() != BookingStatus.OPEN) {
             throw new BookingNotOpenException();
