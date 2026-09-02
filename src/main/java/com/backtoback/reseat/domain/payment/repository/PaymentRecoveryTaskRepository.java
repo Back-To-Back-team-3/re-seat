@@ -38,6 +38,7 @@ public interface PaymentRecoveryTaskRepository extends JpaRepository<PaymentReco
         select task
         from PaymentRecoveryTask task
         join fetch task.payment
+        left join fetch task.paymentCancel
         where task.id = :taskId
         """)
     Optional<PaymentRecoveryTask> findByIdWithPessimisticWriteLock(@Param("taskId") Long taskId);
