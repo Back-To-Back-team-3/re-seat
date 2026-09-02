@@ -12,13 +12,12 @@ import org.springframework.data.repository.query.Param;
 
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
-import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryType;
 
 import jakarta.persistence.LockModeType;
 
 public interface PaymentRecoveryTaskRepository extends JpaRepository<PaymentRecoveryTask, Long> {
 
-    Optional<PaymentRecoveryTask> findByPayment_IdAndType(Long paymentId, PaymentRecoveryType type);
+    Optional<PaymentRecoveryTask> findByRecoveryKey(String recoveryKey);
 
     @Query("""
         select task.id

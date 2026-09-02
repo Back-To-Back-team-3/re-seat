@@ -28,7 +28,6 @@ import com.backtoback.reseat.domain.payment.dto.response.PaymentFailResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentResponse;
 import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
-import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryType;
 import com.backtoback.reseat.domain.payment.entity.PaymentStatus; // [신규] 관리자 강제취소 시 APPROVED 결제 조회용
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelResponseInvalidException;
@@ -148,8 +147,7 @@ public class PaymentService {
                     e
                 );
             payment.fail("토스 결제 승인 상태를 확인할 수 없습니다.", LocalDateTime.now());
-            paymentRecoveryTaskRepository
-                .save(PaymentRecoveryTask.create(payment, PaymentRecoveryType.CONFIRM_UNKNOWN));
+            paymentRecoveryTaskRepository.save(PaymentRecoveryTask.createConfirmUnknown(payment));
             orderService.failOrder(payment.getOrder().getId());
             return PaymentCompleteResponse.from(payment, List.of());
         }

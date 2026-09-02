@@ -23,6 +23,7 @@ import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.entity.OrderItem;
@@ -131,17 +132,20 @@ class PaymentServiceTest {
     private Payment payment(PaymentStatus status) {
         Order order = mock(Order.class);
 
-        return Payment
-            .builder()
-            .paymentNo("PAY-20260728010000-000001")
-            .order(order)
-            .user(mock(User.class))
-            .amount(AMOUNT)
-            .idempotencyKey(IDEMPOTENCY_KEY)
-            .status(status)
-            .pgProvider(PgProvider.TOSS)
-            .pgOrderId(PG_ORDER_ID)
-            .build();
+        Payment payment
+            = Payment
+                .builder()
+                .paymentNo("PAY-20260728010000-000001")
+                .order(order)
+                .user(mock(User.class))
+                .amount(AMOUNT)
+                .idempotencyKey(IDEMPOTENCY_KEY)
+                .status(status)
+                .pgProvider(PgProvider.TOSS)
+                .pgOrderId(PG_ORDER_ID)
+                .build();
+        ReflectionTestUtils.setField(payment, "id", PAYMENT_ID);
+        return payment;
     }
 
     private PaymentCompleteRequest completeRequest() {

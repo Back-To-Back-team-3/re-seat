@@ -16,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.backtoback.reseat.domain.payment.entity.Payment;
+import com.backtoback.reseat.domain.payment.entity.PaymentCancel;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryType;
@@ -54,8 +55,22 @@ class PaymentRecoveryServiceTest {
 
     private PaymentRecoveryTask pendingTask() {
         Payment payment = mock(Payment.class);
-        when(payment.getPgPaymentKey()).thenReturn(PAYMENT_KEY);
-        return PaymentRecoveryTask.create(payment, PaymentRecoveryType.CONFIRM_UNKNOWN);
+        when(payment.getId()).thenReturn(1L);
+        return PaymentRecoveryTask.createConfirmUnknown(payment);
+    }
+
+    private PaymentRecoveryTask confirmRecoveryTask() {
+        PaymentRecoveryTask task = pendingTask();
+        when(task.getPayment().getPgPaymentKey()).thenReturn(PAYMENT_KEY);
+        return task;
+    }
+
+    private PaymentRecoveryTask partialCancelTask() {
+        Payment payment = mock(Payment.class);
+        PaymentCancel paymentCancel = mock(PaymentCancel.class);
+        when(paymentCancel.getId()).thenReturn(1L);
+        when(paymentCancel.getPayment()).thenReturn(payment);
+        return PaymentRecoveryTask.createPartialCancel(paymentCancel);
     }
 
     @Nested
@@ -93,8 +108,7 @@ class PaymentRecoveryServiceTest {
         @Test
         @DisplayName("이미 완료된 작업은 다시 처리하지 않는다.")
         void ignoresCompletedTask() {
-            PaymentRecoveryTask task
-                = PaymentRecoveryTask.create(mock(Payment.class), PaymentRecoveryType.CONFIRM_UNKNOWN);
+            PaymentRecoveryTask task = pendingTask();
             task.startProcessing(NOW.minusMinutes(2));
             task.complete(NOW.minusMinutes(1));
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID)).thenReturn(Optional.of(task));
@@ -108,8 +122,7 @@ class PaymentRecoveryServiceTest {
         @Test
         @DisplayName("재시도 시각이 지나지 않은 작업은 처리하지 않는다.")
         void ignoresRetryTaskBeforeDueTime() {
-            PaymentRecoveryTask task
-                = PaymentRecoveryTask.create(mock(Payment.class), PaymentRecoveryType.CONFIRM_UNKNOWN);
+            PaymentRecoveryTask task = pendingTask();
             task.startProcessing(NOW.minusMinutes(1));
             task.scheduleRetry("토스 조회 실패", NOW.plusMinutes(1));
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID)).thenReturn(Optional.of(task));
@@ -124,8 +137,7 @@ class PaymentRecoveryServiceTest {
         @Test
         @DisplayName("등록된 처리기가 없는 복구 유형은 최종 실패 처리한다.")
         void failsTaskWhenHandlerIsMissing() {
-            PaymentRecoveryTask task
-                = PaymentRecoveryTask.create(mock(Payment.class), PaymentRecoveryType.PARTIAL_CANCEL);
+            PaymentRecoveryTask task = partialCancelTask();
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID)).thenReturn(Optional.of(task));
 
             paymentRecoveryService.recover(TASK_ID, NOW);
@@ -138,7 +150,7 @@ class PaymentRecoveryServiceTest {
         @Test
         @DisplayName("Toss에서 승인된 결제를 전액 취소하고 복구 작업을 완료한다.")
         void cancelsApprovedPaymentAndCompletesTask() {
-            PaymentRecoveryTask task = pendingTask();
+            PaymentRecoveryTask task = confirmRecoveryTask();
             TossPaymentResponse paymentResponse = mock(TossPaymentResponse.class);
             TossPaymentResponse cancelResponse = mock(TossPaymentResponse.class);
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID)).thenReturn(Optional.of(task));
@@ -158,7 +170,7 @@ class PaymentRecoveryServiceTest {
         @Test
         @DisplayName("Toss에서 승인 실패 상태가 확인되면 환불 없이 복구 작업을 완료한다.")
         void completesTaskForConfirmFailureStatus() {
-            PaymentRecoveryTask task = pendingTask();
+            PaymentRecoveryTask task = confirmRecoveryTask();
             TossPaymentResponse paymentResponse = mock(TossPaymentResponse.class);
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID)).thenReturn(Optional.of(task));
             when(tossPaymentClient.getPayment(PAYMENT_KEY)).thenReturn(paymentResponse);
@@ -175,7 +187,7 @@ class PaymentRecoveryServiceTest {
         @Test
         @DisplayName("Toss 결제가 최종 상태가 아니면 다음 복구를 예약한다.")
         void schedulesRetryForNonFinalPaymentStatus() {
-            PaymentRecoveryTask task = pendingTask();
+            PaymentRecoveryTask task = confirmRecoveryTask();
             TossPaymentResponse paymentResponse = mock(TossPaymentResponse.class);
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID)).thenReturn(Optional.of(task));
             when(tossPaymentClient.getPayment(PAYMENT_KEY)).thenReturn(paymentResponse);
@@ -195,7 +207,7 @@ class PaymentRecoveryServiceTest {
         @Test
         @DisplayName("자동 환불 완료를 확인할 수 없으면 다음 복구를 예약한다.")
         void schedulesRetryWhenCancelIsNotCompleted() {
-            PaymentRecoveryTask task = pendingTask();
+            PaymentRecoveryTask task = confirmRecoveryTask();
             TossPaymentResponse paymentResponse = mock(TossPaymentResponse.class);
             TossPaymentResponse cancelResponse = mock(TossPaymentResponse.class);
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID)).thenReturn(Optional.of(task));
@@ -215,7 +227,7 @@ class PaymentRecoveryServiceTest {
         @Test
         @DisplayName("Toss 조회 중 예외가 발생하면 다음 복구를 예약한다.")
         void schedulesRetryWhenTossRequestFails() {
-            PaymentRecoveryTask task = pendingTask();
+            PaymentRecoveryTask task = confirmRecoveryTask();
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID)).thenReturn(Optional.of(task));
             when(tossPaymentClient.getPayment(PAYMENT_KEY)).thenThrow(new RuntimeException("Toss 조회 실패"));
 
@@ -230,7 +242,7 @@ class PaymentRecoveryServiceTest {
         @Test
         @DisplayName("최대 재시도 횟수에 도달하면 복구 작업을 최종 실패 처리한다.")
         void failsTaskAfterMaximumRetries() {
-            PaymentRecoveryTask task = pendingTask();
+            PaymentRecoveryTask task = confirmRecoveryTask();
             for (int attempt = 0; attempt < 5; attempt++) {
                 task.startProcessing(NOW.minusMinutes(2));
                 task.scheduleRetry("토스 조회 실패", NOW.minusMinutes(1));
