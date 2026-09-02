@@ -24,7 +24,12 @@ import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
 import com.backtoback.reseat.domain.seatinventory.service.GameSeatCreateService;
+import com.backtoback.reseat.domain.stadium.entity.Seat;
+import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
+import com.backtoback.reseat.domain.stadium.entity.SeatZone;
 import com.backtoback.reseat.domain.stadium.entity.Stadium;
+import com.backtoback.reseat.domain.stadium.repository.SeatRepository;
+import com.backtoback.reseat.domain.stadium.repository.SeatZoneRepository;
 import com.backtoback.reseat.domain.stadium.repository.StadiumRepository;
 import com.backtoback.reseat.domain.team.entity.Team;
 import com.backtoback.reseat.domain.team.repository.TeamRepository;
@@ -33,11 +38,15 @@ import com.backtoback.reseat.domain.team.repository.TeamRepository;
  * 경기 예매 상태 전이 API 통합 및 인가 테스트.
  * <p>ApplicationContext 로딩만 통과시키기 위해 RedissonClient를 목(mock)으로 대체한다.
  * (RedissonClient 자체의 동작은 이 API와 무관하므로 목의 실제 동작은 검증하지 않는다.)
+ * <p>test 프로필(H2)에는 시드 데이터가 없으므로,
+ * OPEN 전이의 선행 조건인 좌석 재고까지 각 테스트 실행 전에 직접 준비한다.
+ * (Stadium → SeatZone → Seat → Team → Game 순)
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
 class AdminGameBookingControllerTest {
+
     private static final long NOT_EXISTING_GAME_ID = 999_999L;
     private static final String BOOKING_STATUS_URI = "/api/v1/admin/games/{gameId}/booking-status";
 
@@ -46,6 +55,12 @@ class AdminGameBookingControllerTest {
 
     @Autowired
     private StadiumRepository stadiumRepository;
+
+    @Autowired
+    private SeatZoneRepository seatZoneRepository;
+
+    @Autowired
+    private SeatRepository seatRepository;
 
     @Autowired
     private TeamRepository teamRepository;
@@ -67,6 +82,10 @@ class AdminGameBookingControllerTest {
         Stadium stadium = stadiumRepository.save(Stadium.of("테스트 구장", "서울시 테스트구", 10_000));
         Team homeTeam = teamRepository.save(Team.of("홈팀", stadium));
         Team awayTeam = teamRepository.save(Team.of("원정팀", stadium));
+
+        // GameSeatCreateService.openInventory()가 요구하는 최소 좌석 재고 준비
+        SeatZone zone = seatZoneRepository.save(SeatZone.of(stadium, "테스트 구역", SeatGrade.INFIELD, 18_000));
+        seatRepository.save(Seat.of(stadium, zone, "A", "1", "1"));
 
         LocalDateTime now = LocalDateTime.now();
         Game game
