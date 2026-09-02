@@ -1,12 +1,12 @@
 package com.backtoback.reseat.domain.game.repository;
 
-import com.backtoback.reseat.domain.game.entity.BookingStatus;
-import com.backtoback.reseat.domain.game.entity.Game;
-import com.backtoback.reseat.domain.game.service.GameSearchCondition;
-import com.backtoback.reseat.domain.stadium.entity.Stadium;
-import com.backtoback.reseat.domain.team.entity.Team;
-import com.querydsl.jpa.impl.JPAQueryFactory;
-import jakarta.persistence.EntityManager;
+import static org.assertj.core.api.Assertions.*;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.DisplayName;
@@ -20,11 +20,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
+import com.backtoback.reseat.domain.game.entity.BookingStatus;
+import com.backtoback.reseat.domain.game.entity.Game;
+import com.backtoback.reseat.domain.game.service.GameSearchCondition;
+import com.backtoback.reseat.domain.stadium.entity.Stadium;
+import com.backtoback.reseat.domain.team.entity.Team;
+import com.querydsl.jpa.impl.JPAQueryFactory;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import jakarta.persistence.EntityManager;
 
 /**
  * 경기 Repository 조회 테스트.
@@ -103,6 +106,26 @@ class GameRepositoryTest {
     }
 
     @Test
+    @DisplayName("경기 상세 조회 시 구장 좌표를 읽어도 추가 쿼리가 발생하지 않는다")
+    void should_notIncreaseQueryCount_when_readingStadiumCoordinatesOnDetail() {
+        Game saved = gameFixture(BookingStatus.OPEN);
+        saved.getStadium().registerCoordinates(new BigDecimal("37.5121676"), new BigDecimal("127.0719084"));
+        gameRepository.save(saved);
+        entityManager.flush();
+        entityManager.clear();
+
+        Statistics statistics = entityManager.getEntityManagerFactory().unwrap(SessionFactory.class).getStatistics();
+        statistics.clear();
+
+        Game found = gameRepository.findDetailById(saved.getId()).orElseThrow();
+        // 좌표 2필드를 읽어도 findDetailById 쿼리 1건 외에 추가 쿼리가 없어야 한다.
+        found.getStadium().getLatitude();
+        found.getStadium().getLongitude();
+
+        assertThat(statistics.getPrepareStatementCount()).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("현재 상태가 기대값과 같으면 조건부 UPDATE가 1건을 반환하고 상태가 전이된다")
     void should_returnOne_when_currentStatusMatches() {
         Game saved = gameRepository.save(gameFixture(BookingStatus.SCHEDULED));
@@ -129,7 +152,9 @@ class GameRepositoryTest {
             .isEqualTo(BookingStatus.OPEN); // 변경 없이 유지
     }
 
-    /** Team.of/Stadium.of 정적 팩터리를 그대로 사용해 다른 테스트와 컨벤션을 맞춘다. */
+    /**
+     * Team.of/Stadium.of 정적 팩터리를 그대로 사용해 다른 테스트와 컨벤션을 맞춘다.
+     */
     private Game gameFixture(BookingStatus bookingStatus) {
         String suffix = UUID.randomUUID().toString().substring(0, 8);
 

@@ -1,5 +1,7 @@
 package com.backtoback.reseat.domain.stadium.entity;
 
+import java.math.BigDecimal;
+
 import com.backtoback.reseat.global.common.BaseEntity;
 
 import jakarta.persistence.Column;
@@ -45,6 +47,22 @@ public class Stadium extends BaseEntity {
     )
     private int totalCapacity;
 
+    // 구장 위치 위도.
+    @Column(
+        name = "latitude",
+        precision = 10,
+        scale = 7
+    )
+    private BigDecimal latitude;
+
+    // 구장 위치 경도.
+    @Column(
+        name = "longitude",
+        precision = 11,
+        scale = 7
+    )
+    private BigDecimal longitude;
+
     @Enumerated(EnumType.STRING)
     @Column(
         name = "status",
@@ -60,5 +78,13 @@ public class Stadium extends BaseEntity {
         stadium.totalCapacity = totalCapacity;
         stadium.status = StadiumStatus.ACTIVE;
         return stadium;
+    }
+
+    /**
+     * 구장 좌표를 등록한다.
+     */
+    public void registerCoordinates(BigDecimal latitude, BigDecimal longitude) {
+        this.latitude = latitude;
+        this.longitude = longitude;
     }
 }
