@@ -4,6 +4,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import java.time.LocalDateTime;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,25 +21,23 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
+import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
 import com.backtoback.reseat.domain.seatinventory.service.GameSeatCreateService;
-
-import jakarta.persistence.EntityManager;
+import com.backtoback.reseat.domain.stadium.entity.Stadium;
+import com.backtoback.reseat.domain.stadium.repository.StadiumRepository;
+import com.backtoback.reseat.domain.team.entity.Team;
+import com.backtoback.reseat.domain.team.repository.TeamRepository;
 
 /**
  * 경기 예매 상태 전이 API 통합 및 인가 테스트.
- * <p>AdminGameSeatControllerTest와 동일하게 실제 서비스·DB·SecurityConfig를 사용하는
- * 통합 테스트로 작성한다. 다만 PaymentService가 필수로 요구하는 RedissonClient는
- * RedissonConfig가 test 프로필에서 비활성화(@Profile("!test"))되어 빈이 존재하지 않으므로,
- * ApplicationContext 로딩만 통과시키기 위해 RedissonClient를 목(mock)으로 대체한다.
+ * <p>ApplicationContext 로딩만 통과시키기 위해 RedissonClient를 목(mock)으로 대체한다.
  * (RedissonClient 자체의 동작은 이 API와 무관하므로 목의 실제 동작은 검증하지 않는다.)
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
 class AdminGameBookingControllerTest {
-
-    private static final long SEEDED_STADIUM_ID = 1L;
     private static final long NOT_EXISTING_GAME_ID = 999_999L;
     private static final String BOOKING_STATUS_URI = "/api/v1/admin/games/{gameId}/booking-status";
 
@@ -45,7 +45,10 @@ class AdminGameBookingControllerTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private EntityManager entityManager;
+    private StadiumRepository stadiumRepository;
+
+    @Autowired
+    private TeamRepository teamRepository;
 
     @Autowired
     private GameRepository gameRepository;
@@ -61,12 +64,25 @@ class AdminGameBookingControllerTest {
 
     @BeforeEach
     void setUp() {
-        scheduledGameId
-            = entityManager
-                .createQuery("select g.id from Game g where g.stadium.id = :stadiumId order by g.id asc", Long.class)
-                .setParameter("stadiumId", SEEDED_STADIUM_ID)
-                .setMaxResults(1)
-                .getSingleResult();
+        Stadium stadium = stadiumRepository.save(Stadium.of("테스트 구장", "서울시 테스트구", 10_000));
+        Team homeTeam = teamRepository.save(Team.of("홈팀", stadium));
+        Team awayTeam = teamRepository.save(Team.of("원정팀", stadium));
+
+        LocalDateTime now = LocalDateTime.now();
+        Game game
+            = Game
+                .builder()
+                .homeTeam(homeTeam)
+                .awayTeam(awayTeam)
+                .stadium(stadium)
+                .gameAt(now.plusDays(7))
+                .bookingOpenAt(now)
+                .bookingCloseAt(now.plusDays(7))
+                .bookingStatus(BookingStatus.SCHEDULED)
+                .title("테스트 경기")
+                .build();
+
+        scheduledGameId = gameRepository.save(game).getId();
     }
 
     private String body(String bookingStatus, String reason) {
