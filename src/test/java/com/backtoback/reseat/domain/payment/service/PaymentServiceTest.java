@@ -160,7 +160,7 @@ class PaymentServiceTest {
         Ticket ticket = mock(Ticket.class);
         when(order.getId()).thenReturn(ORDER_ID);
         when(orderItem.getOrder()).thenReturn(order);
-        when(orderItem.getPrice()).thenReturn(price);
+        lenient().when(orderItem.getPrice()).thenReturn(price);
         when(ticket.getId()).thenReturn(ORDER_ITEM_ID);
         when(ticket.getOrderItem()).thenReturn(orderItem);
         return ticket;
@@ -712,13 +712,14 @@ class PaymentServiceTest {
                 return paymentCancel;
             });
 
-            PaymentCancelResponse response = paymentService.cancelTicketPayment(ticket, "사용자 티켓 취소");
+            paymentService.requestTicketPaymentCancel(ticket, "사용자 티켓 취소");
 
             ArgumentCaptor<PaymentRecoveryTask> taskCaptor = ArgumentCaptor.forClass(PaymentRecoveryTask.class);
             verify(paymentRecoveryTaskRepository).save(taskCaptor.capture());
-            assertThat(response.getPaymentCancelId()).isEqualTo(200L);
-            assertThat(response.getCancelStatus()).isEqualTo(PaymentCancelStatus.PENDING);
-            assertThat(response.getRefundAmount()).isEqualTo(cancelAmount);
+            assertThat(taskCaptor.getValue().getPaymentCancel().getId()).isEqualTo(200L);
+            assertThat(taskCaptor.getValue().getPaymentCancel().getStatus()).isEqualTo(PaymentCancelStatus.PENDING);
+            assertThat(taskCaptor.getValue().getPaymentCancel().getTicket().getOrderItem().getPrice())
+                .isEqualTo(cancelAmount);
             assertThat(taskCaptor.getValue().getRecoveryKey()).isEqualTo("PARTIAL_CANCEL:200");
         }
 
@@ -736,10 +737,10 @@ class PaymentServiceTest {
             when(paymentCancelRepository.findByTicketIdWithPessimisticWriteLock(ORDER_ITEM_ID))
                 .thenReturn(Optional.of(paymentCancel));
 
-            PaymentCancelResponse response = paymentService.cancelTicketPayment(ticket, "사용자 티켓 취소");
+            paymentService.requestTicketPaymentCancel(ticket, "사용자 티켓 취소");
 
-            assertThat(response.getCancelStatus()).isEqualTo(PaymentCancelStatus.DONE);
-            assertThat(response.getPaymentStatus()).isEqualTo(PaymentStatus.CANCELED);
+            assertThat(paymentCancel.getStatus()).isEqualTo(PaymentCancelStatus.DONE);
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.CANCELED);
             verify(paymentValidator, never()).validateCancelable(payment);
             verifyNoInteractions(paymentRecoveryTaskRepository);
         }
@@ -760,9 +761,9 @@ class PaymentServiceTest {
                 .thenReturn(Optional.of(paymentCancel));
             when(paymentRecoveryTaskRepository.findByPaymentCancel_Id(200L)).thenReturn(Optional.of(recoveryTask));
 
-            PaymentCancelResponse response = paymentService.cancelTicketPayment(ticket, "재시도 취소");
+            paymentService.requestTicketPaymentCancel(ticket, "재시도 취소");
 
-            assertThat(response.getCancelStatus()).isEqualTo(PaymentCancelStatus.PENDING);
+            assertThat(paymentCancel.getStatus()).isEqualTo(PaymentCancelStatus.PENDING);
             assertThat(paymentCancel.getReason()).isEqualTo("재시도 취소");
             assertThat(paymentCancel.getPgIdempotencyKey()).isNotEqualTo("old-pg-key");
             assertThat(recoveryTask.getStatus()).isEqualTo(PaymentRecoveryStatus.PENDING);

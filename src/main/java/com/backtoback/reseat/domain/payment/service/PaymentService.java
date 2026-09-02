@@ -258,9 +258,9 @@ public class PaymentService {
         return cancelApprovedPayment(payment, request);
     }
 
-    /** 티켓 한 장의 부분 취소 이력과 비동기 복구 작업을 등록한다. */
+    /** 티켓 한 장의 부분 취소 이력과 비동기 복구 작업을 접수한다. */
     @Transactional
-    public PaymentCancelResponse cancelTicketPayment(Ticket ticket, String reason) {
+    public void requestTicketPaymentCancel(Ticket ticket, String reason) {
         validatePartialCancelTarget(ticket);
 
         Long orderId = ticket.getOrderItem().getOrder().getId();
@@ -269,25 +269,24 @@ public class PaymentService {
                 .findByOrderIdWithPessimisticWriteLock(orderId)
                 .orElseThrow(PaymentNotFoundException::new);
 
-        // 동일 결제의 취소 접수를 직렬화한 뒤 완료된 티켓 취소 요청은 기존 결과를 반환한다.
+        // 기존 취소 이력은 상태에 맞게 재사용하고, 없을 때만 새로운 취소 작업을 등록한다.
         Optional<PaymentCancel> existingCancel
             = paymentCancelRepository.findByTicketIdWithPessimisticWriteLock(ticket.getId());
-        if (existingCancel.filter(PaymentCancel::isDone).isPresent()) {
-            return PaymentCancelResponse.from(payment, existingCancel.get());
+        if (existingCancel.isPresent()) {
+            PaymentCancel paymentCancel = existingCancel.get();
+            if (paymentCancel.isDone()) {
+                return;
+            }
+
+            paymentValidator.validateCancelable(payment);
+            reopenFailedPartialCancel(paymentCancel, reason);
+            return;
         }
 
         paymentValidator.validateCancelable(payment);
-        if (existingCancel.isPresent()) {
-            PaymentCancel paymentCancel = existingCancel.get();
-            reopenFailedPartialCancel(paymentCancel, reason);
-            return PaymentCancelResponse.from(payment, paymentCancel);
-        }
-
         PaymentCancel paymentCancel
             = paymentCancelRepository.save(PaymentCancel.create(payment, ticket, reason, UUID.randomUUID().toString()));
         paymentRecoveryTaskRepository.save(PaymentRecoveryTask.createPartialCancel(paymentCancel));
-
-        return PaymentCancelResponse.from(payment, paymentCancel);
     }
 
     /** 실패한 부분 취소 이력과 복구 작업을 새로운 PG 취소 시도로 다시 활성화한다. */
