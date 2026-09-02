@@ -69,7 +69,8 @@ public class StadiumCongestionService {
     }
 
     private StadiumCongestionResponse createFallbackResponse(StadiumCityArea cityArea) {
-        String nowStr = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+        String nowStr
+            = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
         return StadiumCongestionResponse
             .of(
                 cityArea.getStadiumNum(),
