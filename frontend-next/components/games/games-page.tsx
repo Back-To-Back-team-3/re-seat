@@ -6,15 +6,18 @@ import {useState} from "react";
 import {VerificationPanel} from "@/components/auth/verification-panel";
 import {Alert} from "@/components/common/alert";
 import {EmptyState} from "@/components/common/empty-state";
+import {StadiumCongestionMap} from "@/components/congestion/stadium-congestion-map";
 import {GAME_STATUS_META} from "@/components/games/game-card";
 import {GameList} from "@/components/games/game-list";
 import {TodayGamesPanel} from "@/components/games/today-games-panel";
 import {useAuth} from "@/hooks/use-auth";
 import {useGames} from "@/hooks/use-games";
 import {getCompletedGameIds} from "@/lib/completed-games";
-import {KST_TIME_ZONE, STADIUM_IMAGE_URL} from "@/lib/constants";
+import {KST_TIME_ZONE} from "@/lib/constants";
 import {formatGameDate} from "@/lib/date";
 import type {GameSummary} from "@/types/game";
+
+
 
 /**
  * KST(Asia/Seoul) 기준 오늘 날짜를 YYYY-MM-DD로 반환한다.
@@ -196,22 +199,9 @@ export function GamesPage() {
                                 onSelect={selectGame}
                                 selectedGameId={selectedGame?.gameId ?? null}
                             />
-                            <figure
-                                className="relative m-0 h-[210px] overflow-hidden rounded-[18px] shadow-card after:absolute after:inset-0 after:bg-[linear-gradient(180deg,transparent_40%,rgba(9,13,21,0.7))] after:content-[''] max-sm:h-[170px]">
-                                <img
-                                    alt="잠실야구장 경기 전경"
-                                    className="size-full object-cover"
-                                    src={STADIUM_IMAGE_URL}
-                                />
-                                <figcaption
-                                    className="absolute inset-x-[18px] bottom-[14px] z-[1] flex justify-between text-xs text-white">
-                  <span className="font-extrabold tracking-[0.12em]">
-                    JAMSIL
-                  </span>{" "}
-                                    실제 구장 이미지
-                                </figcaption>
-                            </figure>
+                            <StadiumCongestionMap stadiumNum={1} />
                         </div>
+
                     </section>
 
                     <main className="mx-auto grid w-full max-w-[1440px] gap-10 px-[5vw] py-14 max-sm:px-4">
