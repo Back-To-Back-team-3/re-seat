@@ -78,6 +78,10 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/v1/games", "/api/v1/games/{gameId}")
                     .permitAll()
 
+                    // 구장 실시간 혼잡도(/api/v1/congestion/**) GET 공개 허용
+                    .requestMatchers(HttpMethod.GET, "/api/v1/congestion/**")
+                    .permitAll()
+
                     // 관리자 전용 API 인가 적용
                     .requestMatchers("/api/v1/admin/**")
                     .hasRole("ADMIN")
