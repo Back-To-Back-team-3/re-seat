@@ -12,3 +12,18 @@ export interface StadiumCongestion {
     longitude: number;
     observedAt: string;
 }
+
+export type ZoneCategory = "출입구/게이트" | "지하철/대중교통" | "먹거리/주차";
+
+export interface StadiumZoneSpot {
+    id: string;
+    name: string;
+    category: ZoneCategory;
+    description: string;
+    guideTip: string;
+    waitTimeEst: string;
+    latitude: number;
+    longitude: number;
+    congestionLevel: CongestionLevel;
+    congestionMessage: string;
+}

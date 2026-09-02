@@ -1,12 +1,14 @@
 "use client";
 
 import Script from "next/script";
-import {useCallback, useEffect, useRef, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 
-import {CongestionBadge} from "@/components/congestion/congestion-badge";
+import {
+    CONGESTION_CONFIG,
+    CongestionBadge,
+} from "@/components/congestion/congestion-badge";
 import {useStadiumCongestion} from "@/hooks/use-stadium-congestion";
 import {STADIUM_IMAGE_URL} from "@/lib/constants";
-import type {StadiumCongestion} from "@/types/congestion";
 
 interface StadiumCongestionMapProps {
     stadiumNum?: number;
@@ -27,8 +29,11 @@ export function StadiumCongestionMap({
     const markerInstanceRef = useRef<any>(null);
     /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     const overlayInstanceRef = useRef<any>(null);
-    const [sdkLoaded, setSdkLoaded] = useState(false);
+    const [sdkLoaded, setSdkLoaded] = useState(
+        () => typeof window !== "undefined" && Boolean(window.kakao?.maps),
+    );
     const [sdkError, setSdkError] = useState(false);
+    const [mapReady, setMapReady] = useState(false);
 
     const {
         data: congestion,
@@ -39,13 +44,6 @@ export function StadiumCongestionMap({
 
     const kakaoApiKey = process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY;
 
-    // 이미 스크립트가 로드되어 있는 경우 대응
-    useEffect(() => {
-        if (typeof window !== "undefined" && window.kakao?.maps) {
-            setSdkLoaded(true);
-        }
-    }, []);
-
     // 1. SDK가 로드되면 기본 잠실야구장 좌표로 지도를 먼저 초기화
     useEffect(() => {
         if (!sdkLoaded || !mapContainerRef.current) return;
@@ -55,30 +53,33 @@ export function StadiumCongestionMap({
 
         kakao.maps.load(() => {
             const container = mapContainerRef.current;
-            if (!container || !kakao.maps || mapInstanceRef.current) return;
+            if (!container || !kakao.maps) return;
 
-            const center = new kakao.maps.LatLng(
-                DEFAULT_LATITUDE,
-                DEFAULT_LONGITUDE,
-            );
+            if (!mapInstanceRef.current) {
+                const center = new kakao.maps.LatLng(
+                    DEFAULT_LATITUDE,
+                    DEFAULT_LONGITUDE,
+                );
 
-            const map = new kakao.maps.Map(container, {
-                center,
-                level: 4,
-            });
-            mapInstanceRef.current = map;
+                const map = new kakao.maps.Map(container, {
+                    center,
+                    level: 4,
+                });
+                mapInstanceRef.current = map;
 
-            const marker = new kakao.maps.Marker({
-                position: center,
-                map,
-            });
-            markerInstanceRef.current = marker;
+                const marker = new kakao.maps.Marker({
+                    position: center,
+                    map,
+                });
+                markerInstanceRef.current = marker;
+            }
+            setMapReady(true);
         });
     }, [sdkLoaded]);
 
     // 2. 백엔드 혼잡도 데이터가 도착하면 좌표 이동 및 커스텀 오버레이 렌더링
     useEffect(() => {
-        if (!sdkLoaded || !congestion || !mapInstanceRef.current) return;
+        if (!mapReady || !congestion || !mapInstanceRef.current) return;
 
         const kakao = window.kakao;
         if (!kakao?.maps) return;
@@ -105,13 +106,20 @@ export function StadiumCongestionMap({
                 ? `${congestion.populationMin.toLocaleString()} ~ ${congestion.populationMax.toLocaleString()}명`
                 : "정보 없음";
 
+        const badgeConfig =
+            CONGESTION_CONFIG[congestion.congestionLevel] ??
+            CONGESTION_CONFIG["보통"];
+
         const overlayContent = document.createElement("div");
         overlayContent.className =
             "relative -translate-y-3 rounded-xl border border-border/80 bg-surface/95 p-3.5 shadow-2xl backdrop-blur-md text-foreground min-w-[240px] max-w-[280px] pointer-events-auto transition-all";
         overlayContent.innerHTML = `
             <div class="flex items-center justify-between gap-2 border-b border-border/60 pb-2 mb-2">
                 <span class="font-extrabold text-sm truncate">${congestion.stadiumName}</span>
-                <span class="text-xs px-2 py-0.5 rounded-full font-bold bg-brand/10 text-brand">${congestion.congestionLevel}</span>
+                <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-bold border ${badgeConfig.colorClass}">
+                    <span class="size-1.5 rounded-full ${badgeConfig.dotClass}"></span>
+                    ${badgeConfig.label}
+                </span>
             </div>
             <p class="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-2">
                 ${congestion.congestionMessage || "실시간 인구 혼잡도 정보입니다."}
@@ -129,7 +137,13 @@ export function StadiumCongestionMap({
             yAnchor: 1.3,
         });
         overlayInstanceRef.current = overlay;
-    }, [sdkLoaded, congestion]);
+
+        if (markerInstanceRef.current && kakao.maps.event?.addListener) {
+            kakao.maps.event.addListener(markerInstanceRef.current, "click", () => {
+                overlay.setMap(mapInstanceRef.current);
+            });
+        }
+    }, [mapReady, congestion]);
 
     // 카카오 API 키가 없거나 SDK 로드 실패 시 정적 이미지 폴백
     if (!kakaoApiKey || sdkError) {
@@ -159,11 +173,15 @@ export function StadiumCongestionMap({
             className={`relative h-[210px] w-full overflow-hidden rounded-[18px] border border-border bg-surface shadow-card max-sm:h-[170px] ${className}`}
         >
             <Script
+                id="kakao-maps-sdk-small"
                 onError={() => {
                     console.error("카카오 지도 SDK 로드 실패");
                     setSdkError(true);
                 }}
                 onLoad={() => {
+                    setSdkLoaded(true);
+                }}
+                onReady={() => {
                     setSdkLoaded(true);
                 }}
                 src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${kakaoApiKey}&autoload=false`}

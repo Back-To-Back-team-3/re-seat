@@ -5,7 +5,7 @@ interface CongestionBadgeProps {
     className?: string;
 }
 
-const CONGESTION_CONFIG: Record<
+export const CONGESTION_CONFIG: Record<
     CongestionLevel,
     {label: string; colorClass: string; dotClass: string}
 > = {

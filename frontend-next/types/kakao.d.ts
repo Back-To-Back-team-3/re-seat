@@ -23,6 +23,10 @@ declare global {
                     yAnchor?: number;
                     xAnchor?: number;
                 }) => any;
+                event?: {
+                    addListener: (target: any, type: string, handler: (...args: any[]) => void) => void;
+                    removeListener: (target: any, type: string, handler: (...args: any[]) => void) => void;
+                };
             };
         };
     }

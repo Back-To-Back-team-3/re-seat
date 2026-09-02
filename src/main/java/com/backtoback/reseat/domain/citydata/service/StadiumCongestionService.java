@@ -49,11 +49,15 @@ public class StadiumCongestionService {
             log.warn("Reids 캐시 조회 중 오류 발생 (stadiumNum = {}), 외부 API를 직접 호출합니다", stadiumNum, e);
         }
 
-        // 외부 API 호출(캐시 미스)
-        SeoulCityDataRawResponse rawResponse = seoulCityDataClient.fetchCityData(cityArea.getAreaName());
-
-        // 응답 DTO 변환
-        StadiumCongestionResponse response = mapToResponse(cityArea, rawResponse);
+        StadiumCongestionResponse response;
+        try {
+            // 외부 API 호출(캐시 미스)
+            SeoulCityDataRawResponse rawResponse = seoulCityDataClient.fetchCityData(cityArea.getAreaName());
+            response = mapToResponse(cityArea, rawResponse);
+        } catch (Exception e) {
+            log.warn("서울시 실시간 도시데이터 API 호출 실패 (stadiumNum = {}), 기본 혼잡도 데이터로 대체합니다: {}", stadiumNum, e.getMessage());
+            response = createFallbackResponse(cityArea);
+        }
 
         // Redis 캐시 저장
         try {
@@ -62,6 +66,23 @@ public class StadiumCongestionService {
             log.warn("Redis 캐시 저장 실패(stadiumNum = {})", stadiumNum, e);
         }
         return response;
+    }
+
+    private StadiumCongestionResponse createFallbackResponse(StadiumCityArea cityArea) {
+        String nowStr = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+        return StadiumCongestionResponse
+            .of(
+                cityArea.getStadiumNum(),
+                cityArea.getStadiumName(),
+                cityArea.getAreaName(),
+                "보통",
+                "사람이 몰려있을 수 있지만 크게 붐비지 않으며, 도보 이동이 원활합니다.",
+                14000,
+                17000,
+                cityArea.getLatitude(),
+                cityArea.getLongitude(),
+                nowStr
+            );
     }
 
     private StadiumCongestionResponse mapToResponse(StadiumCityArea cityArea, SeoulCityDataRawResponse raw) {
