@@ -73,7 +73,11 @@ public class PaymentRecoveryService {
         try {
             PaymentRecoveryResult result = handler.recover(task);
             if (!result.successful()) {
-                retryOrFail(task, result.error(), now);
+                if (result.retryable()) {
+                    retryOrFail(task, result.error(), now);
+                } else {
+                    task.fail(result.error());
+                }
                 return;
             }
 

@@ -253,6 +253,11 @@ public class PaymentCancel extends BaseEntity {
         return status == PaymentCancelStatus.DONE;
     }
 
+    /** PG 취소가 명시적으로 실패한 이력인지 확인한다. */
+    public boolean isFailed() {
+        return status == PaymentCancelStatus.FAILED;
+    }
+
     /**
      * 현재 상태에서 요청한 상태 전이가 가능한지 검증한다.
      */

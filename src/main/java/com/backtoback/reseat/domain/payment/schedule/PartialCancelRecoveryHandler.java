@@ -14,6 +14,7 @@ import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryType;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossCancelResponse;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
+import com.backtoback.reseat.domain.payment.pg.toss.exception.TossApiException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +32,7 @@ public class PartialCancelRecoveryHandler implements PaymentRecoveryHandler {
     public PaymentRecoveryResult recover(PaymentRecoveryTask task) {
         PaymentCancel paymentCancel = task.getPaymentCancel();
         if (paymentCancel == null) {
-            return PaymentRecoveryResult.retry("부분 취소 복구 대상이 없습니다.");
+            return PaymentRecoveryResult.failure("부분 취소 복구 대상이 없습니다.");
         }
         if (paymentCancel.isDone()) {
             return PaymentRecoveryResult.success();
@@ -54,22 +55,43 @@ public class PartialCancelRecoveryHandler implements PaymentRecoveryHandler {
             if (completedCancel == null) {
                 return PaymentRecoveryResult.retry("Toss 부분 취소 완료 상태를 확인할 수 없습니다.");
             }
+        } catch (TossApiException exception) {
+            if (isClientError(exception)) {
+                paymentCancel.fail(exception.getMessage(), LocalDateTime.now());
+                return PaymentRecoveryResult.failure("Toss가 부분 취소 요청을 거절했습니다.");
+            }
+            return retryAfterFailure(task, payment, paymentCancel, exception);
         } catch (RuntimeException exception) {
-            log
-                .warn(
-                    "결제 부분 취소 복구 PG 요청 실패 (taskId={}, paymentId={}, paymentCancelId={})",
-                    task.getId(),
-                    payment.getId(),
-                    paymentCancel.getId(),
-                    exception
-                );
-            return PaymentRecoveryResult.retry("Toss 부분 취소 요청 또는 응답 확인에 실패했습니다.");
+            return retryAfterFailure(task, payment, paymentCancel, exception);
         }
 
         LocalDateTime canceledAt = resolveCanceledAt(completedCancel.getCanceledAt());
         updatePaymentStatus(payment, cancelAmount);
         paymentCancel.complete(completedCancel.getTransactionKey(), canceledAt);
         return PaymentRecoveryResult.success();
+    }
+
+    /** 일시적인 PG 요청 실패를 기록하고 동일 멱등키 재시도를 요청한다. */
+    private PaymentRecoveryResult retryAfterFailure(
+        PaymentRecoveryTask task,
+        Payment payment,
+        PaymentCancel paymentCancel,
+        RuntimeException exception
+    ) {
+        log
+            .warn(
+                "결제 부분 취소 복구 PG 요청 실패 (taskId={}, paymentId={}, paymentCancelId={})",
+                task.getId(),
+                payment.getId(),
+                paymentCancel.getId(),
+                exception
+            );
+        return PaymentRecoveryResult.retry("Toss 부분 취소 요청 또는 응답 확인에 실패했습니다.");
+    }
+
+    /** Toss가 요청 자체를 거절한 4xx 응답인지 확인한다. */
+    private boolean isClientError(TossApiException exception) {
+        return exception.getStatusCode() >= 400 && exception.getStatusCode() < 500;
     }
 
     /** Toss 응답의 마지막 취소 거래가 이번 부분 취소 요청과 일치하는지 확인한다. */

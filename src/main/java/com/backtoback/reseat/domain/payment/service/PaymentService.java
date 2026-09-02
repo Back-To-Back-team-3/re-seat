@@ -29,6 +29,7 @@ import com.backtoback.reseat.domain.payment.dto.response.PaymentFailResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentResponse;
 import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentCancel;
+import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
 import com.backtoback.reseat.domain.payment.entity.PaymentStatus; // [신규] 관리자 강제취소 시 APPROVED 결제 조회용
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
@@ -267,13 +268,19 @@ public class PaymentService {
             = paymentRepository
                 .findByOrderIdWithPessimisticWriteLock(orderId)
                 .orElseThrow(PaymentNotFoundException::new);
-        paymentValidator.validateCancelable(payment);
 
-        // 동일 결제의 취소 접수를 직렬화한 뒤 티켓별 기존 이력이 있으면 그대로 반환한다.
+        // 동일 결제의 취소 접수를 직렬화한 뒤 완료된 티켓 취소 요청은 기존 결과를 반환한다.
         Optional<PaymentCancel> existingCancel
             = paymentCancelRepository.findByTicketIdWithPessimisticWriteLock(ticket.getId());
-        if (existingCancel.isPresent()) {
+        if (existingCancel.filter(PaymentCancel::isDone).isPresent()) {
             return PaymentCancelResponse.from(payment, existingCancel.get());
+        }
+
+        paymentValidator.validateCancelable(payment);
+        if (existingCancel.isPresent()) {
+            PaymentCancel paymentCancel = existingCancel.get();
+            reopenFailedPartialCancel(paymentCancel, reason);
+            return PaymentCancelResponse.from(payment, paymentCancel);
         }
 
         PaymentCancel paymentCancel
@@ -281,6 +288,21 @@ public class PaymentService {
         paymentRecoveryTaskRepository.save(PaymentRecoveryTask.createPartialCancel(paymentCancel));
 
         return PaymentCancelResponse.from(payment, paymentCancel);
+    }
+
+    /** 실패한 부분 취소 이력과 복구 작업을 새로운 PG 취소 시도로 다시 활성화한다. */
+    private void reopenFailedPartialCancel(PaymentCancel paymentCancel, String reason) {
+        PaymentRecoveryTask recoveryTask
+            = paymentRecoveryTaskRepository
+                .findByPaymentCancel_Id(paymentCancel.getId())
+                .orElseThrow(PaymentCancelStatusUnknownException::new);
+
+        if (paymentCancel.isFailed()) {
+            paymentCancel.retry(reason, UUID.randomUUID().toString());
+        }
+        if (recoveryTask.getStatus() == PaymentRecoveryStatus.FAILED) {
+            recoveryTask.reopen();
+        }
     }
 
     /** 부분 취소 대상 티켓에서 결제와 취소 금액을 확인할 수 있는지 검증한다. */

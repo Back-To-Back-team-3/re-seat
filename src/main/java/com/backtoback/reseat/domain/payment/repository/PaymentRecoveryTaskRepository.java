@@ -19,6 +19,8 @@ public interface PaymentRecoveryTaskRepository extends JpaRepository<PaymentReco
 
     Optional<PaymentRecoveryTask> findByRecoveryKey(String recoveryKey);
 
+    Optional<PaymentRecoveryTask> findByPaymentCancel_Id(Long paymentCancelId);
+
     @Query("""
         select task.id
         from PaymentRecoveryTask task

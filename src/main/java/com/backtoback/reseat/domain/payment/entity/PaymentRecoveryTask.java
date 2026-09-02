@@ -200,6 +200,19 @@ public class PaymentRecoveryTask extends BaseEntity {
         this.lastError = lastError;
     }
 
+    /** 최종 실패한 복구 작업을 처음부터 다시 실행할 수 있는 상태로 전환한다. */
+    public void reopen() {
+        if (status != PaymentRecoveryStatus.FAILED) {
+            throw new IllegalStateException("최종 실패한 결제 복구 작업만 다시 시작할 수 있습니다.");
+        }
+        this.status = PaymentRecoveryStatus.PENDING;
+        this.attemptCount = 0;
+        this.nextRetryAt = null;
+        this.processingStartedAt = null;
+        this.lastError = null;
+        this.completedAt = null;
+    }
+
     private void validateProcessing() {
         if (status != PaymentRecoveryStatus.PROCESSING) {
             throw new IllegalStateException("처리 중인 결제 복구 작업만 상태를 변경할 수 있습니다.");
