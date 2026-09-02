@@ -12,9 +12,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
 import org.mockito.InOrder;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentCancel;
@@ -23,8 +27,8 @@ import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryType;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
-import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
 import com.backtoback.reseat.domain.payment.repository.PaymentRecoveryTaskRepository;
+import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
 import com.backtoback.reseat.domain.payment.schedule.ConfirmUnknownRecoveryHandler;
 import com.backtoback.reseat.domain.payment.schedule.PaymentRecoveryHandler;
 import com.backtoback.reseat.domain.payment.schedule.PaymentRecoveryResult;
@@ -48,14 +52,26 @@ class PaymentRecoveryServiceTest {
     @Mock
     private TossPaymentClient tossPaymentClient;
 
+    @Mock
+    private PlatformTransactionManager transactionManager;
+
+    @Mock
+    private TransactionStatus transactionStatus;
+
+    private TransactionTemplate transactionTemplate;
     private PaymentRecoveryService paymentRecoveryService;
 
     @BeforeEach
     void setUp() {
+        lenient()
+            .when(transactionManager.getTransaction(any(TransactionDefinition.class)))
+            .thenReturn(transactionStatus);
+        transactionTemplate = new TransactionTemplate(transactionManager);
         paymentRecoveryService
             = new PaymentRecoveryService(
                 paymentRecoveryTaskRepository,
                 paymentRepository,
+                transactionTemplate,
                 List.of(new ConfirmUnknownRecoveryHandler(tossPaymentClient))
             );
     }
@@ -97,6 +113,7 @@ class PaymentRecoveryServiceTest {
                 () -> new PaymentRecoveryService(
                     paymentRecoveryTaskRepository,
                     paymentRepository,
+                    transactionTemplate,
                     List.of(firstHandler, secondHandler)
                 )
             ).isInstanceOf(IllegalStateException.class).hasMessage("결제 복구 Handler가 중복 등록되었습니다: CONFIRM_UNKNOWN");
@@ -167,7 +184,12 @@ class PaymentRecoveryServiceTest {
             when(handler.getType()).thenReturn(PaymentRecoveryType.PARTIAL_CANCEL);
             when(handler.recover(task)).thenReturn(PaymentRecoveryResult.failure("Toss가 취소 요청을 거절했습니다."));
             PaymentRecoveryService service
-                = new PaymentRecoveryService(paymentRecoveryTaskRepository, paymentRepository, List.of(handler));
+                = new PaymentRecoveryService(
+                    paymentRecoveryTaskRepository,
+                    paymentRepository,
+                    transactionTemplate,
+                    List.of(handler)
+                );
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID)).thenReturn(Optional.of(task));
             when(paymentRepository.findByIdWithPessimisticWriteLock(2L)).thenReturn(Optional.of(task.getPayment()));
 
@@ -187,7 +209,12 @@ class PaymentRecoveryServiceTest {
             when(handler.getType()).thenReturn(PaymentRecoveryType.PARTIAL_CANCEL);
             when(handler.recover(task)).thenReturn(PaymentRecoveryResult.success());
             PaymentRecoveryService service
-                = new PaymentRecoveryService(paymentRecoveryTaskRepository, paymentRepository, List.of(handler));
+                = new PaymentRecoveryService(
+                    paymentRecoveryTaskRepository,
+                    paymentRepository,
+                    transactionTemplate,
+                    List.of(handler)
+                );
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID)).thenReturn(Optional.of(task));
             when(paymentRepository.findByIdWithPessimisticWriteLock(2L)).thenReturn(Optional.of(task.getPayment()));
 
@@ -196,6 +223,39 @@ class PaymentRecoveryServiceTest {
             InOrder inOrder = inOrder(paymentRepository, handler);
             inOrder.verify(paymentRepository).findByIdWithPessimisticWriteLock(2L);
             inOrder.verify(handler).recover(task);
+        }
+
+        @Test
+        @DisplayName("로컬 상태 반영 중 예외가 발생하면 별도 트랜잭션에서 다음 복구를 예약한다.")
+        void recordsRetryInSeparateTransactionAfterUnexpectedFailure() {
+            PaymentRecoveryTask task = partialCancelTask();
+            PaymentRecoveryHandler handler = mock(PaymentRecoveryHandler.class);
+            when(handler.getType()).thenReturn(PaymentRecoveryType.PARTIAL_CANCEL);
+            when(handler.recover(task)).thenThrow(new RuntimeException("로컬 상태 반영 실패"));
+            PaymentRecoveryService service
+                = new PaymentRecoveryService(
+                    paymentRecoveryTaskRepository,
+                    paymentRepository,
+                    transactionTemplate,
+                    List.of(handler)
+                );
+            when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID))
+                .thenReturn(Optional.of(task))
+                .thenReturn(Optional.of(task));
+            when(paymentRepository.findByIdWithPessimisticWriteLock(2L)).thenReturn(Optional.of(task.getPayment()));
+
+            service.recover(TASK_ID, NOW);
+
+            assertThat(task.getStatus()).isEqualTo(PaymentRecoveryStatus.RETRY);
+            assertThat(task.getAttemptCount()).isEqualTo(1);
+            assertThat(task.getNextRetryAt()).isEqualTo(NOW.plusMinutes(1));
+            assertThat(task.getLastError()).isEqualTo("결제 복구 처리 중 예기치 않은 오류가 발생했습니다.");
+            verify(paymentRecoveryTaskRepository, times(2)).findByIdWithPessimisticWriteLock(TASK_ID);
+            verify(transactionManager, times(2)).getTransaction(any(TransactionDefinition.class));
+            // 복구 트랜잭션의 롤벡
+            verify(transactionManager).rollback(transactionStatus);
+            // 재시도 기록의 커밋
+            verify(transactionManager).commit(transactionStatus);
         }
 
         @Test
