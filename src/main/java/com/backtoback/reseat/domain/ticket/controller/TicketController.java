@@ -98,7 +98,7 @@ public class TicketController {
     ) {
         TicketCancelResponse response = ticketService.cancelTicket(userDetails.getId(), ticketId);
 
-        return ResponseEntity.ok(ApiResponse.success("티켓 취소 완료", response));
+        return ResponseEntity.ok(ApiResponse.success("티켓 취소 요청 접수 완료", response));
     }
 
     /**
@@ -117,6 +117,6 @@ public class TicketController {
     ) {
         TicketCancelResponse response = ticketService.retryCancelTicket(userDetails.getId(), ticketId);
 
-        return ResponseEntity.ok(ApiResponse.success("티켓 취소 재시도 완료", response));
+        return ResponseEntity.ok(ApiResponse.success("티켓 취소 재시도 요청 접수 완료", response));
     }
 }

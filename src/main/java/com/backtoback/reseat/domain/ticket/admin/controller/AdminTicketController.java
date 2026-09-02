@@ -60,6 +60,6 @@ public class AdminTicketController {
 
         AdminTicketCancelResponse response = adminTicketService.cancelTicketByAdmin(ticketId, request);
 
-        return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success("관리자 직권 티켓 강제 취소 및 자원 반환 완료", response));
+        return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success("관리자 직권 티켓 강제 취소 요청 접수 완료", response));
     }
 }

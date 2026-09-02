@@ -302,7 +302,6 @@ public class Ticket extends BaseEntity {
             throw new InvalidTicketStateException();
         }
         this.status = TicketStatus.REFUND_PENDING;
-        this.refundRequestedAt = LocalDateTime.now();
     }
 
     /**
