@@ -6,7 +6,9 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 
 import {API_BASE_URL} from "@/api/client";
 import {StadiumCongestionSection} from "@/components/congestion/stadium-congestion-section";
+import {adjustLevel, calculateStadiumZones} from "@/lib/stadium-zones";
 import {server} from "@/test/mocks/server";
+import type {CongestionLevel} from "@/types/congestion";
 
 function createWrapper() {
     const queryClient = new QueryClient({
@@ -96,7 +98,7 @@ describe("StadiumCongestionSection 컴포넌트", () => {
         ).not.toBeInTheDocument();
     });
 
-    it("구역 카드 클릭 시 선택 상태가 변경된다", async () => {
+    it("구역 카드 클릭 및 키보드(Enter) 입력 시 '선택됨' 상태로 변경된다", async () => {
         render(<StadiumCongestionSection stadiumNum={1} />, {
             wrapper: createWrapper(),
         });
@@ -104,7 +106,13 @@ describe("StadiumCongestionSection 컴포넌트", () => {
         const card = screen.getByText("1루 출입구 (홈팀 방면)");
         fireEvent.click(card);
 
-        expect(card).toBeInTheDocument();
+        // 클릭 후 '선택됨' 뱃지가 화면에 렌더링되는지 단언
+        expect(screen.getByText("선택됨")).toBeInTheDocument();
+
+        // 키보드 엔터 이벤트 테스트
+        const otherCard = screen.getByText("3루 출입구 (원정팀 방면)");
+        fireEvent.keyDown(otherCard, {key: "Enter", code: "Enter"});
+        expect(screen.getByText("선택됨")).toBeInTheDocument();
     });
 
     it("혼잡도 API 에러 시 에러 안내 및 재시도 버튼이 표시된다", async () => {
@@ -130,6 +138,41 @@ describe("StadiumCongestionSection 컴포넌트", () => {
             expect(
                 screen.getByText("혼잡도 데이터를 불러오지 못했습니다."),
             ).toBeInTheDocument();
+        });
+    });
+});
+
+describe("stadium-zones 유틸리티 단위 테스트", () => {
+    it("adjustLevel이 경계값을 초과하지 않고 적절한 레벨을 반환한다", () => {
+        expect(adjustLevel("여유", -1)).toBe("여유");
+        expect(adjustLevel("여유", 1)).toBe("보통");
+        expect(adjustLevel("붐빔", 1)).toBe("붐빔");
+        expect(adjustLevel("붐빔", -1)).toBe("약간 붐빔");
+        expect(adjustLevel("보통", 0)).toBe("보통");
+    });
+
+    it("calculateStadiumZones가 혼잡도 레벨에 따라 동적 waitTimeEst를 산출한다", () => {
+        const levels: CongestionLevel[] = ["여유", "보통", "약간 붐빔", "붐빔"];
+
+        levels.forEach((lvl) => {
+            const zones = calculateStadiumZones({
+                stadiumNum: 1,
+                stadiumName: "잠실야구장",
+                areaName: "잠실종합운동장",
+                congestionLevel: lvl,
+                congestionMessage: "",
+                populationMin: null,
+                populationMax: null,
+                latitude: 37.51,
+                longitude: 127.07,
+                observedAt: "2026-09-02",
+            });
+
+            expect(zones).toHaveLength(8);
+            zones.forEach((zone) => {
+                expect(zone.waitTimeEst).toBeTruthy();
+                expect(typeof zone.waitTimeEst).toBe("string");
+            });
         });
     });
 });

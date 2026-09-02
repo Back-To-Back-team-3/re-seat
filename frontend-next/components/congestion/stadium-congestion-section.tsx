@@ -155,19 +155,35 @@ export function StadiumCongestionSection({
                 CONGESTION_CONFIG[spot.congestionLevel] ??
                 CONGESTION_CONFIG["보통"];
 
-            // 커스텀 핀 오버레이 (점 + 라벨 태그)
+            // 커스텀 핀 오버레이 (점 + 라벨 태그) - DOM API로 안전하게 생성
             const pinContainer = document.createElement("div");
             pinContainer.className =
                 "group relative flex flex-col items-center cursor-pointer transition-transform hover:scale-110 -translate-x-1/2 -translate-y-full";
 
-            pinContainer.innerHTML = `
-                <div class="flex items-center gap-1.5 rounded-full border border-border/80 bg-surface/95 px-2.5 py-1 shadow-md backdrop-blur-md text-[11px] font-bold text-foreground hover:border-brand/60 transition-colors">
-                    <span class="size-2 rounded-full ${config.dotClass} animate-pulse"></span>
-                    <span>${spot.name}</span>
-                    <span class="rounded px-1 text-[10px] ${config.colorClass}">${spot.congestionLevel}</span>
-                </div>
-                <div class="size-2.5 rotate-45 border-r border-b border-border/80 bg-surface/95 -mt-1 shadow-sm"></div>
-            `;
+            const pinPill = document.createElement("div");
+            pinPill.className =
+                "flex items-center gap-1.5 rounded-full border border-border/80 bg-surface/95 px-2.5 py-1 shadow-md backdrop-blur-md text-[11px] font-bold text-foreground hover:border-brand/60 transition-colors";
+
+            const dot = document.createElement("span");
+            dot.className = `size-2 rounded-full ${config.dotClass} animate-pulse`;
+
+            const nameSpan = document.createElement("span");
+            nameSpan.textContent = spot.name;
+
+            const levelSpan = document.createElement("span");
+            levelSpan.className = `rounded px-1 text-[10px] ${config.colorClass}`;
+            levelSpan.textContent = spot.congestionLevel;
+
+            pinPill.appendChild(dot);
+            pinPill.appendChild(nameSpan);
+            pinPill.appendChild(levelSpan);
+
+            const arrow = document.createElement("div");
+            arrow.className =
+                "size-2.5 rotate-45 border-r border-b border-border/80 bg-surface/95 -mt-1 shadow-sm";
+
+            pinContainer.appendChild(pinPill);
+            pinContainer.appendChild(arrow);
 
             pinContainer.onclick = () => {
                 setSelectedSpotId(spot.id);
@@ -211,32 +227,82 @@ export function StadiumCongestionSection({
             CONGESTION_CONFIG[selectedSpot.congestionLevel] ??
             CONGESTION_CONFIG["보통"];
 
+        // 상세 팝업 DOM API 안전 구성 (XSS 방지)
         const popupEl = document.createElement("div");
         popupEl.className =
             "relative -translate-y-8 rounded-xl border border-border bg-surface/95 p-3.5 shadow-2xl backdrop-blur-md text-foreground min-w-[260px] max-w-[300px] pointer-events-auto transition-all";
-        popupEl.innerHTML = `
-            <div class="flex items-center justify-between gap-2 border-b border-border/60 pb-2 mb-2">
-                <div class="flex items-center gap-1.5 truncate">
-                    <span class="text-[11px] text-muted-foreground font-medium">[${selectedSpot.category}]</span>
-                    <strong class="text-xs truncate font-extrabold">${selectedSpot.name}</strong>
-                </div>
-                <span class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-bold border ${config.colorClass}">
-                    <span class="size-1.5 rounded-full ${config.dotClass}"></span>
-                    ${config.label}
-                </span>
-            </div>
-            <p class="text-xs text-muted-foreground leading-relaxed mb-2">
-                ${selectedSpot.description}
-            </p>
-            <div class="rounded-lg bg-brand/5 border border-brand/20 p-2 text-xs text-foreground mb-2 leading-tight">
-                <span class="font-extrabold text-brand text-[11px]">💡 동선 팁:</span>
-                <span class="text-[11px] text-foreground block mt-0.5">${selectedSpot.guideTip}</span>
-            </div>
-            <div class="flex items-center justify-between text-[11px] text-muted-foreground font-mono border-t border-border/40 pt-2">
-                <span>예상 대기/소요</span>
-                <strong class="text-foreground">${selectedSpot.waitTimeEst}</strong>
-            </div>
-        `;
+
+        // 1. 헤더
+        const header = document.createElement("div");
+        header.className =
+            "flex items-center justify-between gap-2 border-b border-border/60 pb-2 mb-2";
+
+        const titleGroup = document.createElement("div");
+        titleGroup.className = "flex items-center gap-1.5 truncate";
+
+        const catSpan = document.createElement("span");
+        catSpan.className = "text-[11px] text-muted-foreground font-medium";
+        catSpan.textContent = `[${selectedSpot.category}]`;
+
+        const nameStrong = document.createElement("strong");
+        nameStrong.className = "text-xs truncate font-extrabold";
+        nameStrong.textContent = selectedSpot.name;
+
+        titleGroup.appendChild(catSpan);
+        titleGroup.appendChild(nameStrong);
+
+        const badge = document.createElement("span");
+        badge.className = `inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-bold border ${config.colorClass}`;
+
+        const badgeDot = document.createElement("span");
+        badgeDot.className = `size-1.5 rounded-full ${config.dotClass}`;
+
+        badge.appendChild(badgeDot);
+        badge.appendChild(document.createTextNode(config.label));
+
+        header.appendChild(titleGroup);
+        header.appendChild(badge);
+
+        // 2. 설명
+        const descP = document.createElement("p");
+        descP.className = "text-xs text-muted-foreground leading-relaxed mb-2";
+        descP.textContent = selectedSpot.description;
+
+        // 3. 동선 팁 박스
+        const tipBox = document.createElement("div");
+        tipBox.className =
+            "rounded-lg bg-brand/5 border border-brand/20 p-2 text-xs text-foreground mb-2 leading-tight";
+
+        const tipLabel = document.createElement("span");
+        tipLabel.className = "font-extrabold text-brand text-[11px]";
+        tipLabel.textContent = "💡 동선 팁:";
+
+        const tipContent = document.createElement("span");
+        tipContent.className = "text-[11px] text-foreground block mt-0.5";
+        tipContent.textContent = selectedSpot.guideTip;
+
+        tipBox.appendChild(tipLabel);
+        tipBox.appendChild(tipContent);
+
+        // 4. 예상 대기시간
+        const footer = document.createElement("div");
+        footer.className =
+            "flex items-center justify-between text-[11px] text-muted-foreground font-mono border-t border-border/40 pt-2";
+
+        const waitLabel = document.createElement("span");
+        waitLabel.textContent = "예상 대기/소요";
+
+        const waitStrong = document.createElement("strong");
+        waitStrong.className = "text-foreground";
+        waitStrong.textContent = selectedSpot.waitTimeEst;
+
+        footer.appendChild(waitLabel);
+        footer.appendChild(waitStrong);
+
+        popupEl.appendChild(header);
+        popupEl.appendChild(descP);
+        popupEl.appendChild(tipBox);
+        popupEl.appendChild(footer);
 
         const detailOverlay = new kakao.maps.CustomOverlay({
             position,
@@ -416,6 +482,12 @@ export function StadiumCongestionSection({
                                     }`}
                                     key={spot.id}
                                     onClick={() => setSelectedSpotId(spot.id)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter" || e.key === " ") {
+                                            e.preventDefault();
+                                            setSelectedSpotId(spot.id);
+                                        }
+                                    }}
                                     role="button"
                                     tabIndex={0}
                                 >

@@ -116,7 +116,7 @@ cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,https://re-seat.netlify.app}
 
 jwt:
-  secret: ${JWT_SECRET:cmVzZWF0LXNlY3JldC1rZXktZm9yLWhtYWMtc2hhMjU2LXRlc3QtMjAyNg==}
+  secret: ${JWT_SECRET}
 
 oauth2:
   redirect:

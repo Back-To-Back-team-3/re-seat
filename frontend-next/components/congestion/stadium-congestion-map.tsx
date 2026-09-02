@@ -110,25 +110,63 @@ export function StadiumCongestionMap({
             CONGESTION_CONFIG[congestion.congestionLevel] ??
             CONGESTION_CONFIG["보통"];
 
+        // 안전한 DOM API를 통한 오버레이 요소 구성 (XSS 방지)
         const overlayContent = document.createElement("div");
         overlayContent.className =
             "relative -translate-y-3 rounded-xl border border-border/80 bg-surface/95 p-3.5 shadow-2xl backdrop-blur-md text-foreground min-w-[240px] max-w-[280px] pointer-events-auto transition-all";
-        overlayContent.innerHTML = `
-            <div class="flex items-center justify-between gap-2 border-b border-border/60 pb-2 mb-2">
-                <span class="font-extrabold text-sm truncate">${congestion.stadiumName}</span>
-                <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-bold border ${badgeConfig.colorClass}">
-                    <span class="size-1.5 rounded-full ${badgeConfig.dotClass}"></span>
-                    ${badgeConfig.label}
-                </span>
-            </div>
-            <p class="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-2">
-                ${congestion.congestionMessage || "실시간 인구 혼잡도 정보입니다."}
-            </p>
-            <div class="flex items-center justify-between text-[11px] text-muted-foreground font-mono">
-                <span>실시간 인구: <strong class="text-foreground">${populationText}</strong></span>
-                <span>${congestion.observedAt ? congestion.observedAt.slice(11, 16) : ""}</span>
-            </div>
-        `;
+
+        // 헤더 영역
+        const headerEl = document.createElement("div");
+        headerEl.className =
+            "flex items-center justify-between gap-2 border-b border-border/60 pb-2 mb-2";
+
+        const titleEl = document.createElement("span");
+        titleEl.className = "font-extrabold text-sm truncate";
+        titleEl.textContent = congestion.stadiumName;
+
+        const badgeEl = document.createElement("span");
+        badgeEl.className = `inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-bold border ${badgeConfig.colorClass}`;
+
+        const dotEl = document.createElement("span");
+        dotEl.className = `size-1.5 rounded-full ${badgeConfig.dotClass}`;
+
+        const badgeText = document.createTextNode(badgeConfig.label);
+        badgeEl.appendChild(dotEl);
+        badgeEl.appendChild(badgeText);
+
+        headerEl.appendChild(titleEl);
+        headerEl.appendChild(badgeEl);
+
+        // 메시지 본문
+        const messageEl = document.createElement("p");
+        messageEl.className =
+            "text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-2";
+        messageEl.textContent =
+            congestion.congestionMessage || "실시간 인구 혼잡도 정보입니다.";
+
+        // 하단 정보 (실시간 인구 & 갱신시각)
+        const footerEl = document.createElement("div");
+        footerEl.className =
+            "flex items-center justify-between text-[11px] text-muted-foreground font-mono";
+
+        const popLabel = document.createElement("span");
+        popLabel.textContent = "실시간 인구: ";
+        const popValue = document.createElement("strong");
+        popValue.className = "text-foreground";
+        popValue.textContent = populationText;
+        popLabel.appendChild(popValue);
+
+        const timeEl = document.createElement("span");
+        timeEl.textContent = congestion.observedAt
+            ? congestion.observedAt.slice(11, 16)
+            : "";
+
+        footerEl.appendChild(popLabel);
+        footerEl.appendChild(timeEl);
+
+        overlayContent.appendChild(headerEl);
+        overlayContent.appendChild(messageEl);
+        overlayContent.appendChild(footerEl);
 
         const overlay = new kakao.maps.CustomOverlay({
             position: center,
@@ -138,11 +176,22 @@ export function StadiumCongestionMap({
         });
         overlayInstanceRef.current = overlay;
 
-        if (markerInstanceRef.current && kakao.maps.event?.addListener) {
-            kakao.maps.event.addListener(markerInstanceRef.current, "click", () => {
-                overlay.setMap(mapInstanceRef.current);
-            });
+        const marker = markerInstanceRef.current;
+        const currentMap = mapInstanceRef.current;
+        const clickHandler = () => {
+            overlay.setMap(currentMap);
+        };
+
+        if (marker && kakao.maps.event?.addListener) {
+            kakao.maps.event.addListener(marker, "click", clickHandler);
         }
+
+        return () => {
+            overlay.setMap(null);
+            if (marker && kakao.maps.event?.removeListener) {
+                kakao.maps.event.removeListener(marker, "click", clickHandler);
+            }
+        };
     }, [mapReady, congestion]);
 
     // 카카오 API 키가 없거나 SDK 로드 실패 시 정적 이미지 폴백
