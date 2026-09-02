@@ -41,6 +41,8 @@ import com.backtoback.reseat.domain.payment.dto.response.PaymentCreateResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentFailResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentResponse;
 import com.backtoback.reseat.domain.payment.entity.Payment;
+import com.backtoback.reseat.domain.payment.entity.PaymentCancel;
+import com.backtoback.reseat.domain.payment.entity.PaymentCancelStatus;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
 import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
@@ -57,6 +59,7 @@ import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
 import com.backtoback.reseat.domain.payment.pg.toss.exception.TossPaymentStatusUnknownException;
+import com.backtoback.reseat.domain.payment.repository.PaymentCancelRepository;
 import com.backtoback.reseat.domain.payment.repository.PaymentRecoveryTaskRepository;
 import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
 import com.backtoback.reseat.domain.ticket.entity.Ticket;
@@ -80,6 +83,9 @@ class PaymentServiceTest {
 
     @Mock
     private PaymentRepository paymentRepository;
+
+    @Mock
+    private PaymentCancelRepository paymentCancelRepository;
 
     @Mock
     private PaymentRecoveryTaskRepository paymentRecoveryTaskRepository;
@@ -146,6 +152,18 @@ class PaymentServiceTest {
                 .build();
         ReflectionTestUtils.setField(payment, "id", PAYMENT_ID);
         return payment;
+    }
+
+    private Ticket ticket(int price) {
+        Order order = mock(Order.class);
+        OrderItem orderItem = mock(OrderItem.class);
+        Ticket ticket = mock(Ticket.class);
+        when(order.getId()).thenReturn(ORDER_ID);
+        when(orderItem.getOrder()).thenReturn(order);
+        when(orderItem.getPrice()).thenReturn(price);
+        when(ticket.getId()).thenReturn(ORDER_ITEM_ID);
+        when(ticket.getOrderItem()).thenReturn(orderItem);
+        return ticket;
     }
 
     private PaymentCompleteRequest completeRequest() {
@@ -672,6 +690,83 @@ class PaymentServiceTest {
 
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED);
             verifyNoInteractions(orderService);
+        }
+    }
+
+    @Nested
+    @DisplayName("티켓 단위 부분 취소를 접수한다")
+    class CancelTicketPayment {
+
+        @Test
+        @DisplayName("신규 티켓 취소는 PENDING 이력과 부분 취소 복구 작업을 함께 등록한다.")
+        void registersPendingCancelAndRecoveryTask() {
+            int cancelAmount = 4000;
+            Ticket ticket = ticket(cancelAmount);
+            Payment payment = payment(PaymentStatus.APPROVED);
+            when(paymentRepository.findByOrderIdWithPessimisticWriteLock(ORDER_ID)).thenReturn(Optional.of(payment));
+            when(paymentCancelRepository.findByTicketIdWithPessimisticWriteLock(ORDER_ITEM_ID))
+                .thenReturn(Optional.empty());
+            when(paymentCancelRepository.save(any(PaymentCancel.class))).thenAnswer(invocation -> {
+                PaymentCancel paymentCancel = invocation.getArgument(0);
+                ReflectionTestUtils.setField(paymentCancel, "id", 200L);
+                return paymentCancel;
+            });
+
+            PaymentCancelResponse response = paymentService.cancelTicketPayment(ticket, "사용자 티켓 취소");
+
+            ArgumentCaptor<PaymentRecoveryTask> taskCaptor = ArgumentCaptor.forClass(PaymentRecoveryTask.class);
+            verify(paymentRecoveryTaskRepository).save(taskCaptor.capture());
+            assertThat(response.getPaymentCancelId()).isEqualTo(200L);
+            assertThat(response.getCancelStatus()).isEqualTo(PaymentCancelStatus.PENDING);
+            assertThat(response.getRefundAmount()).isEqualTo(cancelAmount);
+            assertThat(taskCaptor.getValue().getRecoveryKey()).isEqualTo("PARTIAL_CANCEL:200");
+        }
+
+        @Test
+        @DisplayName("완료된 티켓 취소는 전체 취소된 결제에서도 기존 결과를 반환한다.")
+        void returnsCompletedCancelForCanceledPayment() {
+            int cancelAmount = AMOUNT;
+            Ticket ticket = ticket(cancelAmount);
+            Payment payment = payment(PaymentStatus.APPROVED);
+            PaymentCancel paymentCancel = PaymentCancel.create(payment, ticket, "사용자 티켓 취소", "pg-key");
+            ReflectionTestUtils.setField(paymentCancel, "id", 200L);
+            paymentCancel.complete("transaction-key", LocalDateTime.of(2026, 9, 2, 12, 0));
+            payment.cancel();
+            when(paymentRepository.findByOrderIdWithPessimisticWriteLock(ORDER_ID)).thenReturn(Optional.of(payment));
+            when(paymentCancelRepository.findByTicketIdWithPessimisticWriteLock(ORDER_ITEM_ID))
+                .thenReturn(Optional.of(paymentCancel));
+
+            PaymentCancelResponse response = paymentService.cancelTicketPayment(ticket, "사용자 티켓 취소");
+
+            assertThat(response.getCancelStatus()).isEqualTo(PaymentCancelStatus.DONE);
+            assertThat(response.getPaymentStatus()).isEqualTo(PaymentStatus.CANCELED);
+            verify(paymentValidator, never()).validateCancelable(payment);
+            verifyNoInteractions(paymentRecoveryTaskRepository);
+        }
+
+        @Test
+        @DisplayName("실패한 취소를 다시 요청하면 기존 이력과 복구 작업을 PENDING으로 재활성화한다.")
+        void reopensFailedCancelAndRecoveryTask() {
+            Ticket ticket = ticket(4000);
+            Payment payment = payment(PaymentStatus.APPROVED);
+            PaymentCancel paymentCancel = PaymentCancel.create(payment, ticket, "최초 취소", "old-pg-key");
+            ReflectionTestUtils.setField(paymentCancel, "id", 200L);
+            paymentCancel.fail("Toss 요청 거절", LocalDateTime.of(2026, 9, 2, 12, 0));
+            PaymentRecoveryTask recoveryTask = PaymentRecoveryTask.createPartialCancel(paymentCancel);
+            recoveryTask.startProcessing(LocalDateTime.of(2026, 9, 2, 12, 0));
+            recoveryTask.fail("Toss 요청 거절");
+            when(paymentRepository.findByOrderIdWithPessimisticWriteLock(ORDER_ID)).thenReturn(Optional.of(payment));
+            when(paymentCancelRepository.findByTicketIdWithPessimisticWriteLock(ORDER_ITEM_ID))
+                .thenReturn(Optional.of(paymentCancel));
+            when(paymentRecoveryTaskRepository.findByPaymentCancel_Id(200L)).thenReturn(Optional.of(recoveryTask));
+
+            PaymentCancelResponse response = paymentService.cancelTicketPayment(ticket, "재시도 취소");
+
+            assertThat(response.getCancelStatus()).isEqualTo(PaymentCancelStatus.PENDING);
+            assertThat(paymentCancel.getReason()).isEqualTo("재시도 취소");
+            assertThat(paymentCancel.getPgIdempotencyKey()).isNotEqualTo("old-pg-key");
+            assertThat(recoveryTask.getStatus()).isEqualTo(PaymentRecoveryStatus.PENDING);
+            assertThat(recoveryTask.getAttemptCount()).isZero();
         }
     }
 

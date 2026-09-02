@@ -246,4 +246,38 @@ class PaymentRecoveryTaskTest {
             assertThat(task.getStatus()).isEqualTo(status);
         }
     }
+
+    @Nested
+    @DisplayName("최종 실패한 복구 작업을 다시 활성화한다")
+    class Reopen {
+
+        @Test
+        @DisplayName("FAILED 작업은 재시도 정보를 초기화하고 PENDING 상태로 돌아간다.")
+        void reopensFailedTask() {
+            PaymentRecoveryTask task = taskInStatus(PaymentRecoveryStatus.FAILED);
+
+            task.reopen();
+
+            assertThat(task.getStatus()).isEqualTo(PaymentRecoveryStatus.PENDING);
+            assertThat(task.getAttemptCount()).isZero();
+            assertThat(task.getNextRetryAt()).isNull();
+            assertThat(task.getProcessingStartedAt()).isNull();
+            assertThat(task.getLastError()).isNull();
+            assertThat(task.getCompletedAt()).isNull();
+        }
+
+        @ParameterizedTest(name = "{0} 상태의 작업은 다시 활성화할 수 없다")
+        @EnumSource(
+            value = PaymentRecoveryStatus.class,
+            mode = EnumSource.Mode.EXCLUDE,
+            names = "FAILED"
+        )
+        @DisplayName("FAILED가 아닌 작업을 다시 활성화하면 예외가 발생한다.")
+        void rejectsNonFailedStatus(PaymentRecoveryStatus status) {
+            PaymentRecoveryTask task = taskInStatus(status);
+
+            assertThatThrownBy(task::reopen).isInstanceOf(IllegalStateException.class);
+            assertThat(task.getStatus()).isEqualTo(status);
+        }
+    }
 }

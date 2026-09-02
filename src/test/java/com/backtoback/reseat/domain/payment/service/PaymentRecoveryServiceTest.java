@@ -25,6 +25,7 @@ import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResp
 import com.backtoback.reseat.domain.payment.repository.PaymentRecoveryTaskRepository;
 import com.backtoback.reseat.domain.payment.schedule.ConfirmUnknownRecoveryHandler;
 import com.backtoback.reseat.domain.payment.schedule.PaymentRecoveryHandler;
+import com.backtoback.reseat.domain.payment.schedule.PaymentRecoveryResult;
 import com.backtoback.reseat.domain.payment.schedule.PaymentRecoveryService;
 
 @ExtendWith(MockitoExtension.class)
@@ -145,6 +146,25 @@ class PaymentRecoveryServiceTest {
             assertThat(task.getStatus()).isEqualTo(PaymentRecoveryStatus.FAILED);
             assertThat(task.getLastError()).isEqualTo("지원하지 않는 결제 복구 유형입니다: PARTIAL_CANCEL");
             verifyNoInteractions(tossPaymentClient);
+        }
+
+        @Test
+        @DisplayName("처리기가 종결 실패를 반환하면 재시도를 예약하지 않고 작업을 실패 처리한다.")
+        void failsTaskForNonRetryableResult() {
+            PaymentRecoveryTask task = partialCancelTask();
+            PaymentRecoveryHandler handler = mock(PaymentRecoveryHandler.class);
+            when(handler.getType()).thenReturn(PaymentRecoveryType.PARTIAL_CANCEL);
+            when(handler.recover(task)).thenReturn(PaymentRecoveryResult.failure("Toss가 취소 요청을 거절했습니다."));
+            PaymentRecoveryService service
+                = new PaymentRecoveryService(paymentRecoveryTaskRepository, List.of(handler));
+            when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID)).thenReturn(Optional.of(task));
+
+            service.recover(TASK_ID, NOW);
+
+            assertThat(task.getStatus()).isEqualTo(PaymentRecoveryStatus.FAILED);
+            assertThat(task.getAttemptCount()).isZero();
+            assertThat(task.getNextRetryAt()).isNull();
+            assertThat(task.getLastError()).isEqualTo("Toss가 취소 요청을 거절했습니다.");
         }
 
         @Test
