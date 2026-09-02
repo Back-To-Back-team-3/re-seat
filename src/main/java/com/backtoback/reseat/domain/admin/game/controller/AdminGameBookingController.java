@@ -21,13 +21,14 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/admin/games")
-public class AdminGameBookingController {
+public class AdminGameBookingController implements AdminGameBookingControllerDocs {
 
     private final AdminGameBookingService adminGameBookingService;
 
     /**
      * 경기 예매 상태를 전이한다(OPEN/CLOSED/CANCELLED).
      */
+    @Override
     @PatchMapping("/{gameId}/booking-status")
     public ResponseEntity<ApiResponse<GameBookingStatusResponse>> updateBookingStatus(
         @PathVariable Long gameId,
