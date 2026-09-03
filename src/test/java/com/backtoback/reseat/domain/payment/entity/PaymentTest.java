@@ -12,9 +12,11 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import com.backtoback.reseat.domain.order.entity.Order;
+import com.backtoback.reseat.domain.order.entity.OrderItem;
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCallbackMismatchException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelNotAllowedException;
+import com.backtoback.reseat.domain.ticket.entity.Ticket;
 import com.backtoback.reseat.domain.user.entity.User;
 
 @DisplayName("Payment 상태 전이")
@@ -41,6 +43,17 @@ class PaymentTest {
 
     private Payment readyPayment() {
         return payment(PaymentStatus.READY);
+    }
+
+    private PaymentCancel completedCancel(Payment payment, int cancelAmount) {
+        OrderItem orderItem = mock(OrderItem.class);
+        Ticket ticket = mock(Ticket.class);
+        when(ticket.getOrderItem()).thenReturn(orderItem);
+        when(orderItem.getPrice()).thenReturn(cancelAmount);
+
+        PaymentCancel paymentCancel = PaymentCancel.create(payment, ticket, "사용자 티켓 취소", "cancel-key");
+        paymentCancel.complete("transaction-key", LocalDateTime.of(2026, 9, 2, 12, 0));
+        return paymentCancel;
     }
 
     @Nested
@@ -111,6 +124,24 @@ class PaymentTest {
             assertThat(payment.isCanceled()).isEqualTo(status == PaymentStatus.CANCELED);
             assertThat(payment.isCancelable())
                 .isEqualTo(status == PaymentStatus.APPROVED || status == PaymentStatus.PARTIALLY_CANCELED);
+        }
+    }
+
+    @Nested
+    @DisplayName("결제 취소 금액을 계산한다")
+    class CancelAmount {
+
+        @Test
+        @DisplayName("완료된 취소 이력의 금액만 합산하고 결제 잔액을 계산한다.")
+        void calculatesCanceledAndRemainingAmount() {
+            Payment payment = payment(PaymentStatus.PARTIALLY_CANCELED);
+            completedCancel(payment, 4000);
+            PaymentCancel pendingCancel
+                = PaymentCancel.create(payment, mock(Ticket.class), "처리 중인 티켓 취소", "pending-cancel-key");
+
+            assertThat(payment.getCanceledAmount()).isEqualTo(4000);
+            assertThat(payment.getRemainingAmount()).isEqualTo(6000);
+            assertThat(pendingCancel.getStatus()).isEqualTo(PaymentCancelStatus.PENDING);
         }
     }
 

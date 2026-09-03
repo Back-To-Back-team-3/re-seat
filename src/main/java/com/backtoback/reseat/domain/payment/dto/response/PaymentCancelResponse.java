@@ -9,7 +9,7 @@ import lombok.Getter;
 
 @Getter
 @Builder
-@Schema(description = "결제 전액 취소 응답")
+@Schema(description = "결제 취소 응답")
 public class PaymentCancelResponse {
 
     @Schema(
@@ -52,4 +52,5 @@ public class PaymentCancelResponse {
             .paymentStatus(payment.getStatus())
             .build();
     }
+
 }
