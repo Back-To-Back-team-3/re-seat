@@ -1,6 +1,8 @@
 package com.backtoback.reseat.domain.citydata.service;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -9,6 +11,7 @@ import org.springframework.stereotype.Service;
 import com.backtoback.reseat.domain.citydata.client.SeoulCityDataClient;
 import com.backtoback.reseat.domain.citydata.client.dto.SeoulCityDataRawResponse;
 import com.backtoback.reseat.domain.citydata.dto.response.StadiumCongestionResponse;
+import com.backtoback.reseat.domain.citydata.exception.CityDataApiException;
 import com.backtoback.reseat.domain.citydata.exception.StadiumCongestionNotFoundException;
 import com.backtoback.reseat.domain.citydata.model.StadiumCityArea;
 
@@ -46,22 +49,46 @@ public class StadiumCongestionService {
                 return cachedResponse;
             }
         } catch (Exception e) {
-            log.warn("Reids 캐시 조회 중 오류 발생 (stadiumNum = {}), 외부 API를 직접 호출합니다", stadiumNum, e);
+            log.warn("Redis 캐시 조회 중 오류 발생 (stadiumNum = {}), 외부 API를 직접 호출합니다", stadiumNum, e);
         }
 
         // 외부 API 호출(캐시 미스)
-        SeoulCityDataRawResponse rawResponse = seoulCityDataClient.fetchCityData(cityArea.getAreaName());
+        SeoulCityDataRawResponse rawResponse;
+        try {
+            rawResponse = seoulCityDataClient.fetchCityData(cityArea.getAreaName());
+        } catch (CityDataApiException e) {
+            log.warn("서울시 실시간 도시데이터 API 호출 실패 (stadiumNum = {}), 기본 혼잡도 데이터로 대체합니다: {}", stadiumNum, e.getMessage());
+            // Fallback 응답은 장기 캐시하지 않고 즉시 반환하여 외부 API 복구 시 정상 재시도하도록 함
+            return createFallbackResponse(cityArea);
+        }
 
         // 응답 DTO 변환
         StadiumCongestionResponse response = mapToResponse(cityArea, rawResponse);
 
-        // Redis 캐시 저장
+        // 정상 응답에 대해서만 Redis 캐시 저장
         try {
             redisTemplate.opsForValue().set(cacheKey, response, Duration.ofMinutes(cacheTtlMinutes));
         } catch (Exception e) {
             log.warn("Redis 캐시 저장 실패(stadiumNum = {})", stadiumNum, e);
         }
         return response;
+    }
+
+    private StadiumCongestionResponse createFallbackResponse(StadiumCityArea cityArea) {
+        String nowStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+        return StadiumCongestionResponse
+            .of(
+                cityArea.getStadiumNum(),
+                cityArea.getStadiumName(),
+                cityArea.getAreaName(),
+                "보통",
+                "사람이 몰려있을 수 있지만 크게 붐비지 않으며, 도보 이동이 원활합니다.",
+                14000,
+                17000,
+                cityArea.getLatitude(),
+                cityArea.getLongitude(),
+                nowStr
+            );
     }
 
     private StadiumCongestionResponse mapToResponse(StadiumCityArea cityArea, SeoulCityDataRawResponse raw) {
