@@ -6,9 +6,10 @@ import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.order.entity.OrderItem;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.ticket.exception.InvalidTicketStateException;
+import com.backtoback.reseat.domain.ticket.exception.TicketAlreadyRefundedException;
 import com.backtoback.reseat.domain.ticket.exception.TicketAlreadyUsedException;
-import com.backtoback.reseat.domain.ticket.exception.TicketCanceledByAdminException;
-import com.backtoback.reseat.domain.ticket.exception.TicketCanceledByUserException;
+import com.backtoback.reseat.domain.ticket.exception.TicketRefundFailedException;
+import com.backtoback.reseat.domain.ticket.exception.TicketRefundInProgressException;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.global.common.BaseEntity;
 
@@ -66,6 +67,9 @@ import lombok.NoArgsConstructor;
     }
 )
 public class Ticket extends BaseEntity {
+
+    // 환불 가능 기한 (경기 시작 24시간 전까지)
+    private static final long REFUND_DEADLINE_HOURS_BEFORE_GAME = 24;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -136,7 +140,7 @@ public class Ticket extends BaseEntity {
     )
     private TicketStatus status;
 
-    // 티켓 취소 사유 유형 (USER_REFUND, ADMIN_FORCE_CANCEL, PAYMENT_CANCELED)
+    // 티켓 취소(환불) 사유 유형 (USER_REFUND, ADMIN_FORCE_CANCEL, PAYMENT_CANCELED)
     @Enumerated(EnumType.STRING)
     @Column(
         name = "cancel_reason",
@@ -160,13 +164,21 @@ public class Ticket extends BaseEntity {
     )
     private LocalDateTime issuedAt;
 
-    // 티켓 사용 시간
+    // 티켓 사용(입장) 시간
     @Column(name = "used_at")
     private LocalDateTime usedAt;
 
-    // 티켓 취소 시간
+    // 관리자 강제 취소 집행 시각 (관리자 강제 취소 전용, 그 외에는 null)
     @Column(name = "canceled_at")
     private LocalDateTime canceledAt;
+
+    // 환불 요청 접수 시각 (ISSUED -> REFUND_PENDING 전이 시각, 재시도 시에도 유지)
+    @Column(name = "refund_requested_at")
+    private LocalDateTime refundRequestedAt;
+
+    // 환불 확정 시각 (REFUND_PENDING -> REFUNDED 전이 시각)
+    @Column(name = "refunded_at")
+    private LocalDateTime refundedAt;
 
     public static Ticket issue(String ticketNo, User user, OrderItem orderItem, GameSeat gameSeat, String qrToken) {
         validateIssueParams(ticketNo, user, orderItem, gameSeat, qrToken);
@@ -208,52 +220,131 @@ public class Ticket extends BaseEntity {
         }
     }
 
-    // 티켓 사용 처리, ISSUED 상태의 티켓만 사용 가능
-    public void markUsed() {
-        validateStatus(TicketStatus.ISSUED);
-        this.status = TicketStatus.USED;
+    // 환불 가능 기한(경기 시작 24시간 전) 반환
+    public LocalDateTime getRefundDeadline() {
+        return this.game.getGameAt().minusHours(REFUND_DEADLINE_HOURS_BEFORE_GAME);
+    }
+
+    /**
+     * 현재 시점에 사용자가 취소(환불)를 요청할 수 있는 상태인지 확인한다.
+     * <p>ISSUED 상태이고 환불 기한이 지나지 않은 경우에만 true.</p>
+     */
+    public boolean isRefundable() {
+        return this.status == TicketStatus.ISSUED && LocalDateTime.now().isBefore(getRefundDeadline());
+    }
+
+    // 티켓 입장(검표) 처리, ISSUED 상태의 티켓만 가능
+    public void markEntered() {
+        validateIssuedForTransition();
+        this.status = TicketStatus.USED_ENTERED;
         this.usedAt = LocalDateTime.now();
     }
 
-    // 관리자 전용 직권 취소 처리
-    // @param detail 관리자가 입력한 취소 상세 사유 (예: "매크로 부정 예매 탐지")
+    // 경기 종료 후 미입장 자동 처리 배치용, ISSUED 상태의 티켓만 가능
+    public void markNoShow() {
+        validateIssuedForTransition();
+        this.status = TicketStatus.USED_NO_SHOW;
+    }
 
-    // 티켓 취소 처리, ISSUED 상태의 티켓만 취소 가능
-    public void cancel(TicketCancelReason cancelReason) {
-        validateStatus(TicketStatus.ISSUED);
-
+    /**
+     * 환불(취소) 요청을 접수한다. ISSUED -> REFUND_PENDING.
+     * <p>PG 호출 전에 먼저 호출해 "환불 진행 중" 상태를 기록한다.
+     * 관리자 강제 취소 집행 시각(canceledAt)은 여기서 기록하지 않고,
+     * 환불이 실제로 확정되는 {@link #completeRefund()}에서만 기록한다.</p>
+     *
+     * @param cancelReason 취소 사유 유형
+     * @param cancelDetail 취소 상세 사유 (선택)
+     */
+    public void requestRefund(TicketCancelReason cancelReason, String cancelDetail) {
         if (cancelReason == null) {
             throw new IllegalArgumentException("cancelReason은 필수입니다.");
         }
+        validateIssuedForTransition();
 
-        this.status = TicketStatus.CANCELED;
+        this.status = TicketStatus.REFUND_PENDING;
         this.cancelReason = cancelReason;
-        this.canceledAt = LocalDateTime.now();
+        this.cancelDetail = cancelDetail;
+        this.refundRequestedAt = LocalDateTime.now();
     }
 
-    public void cancelByAdmin(String detail) {
-        validateStatus(TicketStatus.ISSUED);
-        this.status = TicketStatus.CANCELED;
-        this.cancelReason = TicketCancelReason.ADMIN_FORCE_CANCEL;
-        this.cancelDetail = (detail != null && !detail.isBlank()) ? detail : "관리자 직권 취소";
-        this.canceledAt = LocalDateTime.now();
+    /**
+     * PG 취소가 성공적으로 완료된 뒤 환불을 확정한다. REFUND_PENDING -> REFUNDED.
+     */
+    public void completeRefund() {
+        if (this.status != TicketStatus.REFUND_PENDING) {
+            throw new IllegalStateException("환불 대기 상태의 티켓만 환불 확정할 수 있습니다.");
+        }
+        this.status = TicketStatus.REFUNDED;
+        this.refundedAt = LocalDateTime.now();
+        // 관리자 강제 취소 집행 시각은 환불이 실제로 확정된 이 시점에만 기록한다.
+        if (this.cancelReason == TicketCancelReason.ADMIN_FORCE_CANCEL) {
+            this.canceledAt = LocalDateTime.now();
+        }
     }
 
-    // 현재 티켓 상태가 기대 상태와 같은지 검증
-    // 구체적인 예외 클래스명으로 원인을 구분할 수 있게 한다.
-    // 이미 취소된 티켓이면 cancelReason(취소 주체)에 따라 관리자 취소/사용자 취소 예외를 구분해서 던진다.
-    private void validateStatus(TicketStatus expected) {
-        if (this.status == TicketStatus.CANCELED) {
-            if (this.cancelReason == TicketCancelReason.ADMIN_FORCE_CANCEL) {
-                throw new TicketCanceledByAdminException();
-            }
-            throw new TicketCanceledByUserException();
+    /**
+     * PG 취소가 실패한 경우 환불 실패로 전환한다. REFUND_PENDING -> REFUND_FAILED.
+     * <p>좌석·주문·결제 상태는 변경하지 않는다.</p>
+     */
+    public void failRefund() {
+        if (this.status != TicketStatus.REFUND_PENDING) {
+            throw new IllegalStateException("환불 대기 상태의 티켓만 환불 실패 처리할 수 있습니다.");
         }
-        if (this.status == TicketStatus.USED) {
-            throw new TicketAlreadyUsedException();
-        }
-        if (this.status != expected) {
+        this.status = TicketStatus.REFUND_FAILED;
+    }
+
+    /**
+     * 환불 실패 이력을 재시도한다. REFUND_FAILED -> REFUND_PENDING.
+     * <p>사용자가 직접 호출하는 재시도 API에서 쓰이므로, 대상이 아니면 일반 상태 전이 예외로 알린다.</p>
+     */
+    public void retryRefund() {
+        if (this.status != TicketStatus.REFUND_FAILED) {
             throw new InvalidTicketStateException();
         }
+        this.status = TicketStatus.REFUND_PENDING;
+    }
+
+    /**
+     * 결제 패키지 호환용 > 결제 전체 취소 시 함께 정리되는 다른 ISSUED 티켓을 즉시 환불 완료로 전환한다.
+     * <p>{@code PaymentService#cancelRemainingIssuedTickets}가 호출하는 기존 계약을 유지하기 위한 메서드다.
+     * 결제 패키지가 이 시점에는 이미 PG 전액 취소를 완료한 뒤이므로, REFUND_PENDING 단계 없이 바로 REFUNDED로 확정한다.
+     * "티켓 1장 단위" 취소 흐름(사용자·관리자 취소)은
+     * {@link #requestRefund(TicketCancelReason, String)} / {@link #completeRefund()}를 사용한다.</p>
+     *
+     * @param cancelReason 취소 사유 유형
+     * @deprecated 결제 패키지가 티켓 단위 부분 취소를 지원하도록 바뀌면 이 메서드는 제거 대상이다.
+     */
+    @Deprecated
+    public void cancel(TicketCancelReason cancelReason) {
+        if (cancelReason == null) {
+            throw new IllegalArgumentException("cancelReason은 필수입니다.");
+        }
+        validateIssuedForTransition();
+
+        this.status = TicketStatus.REFUNDED;
+        this.cancelReason = cancelReason;
+        this.refundRequestedAt = LocalDateTime.now();
+        this.refundedAt = LocalDateTime.now();
+    }
+
+    /**
+     * ISSUED 상태에서만 가능한 동작(입장, 환불 요청)을 검증한다.
+     * <p>이미 진행 중이거나 종결된 상태면 구체적인 원인을 구분해 예외를 던진다.</p>
+     */
+    private void validateIssuedForTransition() {
+        if (this.status == TicketStatus.ISSUED) {
+            return;
+        }
+        if (this.status == TicketStatus.REFUND_PENDING) {
+            throw new TicketRefundInProgressException();
+        }
+        if (this.status == TicketStatus.REFUND_FAILED) {
+            throw new TicketRefundFailedException();
+        }
+        if (this.status == TicketStatus.REFUNDED) {
+            throw new TicketAlreadyRefundedException();
+        }
+        // USED_ENTERED, USED_NO_SHOW
+        throw new TicketAlreadyUsedException();
     }
 }

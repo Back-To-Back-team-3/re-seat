@@ -14,7 +14,7 @@ import lombok.Getter;
  * 티켓 상세 조회 응답 DTO
  * <p>
  * API 명세 8.2의 응답 예시 기반
- * 티켓의 기본 정보, 좌석 정보, QR 토큰, 경기 시작 일시를 포함
+ * 티켓의 기본 정보, 좌석 정보, QR 토큰, 경기 시작 일시, 환불 가능 여부·기한과 환불 진행 시각을 포함
  */
 @Getter
 @Builder
@@ -24,11 +24,21 @@ public class TicketDetailResponse {
     private Long ticketId;
     private String ticketNo;
     private Long gameId;
+    private String gameTitle;
+    private String stadiumName;
     private Long gameSeatId;
     private String seat;
+    private String orderNo;
+    private int price;
     private TicketStatus status;
     private String qrToken;
     private LocalDateTime gameAt;
+    private boolean refundable;
+    private LocalDateTime refundDeadline;
+    private LocalDateTime issuedAt;
+    private LocalDateTime usedAt;
+    private LocalDateTime refundRequestedAt;
+    private LocalDateTime refundedAt;
 
     /**
      * 티켓 엔티티를 상세 응답 DTO로 변환
@@ -42,11 +52,21 @@ public class TicketDetailResponse {
             .ticketId(ticket.getId())
             .ticketNo(ticket.getTicketNo())
             .gameId(ticket.getGame().getId())
+            .gameTitle(ticket.getGame().getTitle())
+            .stadiumName(ticket.getGame().getStadium() != null ? ticket.getGame().getStadium().getName() : null)
             .gameSeatId(ticket.getGameSeat().getId())
             .seat(buildSeatLabel(ticket))
+            .orderNo(ticket.getOrderItem().getOrder().getOrderNo())
+            .price(ticket.getOrderItem().getPrice())
             .status(ticket.getStatus())
             .qrToken(ticket.getQrToken())
             .gameAt(ticket.getGame().getGameAt())
+            .refundable(ticket.isRefundable())
+            .refundDeadline(ticket.getRefundDeadline())
+            .issuedAt(ticket.getIssuedAt())
+            .usedAt(ticket.getUsedAt())
+            .refundRequestedAt(ticket.getRefundRequestedAt())
+            .refundedAt(ticket.getRefundedAt())
             .build();
     }
 
