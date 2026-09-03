@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.redisson.api.RLock;
@@ -27,8 +28,9 @@ import com.backtoback.reseat.domain.payment.dto.response.PaymentCreateResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentFailResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentResponse;
 import com.backtoback.reseat.domain.payment.entity.Payment;
+import com.backtoback.reseat.domain.payment.entity.PaymentCancel;
+import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
-import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryType;
 import com.backtoback.reseat.domain.payment.entity.PaymentStatus; // [신규] 관리자 강제취소 시 APPROVED 결제 조회용
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelResponseInvalidException;
@@ -38,9 +40,11 @@ import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
 import com.backtoback.reseat.domain.payment.pg.toss.exception.TossPaymentStatusUnknownException;
+import com.backtoback.reseat.domain.payment.repository.PaymentCancelRepository;
 import com.backtoback.reseat.domain.payment.repository.PaymentRecoveryTaskRepository;
 import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
 import com.backtoback.reseat.domain.ticket.dto.response.TicketListResponse;
+import com.backtoback.reseat.domain.ticket.entity.Ticket;
 import com.backtoback.reseat.domain.ticket.entity.TicketCancelReason;
 import com.backtoback.reseat.domain.ticket.entity.TicketStatus;
 import com.backtoback.reseat.domain.ticket.repository.TicketRepository;
@@ -57,6 +61,7 @@ public class PaymentService {
     private static final long PAYMENT_LOCK_WAIT_SECONDS = 3L;
 
     private final PaymentRepository paymentRepository;
+    private final PaymentCancelRepository paymentCancelRepository;
     private final PaymentRecoveryTaskRepository paymentRecoveryTaskRepository;
     private final PaymentCreationService paymentCreationService;
     private final PaymentOrderPolicy paymentOrderPolicy;
@@ -148,8 +153,7 @@ public class PaymentService {
                     e
                 );
             payment.fail("토스 결제 승인 상태를 확인할 수 없습니다.", LocalDateTime.now());
-            paymentRecoveryTaskRepository
-                .save(PaymentRecoveryTask.create(payment, PaymentRecoveryType.CONFIRM_UNKNOWN));
+            paymentRecoveryTaskRepository.save(PaymentRecoveryTask.createConfirmUnknown(payment));
             orderService.failOrder(payment.getOrder().getId());
             return PaymentCompleteResponse.from(payment, List.of());
         }
@@ -252,6 +256,60 @@ public class PaymentService {
         // 로컬 결제를 잠그고 소유자를 검증한다. (사용자는 본인 결제만 취소 가능)
         Payment payment = getOwnedPaymentWithPessimisticWriteLock(userId, paymentId);
         return cancelApprovedPayment(payment, request);
+    }
+
+    /** 티켓 한 장의 부분 취소 이력과 비동기 복구 작업을 접수한다. */
+    @Transactional
+    public void requestTicketPaymentCancel(Ticket ticket, String reason) {
+        validatePartialCancelTarget(ticket);
+
+        Long orderId = ticket.getOrderItem().getOrder().getId();
+        Payment payment
+            = paymentRepository
+                .findByOrderIdWithPessimisticWriteLock(orderId)
+                .orElseThrow(PaymentNotFoundException::new);
+
+        // 기존 취소 이력은 상태에 맞게 재사용하고, 없을 때만 새로운 취소 작업을 등록한다.
+        Optional<PaymentCancel> existingCancel
+            = paymentCancelRepository.findByTicketIdWithPessimisticWriteLock(ticket.getId());
+        if (existingCancel.isPresent()) {
+            PaymentCancel paymentCancel = existingCancel.get();
+            if (paymentCancel.isDone()) {
+                return;
+            }
+
+            paymentValidator.validateCancelable(payment);
+            reopenFailedPartialCancel(paymentCancel, reason);
+            return;
+        }
+
+        paymentValidator.validateCancelable(payment);
+        PaymentCancel paymentCancel
+            = paymentCancelRepository.save(PaymentCancel.create(payment, ticket, reason, UUID.randomUUID().toString()));
+        paymentRecoveryTaskRepository.save(PaymentRecoveryTask.createPartialCancel(paymentCancel));
+    }
+
+    /** 실패한 부분 취소 이력과 복구 작업을 새로운 PG 취소 시도로 다시 활성화한다. */
+    private void reopenFailedPartialCancel(PaymentCancel paymentCancel, String reason) {
+        PaymentRecoveryTask recoveryTask
+            = paymentRecoveryTaskRepository
+                .findByPaymentCancel_Id(paymentCancel.getId())
+                .orElseThrow(PaymentCancelStatusUnknownException::new);
+
+        if (paymentCancel.isFailed()) {
+            paymentCancel.retry(reason, UUID.randomUUID().toString());
+        }
+        if (recoveryTask.getStatus() == PaymentRecoveryStatus.FAILED) {
+            recoveryTask.reopen();
+        }
+    }
+
+    /** 부분 취소 대상 티켓에서 결제와 취소 금액을 확인할 수 있는지 검증한다. */
+    private void validatePartialCancelTarget(Ticket ticket) {
+        if (ticket == null || ticket.getId() == null || ticket.getOrderItem() == null
+            || ticket.getOrderItem().getOrder() == null) {
+            throw new IllegalArgumentException("취소 대상 티켓과 주문 항목은 필수입니다.");
+        }
     }
 
     /**

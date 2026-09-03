@@ -15,9 +15,13 @@ import org.junit.jupiter.params.provider.EnumSource;
 class PaymentRecoveryTaskTest {
 
     private static final LocalDateTime BASE_TIME = LocalDateTime.of(2026, 7, 25, 12, 0);
+    private static final Long PAYMENT_ID = 1L;
+    private static final Long PAYMENT_CANCEL_ID = 2L;
 
     private PaymentRecoveryTask pendingTask() {
-        return PaymentRecoveryTask.create(mock(Payment.class), PaymentRecoveryType.CONFIRM_UNKNOWN);
+        Payment payment = mock(Payment.class);
+        when(payment.getId()).thenReturn(PAYMENT_ID);
+        return PaymentRecoveryTask.createConfirmUnknown(payment);
     }
 
     private PaymentRecoveryTask taskInStatus(PaymentRecoveryStatus status) {
@@ -53,17 +57,38 @@ class PaymentRecoveryTaskTest {
             PaymentRecoveryTask task = pendingTask();
 
             assertThat(task.getType()).isEqualTo(PaymentRecoveryType.CONFIRM_UNKNOWN);
+            assertThat(task.getRecoveryKey()).isEqualTo("CONFIRM_UNKNOWN:" + PAYMENT_ID);
+            assertThat(task.getPaymentCancel()).isNull();
             assertThat(task.getStatus()).isEqualTo(PaymentRecoveryStatus.PENDING);
             assertThat(task.getAttemptCount()).isZero();
         }
 
         @Test
-        @DisplayName("요청한 복구 유형으로 작업을 생성한다.")
-        void createsRequestedType() {
-            PaymentRecoveryTask task
-                = PaymentRecoveryTask.create(mock(Payment.class), PaymentRecoveryType.PARTIAL_CANCEL);
+        @DisplayName("부분 취소 이력과 해당 이력을 식별하는 복구 키로 작업을 생성한다.")
+        void createsPartialCancelTask() {
+            Payment payment = mock(Payment.class);
+            PaymentCancel paymentCancel = mock(PaymentCancel.class);
+            when(paymentCancel.getId()).thenReturn(PAYMENT_CANCEL_ID);
+            when(paymentCancel.getPayment()).thenReturn(payment);
+
+            PaymentRecoveryTask task = PaymentRecoveryTask.createPartialCancel(paymentCancel);
 
             assertThat(task.getType()).isEqualTo(PaymentRecoveryType.PARTIAL_CANCEL);
+            assertThat(task.getPayment()).isSameAs(payment);
+            assertThat(task.getPaymentCancel()).isSameAs(paymentCancel);
+            assertThat(task.getRecoveryKey()).isEqualTo("PARTIAL_CANCEL:" + PAYMENT_CANCEL_ID);
+        }
+
+        @Test
+        @DisplayName("영속화되지 않은 결제 또는 부분 취소 이력으로는 복구 작업을 생성할 수 없다.")
+        void rejectsTargetWithoutId() {
+            Payment payment = Payment.builder().build();
+            PaymentCancel paymentCancel = mock(PaymentCancel.class);
+
+            assertThatThrownBy(() -> PaymentRecoveryTask.createConfirmUnknown(payment))
+                .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> PaymentRecoveryTask.createPartialCancel(paymentCancel))
+                .isInstanceOf(IllegalArgumentException.class);
         }
     }
 
@@ -218,6 +243,40 @@ class PaymentRecoveryTaskTest {
             PaymentRecoveryTask task = taskInStatus(status);
 
             assertThatThrownBy(() -> task.fail("최대 재시도 횟수 초과")).isInstanceOf(IllegalStateException.class);
+            assertThat(task.getStatus()).isEqualTo(status);
+        }
+    }
+
+    @Nested
+    @DisplayName("최종 실패한 복구 작업을 다시 활성화한다")
+    class Reopen {
+
+        @Test
+        @DisplayName("FAILED 작업은 재시도 정보를 초기화하고 PENDING 상태로 돌아간다.")
+        void reopensFailedTask() {
+            PaymentRecoveryTask task = taskInStatus(PaymentRecoveryStatus.FAILED);
+
+            task.reopen();
+
+            assertThat(task.getStatus()).isEqualTo(PaymentRecoveryStatus.PENDING);
+            assertThat(task.getAttemptCount()).isZero();
+            assertThat(task.getNextRetryAt()).isNull();
+            assertThat(task.getProcessingStartedAt()).isNull();
+            assertThat(task.getLastError()).isNull();
+            assertThat(task.getCompletedAt()).isNull();
+        }
+
+        @ParameterizedTest(name = "{0} 상태의 작업은 다시 활성화할 수 없다")
+        @EnumSource(
+            value = PaymentRecoveryStatus.class,
+            mode = EnumSource.Mode.EXCLUDE,
+            names = "FAILED"
+        )
+        @DisplayName("FAILED가 아닌 작업을 다시 활성화하면 예외가 발생한다.")
+        void rejectsNonFailedStatus(PaymentRecoveryStatus status) {
+            PaymentRecoveryTask task = taskInStatus(status);
+
+            assertThatThrownBy(task::reopen).isInstanceOf(IllegalStateException.class);
             assertThat(task.getStatus()).isEqualTo(status);
         }
     }
