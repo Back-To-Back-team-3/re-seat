@@ -1,16 +1,8 @@
 package com.backtoback.reseat.domain.order.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.mock;
-import static org.mockito.BDDMockito.never;
-import static org.mockito.BDDMockito.then;
-import static org.mockito.BDDMockito.verify;
-import static org.mockito.BDDMockito.verifyNoInteractions;
-import static org.mockito.BDDMockito.when;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.BDDMockito.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -28,6 +20,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import com.backtoback.reseat.domain.order.dto.response.OrderResponse;
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.entity.OrderItem;
+import com.backtoback.reseat.domain.order.entity.OrderItemStatus;
 import com.backtoback.reseat.domain.order.entity.OrderStatus;
 import com.backtoback.reseat.domain.order.exception.InvalidOrderStatusException;
 import com.backtoback.reseat.domain.order.exception.OrderExpiredException;
@@ -40,8 +33,10 @@ import com.backtoback.reseat.domain.reservation.entity.ReservationSeat;
 import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
 import com.backtoback.reseat.domain.reservation.exception.PreReservationExpiredException;
 import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
+import com.backtoback.reseat.domain.reservation.service.ReservationService;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
+import com.backtoback.reseat.domain.seatinventory.service.GameSeatStatusService;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
 
@@ -55,8 +50,10 @@ public class OrderServiceTest {
     private static final int TOTAL_AMOUNT = 34_000;
     private static final int PRICE = 17_000;
     private static final Long ORDER_ID = 1L;
+    private static final Long ORDER_ITEM_ID = 1L;
     private static final Long USER_ID = 1L;
     private static final Long RESERVATION_ID = 1L;
+    private static final Long GAME_SEAT_ID = 1L;
 
     @Mock
     private OrderRepository orderRepository;
@@ -72,6 +69,12 @@ public class OrderServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private ReservationService reservationService;
+
+    @Mock
+    private GameSeatStatusService gameSeatStatusService;
 
     @InjectMocks
     private OrderService orderService;
@@ -206,6 +209,49 @@ public class OrderServiceTest {
         ).willReturn(expiredOrderCount);
 
         return order;
+    }
+
+    /**
+     * 환불 상태 전이를 검증할 주문, 주문 항목, 좌석과 예약을 함께 전달한다.
+     *
+     * @param order 환불 후 상태를 검증할 주문
+     * @param orderItem 환불 대상 주문 항목
+     * @param gameSeat 환불 대상 주문 항목과 연결된 경기 좌석
+     * @param reservation 최종 환불 후 상태를 검증할 예약
+     */
+    private record RefundOrderFixture(Order order, OrderItem orderItem, GameSeat gameSeat, Reservation reservation) {
+    }
+
+    /**
+     * 남은 주문 항목 존재 여부에 따른 주문, 주문 항목, 좌석과 Repository 응답을 준비한다.
+     *
+     * @param hasRemainingOrderItems 환불 후 ACTIVE 주문 항목이 남아 있는지 여부
+     * @return 환불 후 상태를 검증할 주문, 주문 항목, 좌석과 예약 fixture
+     */
+    private RefundOrderFixture givenRefundableOrder(boolean hasRemainingOrderItems) {
+
+        Reservation reservation = Reservation.builder().status(ReservationStatus.CONFIRMED).build();
+        ReflectionTestUtils.setField(reservation, "id", RESERVATION_ID);
+
+        // 남은 주문 항목 조회에 사용하는 주문 ID를 테스트 조건에 맞게 설정한다.
+        Order order = createdOrder(reservation, PAYMENT_DEADLINE);
+        ReflectionTestUtils.setField(order, "id", ORDER_ID);
+        order.paid();
+
+        GameSeat gameSeat = GameSeat.builder().status(GameSeatStatus.SOLD).build();
+        ReflectionTestUtils.setField(gameSeat, "id", GAME_SEAT_ID);
+        OrderItem orderItem = OrderItem.of(order, gameSeat, PRICE);
+
+        given(orderRepository.findByOrderItemIdWithPessimisticWriteLock(eq(ORDER_ITEM_ID)))
+            .willReturn(Optional.of(order));
+
+        given(orderItemRepository.findById(ORDER_ITEM_ID)).willReturn(Optional.of(orderItem));
+
+        // 환불 후 남은 ACTIVE 주문 항목의 존재 여부로 주문 상태 전이 경로를 구분한다.
+        given(orderItemRepository.existsByOrder_IdAndStatus(ORDER_ID, OrderItemStatus.ACTIVE))
+            .willReturn(hasRemainingOrderItems);
+
+        return new RefundOrderFixture(order, orderItem, gameSeat, reservation);
     }
 
     // ---------- 결제 완료 ----------
@@ -398,6 +444,50 @@ public class OrderServiceTest {
 
         // then
         assertThat(response.getHoldExpiresAt()).isEqualTo(response.getPaymentDeadline());
+    }
+
+    // ---------- 주문 환불 ----------
+
+    @Test
+    @DisplayName("일부 티켓 환불이 완료되고 남은 주문 항목이 있으면 주문이 PARTIALLY_CANCELED 상태로 변경된다.")
+    void refundOrder_partiallyCancelsOrder() {
+
+        // given
+        // 환불 대상 외에 ACTIVE 주문 항목이 남아 있는 부분 취소 조건을 준비한다.
+        RefundOrderFixture fixture = givenRefundableOrder(true);
+        Order order = fixture.order();
+        OrderItem orderItem = fixture.orderItem();
+
+        // when
+        orderService.refundOrder(ORDER_ITEM_ID);
+
+        // then
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.PARTIALLY_CANCELED);
+        assertThat(orderItem.getStatus()).isEqualTo(OrderItemStatus.CANCELED);
+
+        then(gameSeatStatusService).should().releaseSeat(GAME_SEAT_ID);
+        then(reservationService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("마지막 티켓 환불이 완료되면 주문이 CANCELED 상태로 변경된다.")
+    void refundOrder_cancelsOrderAfterLastItem() {
+
+        // given
+        // 환불 대상 취소 후 ACTIVE 주문 항목이 남지 않는 최종 취소 조건을 준비한다.
+        RefundOrderFixture fixture = givenRefundableOrder(false);
+        Order order = fixture.order();
+        OrderItem orderItem = fixture.orderItem();
+
+        // when
+        orderService.refundOrder(ORDER_ITEM_ID);
+
+        // then
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELED);
+        assertThat(orderItem.getStatus()).isEqualTo(OrderItemStatus.CANCELED);
+
+        then(gameSeatStatusService).should().releaseSeat(GAME_SEAT_ID);
+        then(reservationService).should().cancelConfirmed(RESERVATION_ID);
     }
 
     // ---------- 주문 생성 시 선점 만료 시간 연장 ----------

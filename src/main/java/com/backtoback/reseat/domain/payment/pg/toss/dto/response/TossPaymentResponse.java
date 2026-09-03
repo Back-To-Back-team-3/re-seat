@@ -1,7 +1,9 @@
 package com.backtoback.reseat.domain.payment.pg.toss.dto.response;
 
+import java.util.List;
 import java.util.Optional;
 
+import com.backtoback.reseat.domain.payment.pg.toss.entity.TossPaymentStatus;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import lombok.Getter;
@@ -19,6 +21,10 @@ public class TossPaymentResponse {
     private Integer totalAmount;
     private String approvedAt;
     private String method;
+    private String lastTransactionKey;
+
+    /** Toss가 반환한 결제 취소 거래 목록. */
+    private List<TossCancelResponse> cancels;
 
     public boolean isApproved() {
         return parsedStatus().filter(TossPaymentStatus::isApproved).isPresent();

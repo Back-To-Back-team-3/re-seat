@@ -285,6 +285,20 @@ public class Payment extends BaseEntity {
         return isApproved() || isPartiallyCanceled();
     }
 
+    /** 완료된 티켓 취소 이력의 누적 환불 금액을 계산한다. */
+    public int getCanceledAmount() {
+        return cancels
+            .stream()
+            .filter(PaymentCancel::isDone)
+            .mapToInt(cancel -> cancel.getTicket().getOrderItem().getPrice())
+            .sum();
+    }
+
+    /** 결제 금액에서 누적 환불 금액을 제외한 잔액을 계산한다. */
+    public int getRemainingAmount() {
+        return amount - getCanceledAmount();
+    }
+
     /**
      * 결제를 승인 완료 상태로 전환한다.
      */

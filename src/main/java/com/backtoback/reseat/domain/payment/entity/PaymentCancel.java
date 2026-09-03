@@ -34,6 +34,10 @@ import lombok.NoArgsConstructor;
         @UniqueConstraint(
             name = "uk_payment_cancels_ticket",
             columnNames = "ticket_id"
+        ),
+        @UniqueConstraint(
+            name = "uk_payment_cancels_pg_idempotency_key",
+            columnNames = "pg_idempotency_key"
         )
     },
     indexes = {
@@ -48,7 +52,7 @@ import lombok.NoArgsConstructor;
 public class PaymentCancel extends BaseEntity {
 
     /**
-     * 기본기 (PK)
+     * 기본키 (PK)
      */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -102,6 +106,15 @@ public class PaymentCancel extends BaseEntity {
     private String reason;
 
     /**
+     * 현재 PG 취소 시도를 식별하는 멱등키.
+     */
+    @Column(
+        name = "pg_idempotency_key",
+        length = 200
+    )
+    private String pgIdempotencyKey;
+
+    /**
      * PG가 반환한 취소 거래 식별자.
      */
     @Column(
@@ -134,16 +147,18 @@ public class PaymentCancel extends BaseEntity {
     /**
      * 티켓 한 장의 결제 취소 이력을 대기 상태로 생성하고 결제에 연결한다.
      */
-    public static PaymentCancel create(Payment payment, Ticket ticket, String reason) {
+    public static PaymentCancel create(Payment payment, Ticket ticket, String reason, String pgIdempotencyKey) {
         validatePayment(payment);
         validateTicket(ticket);
         validateReason(reason);
+        validatePgIdempotencyKey(pgIdempotencyKey);
 
         PaymentCancel paymentCancel = new PaymentCancel();
         paymentCancel.payment = payment;
         paymentCancel.ticket = ticket;
         paymentCancel.status = PaymentCancelStatus.PENDING;
         paymentCancel.reason = reason;
+        paymentCancel.pgIdempotencyKey = pgIdempotencyKey;
         payment.addCancel(paymentCancel);
         return paymentCancel;
     }
@@ -172,6 +187,15 @@ public class PaymentCancel extends BaseEntity {
     private static void validateReason(String reason) {
         if (reason == null || reason.isBlank()) {
             throw new IllegalArgumentException("취소 사유는 필수입니다.");
+        }
+    }
+
+    /**
+     * PG 취소 시도를 식별할 멱등키가 입력되었는지 검증한다.
+     */
+    private static void validatePgIdempotencyKey(String pgIdempotencyKey) {
+        if (pgIdempotencyKey == null || pgIdempotencyKey.isBlank()) {
+            throw new IllegalArgumentException("PG 멱등키는 필수입니다.");
         }
     }
 
@@ -208,12 +232,14 @@ public class PaymentCancel extends BaseEntity {
     /**
      * 실패한 결제 취소 이력을 새로운 사유로 다시 대기 상태로 전환한다.
      */
-    public void retry(String reason) {
+    public void retry(String reason, String pgIdempotencyKey) {
         validateStatus(PaymentCancelStatus.FAILED);
         validateReason(reason);
+        validatePgIdempotencyKey(pgIdempotencyKey);
 
         this.status = PaymentCancelStatus.PENDING;
         this.reason = reason;
+        this.pgIdempotencyKey = pgIdempotencyKey;
         this.pgTransactionKey = null;
         this.failureReason = null;
         this.completedAt = null;
@@ -225,6 +251,11 @@ public class PaymentCancel extends BaseEntity {
      */
     public boolean isDone() {
         return status == PaymentCancelStatus.DONE;
+    }
+
+    /** PG 취소가 명시적으로 실패한 이력인지 확인한다. */
+    public boolean isFailed() {
+        return status == PaymentCancelStatus.FAILED;
     }
 
     /**

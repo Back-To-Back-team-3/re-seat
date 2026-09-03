@@ -15,7 +15,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
@@ -27,8 +27,8 @@ import lombok.NoArgsConstructor;
     name = "payment_recovery_tasks",
     uniqueConstraints = {
         @UniqueConstraint(
-            name = "uk_payment_recovery_tasks_payment",
-            columnNames = "payment_id"
+            name = "uk_payment_recovery_tasks_recovery_key",
+            columnNames = "recovery_key"
         )
     },
     indexes = {
@@ -42,11 +42,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PaymentRecoveryTask extends BaseEntity {
 
+    private static final String RECOVERY_KEY_SEPARATOR = ":";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(
+    @ManyToOne(
         fetch = FetchType.LAZY,
         optional = false
     )
@@ -56,6 +58,30 @@ public class PaymentRecoveryTask extends BaseEntity {
         foreignKey = @ForeignKey(name = "fk_payment_recovery_tasks_payment")
     )
     private Payment payment;
+
+    /** 부분 취소 복구 작업이 처리할 결제 취소 이력. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+        name = "payment_cancel_id",
+        foreignKey = @ForeignKey(name = "fk_payment_recovery_tasks_payment_cancel")
+    )
+    private PaymentCancel paymentCancel;
+
+    /** 복구 작업이 처리할 PG 연동 상황. */
+    @Enumerated(EnumType.STRING)
+    @Column(
+        nullable = false,
+        length = 40
+    )
+    private PaymentRecoveryType type;
+
+    /** 복구 유형과 대상 ID를 조합한 중복 방지 키. */
+    @Column(
+        name = "recovery_key",
+        nullable = false,
+        length = 100
+    )
+    private String recoveryKey;
 
     @Enumerated(EnumType.STRING)
     @Column(
@@ -85,10 +111,46 @@ public class PaymentRecoveryTask extends BaseEntity {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
-    public PaymentRecoveryTask(Payment payment) {
-        this.payment = payment;
-        this.status = PaymentRecoveryStatus.PENDING;
-        this.attemptCount = 0;
+    /** 승인 상태를 확인할 수 없는 결제의 복구 작업을 생성한다. */
+    public static PaymentRecoveryTask createConfirmUnknown(Payment payment) {
+        validateId(payment == null ? null : payment.getId(), "결제");
+        return create(payment, null, PaymentRecoveryType.CONFIRM_UNKNOWN, payment.getId());
+    }
+
+    /** 처리 결과를 확인할 수 없는 부분 취소의 복구 작업을 생성한다. */
+    public static PaymentRecoveryTask createPartialCancel(PaymentCancel paymentCancel) {
+        validateId(paymentCancel == null ? null : paymentCancel.getId(), "결제 취소 이력");
+        if (paymentCancel.getPayment() == null) {
+            throw new IllegalArgumentException("결제 취소 이력에 결제가 연결되어 있어야 합니다.");
+        }
+        return create(
+            paymentCancel.getPayment(),
+            paymentCancel,
+            PaymentRecoveryType.PARTIAL_CANCEL,
+            paymentCancel.getId()
+        );
+    }
+
+    private static PaymentRecoveryTask create(
+        Payment payment,
+        PaymentCancel paymentCancel,
+        PaymentRecoveryType type,
+        Long targetId
+    ) {
+        PaymentRecoveryTask task = new PaymentRecoveryTask();
+        task.payment = payment;
+        task.paymentCancel = paymentCancel;
+        task.type = type;
+        task.recoveryKey = type.name() + RECOVERY_KEY_SEPARATOR + targetId;
+        task.status = PaymentRecoveryStatus.PENDING;
+        task.attemptCount = 0;
+        return task;
+    }
+
+    private static void validateId(Long id, String target) {
+        if (id == null) {
+            throw new IllegalArgumentException(target + " ID는 필수입니다.");
+        }
     }
 
     /**
@@ -136,6 +198,19 @@ public class PaymentRecoveryTask extends BaseEntity {
         this.nextRetryAt = null;
         this.processingStartedAt = null;
         this.lastError = lastError;
+    }
+
+    /** 최종 실패한 복구 작업을 처음부터 다시 실행할 수 있는 상태로 전환한다. */
+    public void reopen() {
+        if (status != PaymentRecoveryStatus.FAILED) {
+            throw new IllegalStateException("최종 실패한 결제 복구 작업만 다시 시작할 수 있습니다.");
+        }
+        this.status = PaymentRecoveryStatus.PENDING;
+        this.attemptCount = 0;
+        this.nextRetryAt = null;
+        this.processingStartedAt = null;
+        this.lastError = null;
+        this.completedAt = null;
     }
 
     private void validateProcessing() {

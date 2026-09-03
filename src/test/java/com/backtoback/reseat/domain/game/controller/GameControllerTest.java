@@ -5,6 +5,8 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
@@ -18,11 +20,14 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.backtoback.reseat.domain.game.dto.GameDetailResponse;
 import com.backtoback.reseat.domain.game.dto.GameListResponse;
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
 import com.backtoback.reseat.domain.game.exception.InvalidGameSearchConditionException;
 import com.backtoback.reseat.domain.game.service.GameQueryService;
+import com.backtoback.reseat.domain.stadium.dto.StadiumDetailResponse;
+import com.backtoback.reseat.domain.team.dto.TeamSummaryResponse;
 import com.backtoback.reseat.global.exception.GlobalExceptionHandler;
 
 /**
@@ -119,5 +124,67 @@ class GameControllerTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"));
+    }
+
+    @Test
+    @DisplayName("좌표가 등록된 구장은 경기 상세 응답에 위도·경도가 포함된다")
+    void should_includeCoordinates_when_stadiumHasCoordinates() throws Exception {
+        Long gameId = 1L;
+        LocalDateTime now = LocalDateTime.now();
+        GameDetailResponse response
+            = new GameDetailResponse(
+                gameId,
+                "LG vs 한화",
+                new TeamSummaryResponse(1L, "LG"),
+                new TeamSummaryResponse(2L, "한화"),
+                new StadiumDetailResponse(
+                    1L,
+                    "서울종합운동장 야구장",
+                    "서울 송파구",
+                    23750,
+                    new BigDecimal("37.5121676"),
+                    new BigDecimal("127.0719084")
+                ),
+                now,
+                now,
+                now,
+                BookingStatus.OPEN
+            );
+
+        when(gameQueryService.getGame(gameId)).thenReturn(response);
+
+        mockMvc
+            .perform(get("/api/v1/games/{gameId}", gameId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.stadium.latitude").value(37.5121676))
+            .andExpect(jsonPath("$.data.stadium.longitude").value(127.0719084));
+    }
+
+    @Test
+    @DisplayName("좌표가 등록되지 않은 구장도 200으로 응답하고 좌표 필드가 null로 내려간다")
+    void should_returnNullCoordinates_when_stadiumHasNoCoordinates() throws Exception {
+        Long gameId = 1L;
+        LocalDateTime now = LocalDateTime.now();
+        GameDetailResponse response
+            = new GameDetailResponse(
+                gameId,
+                "LG vs 한화",
+                new TeamSummaryResponse(1L, "LG"),
+                new TeamSummaryResponse(2L, "한화"),
+                new StadiumDetailResponse(1L, "서울종합운동장 야구장", "서울 송파구", 23750, null, null),
+                now,
+                now,
+                now,
+                BookingStatus.OPEN
+            );
+
+        when(gameQueryService.getGame(gameId)).thenReturn(response);
+
+        mockMvc
+            .perform(get("/api/v1/games/{gameId}", gameId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.stadium").exists())
+            .andExpect(jsonPath("$.data.stadium.latitude").doesNotExist())
+            .andExpect(jsonPath("$.data.stadium.longitude").doesNotExist());
     }
 }
