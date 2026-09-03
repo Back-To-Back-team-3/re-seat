@@ -15,21 +15,21 @@ Redis와 Kafka를 활용한 경기별 대기열, 좌석 선점, 주문·결제, 
 <table>
   <thead>
     <tr>
-      <th>파트</th>
-      <th>담당 도메인</th>
+      <th width="13%">파트</th>
+      <th width="20%">담당 도메인</th>
       <th>주요 역할</th>
-      <th>담당자</th>
+      <th width="10%" align="center">담당자</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td>인증·사용자·인프라</td>
+      <td>사용자·인프라</td>
       <td><code>user</code>, <code>verification</code>, <code>citydata</code>, 배포·모니터링</td>
       <td>인증·인가, 회원 관리, 배포·운영 환경, 외부 API(날씨·지도) 연동, 모니터링</td>
       <td align="center">
         <a href="https://github.com/LFCKJ">
-          <img src="https://avatars.githubusercontent.com/u/169630924?v=4" width="60px;" alt="LFCKJ"/>
-          <br />
+          <img src="https://github.com/LFCKJ.png?size=36" width="36" height="36" alt="LFCKJ"/>
+          <br/>
           <sub><b>김재환(팀원)</b></sub>
         </a>
       </td>
@@ -40,8 +40,8 @@ Redis와 Kafka를 활용한 경기별 대기열, 좌석 선점, 주문·결제, 
       <td>진입 게이트, 대기열, SSE, 입장 토큰, CAPTCHA, 주문 상태·만료</td>
       <td align="center">
         <a href="https://github.com/bepo03">
-          <img src="https://avatars.githubusercontent.com/u/250156074?v=4" width="60px;" alt="bepo03"/>
-          <br />
+          <img src="https://github.com/bepo03.png?size=36" width="36" height="36" alt="bepo03"/>
+          <br/>
           <sub><b>전윤현(팀장)</b></sub>
         </a>
       </td>
@@ -49,10 +49,10 @@ Redis와 Kafka를 활용한 경기별 대기열, 좌석 선점, 주문·결제, 
     <tr>
       <td>경기·좌석·예약</td>
       <td><code>game</code>, <code>stadium</code>, <code>seatinventory</code>, <code>reservation</code></td>
-      <td>경기·좌석 조회, 좌석 HOLD·해제·만료, 동시성 제어와 락 전략 비교, 소유 도메인 관리자 API, 고객 안내 챗봇</td>
+      <td>경기·좌석 조회, 좌석 HOLD·해제·만료, 동시성 제어와 락 전략 비교, <br/>소유 도메인 관리자 API, 고객 안내 챗봇</td>
       <td align="center">
         <a href="https://github.com/r1nn-dev">
-          <img src="https://avatars.githubusercontent.com/u/252337556?v=4" width="60px;" alt="r1nn-dev"/>
+          <img src="https://github.com/r1nn-dev.png?size=36" width="36" height="36" alt="r1nn-dev"/>
           <br/>
           <sub><b>조하린(팀원)</b></sub>
         </a>
@@ -64,8 +64,8 @@ Redis와 Kafka를 활용한 경기별 대기열, 좌석 선점, 주문·결제, 
       <td>Toss Payments, 멱등 승인, 부분·전체 환불, 취소 이력 관리, PG 복구, 결제 이력</td>
       <td align="center">
         <a href="https://github.com/Siho-ily">
-          <img src="https://avatars.githubusercontent.com/u/57564087?v=4" width="60px;" alt="Siho-ily"/>
-          <br />
+          <img src="https://github.com/Siho-ily.png?size=36" width="36" height="36" alt="Siho-ily"/>
+          <br/>
           <sub><b>박현수(팀원)</b></sub>
         </a>
       </td>
@@ -76,8 +76,8 @@ Redis와 Kafka를 활용한 경기별 대기열, 좌석 선점, 주문·결제, 
       <td>티켓 발급·상태 관리, QR 검표, 마이페이지 통합 조회, 관리자 조회·강제 취소</td>
       <td align="center">
         <a href="https://github.com/rmi9394">
-          <img src="https://avatars.githubusercontent.com/u/252343566?v=4" width="60px;" alt="rmi9394"/>
-          <br />
+          <img src="https://github.com/rmi9394.png?size=36" width="36" height="36" alt="rmi9394"/>
+          <br/>
           <sub><b>유명인(팀원)</b></sub>
         </a>
       </td>
@@ -192,8 +192,8 @@ flowchart LR
     Game[경기 선택] --> OneEntryGate[1차 진입 게이트]
     OneEntryGate --> Queue[대기열 진입]
     Queue --> Token[Queue-Token 발급]
-    Token --> Chapcha[CHAPCHA 검증]
-    Chapcha --> Seat[좌석 선택/선점]
+    Token --> Captcha[CAPTCHA 검증]
+    Captcha --> Seat[좌석 선택/선점]
     Seat --> Reservation[예약 생성]
     Reservation --> Order[주문 생성]
     Order --> Payment[결제]
@@ -205,7 +205,7 @@ flowchart LR
 
 ## 프로젝트 구조
 
-```
+```text
 re-seat
 ├── src
 │   ├── main
