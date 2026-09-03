@@ -17,10 +17,12 @@ import com.backtoback.reseat.domain.ticket.entity.Ticket;
 class PaymentCancelTest {
 
     private static final String REASON = "사용자 티켓 취소";
+    private static final String PG_IDEMPOTENCY_KEY = "payment-cancel-attempt-key";
+    private static final String RETRY_PG_IDEMPOTENCY_KEY = "payment-cancel-retry-key";
     private static final LocalDateTime BASE_TIME = LocalDateTime.of(2026, 8, 29, 12, 0);
 
     private PaymentCancel pendingCancel() {
-        return PaymentCancel.create(Payment.builder().build(), mock(Ticket.class), REASON);
+        return PaymentCancel.create(Payment.builder().build(), mock(Ticket.class), REASON, PG_IDEMPOTENCY_KEY);
     }
 
     private PaymentCancel cancelInStatus(PaymentCancelStatus status) {
@@ -47,11 +49,12 @@ class PaymentCancelTest {
             Payment payment = Payment.builder().build();
             Ticket ticket = mock(Ticket.class);
 
-            PaymentCancel paymentCancel = PaymentCancel.create(payment, ticket, REASON);
+            PaymentCancel paymentCancel = PaymentCancel.create(payment, ticket, REASON, PG_IDEMPOTENCY_KEY);
 
             assertThat(paymentCancel.getPayment()).isSameAs(payment);
             assertThat(paymentCancel.getTicket()).isSameAs(ticket);
             assertThat(paymentCancel.getReason()).isEqualTo(REASON);
+            assertThat(paymentCancel.getPgIdempotencyKey()).isEqualTo(PG_IDEMPOTENCY_KEY);
             assertThat(paymentCancel.getStatus()).isEqualTo(PaymentCancelStatus.PENDING);
             // 생성과 동시에 Payment에서도 같은 취소 이력을 조회할 수 있어야 한다.
             assertThat(payment.getCancels()).containsExactly(paymentCancel);
@@ -63,11 +66,13 @@ class PaymentCancelTest {
             Payment payment = Payment.builder().build();
             Ticket ticket = mock(Ticket.class);
 
-            assertThatThrownBy(() -> PaymentCancel.create(null, ticket, REASON))
+            assertThatThrownBy(() -> PaymentCancel.create(null, ticket, REASON, PG_IDEMPOTENCY_KEY))
                 .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> PaymentCancel.create(payment, null, REASON))
+            assertThatThrownBy(() -> PaymentCancel.create(payment, null, REASON, PG_IDEMPOTENCY_KEY))
                 .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> PaymentCancel.create(payment, ticket, " "))
+            assertThatThrownBy(() -> PaymentCancel.create(payment, ticket, " ", PG_IDEMPOTENCY_KEY))
+                .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> PaymentCancel.create(payment, ticket, REASON, " "))
                 .isInstanceOf(IllegalArgumentException.class);
         }
     }
@@ -171,10 +176,11 @@ class PaymentCancelTest {
             // 새 이력을 만들지 않고 실패한 이력에 실패 결과를 남긴 뒤 재사용한다.
             paymentCancel.fail("PG 취소 실패", BASE_TIME);
 
-            paymentCancel.retry("관리자 재시도");
+            paymentCancel.retry("관리자 재시도", RETRY_PG_IDEMPOTENCY_KEY);
 
             assertThat(paymentCancel.getStatus()).isEqualTo(PaymentCancelStatus.PENDING);
             assertThat(paymentCancel.getReason()).isEqualTo("관리자 재시도");
+            assertThat(paymentCancel.getPgIdempotencyKey()).isEqualTo(RETRY_PG_IDEMPOTENCY_KEY);
             assertThat(paymentCancel.getFailureReason()).isNull();
             assertThat(paymentCancel.getFailedAt()).isNull();
         }
@@ -189,17 +195,21 @@ class PaymentCancelTest {
         void requiresFailedStatus(PaymentCancelStatus status) {
             PaymentCancel paymentCancel = cancelInStatus(status);
 
-            assertThatThrownBy(() -> paymentCancel.retry("관리자 재시도")).isInstanceOf(IllegalStateException.class);
+            assertThatThrownBy(() -> paymentCancel.retry("관리자 재시도", RETRY_PG_IDEMPOTENCY_KEY))
+                .isInstanceOf(IllegalStateException.class);
             assertThat(paymentCancel.getStatus()).isEqualTo(status);
         }
 
         @Test
-        @DisplayName("새로운 취소 사유가 없으면 재시도할 수 없다.")
-        void rejectsMissingReason() {
+        @DisplayName("새로운 취소 사유 또는 PG 멱등키가 없으면 재시도할 수 없다.")
+        void rejectsMissingRequiredValue() {
             PaymentCancel paymentCancel = cancelInStatus(PaymentCancelStatus.FAILED);
 
-            assertThatThrownBy(() -> paymentCancel.retry(" ")).isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> paymentCancel.retry(" ", RETRY_PG_IDEMPOTENCY_KEY))
+                .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> paymentCancel.retry("관리자 재시도", " ")).isInstanceOf(IllegalArgumentException.class);
             assertThat(paymentCancel.getStatus()).isEqualTo(PaymentCancelStatus.FAILED);
+            assertThat(paymentCancel.getPgIdempotencyKey()).isEqualTo(PG_IDEMPOTENCY_KEY);
         }
     }
 

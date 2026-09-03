@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.payment.pg.toss.dto.response;
+package com.backtoback.reseat.domain.payment.pg.toss.entity;
 
 import java.util.Optional;
 
