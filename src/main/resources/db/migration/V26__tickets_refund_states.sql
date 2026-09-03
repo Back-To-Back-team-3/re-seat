@@ -5,7 +5,9 @@
 
 -- 1) 환불 파이프라인에 필요한 시각 컬럼을 먼저 추가한다.
 ALTER TABLE tickets
-    ADD COLUMN refund_requested_at DATETIME(6) NULL AFTER canceled_at,
+    ADD COLUMN refund_requested_at DATETIME(6) NULL AFTER canceled_at;
+
+ALTER TABLE tickets
     ADD COLUMN refunded_at DATETIME(6) NULL AFTER refund_requested_at;
 
 -- 2) 기존 상태값을 새 상태로 백필한다. (USED -> USED_ENTERED, CANCELED -> REFUNDED)
