@@ -114,9 +114,10 @@ public class PaymentRecoveryService {
      * 롤백된 복구 작업을 다시 조회해 재시도 또는 최종 실패 상태로 변경한다.
      */
     private void recordUnexpectedFailure(Long taskId, LocalDateTime now) {
-        paymentRecoveryTaskRepository
-            .findByIdWithPessimisticWriteLock(taskId)
-            .ifPresent(task -> retryOrFail(task, "결제 복구 처리 중 예기치 않은 오류가 발생했습니다.", now));
+        paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(taskId).ifPresent(task -> {
+            task.startProcessing(now);
+            retryOrFail(task, "결제 복구 처리 중 예기치 않은 오류가 발생했습니다.", now);
+        });
     }
 
     /**

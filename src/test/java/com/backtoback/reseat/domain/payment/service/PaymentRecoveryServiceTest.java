@@ -228,10 +228,12 @@ class PaymentRecoveryServiceTest {
         @Test
         @DisplayName("로컬 상태 반영 중 예외가 발생하면 별도 트랜잭션에서 다음 복구를 예약한다.")
         void recordsRetryInSeparateTransactionAfterUnexpectedFailure() {
-            PaymentRecoveryTask task = partialCancelTask();
+            PaymentRecoveryTask processingTask = partialCancelTask();
+            // 첫 트랜잭션이 롤백되면 재조회한 작업은 기존 PENDING 상태로 복원된다.
+            PaymentRecoveryTask rolledBackTask = partialCancelTask();
             PaymentRecoveryHandler handler = mock(PaymentRecoveryHandler.class);
             when(handler.getType()).thenReturn(PaymentRecoveryType.PARTIAL_CANCEL);
-            when(handler.recover(task)).thenThrow(new RuntimeException("로컬 상태 반영 실패"));
+            when(handler.recover(processingTask)).thenThrow(new RuntimeException("로컬 상태 반영 실패"));
             PaymentRecoveryService service
                 = new PaymentRecoveryService(
                     paymentRecoveryTaskRepository,
@@ -240,16 +242,17 @@ class PaymentRecoveryServiceTest {
                     List.of(handler)
                 );
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID))
-                .thenReturn(Optional.of(task))
-                .thenReturn(Optional.of(task));
-            when(paymentRepository.findByIdWithPessimisticWriteLock(2L)).thenReturn(Optional.of(task.getPayment()));
+                .thenReturn(Optional.of(processingTask))
+                .thenReturn(Optional.of(rolledBackTask));
+            when(paymentRepository.findByIdWithPessimisticWriteLock(2L))
+                .thenReturn(Optional.of(processingTask.getPayment()));
 
             service.recover(TASK_ID, NOW);
 
-            assertThat(task.getStatus()).isEqualTo(PaymentRecoveryStatus.RETRY);
-            assertThat(task.getAttemptCount()).isEqualTo(1);
-            assertThat(task.getNextRetryAt()).isEqualTo(NOW.plusMinutes(1));
-            assertThat(task.getLastError()).isEqualTo("결제 복구 처리 중 예기치 않은 오류가 발생했습니다.");
+            assertThat(rolledBackTask.getStatus()).isEqualTo(PaymentRecoveryStatus.RETRY);
+            assertThat(rolledBackTask.getAttemptCount()).isEqualTo(1);
+            assertThat(rolledBackTask.getNextRetryAt()).isEqualTo(NOW.plusMinutes(1));
+            assertThat(rolledBackTask.getLastError()).isEqualTo("결제 복구 처리 중 예기치 않은 오류가 발생했습니다.");
             verify(paymentRecoveryTaskRepository, times(2)).findByIdWithPessimisticWriteLock(TASK_ID);
             verify(transactionManager, times(2)).getTransaction(any(TransactionDefinition.class));
             // 복구 트랜잭션의 롤벡
