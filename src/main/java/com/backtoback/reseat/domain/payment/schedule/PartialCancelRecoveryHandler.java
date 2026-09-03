@@ -15,6 +15,7 @@ import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossCancelResponse;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
 import com.backtoback.reseat.domain.payment.pg.toss.exception.TossApiException;
+import com.backtoback.reseat.domain.ticket.service.TicketService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +27,7 @@ public class PartialCancelRecoveryHandler implements PaymentRecoveryHandler {
 
     private final TossPaymentClient tossPaymentClient;
     private final OrderService orderService;
+    private final TicketService ticketService;
 
     /** 저장된 취소 시도를 Toss에 요청하고 완료된 부분 취소를 로컬 상태에 반영한다. */
     @Override
@@ -35,6 +37,7 @@ public class PartialCancelRecoveryHandler implements PaymentRecoveryHandler {
             return PaymentRecoveryResult.failure("부분 취소 복구 대상이 없습니다.");
         }
         if (paymentCancel.isDone()) {
+            ticketService.completeTicketRefund(paymentCancel.getTicket().getId());
             return PaymentRecoveryResult.success();
         }
 
@@ -57,7 +60,7 @@ public class PartialCancelRecoveryHandler implements PaymentRecoveryHandler {
             }
         } catch (TossApiException exception) {
             if (isClientError(exception)) {
-                paymentCancel.fail(exception.getMessage(), LocalDateTime.now());
+                failPartialCancel(paymentCancel, exception.getMessage(), LocalDateTime.now());
                 return PaymentRecoveryResult.failure("Toss가 부분 취소 요청을 거절했습니다.");
             }
             return retryAfterFailure(task, payment, paymentCancel, exception);
@@ -70,7 +73,26 @@ public class PartialCancelRecoveryHandler implements PaymentRecoveryHandler {
         orderService.refundOrder(orderItemId);
         updatePaymentStatus(payment, cancelAmount);
         paymentCancel.complete(completedCancel.getTransactionKey(), canceledAt);
+        ticketService.completeTicketRefund(paymentCancel.getTicket().getId());
         return PaymentRecoveryResult.success();
+    }
+
+    /** 재시도 횟수를 모두 소진한 부분 취소 이력과 티켓을 최종 실패로 전이한다. */
+    @Override
+    public void handleFinalFailure(PaymentRecoveryTask task, String error, LocalDateTime failedAt) {
+        PaymentCancel paymentCancel = task.getPaymentCancel();
+        if (paymentCancel == null) {
+            return;
+        }
+        if (!paymentCancel.isFailed()) {
+            paymentCancel.fail(error, failedAt);
+        }
+        ticketService.failTicketRefund(paymentCancel.getTicket().getId());
+    }
+
+    private void failPartialCancel(PaymentCancel paymentCancel, String error, LocalDateTime failedAt) {
+        paymentCancel.fail(error, failedAt);
+        ticketService.failTicketRefund(paymentCancel.getTicket().getId());
     }
 
     /** 일시적인 PG 요청 실패를 기록하고 동일 멱등키 재시도를 요청한다. */

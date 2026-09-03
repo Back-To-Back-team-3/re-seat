@@ -29,6 +29,7 @@ import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossCancelRespo
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
 import com.backtoback.reseat.domain.payment.pg.toss.exception.TossApiException;
 import com.backtoback.reseat.domain.ticket.entity.Ticket;
+import com.backtoback.reseat.domain.ticket.service.TicketService;
 import com.backtoback.reseat.domain.user.entity.User;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,6 +37,7 @@ import com.backtoback.reseat.domain.user.entity.User;
 class PartialCancelRecoveryHandlerTest {
 
     private static final Long ORDER_ITEM_ID = 10L;
+    private static final Long TICKET_ID = 20L;
     private static final Long PAYMENT_ID = 100L;
     private static final Long PAYMENT_CANCEL_ID = 200L;
     private static final int PAYMENT_AMOUNT = 10000;
@@ -48,6 +50,9 @@ class PartialCancelRecoveryHandlerTest {
     @Mock
     private OrderService orderService;
 
+    @Mock
+    private TicketService ticketService;
+
     @InjectMocks
     private PartialCancelRecoveryHandler handler;
 
@@ -56,8 +61,9 @@ class PartialCancelRecoveryHandlerTest {
         OrderItem orderItem = mock(OrderItem.class);
         Ticket ticket = mock(Ticket.class);
         lenient().when(orderItem.getId()).thenReturn(ORDER_ITEM_ID);
-        when(orderItem.getPrice()).thenReturn(cancelAmount);
-        when(ticket.getOrderItem()).thenReturn(orderItem);
+        lenient().when(orderItem.getPrice()).thenReturn(cancelAmount);
+        lenient().when(ticket.getId()).thenReturn(TICKET_ID);
+        lenient().when(ticket.getOrderItem()).thenReturn(orderItem);
 
         Payment payment
             = Payment
@@ -96,6 +102,19 @@ class PartialCancelRecoveryHandlerTest {
     class Recover {
 
         @Test
+        @DisplayName("이미 완료된 취소 이력은 PG를 다시 호출하지 않고 티켓 환불을 완료한다.")
+        void completesTicketForCompletedCancel() {
+            PaymentRecoveryTask task = partialCancelTask(4000);
+            task.getPaymentCancel().complete("transaction-key", LocalDateTime.of(2026, 9, 2, 12, 0));
+
+            PaymentRecoveryResult result = handler.recover(task);
+
+            assertThat(result.successful()).isTrue();
+            verify(ticketService).completeTicketRefund(TICKET_ID);
+            verifyNoInteractions(tossPaymentClient, orderService);
+        }
+
+        @Test
         @DisplayName("일부 금액 취소가 완료되면 취소 이력과 결제를 부분 취소 상태로 전환한다.")
         void completesPartialCancel() {
             int cancelAmount = 4000;
@@ -112,6 +131,7 @@ class PartialCancelRecoveryHandlerTest {
             assertThat(task.getPayment().getStatus()).isEqualTo(PaymentStatus.PARTIALLY_CANCELED);
             assertThat(task.getPayment().getRemainingAmount()).isEqualTo(6000);
             verify(orderService).refundOrder(ORDER_ITEM_ID);
+            verify(ticketService).completeTicketRefund(TICKET_ID);
         }
 
         @Test
@@ -166,6 +186,7 @@ class PartialCancelRecoveryHandlerTest {
             assertThat(result.retryable()).isFalse();
             assertThat(task.getPaymentCancel().getStatus()).isEqualTo(PaymentCancelStatus.FAILED);
             assertThat(task.getPayment().getStatus()).isEqualTo(PaymentStatus.APPROVED);
+            verify(ticketService).failTicketRefund(TICKET_ID);
         }
 
         @Test
@@ -182,6 +203,26 @@ class PartialCancelRecoveryHandlerTest {
             assertThat(task.getPaymentCancel().getStatus()).isEqualTo(PaymentCancelStatus.PENDING);
             assertThat(task.getPaymentCancel().getPgIdempotencyKey()).isEqualTo(PG_IDEMPOTENCY_KEY);
             assertThat(task.getPayment().getStatus()).isEqualTo(PaymentStatus.APPROVED);
+            verifyNoInteractions(ticketService);
+        }
+    }
+
+    @Nested
+    @DisplayName("재시도 횟수를 모두 소진한 부분 취소를 최종 실패 처리한다")
+    class HandleFinalFailure {
+
+        @Test
+        @DisplayName("취소 이력과 티켓을 실패 상태로 전환한다.")
+        void failsPaymentCancelAndTicket() {
+            PaymentRecoveryTask task = partialCancelTask(4000);
+            LocalDateTime failedAt = LocalDateTime.of(2026, 9, 3, 12, 0);
+
+            handler.handleFinalFailure(task, "최대 재시도 횟수 초과", failedAt);
+
+            assertThat(task.getPaymentCancel().getStatus()).isEqualTo(PaymentCancelStatus.FAILED);
+            assertThat(task.getPaymentCancel().getFailureReason()).isEqualTo("최대 재시도 횟수 초과");
+            assertThat(task.getPaymentCancel().getFailedAt()).isEqualTo(failedAt);
+            verify(ticketService).failTicketRefund(TICKET_ID);
         }
     }
 }

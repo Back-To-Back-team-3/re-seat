@@ -226,6 +226,33 @@ class PaymentRecoveryServiceTest {
         }
 
         @Test
+        @DisplayName("부분 취소 복구가 최대 재시도 횟수에 도달하면 Handler에 최종 실패 처리를 요청한다.")
+        void delegatesFinalFailureAfterMaximumPartialCancelRetries() {
+            PaymentRecoveryTask task = partialCancelTask();
+            for (int attempt = 0; attempt < 5; attempt++) {
+                task.startProcessing(NOW.minusMinutes(2));
+                task.scheduleRetry("Toss 부분 취소 실패", NOW.minusMinutes(1));
+            }
+            PaymentRecoveryHandler handler = mock(PaymentRecoveryHandler.class);
+            when(handler.getType()).thenReturn(PaymentRecoveryType.PARTIAL_CANCEL);
+            when(handler.recover(task)).thenReturn(PaymentRecoveryResult.retry("Toss 부분 취소 실패"));
+            PaymentRecoveryService service
+                = new PaymentRecoveryService(
+                    paymentRecoveryTaskRepository,
+                    paymentRepository,
+                    transactionTemplate,
+                    List.of(handler)
+                );
+            when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID)).thenReturn(Optional.of(task));
+            when(paymentRepository.findByIdWithPessimisticWriteLock(2L)).thenReturn(Optional.of(task.getPayment()));
+
+            service.recover(TASK_ID, NOW);
+
+            assertThat(task.getStatus()).isEqualTo(PaymentRecoveryStatus.FAILED);
+            verify(handler).handleFinalFailure(task, "Toss 부분 취소 실패", NOW);
+        }
+
+        @Test
         @DisplayName("로컬 상태 반영 중 예외가 발생하면 별도 트랜잭션에서 다음 복구를 예약한다.")
         void recordsRetryInSeparateTransactionAfterUnexpectedFailure() {
             PaymentRecoveryTask processingTask = partialCancelTask();
