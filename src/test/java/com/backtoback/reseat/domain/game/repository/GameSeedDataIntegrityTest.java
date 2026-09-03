@@ -41,10 +41,9 @@ class GameSeedDataIntegrityTest {
     }
 
     @Test
-    @DisplayName("발표일(09.16) 이후 예매 가능한 SCHEDULED 경기가 1건 이상 존재한다")
+    @DisplayName("마감일(09.16) 이후 예매 가능한 SCHEDULED 경기가 1건 이상 존재한다")
     void should_haveAtLeastOneScheduledGame_afterAnnouncementDate() {
         long count = gameRepository.countByGameAtAfter(LocalDateTime.of(2026, 9, 16, 0, 0));
-
         assertThat(count).isGreaterThan(0);
     }
 }
