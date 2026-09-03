@@ -135,6 +135,10 @@ public class PaymentRecoveryService {
 
     private void retryOrFail(PaymentRecoveryTask task, String error, LocalDateTime now) {
         if (task.getAttemptCount() >= MAX_RETRY_COUNT) {
+            PaymentRecoveryHandler handler = handlers.get(task.getType());
+            if (handler != null) {
+                handler.handleFinalFailure(task, error, now);
+            }
             task.fail(error);
             log
                 .error(
