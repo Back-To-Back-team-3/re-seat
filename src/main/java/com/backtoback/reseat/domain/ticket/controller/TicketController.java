@@ -98,6 +98,25 @@ public class TicketController {
     ) {
         TicketCancelResponse response = ticketService.cancelTicket(userDetails.getId(), ticketId);
 
-        return ResponseEntity.ok(ApiResponse.success("티켓 취소 완료", response));
+        return ResponseEntity.ok(ApiResponse.success("티켓 취소 요청 접수 완료", response));
+    }
+
+    /**
+     * 내 티켓 취소 재시도 (환불 실패 REFUND_FAILED 티켓 전용)
+     * <p>
+     * POST /api/v1/tickets/{ticketId}/cancel/retry
+     *
+     * @param userDetails 현재 로그인 사용자 정보
+     * @param ticketId 재시도할 티켓 ID
+     * @return 티켓 취소 응답
+     */
+    @PostMapping("/{ticketId}/cancel/retry")
+    public ResponseEntity<ApiResponse<TicketCancelResponse>> retryCancelTicket(
+        @AuthenticationPrincipal CustomUserDetails userDetails,
+        @PathVariable Long ticketId
+    ) {
+        TicketCancelResponse response = ticketService.retryCancelTicket(userDetails.getId(), ticketId);
+
+        return ResponseEntity.ok(ApiResponse.success("티켓 취소 재시도 요청 접수 완료", response));
     }
 }
