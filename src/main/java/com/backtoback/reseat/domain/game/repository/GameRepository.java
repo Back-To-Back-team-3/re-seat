@@ -1,6 +1,7 @@
 package com.backtoback.reseat.domain.game.repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -59,10 +60,11 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
     );
 
     /**
-     * 특정 시각 이후에 시작하는 경기 수를 센다.
+     * 특정 기간(양 끝 포함) 내 시작하는 경기 목록을 조회한다.
      *
-     * @param dateTime 기준 시각
-     * @return 기준 시각 이후 경기 수
+     * @param start 기간 시작(포함)
+     * @param end 기간 종료(포함)
+     * @return 기간 내 경기 목록
      */
-    long countByGameAtAfter(LocalDateTime dateTime);
+    List<Game> findByGameAtBetween(LocalDateTime start, LocalDateTime end);
 }
