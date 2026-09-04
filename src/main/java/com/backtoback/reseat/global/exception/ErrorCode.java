@@ -92,6 +92,7 @@ public enum ErrorCode {
 
     // 주문 (orders)
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "주문을 찾을 수 없습니다."),
+    ORDER_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "주문 항목을 찾을 수 없습니다."),
     INVALID_ORDER_STATUS(HttpStatus.CONFLICT, "결제 가능한 주문 상태가 아닙니다."),
     ORDER_EXPIRED(HttpStatus.GONE, "결제 제한 시각이 경과했습니다."),
 
@@ -107,21 +108,18 @@ public enum ErrorCode {
     PAYMENT_CALLBACK_MISMATCH(HttpStatus.BAD_REQUEST, "결제 콜백 정보가 결제 내역과 일치하지 않습니다."),
     PAYMENT_TIMEOUT(HttpStatus.REQUEST_TIMEOUT, "결제 제한 시간이 초과되었습니다."),
     PAYMENT_CANCEL_NOT_ALLOWED(HttpStatus.CONFLICT, "취소할 수 없는 결제 상태입니다."),
-    PAYMENT_CANCEL_FAILED(HttpStatus.BAD_GATEWAY, "결제 취소 처리에 실패했습니다."),
+    PAYMENT_PG_KEY_MISSING(HttpStatus.CONFLICT, "PG 결제 키가 없어 결제를 취소할 수 없습니다."),
+    PAYMENT_CANCEL_STATUS_UNKNOWN(HttpStatus.BAD_GATEWAY, "PG 결제 취소 상태를 확인할 수 없습니다."),
+    PAYMENT_CANCEL_RESPONSE_INVALID(HttpStatus.BAD_GATEWAY, "PG 결제 취소 응답이 올바르지 않습니다."),
 
     // 티켓 (tickets)
     TICKET_NOT_FOUND(HttpStatus.NOT_FOUND, "티켓을 찾을 수 없습니다."),
     TICKET_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 티켓에 접근할 권한이 없습니다."),
     TICKET_ALREADY_USED(HttpStatus.CONFLICT, "이미 사용된 티켓입니다."),
-    TICKET_ALREADY_CANCELED(HttpStatus.CONFLICT, "이미 취소된 티켓입니다."),
     TICKET_CANCEL_DEADLINE_PASSED(HttpStatus.CONFLICT, "취소 가능 시점이 경과했습니다."),
-
-    // 재판매 (resales) — 2차 확장
-    RESALE_POST_NOT_FOUND(HttpStatus.NOT_FOUND, "재판매 게시글을 찾을 수 없습니다."),
-    RESALE_ALREADY_LISTED(HttpStatus.CONFLICT, "이미 재판매 등록된 티켓입니다."),
-    RESALE_ALREADY_SOLD(HttpStatus.CONFLICT, "이미 판매된 재판매 건입니다."),
-    RESALE_SELF_PURCHASE(HttpStatus.BAD_REQUEST, "본인이 등록한 게시글은 구매할 수 없습니다."),
-    INVALID_PRICE(HttpStatus.BAD_REQUEST, "정가 외의 가격으로 등록할 수 없습니다.");
+    TICKET_REFUND_IN_PROGRESS(HttpStatus.CONFLICT, "환불 처리가 진행 중입니다."),
+    TICKET_ALREADY_REFUNDED(HttpStatus.CONFLICT, "이미 환불 완료된 티켓입니다."),
+    TICKET_REFUND_FAILED_RETRY_REQUIRED(HttpStatus.CONFLICT, "환불 처리에 실패한 티켓입니다. " + "재시도 또는 고객센터 문의가 필요합니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

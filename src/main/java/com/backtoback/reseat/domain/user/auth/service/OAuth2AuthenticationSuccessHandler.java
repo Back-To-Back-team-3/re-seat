@@ -3,6 +3,7 @@ package com.backtoback.reseat.domain.user.auth.service;
 import java.io.IOException;
 import java.time.Duration;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -17,14 +18,23 @@ import com.backtoback.reseat.global.security.JwtTokenProvider;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
 
 @Component
-@RequiredArgsConstructor
 public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final String redirectUrl;
+
+    public OAuth2AuthenticationSuccessHandler(
+        JwtTokenProvider jwtTokenProvider,
+        RefreshTokenRepository refreshTokenRepository,
+        @Value("${oauth2.redirect.frontend-url}") String redirectUrl
+    ) {
+        this.jwtTokenProvider = jwtTokenProvider;
+        this.refreshTokenRepository = refreshTokenRepository;
+        this.redirectUrl = redirectUrl;
+    }
 
     @Override
     @Transactional
@@ -48,7 +58,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         // 프론트엔드 리다이렉트 URL 생성 (토큰 전달)
         String targetUrl
             = UriComponentsBuilder
-                .fromUriString("http://localhost:5173/")
+                .fromUriString(redirectUrl)
                 .queryParam("accessToken", accessToken)
                 .queryParam("refreshToken", refreshToken)
                 // 본인인증 여부에 따라 카카오 로그인 후 포트원 본인인증으로 넘어갈지 말지

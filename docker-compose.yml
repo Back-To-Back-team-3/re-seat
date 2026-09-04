@@ -17,8 +17,17 @@ services:
       - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
       - KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
+
+      - FRONTEND_REDIRECT_URL=${FRONTEND_REDIRECT_URL:-https://re-seat.netlify.app}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-https://re-seat.netlify.app}
+
+      - PORTONE_API_KEY=${PORTONE_API_KEY}
+      - PORTONE_API_SECRET=${PORTONE_API_SECRET}
+
       - KAFKA_BOOTSTRAP_SERVERS=kafka:19092
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:19092
+      - SEOUL_CITYDATA_BASE_URL=${SEOUL_CITYDATA_BASE_URL:-http://openapi.seoul.go.kr:8088}
+      - SEOUL_CITYDATA_API_KEY=${SEOUL_CITYDATA_API_KEY:-sample_key}
     depends_on:
       mysql-db:
         condition: service_healthy
@@ -33,11 +42,13 @@ services:
     image: mysql:8.0
     container_name: reseat-mysql
     ports:
-      - "3306:3306"
+      - "3307:3306"
     environment:
       - TZ=Asia/Seoul
       - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
       - MYSQL_DATABASE=reseat
+    volumes:
+      - mysql-data:/var/lib/mysql
     command:
       - --default-time-zone=+09:00
       - --log-timestamps=SYSTEM
@@ -108,11 +119,19 @@ services:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD environment variable must be set}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set}
+    volumes:
+      - grafana-data:/var/lib/grafana
     depends_on:
       - prometheus
     networks:
       - reseat-network
+
+volumes:
+  mysql-data:
+    name: re-seat_mysql-data
+  grafana-data:
+    name: re-seat_grafana-data
 
 networks:
   reseat-network:

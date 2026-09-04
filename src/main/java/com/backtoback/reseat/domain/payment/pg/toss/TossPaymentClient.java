@@ -1,5 +1,6 @@
 package com.backtoback.reseat.domain.payment.pg.toss;
 
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
@@ -27,12 +28,24 @@ public class TossPaymentClient {
     private static final String CONFIRM_PATH = "/v1/payments/confirm";
     private static final String CANCEL_PATH = "/v1/payments/{paymentKey}/cancel";
     private static final String PAYMENT_PATH = "/v1/payments/{paymentKey}";
-    private final WebClient webClient = WebClient.builder().build();
-    // 하드코딩 유출 방지를 위해 application.yaml 또는 환경변수에서 키 주입
-    @Value("${toss.secret-key}")
-    private String secretKey;
-    @Value("${toss.base-url}")
-    private String baseUrl;
+    private final WebClient webClient;
+    private final String secretKey;
+    private final String baseUrl;
+
+    /** Toss 인증 정보와 HTTPS API 주소로 클라이언트를 생성한다. */
+    public TossPaymentClient(@Value("${toss.secret-key}") String secretKey, @Value("${toss.base-url}") String baseUrl) {
+        validateBaseUrl(baseUrl);
+        this.webClient = WebClient.builder().build();
+        this.secretKey = secretKey;
+        this.baseUrl = baseUrl;
+    }
+
+    /** Toss 인증 정보가 평문으로 전송되지 않도록 HTTPS 주소만 허용한다. */
+    private void validateBaseUrl(String baseUrl) {
+        if (baseUrl == null || !"https".equalsIgnoreCase(URI.create(baseUrl).getScheme())) {
+            throw new IllegalArgumentException("Toss API Base URL은 HTTPS만 사용할 수 있습니다.");
+        }
+    }
 
     /**
      * 승인 응답을 받지 못하면 결제를 재조회해 Toss의 확정 상태를 반환한다.
@@ -73,23 +86,54 @@ public class TossPaymentClient {
      * 취소 응답을 받지 못하면 결제를 재조회해 Toss의 취소 완료 상태를 반환한다.
      */
     public TossPaymentResponse cancel(String paymentKey, String cancelReason) {
+        return cancelWithoutIdempotencyKey(paymentKey, cancelReason, null);
+    }
+
+    /** 취소 금액을 지정해 Toss에 부분 취소를 요청한다. */
+    public TossPaymentResponse cancel(String paymentKey, String cancelReason, Integer cancelAmount) {
+        return cancelWithoutIdempotencyKey(paymentKey, cancelReason, cancelAmount);
+    }
+
+    /** 기존 취소 요청은 응답이 불명확하면 결제 단건 조회로 상태를 확인한다. */
+    private TossPaymentResponse cancelWithoutIdempotencyKey(
+        String paymentKey,
+        String cancelReason,
+        Integer cancelAmount
+    ) {
         try {
-            return requestCancel(paymentKey, cancelReason);
+            return requestCancel(paymentKey, cancelReason, cancelAmount, null);
         } catch (RuntimeException cancelException) {
             return requeryAfterFailure(paymentKey, cancelException, "취소");
         }
     }
 
+    /** PG 멱등키를 사용해 Toss에 부분 취소를 요청한다. */
+    public TossPaymentResponse cancel(
+        String paymentKey,
+        String cancelReason,
+        Integer cancelAmount,
+        String idempotencyKey
+    ) {
+        return requestCancel(paymentKey, cancelReason, cancelAmount, idempotencyKey);
+    }
+
     /**
      * Toss 결제 취소 API를 한 번 호출한다.
      */
-    private TossPaymentResponse requestCancel(String paymentKey, String cancelReason) {
-        return webClient
-            .post()
-            .uri(baseUrl + CANCEL_PATH, paymentKey)
-            .header(HttpHeaders.AUTHORIZATION, authorizationHeader())
+    private TossPaymentResponse requestCancel(
+        String paymentKey,
+        String cancelReason,
+        Integer cancelAmount,
+        String idempotencyKey
+    ) {
+        return webClient.post().uri(baseUrl + CANCEL_PATH, paymentKey).headers(headers -> {
+            headers.set(HttpHeaders.AUTHORIZATION, authorizationHeader());
+            if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+                headers.set("Idempotency-Key", idempotencyKey);
+            }
+        })
             .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(new TossCancelRequest(cancelReason))
+            .bodyValue(new TossCancelRequest(cancelReason, cancelAmount))
             .retrieve()
             .onStatus(
                 HttpStatusCode::isError,

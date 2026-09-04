@@ -1,8 +1,8 @@
-// 결제 메인 엔티티 (payments 테이블 매핑)
-
 package com.backtoback.reseat.domain.payment.entity;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
@@ -23,6 +23,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
@@ -31,7 +32,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-// JPA 엔티티 + Lombok 기본 설정
+/**
+ * 결제 요청과 처리 결과를 관리한다.
+ */
 @Entity
 @Table(
     name = "payments",
@@ -64,12 +67,21 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Payment extends BaseEntity {
 
-    // 기본 키 (PK)
+    /**
+     * 티켓 단위 결제 취소 이력.
+     */
+    @OneToMany(mappedBy = "payment")
+    private final List<PaymentCancel> cancels = new ArrayList<>();
+
+    /**
+     * 기본키 (PK)
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    // 서비스 내부 결제 번호
+    /**
+     * 서비스 내부 결제 번호.
+     */
     @Column(
         name = "payment_no",
         nullable = false,
@@ -77,6 +89,9 @@ public class Payment extends BaseEntity {
     )
     private String paymentNo;
 
+    /**
+     * 결제 대상 주문.
+     */
     @OneToOne(
         fetch = FetchType.LAZY,
         optional = false
@@ -88,7 +103,9 @@ public class Payment extends BaseEntity {
     )
     private Order order;
 
-    // 결제 사용자
+    /**
+     * 결제를 요청한 사용자.
+     */
     @ManyToOne(
         fetch = FetchType.LAZY,
         optional = false
@@ -99,15 +116,21 @@ public class Payment extends BaseEntity {
     )
     private User user;
 
-    // 결제 금액
+    /**
+     * 결제 요청 금액.
+     */
     @Column(nullable = false)
     private Integer amount;
 
-    // 결제 수단
+    /**
+     * PG 승인 응답으로 확인한 결제 수단.
+     */
     @Column(length = 20)
     private String method;
 
-    // 결제 상태
+    /**
+     * 결제 처리 상태.
+     */
     @Enumerated(EnumType.STRING)
     @Column(
         nullable = false,
@@ -115,7 +138,9 @@ public class Payment extends BaseEntity {
     )
     private PaymentStatus status;
 
-    // 중복 결제 방지 키
+    /**
+     * 현재 유효한 결제 시도를 식별하는 멱등키.
+     */
     @Column(
         name = "idempotency_key",
         nullable = false,
@@ -123,7 +148,9 @@ public class Payment extends BaseEntity {
     )
     private String idempotencyKey;
 
-    // 결제 승인/취소를 요청할 PG사
+    /**
+     * 결제 승인과 취소를 처리하는 PG사.
+     */
     @Enumerated(EnumType.STRING)
     @Column(
         name = "pg_provider",
@@ -132,7 +159,9 @@ public class Payment extends BaseEntity {
     )
     private PgProvider pgProvider;
 
-    // PG에 전달한 주문 식별자
+    /**
+     * PG에 전달한 주문 식별자.
+     */
     @Column(
         name = "pg_order_id",
         nullable = false,
@@ -140,29 +169,39 @@ public class Payment extends BaseEntity {
     )
     private String pgOrderId;
 
-    // PG가 발급한 결제 키
+    /**
+     * PG가 발급한 결제 식별자.
+     */
     @Column(
         name = "pg_payment_key",
         length = 200
     )
     private String pgPaymentKey;
 
-    // 결제 실패 사유
+    /**
+     * 결제 실패 사유.
+     */
     @Column(
         name = "fail_reason",
         length = 200
     )
     private String failReason;
 
-    // 결제 승인 시각
+    /**
+     * 결제 승인 시각.
+     */
     @Column(name = "approved_at")
     private LocalDateTime approvedAt;
 
-    // 결제 실패 시각
+    /**
+     * 결제 실패 시각.
+     */
     @Column(name = "failed_at")
     private LocalDateTime failedAt;
 
-    // 빌더 생성자
+    /**
+     * 결제 엔티티를 생성한다.
+     */
     @Builder
     public Payment(
         String paymentNo,
@@ -204,23 +243,65 @@ public class Payment extends BaseEntity {
         this.pgPaymentKey = pgPaymentKey;
     }
 
+    /**
+     * 결제가 승인 대기 상태인지 확인한다.
+     */
     public boolean isReady() {
         return status == PaymentStatus.READY;
     }
 
+    /**
+     * 결제가 승인 완료 상태인지 확인한다.
+     */
     public boolean isApproved() {
         return status == PaymentStatus.APPROVED;
     }
 
+    /**
+     * 결제가 일부 취소 상태인지 확인한다.
+     */
+    public boolean isPartiallyCanceled() {
+        return status == PaymentStatus.PARTIALLY_CANCELED;
+    }
+
+    /**
+     * 결제가 실패 상태인지 확인한다.
+     */
     public boolean isFailed() {
         return status == PaymentStatus.FAILED;
     }
 
+    /**
+     * 결제가 전체 취소 상태인지 확인한다.
+     */
     public boolean isCanceled() {
         return status == PaymentStatus.CANCELED;
     }
 
-    // 결제 승인 처리
+    /**
+     * 결제가 전체 또는 부분 취소 가능한 상태인지 확인한다.
+     */
+    public boolean isCancelable() {
+        return isApproved() || isPartiallyCanceled();
+    }
+
+    /** 완료된 티켓 취소 이력의 누적 환불 금액을 계산한다. */
+    public int getCanceledAmount() {
+        return cancels
+            .stream()
+            .filter(PaymentCancel::isDone)
+            .mapToInt(cancel -> cancel.getTicket().getOrderItem().getPrice())
+            .sum();
+    }
+
+    /** 결제 금액에서 누적 환불 금액을 제외한 잔액을 계산한다. */
+    public int getRemainingAmount() {
+        return amount - getCanceledAmount();
+    }
+
+    /**
+     * 결제를 승인 완료 상태로 전환한다.
+     */
     public void approve(String method, LocalDateTime approvedAt) {
         this.status = PaymentStatus.APPROVED;
         this.method = method;
@@ -229,14 +310,18 @@ public class Payment extends BaseEntity {
         this.failedAt = null;
     }
 
-    // 결제 실패 처리
+    /**
+     * 결제를 실패 상태로 전환한다.
+     */
     public void fail(String failReason, LocalDateTime failedAt) {
         this.status = PaymentStatus.FAILED;
         this.failReason = failReason;
         this.failedAt = failedAt;
     }
 
-    // 동일 주문의 READY 결제를 재사용할 때 현재 결제 시도의 멱등키를 교체한다.
+    /**
+     * 동일 주문의 READY 결제를 재사용할 때 현재 결제 시도의 멱등키를 교체한다.
+     */
     public void changeIdempotencyKey(String idempotencyKey) {
         if (!isReady()) {
             throw new PaymentAlreadyFinalizedException();
@@ -244,13 +329,37 @@ public class Payment extends BaseEntity {
         this.idempotencyKey = idempotencyKey;
     }
 
-    // 결제 취소 처리
+    /**
+     * 결제를 부분 취소 상태로 전환한다.
+     */
+    public void partiallyCancel() {
+        validateCancelable();
+        this.status = PaymentStatus.PARTIALLY_CANCELED;
+    }
+
+    /**
+     * 결제를 전체 취소 상태로 전환한다.
+     */
     public void cancel() {
-        if (!isApproved()) {
-            throw new PaymentCancelNotAllowedException();
-        }
+        validateCancelable();
         this.status = PaymentStatus.CANCELED;
         this.failReason = null;
         this.failedAt = null;
+    }
+
+    /**
+     * 결제 취소 이력을 양방향 연관관계에 연결한다.
+     */
+    void addCancel(PaymentCancel paymentCancel) {
+        this.cancels.add(paymentCancel);
+    }
+
+    /**
+     * 결제가 취소 가능한 상태인지 검증한다.
+     */
+    private void validateCancelable() {
+        if (!isCancelable()) {
+            throw new PaymentCancelNotAllowedException();
+        }
     }
 }

@@ -160,7 +160,7 @@ INSERT INTO reseat_demo_backup.calendar_conflicting_games
 SELECT *
 FROM reseat.games
 WHERE id NOT IN ($script:DemoGameIdList)
-  AND DATE(DATE_ADD(game_at, INTERVAL 9 HOUR)) = DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR));
+  AND DATE(game_at) = DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR));
 "@ | Out-Null
 }
 
@@ -213,8 +213,8 @@ DELETE FROM game_seats WHERE FIND_IN_SET(game_id, @demo_games);
 Write-Host "[4/5] 동적 일정, 좌석 재고와 연관 상태를 준비합니다."
 Invoke-DemoMySql -Sql @"
 START TRANSACTION;
-SET time_zone = '+00:00';
-SET @kst_today_utc = DATE_SUB(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)), INTERVAL 9 HOUR);
+SET time_zone = '+09:00';
+SET @kst_today = CURRENT_DATE();
 
 SET @demo_user_id = (
     SELECT id
@@ -236,42 +236,42 @@ WHERE @demo_user_id IS NULL;
 SET @demo_user_id = COALESCE(@demo_user_id, LAST_INSERT_ID());
 
 UPDATE games
-SET game_at = DATE_ADD(@kst_today_utc, INTERVAL 17 HOUR),
+SET game_at = DATE_ADD(@kst_today, INTERVAL 17 HOUR),
     booking_open_at = LEAST(
-        DATE_ADD(UTC_TIMESTAMP(), INTERVAL 2 HOUR),
-        DATE_ADD(@kst_today_utc, INTERVAL 15 HOUR)
+        DATE_ADD(NOW(), INTERVAL 2 HOUR),
+        DATE_ADD(@kst_today, INTERVAL 15 HOUR)
     ),
-    booking_close_at = DATE_ADD(@kst_today_utc, INTERVAL 16 HOUR),
+    booking_close_at = DATE_ADD(@kst_today, INTERVAL 16 HOUR),
     booking_status = 'SCHEDULED',
     title = CONCAT('[예매 예정] ', (SELECT title FROM reseat_demo_backup.games WHERE id = 106))
 WHERE id = 106;
 
 UPDATE games
-SET game_at = DATE_ADD(@kst_today_utc, INTERVAL 18 HOUR) + INTERVAL 30 MINUTE,
+SET game_at = DATE_ADD(@kst_today, INTERVAL 18 HOUR) + INTERVAL 30 MINUTE,
     booking_open_at = DATE_SUB(NOW(), INTERVAL 1 DAY),
-    booking_close_at = DATE_ADD(@kst_today_utc, INTERVAL 18 HOUR),
+    booking_close_at = DATE_ADD(@kst_today, INTERVAL 18 HOUR),
     booking_status = 'OPEN',
     title = CONCAT('[일반 예매] ', (SELECT title FROM reseat_demo_backup.games WHERE id = 111))
 WHERE id = 111;
 
 UPDATE games
-SET game_at = DATE_ADD(@kst_today_utc, INTERVAL 18 HOUR) + INTERVAL 30 MINUTE,
+SET game_at = DATE_ADD(@kst_today, INTERVAL 18 HOUR) + INTERVAL 30 MINUTE,
     booking_open_at = DATE_SUB(NOW(), INTERVAL 1 DAY),
-    booking_close_at = DATE_ADD(@kst_today_utc, INTERVAL 18 HOUR),
+    booking_close_at = DATE_ADD(@kst_today, INTERVAL 18 HOUR),
     booking_status = 'OPEN',
     title = CONCAT('[대기열 체험] ', (SELECT title FROM reseat_demo_backup.games WHERE id = 117))
 WHERE id = 117;
 
 UPDATE games
-SET game_at = DATE_ADD(@kst_today_utc, INTERVAL 18 HOUR) + INTERVAL 30 MINUTE,
+SET game_at = DATE_ADD(@kst_today, INTERVAL 18 HOUR) + INTERVAL 30 MINUTE,
     booking_open_at = DATE_SUB(NOW(), INTERVAL 1 DAY),
-    booking_close_at = DATE_ADD(@kst_today_utc, INTERVAL 18 HOUR),
+    booking_close_at = DATE_ADD(@kst_today, INTERVAL 18 HOUR),
     booking_status = 'OPEN',
     title = CONCAT('[좌석 상태 혼합] ', (SELECT title FROM reseat_demo_backup.games WHERE id = 121))
 WHERE id = 121;
 
 UPDATE games
-SET game_at = DATE_ADD(@kst_today_utc, INTERVAL 18 HOUR) + INTERVAL 30 MINUTE,
+SET game_at = DATE_ADD(@kst_today, INTERVAL 18 HOUR) + INTERVAL 30 MINUTE,
     booking_open_at = DATE_SUB(NOW(), INTERVAL 1 DAY),
     booking_close_at = DATE_SUB(NOW(), INTERVAL 1 HOUR),
     booking_status = 'CLOSED',
@@ -279,9 +279,9 @@ SET game_at = DATE_ADD(@kst_today_utc, INTERVAL 18 HOUR) + INTERVAL 30 MINUTE,
 WHERE id = 126;
 
 UPDATE games
-SET game_at = DATE_ADD(@kst_today_utc, INTERVAL 18 HOUR) + INTERVAL 30 MINUTE,
+SET game_at = DATE_ADD(@kst_today, INTERVAL 18 HOUR) + INTERVAL 30 MINUTE,
     booking_open_at = DATE_SUB(NOW(), INTERVAL 1 DAY),
-    booking_close_at = DATE_ADD(@kst_today_utc, INTERVAL 18 HOUR),
+    booking_close_at = DATE_ADD(@kst_today, INTERVAL 18 HOUR),
     booking_status = 'CANCELLED',
     title = CONCAT('[경기 취소] ', (SELECT title FROM reseat_demo_backup.games WHERE id = 131))
 WHERE id = 131;

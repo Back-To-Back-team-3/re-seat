@@ -73,7 +73,7 @@ public class VerificationService {
             log.warn("[본인인증 경고] 포트원 실제 정보 조회 실패 (로컬 Fallback 적용): {}", e.getMessage());
             certifiedCi = "FALLBACK_TEST_CI_" + userId; // 중복 가입 에러 방지용 고유 ID 매핑
             certifiedName = user.getName() != null && !user.getName().isEmpty() ? user.getName() : "인증회원";
-            certifiedPhone = "010-9999-9999";
+            certifiedPhone = String.format("010-%04d-%04d", userId / 10000, userId % 10000);
         }
 
         // 중복 가입 명의 예외 처리 (내 아이디 본인 정보인 경우는 패스)

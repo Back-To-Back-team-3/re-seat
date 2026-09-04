@@ -10,6 +10,7 @@ import com.backtoback.reseat.domain.payment.exception.PaymentAccessDeniedExcepti
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCallbackMismatchException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelNotAllowedException;
+import com.backtoback.reseat.domain.payment.exception.PaymentPgKeyMissingException;
 
 @Component
 public class PaymentServiceValidator {
@@ -75,12 +76,12 @@ public class PaymentServiceValidator {
      * 결제가 취소 가능한 상태이고 PG 결제 키를 가지고 있는지 검증한다.
      */
     public void validateCancelable(Payment payment) {
-        if (!payment.isApproved()) {
+        if (!payment.isCancelable()) {
             throw new PaymentCancelNotAllowedException();
         }
 
         if (payment.getPgPaymentKey() == null || payment.getPgPaymentKey().isBlank()) {
-            throw new PaymentCancelNotAllowedException("PG 결제 키가 없어 결제를 취소할 수 없습니다.");
+            throw new PaymentPgKeyMissingException();
         }
     }
 

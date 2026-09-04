@@ -2,6 +2,7 @@ package com.backtoback.reseat.domain.user.auth.service;
 
 import java.io.IOException;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
 import org.springframework.stereotype.Component;
@@ -14,6 +15,12 @@ import jakarta.servlet.http.HttpServletResponse;
 @Component
 public class OAuth2AuthenticationFailureHandler extends SimpleUrlAuthenticationFailureHandler {
 
+    private final String redirectUrl;
+
+    public OAuth2AuthenticationFailureHandler(@Value("${oauth2.redirect.frontend-url}") String redirectUrl) {
+        this.redirectUrl = redirectUrl;
+    }
+
     @Override
     public void onAuthenticationFailure(
         HttpServletRequest request,
@@ -25,7 +32,7 @@ public class OAuth2AuthenticationFailureHandler extends SimpleUrlAuthenticationF
 
         String targetUrl
             = UriComponentsBuilder
-                .fromUriString("http://localhost:5173")
+                .fromUriString(redirectUrl)
                 .queryParam("error", exception.getLocalizedMessage())
                 .build()
                 .toUriString();

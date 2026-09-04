@@ -1,12 +1,18 @@
 package com.backtoback.reseat.domain.stadium.dto;
 
+import java.math.BigDecimal;
+
 import com.backtoback.reseat.domain.stadium.entity.Stadium;
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * 구장 상세 정보 응답.
  * <p>경기 상세 조회 응답에 중첩된다.
+ * 좌표가 등록되지 않은 구장은 latitude·longitude 필드 자체가 JSON에서 생략된다.
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "구장 상세 정보")
 public record StadiumDetailResponse(
     @Schema(
@@ -24,14 +30,26 @@ public record StadiumDetailResponse(
     @Schema(
         description = "총 수용 인원",
         example = "23750"
-    ) int totalCapacity
+    ) int totalCapacity,
+    @Schema(
+        description = "위도. 좌표 미등록 구장은 응답에서 필드가 생략됨",
+        example = "37.5121631",
+        nullable = true
+    ) BigDecimal latitude,
+    @Schema(
+        description = "경도. 좌표 미등록 구장은 응답에서 필드가 생략됨",
+        example = "127.0719372",
+        nullable = true
+    ) BigDecimal longitude
 ) {
     public static StadiumDetailResponse from(Stadium stadium) {
         return new StadiumDetailResponse(
             stadium.getId(),
             stadium.getName(),
             stadium.getAddress(),
-            stadium.getTotalCapacity()
+            stadium.getTotalCapacity(),
+            stadium.getLatitude(),
+            stadium.getLongitude()
         );
     }
 }

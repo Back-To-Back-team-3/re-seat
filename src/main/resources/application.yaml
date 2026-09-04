@@ -7,10 +7,10 @@ spring:
     default: local
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3307/reseat?serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
     driver-class-name: com.mysql.cj.jdbc.Driver
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
   jackson:
     time-zone: Asia/Seoul
     date-format: yyyy-MM-dd HH:mm:ss
@@ -18,7 +18,7 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
@@ -87,6 +87,15 @@ spring:
             token-uri: https://kauth.kakao.com/oauth/token
             user-info-uri: https://kapi.kakao.com/v2/user/me
             user-name-attribute: id
+# ===================================================================
+# 4. 실시간 도시데이터 (서울시 OpenAPI & Redis Cache) 설정
+# ===================================================================
+citydata:
+  seoul:
+    base-url: ${SEOUL_CITYDATA_BASE_URL:http://openapi.seoul.go.kr:8088}
+    api-key: ${SEOUL_CITYDATA_API_KEY:sample_key}
+  cache:
+    ttl-minutes: 10
 
 # -----------------------------------------------------------------
 # Actuator / Prometheus 메트릭 수집 엔드포인트 설정
@@ -103,11 +112,20 @@ management:
     tags:
       application: re-seat
 
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,https://re-seat.netlify.app}
+
 jwt:
   secret: ${JWT_SECRET}
 
+oauth2:
+  redirect:
+    frontend-url: ${FRONTEND_REDIRECT_URL:http://localhost:5173}
+
 portone:
-  api-secret: "MOCK_PORTONE_SECRET_TOKEN"
+  base-url: ${PORTONE_BASE_URL:https://api.iamport.kr}
+  api-key: ${PORTONE_API_KEY:}
+  api-secret: ${PORTONE_API_SECRET:}
 
 toss:
   client-key: ${TOSS_CLIENT_KEY:test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq}
@@ -165,6 +183,13 @@ spring:
 jwt:
   secret: ${JWT_SECRET}
 
+oauth2:
+  redirect:
+    frontend-url: ${FRONTEND_REDIRECT_URL}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:https://re-seat.netlify.app}
+
 # prod 프로필에서도 Actuator 엔드포인트가 유지되도록 재선언
 management:
   endpoints:
@@ -191,3 +216,6 @@ spring:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: create-drop
+
+
+

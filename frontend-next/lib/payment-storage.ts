@@ -1,5 +1,4 @@
 import {storage} from "@/lib/storage";
-import type {GameSeat} from "@/types/game";
 import type {PaymentCreateResponse} from "@/types/payment";
 
 const PENDING_KEY = "pendingTossPayment";
@@ -11,7 +10,6 @@ export type PendingPayment = {
     gameId: number | null;
     payment: PaymentCreateResponse;
     idempotencyKey: string;
-    seats?: GameSeat[];
 };
 
 export function getPaymentKey(orderId: number) {

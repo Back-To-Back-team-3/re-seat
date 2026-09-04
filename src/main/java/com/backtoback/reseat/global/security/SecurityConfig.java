@@ -3,6 +3,7 @@ package com.backtoback.reseat.global.security;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -77,6 +78,10 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/v1/games", "/api/v1/games/{gameId}")
                     .permitAll()
 
+                    // 구장 실시간 혼잡도(/api/v1/congestion/**) GET 공개 허용
+                    .requestMatchers(HttpMethod.GET, "/api/v1/congestion/**")
+                    .permitAll()
+
                     // 관리자 전용 API 인가 적용
                     .requestMatchers("/api/v1/admin/**")
                     .hasRole("ADMIN")
@@ -110,24 +115,17 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // 프론트엔드 연동대비
+    // 프론트엔드 연동대비 CORS 설정 (환경변수 주입)
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource(
+        @Value("${cors.allowed-origins}") List<String> allowedOrigins
+    ) {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration
-            .setAllowedOrigins(
-                List
-                    .of(
-                        "http://localhost:3000", // React 개발용 로컬 주소
-                        "http://localhost:5173", // Vite 개발용 로컬 주소
-                        "https://re-seat.netlify.app", // 프론트엔드 임시/배포 주소 예시
-                        "https://your-frontend-domain.com" // 실서버 프론트엔드 도메인 (필요시 추가)
-                    )
-            );
-
-        configuration.addAllowedMethod("*"); // GET, POST, PUT, DELETE 등 전체 허용
-        configuration.addAllowedHeader("*"); // Authorization, Queue-Token, Idempotency-Key 등 허용
+        configuration.setAllowedOrigins(allowedOrigins);
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setExposedHeaders(List.of("Authorization", "Queue-Token", "Location"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L); // Preflight 요청 캐싱 시간
 

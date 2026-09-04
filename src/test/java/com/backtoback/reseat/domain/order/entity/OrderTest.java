@@ -24,6 +24,8 @@ public class OrderTest {
         return Order.of(ORDER_NO, mock(User.class), mock(Reservation.class), TOTAL_AMOUNT, PAYMENT_DEADLINE);
     }
 
+    // ---------- 정상 상태 전이 ----------
+
     @Test
     @DisplayName("CREATED 주문을 결제 완료 처리하면 PAID 상태가 된다.")
     void paid_changesStatusToPaid() {
@@ -58,6 +60,54 @@ public class OrderTest {
     }
 
     @Test
+    @DisplayName("PAID 주문을 부분 취소 처리하면 PARTIALLY_CANCELED 상태가 된다.")
+    void partiallyCancel_changesStatusToPartiallyCanceled() {
+
+        // given
+        Order order = createdOrder();
+        order.paid();
+
+        // when
+        order.partiallyCancel();
+
+        // then
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.PARTIALLY_CANCELED);
+    }
+
+    @Test
+    @DisplayName("PAID 주문을 최종 취소 처리하면 CANCELED 상태가 된다.")
+    void cancelAfterPayment_changesPaidStatusToCanceled() {
+
+        // given
+        Order order = createdOrder();
+        order.paid();
+
+        // when
+        order.cancelAfterPayment();
+
+        // then
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELED);
+    }
+
+    @Test
+    @DisplayName("PARTIALLY_CANCELED 주문을 최종 취소 처리하면 CANCELED 상태가 된다.")
+    void cancelAfterPayment_changesPartiallyCanceledStatusToCanceled() {
+
+        // given
+        Order order = createdOrder();
+        order.paid();
+        order.partiallyCancel();
+
+        // when
+        order.cancelAfterPayment();
+
+        // then
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELED);
+    }
+
+    // ---------- 잘못된 상태 전이 ----------
+
+    @Test
     @DisplayName("CANCELED 주문을 결제 완료 처리하면 예외가 발생한다.")
     void paid_throwsExceptionWhenStatusIsNotCreated() {
 
@@ -88,5 +138,31 @@ public class OrderTest {
 
         assertThatThrownBy(order::cancel).isInstanceOf(InvalidOrderStatusException.class);
         assertThat(order.getStatus()).isEqualTo(OrderStatus.EXPIRED);
+    }
+
+    @Test
+    @DisplayName("PAID가 아닌 주문을 부분 취소 처리하면 예외가 발생한다.")
+    void partiallyCancel_throwsExceptionWhenStatusIsNotPaid() {
+
+        // given
+        Order order = createdOrder();
+
+        // when & then
+        assertThatThrownBy(order::partiallyCancel).isInstanceOf(InvalidOrderStatusException.class);
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.CREATED);
+    }
+
+    @Test
+    @DisplayName("CANCELED 주문을 최종 취소 처리하면 예외가 발생한다.")
+    void cancelAfterPayment_throwsExceptionWhenStatusIsCanceled() {
+
+        // given
+        Order order = createdOrder();
+        order.paid();
+        order.cancelAfterPayment();
+
+        // when & then
+        assertThatThrownBy(order::cancelAfterPayment).isInstanceOf(InvalidOrderStatusException.class);
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELED);
     }
 }

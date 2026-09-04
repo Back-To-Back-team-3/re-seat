@@ -17,7 +17,9 @@ import jakarta.persistence.LockModeType;
 
 public interface PaymentRecoveryTaskRepository extends JpaRepository<PaymentRecoveryTask, Long> {
 
-    Optional<PaymentRecoveryTask> findByPayment_Id(Long paymentId);
+    Optional<PaymentRecoveryTask> findByRecoveryKey(String recoveryKey);
+
+    Optional<PaymentRecoveryTask> findByPaymentCancel_Id(Long paymentCancelId);
 
     @Query("""
         select task.id
@@ -38,6 +40,7 @@ public interface PaymentRecoveryTaskRepository extends JpaRepository<PaymentReco
         select task
         from PaymentRecoveryTask task
         join fetch task.payment
+        left join fetch task.paymentCancel
         where task.id = :taskId
         """)
     Optional<PaymentRecoveryTask> findByIdWithPessimisticWriteLock(@Param("taskId") Long taskId);

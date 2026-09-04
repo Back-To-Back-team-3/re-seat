@@ -60,9 +60,10 @@ export function useQueue(gameId: number) {
                             });
                         },
                         onAdmit(event) {
-                            // 3. 좌석 API가 요구하는 Queue-Token과 만료 시각을 저장한 뒤 좌석 화면으로 이동한다.
+                            // 3. Queue-Token 전체 TTL은 대기열 상태에 보존하되, 좌석 화면에는
+                            // 백엔드가 실제 선점을 허용하는 최초 탐색 만료 시각을 전달한다.
                             storage.local.set("queueToken", event.queueToken);
-                            setQueueExpiry(event.tokenExpiresAt);
+                            setQueueExpiry(event.tokenSeatBrowsingExpiresAt);
                             setQueue((current) =>
                                 current
                                     ? {
