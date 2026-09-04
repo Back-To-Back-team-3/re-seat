@@ -1,33 +1,33 @@
 package com.backtoback.reseat.domain.ticket.dto.response;
 
-import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
+import java.time.LocalDateTime;
+
 import com.backtoback.reseat.domain.ticket.entity.Ticket;
 import com.backtoback.reseat.domain.ticket.entity.TicketStatus;
 
 import lombok.Builder;
 import lombok.Getter;
 
+/**
+ * 티켓 취소 "접수" 응답.
+ * <p>실제 PG 취소는 결제 쪽 스케줄러가 비동기로 처리하므로,
+ * 이 응답 시점에는 아직 환불이 완료됐는지 알 수 없다.
+ * 최종 결과(REFUNDED/REFUND_FAILED)는 티켓 상세·목록 조회로 확인해야 한다.</p>
+ */
 @Getter
 @Builder
 public class TicketCancelResponse {
 
     private Long ticketId;
-    private TicketStatus status;
-    private boolean refunded; // 환불 처리 여부
-    private Integer refundAmount;
-    private Long gameSeatId;
-    private GameSeatStatus seatStatus;
+    private TicketStatus ticketStatus; // 접수 시점엔 항상 REFUND_PENDING
+    private LocalDateTime refundRequestedAt;
 
-    // Ticket 엔티티 기반 응답 생성
-    public static TicketCancelResponse of(Ticket ticket, boolean refunded, Integer refundAmount) {
+    public static TicketCancelResponse of(Ticket ticket) {
         return TicketCancelResponse
             .builder()
             .ticketId(ticket.getId())
-            .status(ticket.getStatus())
-            .refunded(refunded)
-            .refundAmount(refundAmount)
-            .gameSeatId(ticket.getGameSeat().getId())
-            .seatStatus(ticket.getGameSeat().getStatus())
+            .ticketStatus(ticket.getStatus())
+            .refundRequestedAt(ticket.getRefundRequestedAt())
             .build();
     }
 }

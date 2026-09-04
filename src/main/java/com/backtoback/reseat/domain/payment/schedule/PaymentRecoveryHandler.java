@@ -1,5 +1,7 @@
 package com.backtoback.reseat.domain.payment.schedule;
 
+import java.time.LocalDateTime;
+
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryType;
 
@@ -11,4 +13,9 @@ public interface PaymentRecoveryHandler {
 
     /** PG 상태를 확인하고 복구 처리 결과를 반환한다. */
     PaymentRecoveryResult recover(PaymentRecoveryTask task);
+
+    /** 재시도 횟수를 모두 소진한 작업의 복구 대상 상태를 최종 실패로 전이한다. */
+    default void handleFinalFailure(PaymentRecoveryTask task, String error, LocalDateTime failedAt) {
+        // 복구 유형별 최종 실패 후처리가 필요한 Handler만 재정의한다.
+    }
 }
