@@ -114,7 +114,9 @@ class AdminGameBookingServiceConcurrencyTest {
     }
 
     /**
-     * FK 역참조 역순 삭제 순서: games(team, stadium 참조) → teams(stadium 참조) → stadiums
+     * FK 역참조 역순 삭제 순서:
+     * game_seats(games, seats 참조) → games(teams, stadium 참조) → seats(seat_zones, stadium 참조)
+     * → teams(stadium 참조) → seat_zones(stadium 참조) → stadiums
      */
     @AfterEach
     void tearDown() {
@@ -179,5 +181,61 @@ class AdminGameBookingServiceConcurrencyTest {
         assertThat(successCount.get()).as("정확히 1건만 성공해야 한다").isEqualTo(1);
         assertThat(conflictCount.get()).as("나머지는 전부 409(경합 실패)여야 한다").isEqualTo(THREAD_COUNT - 1);
         assertThat(reloaded.getBookingStatus()).isEqualTo(BookingStatus.OPEN);
+    }
+
+    @Test
+    @DisplayName("관리자 2명이 AdminGameBookingService.transition()으로 동시 CLOSE 요청하면 1건만 성공하고 나머지는 409다")
+    void should_succeedOnce_when_twoAdminsCallTransitionToClosedConcurrently() throws InterruptedException {
+        // given — OPEN까지 미리 전이시켜 CLOSE 전이가 가능한 상태를 만든다 (단일 스레드)
+        adminGameBookingService.transition(gameId, BookingStatus.OPEN, "사전 오픈");
+
+        CountDownLatch readyLatch = new CountDownLatch(THREAD_COUNT);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger conflictCount = new AtomicInteger(0);
+        AtomicInteger unexpectedErrorCount = new AtomicInteger(0);
+        ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
+
+        // when
+        for (int i = 0; i < THREAD_COUNT; i++) {
+            executor.submit(() -> {
+                readyLatch.countDown();
+                try {
+                    startLatch.await();
+                    adminGameBookingService.transition(gameId, BookingStatus.CLOSED, "동시성 테스트 — 예매 마감");
+                    successCount.incrementAndGet();
+                } catch (InvalidBookingStatusTransitionException e) {
+                    conflictCount.incrementAndGet();
+                } catch (Exception e) {
+                    log.error("예상치 못한 예외 발생", e);
+                    unexpectedErrorCount.incrementAndGet();
+                }
+            });
+        }
+
+        readyLatch.await();
+        startLatch.countDown();
+        executor.shutdown();
+        boolean finished = executor.awaitTermination(10, TimeUnit.SECONDS);
+
+        // then
+        assertThat(finished).as("10초 내에 모든 스레드가 종료되지 않았다 — 데드락 또는 타임아웃 의심").isTrue();
+
+        Game reloaded = gameRepository.findById(gameId).orElseThrow();
+
+        log.info("=============================================================");
+        log.info("[이슈 #375] AdminGameBookingService CLOSE 동시성 테스트 수치");
+        log.info("  동시 스레드 수        : {}", THREAD_COUNT);
+        log.info("  성공 건수             : {}", successCount.get());
+        log.info("  409(경합 실패) 건수   : {}", conflictCount.get());
+        log.info("  예상치 못한 예외 건수 : {}", unexpectedErrorCount.get());
+        log.info("  최종 booking_status   : {}", reloaded.getBookingStatus());
+        log.info("=============================================================");
+
+        assertThat(unexpectedErrorCount.get()).as("의도치 않은 예외는 없어야 한다").isZero();
+        assertThat(successCount.get() + conflictCount.get()).as("모든 스레드가 경합에 참여해야 한다").isEqualTo(THREAD_COUNT);
+        assertThat(successCount.get()).as("정확히 1건만 성공해야 한다").isEqualTo(1);
+        assertThat(conflictCount.get()).as("나머지는 전부 409(경합 실패)여야 한다").isEqualTo(THREAD_COUNT - 1);
+        assertThat(reloaded.getBookingStatus()).isEqualTo(BookingStatus.CLOSED);
     }
 }
