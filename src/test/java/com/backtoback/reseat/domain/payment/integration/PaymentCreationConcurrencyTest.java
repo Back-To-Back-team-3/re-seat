@@ -14,14 +14,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.redisson.Redisson;
-import org.redisson.api.RedissonClient;
-import org.redisson.config.Config;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -49,7 +43,12 @@ import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@Import(PaymentCreationConcurrencyTest.RedissonTestConfig.class)
+@ActiveProfiles(
+    {
+        "test",
+        "redis-test"
+    }
+)
 @TestPropertySource(properties = "jwt.secret=cGF5bWVudC1jb25jdXJyZW5jeS10ZXN0LXNlY3JldC1rZXktZm9yLWp3dC1zaWduaW5n")
 @DisplayName("동일 주문 결제 생성 동시성")
 class PaymentCreationConcurrencyTest extends BaseIntegrationTest {
@@ -275,19 +274,5 @@ class PaymentCreationConcurrencyTest extends BaseIntegrationTest {
     }
 
     private record PaymentFixture(Long userId, Long orderId) {
-    }
-
-    @TestConfiguration
-    static class RedissonTestConfig {
-
-        @Bean(destroyMethod = "shutdown")
-        RedissonClient redissonClient(
-            @Value("${spring.data.redis.host}") String host,
-            @Value("${spring.data.redis.port}") int port
-        ) {
-            Config config = new Config();
-            config.useSingleServer().setAddress("redis://" + host + ":" + port);
-            return Redisson.create(config);
-        }
     }
 }

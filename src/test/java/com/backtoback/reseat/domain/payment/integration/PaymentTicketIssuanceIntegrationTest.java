@@ -7,7 +7,6 @@ import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -78,9 +77,6 @@ class PaymentTicketIssuanceIntegrationTest extends BaseIntegrationTest {
 
     @MockitoBean
     private TossPaymentClient tossPaymentClient;
-
-    @MockitoBean
-    private RedissonClient redissonClient;
 
     @Test
     @DisplayName("Toss 승인이 완료되면 결제와 주문을 완료하고 주문 항목의 티켓을 발급한다.")
