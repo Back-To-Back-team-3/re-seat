@@ -1,9 +1,35 @@
 "use client";
 
 import Script from "next/script";
+import {useState} from "react";
 
 const PORTONE_CODE =
     process.env.NEXT_PUBLIC_PORTONE_CODE ?? "imp31640540";
+const PORTONE_PG =
+    process.env.NEXT_PUBLIC_PORTONE_PG ?? "inicis_unified";
+
+export type VerificationAgency = "PASS" | "TOSS" | "KFTC";
+
+export const VERIFICATION_AGENCIES = [
+    {
+        id: "PASS" as const,
+        name: "PASS",
+        badge: "통신사",
+        description: "SKT · KT · LGU+ 패스 앱",
+    },
+    {
+        id: "TOSS" as const,
+        name: "토스",
+        badge: "간편인증",
+        description: "토스 앱 간편 본인확인",
+    },
+    {
+        id: "KFTC" as const,
+        name: "금융인증서",
+        badge: "은행",
+        description: "은행 공동 금융결제원 인증",
+    },
+] as const;
 
 type CertificationResponse = {
     success: boolean;
@@ -11,14 +37,25 @@ type CertificationResponse = {
     error_msg?: string;
 };
 
+type InicisUnifiedBypass = {
+    flgFixedUser: "Y" | "N";
+    directAgency?: VerificationAgency;
+    logoUrl?: string;
+};
+
+type CertificationOptions = {
+    pg: string;
+    merchant_uid: string;
+    popup: true;
+    bypass?: {
+        inicisUnified: InicisUnifiedBypass;
+    };
+};
+
 type PortOne = {
     init(code: string): void;
     certification(
-        options: {
-            pg: "inicis";
-            merchant_uid: string;
-            popup: true;
-        },
+        options: CertificationOptions,
         callback: (response: CertificationResponse) => void,
     ): void;
 };
@@ -69,6 +106,9 @@ export function VerificationPanel({
                                       onLogout,
                                       onVerify,
                                   }: VerificationPanelProps) {
+    const [selectedAgency, setSelectedAgency] =
+        useState<VerificationAgency>("PASS");
+
     function startVerification() {
         const portOne = window.IMP;
         if (!portOne) {
@@ -79,9 +119,15 @@ export function VerificationPanel({
         portOne.init(PORTONE_CODE);
         portOne.certification(
             {
-                pg: "inicis",
+                pg: PORTONE_PG,
                 merchant_uid: `verification_${Date.now()}`,
                 popup: true,
+                bypass: {
+                    inicisUnified: {
+                        flgFixedUser: "N",
+                        directAgency: selectedAgency,
+                    },
+                },
             },
             (response) => {
                 if (!response.success) {
@@ -168,7 +214,33 @@ export function VerificationPanel({
                             본인 명의의 휴대폰으로 인증하면 Re:Seat의 모든 예매 기능을
                             이용할 수 있습니다.
                         </p>
-                        <div className="mt-[18px] mb-[22px] flex gap-3 rounded-control bg-surface-soft p-[13px]">
+                        <div className="mt-4 mb-1">
+                            <span className="mb-2 block text-[11px] font-bold text-foreground">
+                                인증 수단 선택
+                            </span>
+                            <div className="grid grid-cols-3 gap-2">
+                                {VERIFICATION_AGENCIES.map((agency) => {
+                                    const isSelected = selectedAgency === agency.id;
+                                    return (
+                                        <button
+                                            key={agency.id}
+                                            type="button"
+                                            onClick={() => setSelectedAgency(agency.id)}
+                                            className={[
+                                                "flex flex-col items-center justify-center rounded-control border p-2.5 text-center transition duration-fast cursor-pointer",
+                                                isSelected
+                                                    ? "border-brand bg-brand/8 text-brand font-bold shadow-xs ring-1 ring-brand"
+                                                    : "border-border bg-surface text-muted-foreground hover:border-foreground/30 hover:bg-surface-soft",
+                                            ].join(" ")}
+                                        >
+                                            <span className="text-[12px] font-extrabold">{agency.name}</span>
+                                            <span className="mt-0.5 text-[9px] opacity-75">{agency.badge}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        <div className="mt-[14px] mb-[22px] flex gap-3 rounded-control bg-surface-soft p-[13px]">
                             <span className="text-brand">⌕</span>
                             <div className="grid gap-0.5">
                                 <strong className="text-[10px]">
