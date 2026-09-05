@@ -86,11 +86,8 @@ public class QueueEntryEventConsumer {
             Optional<QueueEntryRejectionReason> rejectionReason = queueService.registerQueueEntry(event);
 
             // 사용자 정책에 따른 거절은 정상 처리 결과이므로 Redis에 전달 결과를 저장한 뒤 Offset을 커밋한다.
-            rejectionReason.ifPresent(reason -> queueEntryRejectionService.saveRejection(
-                event.gameId(),
-                event.userId(),
-                reason
-            ));
+            rejectionReason
+                .ifPresent(reason -> queueEntryRejectionService.saveRejection(event.gameId(), event.userId(), reason));
 
             acknowledgment.acknowledge();
 

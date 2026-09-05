@@ -280,7 +280,8 @@ public class QueueService {
         String queueEntryKey = queueEntryKey(event.gameId(), event.userId());
         long score = event.requestedAt().toEpochMilli();
 
-        ActiveTokenCheckResult activeTokenCheckResult = checkActiveTokens(user.getId(), game.getId(), queueEntryKey, now);
+        ActiveTokenCheckResult activeTokenCheckResult
+            = checkActiveTokens(user.getId(), game.getId(), queueEntryKey, now);
         boolean hasWaitingEntryInAnotherGame
             = queueEntryHistoryRepository
                 .existsByUser_IdAndGame_IdNotAndStatus(user.getId(), game.getId(), QueueEntryHistoryStatus.WAITING);
@@ -468,12 +469,26 @@ public class QueueService {
         }
 
         boolean hasUsableCurrentGameToken
-            = activeTokens.stream().anyMatch(token -> token.getStatus() == AdmissionTokenStatus.ACTIVE && token.getGame().getId().equals(currentGameId));
+            = activeTokens
+                .stream()
+                .anyMatch(
+                    token -> token.getStatus() == AdmissionTokenStatus.ACTIVE
+                        && token.getGame().getId().equals(currentGameId)
+                );
 
         boolean hasUsableOtherGameToken
-            = activeTokens.stream().anyMatch(token -> token.getStatus() == AdmissionTokenStatus.ACTIVE && !token.getGame().getId().equals(currentGameId));
+            = activeTokens
+                .stream()
+                .anyMatch(
+                    token -> token.getStatus() == AdmissionTokenStatus.ACTIVE
+                        && !token.getGame().getId().equals(currentGameId)
+                );
 
-        return new ActiveTokenCheckResult(hasUsableCurrentGameToken, hasUsableOtherGameToken, currentQueueHistoryCanceled);
+        return new ActiveTokenCheckResult(
+            hasUsableCurrentGameToken,
+            hasUsableOtherGameToken,
+            currentQueueHistoryCanceled
+        );
     }
 
     /**
