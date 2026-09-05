@@ -94,17 +94,18 @@ class AdminGameBookingServiceConcurrencyTest {
         homeTeamId = homeTeam.getId();
         awayTeamId = awayTeam.getId();
 
-        Game game = Game
-            .builder()
-            .homeTeam(homeTeam)
-            .awayTeam(awayTeam)
-            .stadium(stadium)
-            .gameAt(LocalDateTime.now().plusDays(7))
-            .bookingOpenAt(LocalDateTime.now().minusHours(1))
-            .bookingCloseAt(LocalDateTime.now().plusDays(6))
-            .bookingStatus(BookingStatus.SCHEDULED)
-            .title("[이슈 #375] 서비스 계층 동시성 테스트")
-            .build();
+        Game game
+            = Game
+                .builder()
+                .homeTeam(homeTeam)
+                .awayTeam(awayTeam)
+                .stadium(stadium)
+                .gameAt(LocalDateTime.now().plusDays(7))
+                .bookingOpenAt(LocalDateTime.now().minusHours(1))
+                .bookingCloseAt(LocalDateTime.now().plusDays(6))
+                .bookingStatus(BookingStatus.SCHEDULED)
+                .title("[이슈 #375] 서비스 계층 동시성 테스트")
+                .build();
         gameRepository.save(game);
         gameId = game.getId();
 
