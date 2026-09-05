@@ -41,6 +41,8 @@ public class QueueEntryEventConsumer {
      * 대기열 진입 이벤트의 등록 또는 거절 결과 저장을 처리하고 성공한 경우에만 Offset을 커밋한다.
      * <p>일시적인 처리 실패는 설정된 간격에 따라 재시도하고, 최종 실패한 이벤트는 DLT로 전달한다.
      * 이벤트 값이 잘못됐거나 경기 · 사용자가 존재하지 않는 경우에는 재시도해도 성공할 수 없으므로 즉시 DLT로 전달한다.</p>
+     * <p>정책상 거절된 최신 요청은 거절 사유를 저장하고,
+     * 정상 처리된 최신 요청은 요청 식별자를 정리한다.</p>
      *
      * @param record Kafka Consumer Record
      * @param acknowledgment 수동 Offset 커밋 객체
@@ -81,13 +83,15 @@ public class QueueEntryEventConsumer {
         String eventId = event == null ? "null" : String.valueOf(event.eventId());
 
         try {
-            // 신규 등록, 기존 대기열 복구 · 무시 또는 거절 결과 저장이 예외 없이 끝나면 이벤트 처리가 성공한 것으로 본다.
+            // 신규 등록, 기존 대기열 복구 · 무시 또는 정책상 거절을 처리한다.
             // 정상적으로 처리된 경우만 offset을 커밋하고 예외가 발생하면 커밋하지 않아 재시도 또한 DLT 처리가 이어지게 한다.
             Optional<QueueEntryRejectionReason> rejectionReason = queueService.registerQueueEntry(event);
 
-            // 사용자 정책에 따른 거절은 정상 처리 결과이므로 Redis에 전달 결과를 저장한 뒤 Offset을 커밋한다.
-            rejectionReason
-                .ifPresent(reason -> queueEntryRejectionService.saveRejection(event.gameId(), event.userId(), reason));
+            // 최신 요청과 일치하는 이벤트만 거절 결과를 저장하거나 요청 식별자를 정리한 뒤 Offset을 커밋한다.
+            rejectionReason.ifPresentOrElse(
+                reason -> queueEntryRejectionService.saveRejectionIfLatest(event.gameId(), event.userId(), event.eventId(), reason),
+                () -> queueEntryRejectionService.completeRequestIfLatest(event.gameId(), event.userId(), event.eventId())
+            );
 
             acknowledgment.acknowledge();
 
