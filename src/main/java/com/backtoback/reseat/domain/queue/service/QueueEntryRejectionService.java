@@ -22,7 +22,9 @@ import lombok.RequiredArgsConstructor;
 public class QueueEntryRejectionService {
 
     private static final Duration REJECTION_TTL = Duration.ofMinutes(2);
-    private static final Duration LATEST_REQUEST_TTL = Duration.ofMinutes(2);
+
+    // Consumer 재시도와 처리 대기시간을 고려해 최신 요청 식별자를 거절 결과보다 길게 유지한다.
+    private static final Duration LATEST_REQUEST_TTL = Duration.ofMinutes(5);
 
     // 최신 eventId와 일치할 때만 거절 결과를 저장하고 최신 요청 식별자를 제거한다.
     private static final DefaultRedisScript<Long> SAVE_REJECTION_IF_LATEST_SCRIPT = new DefaultRedisScript<>("""
@@ -43,6 +45,13 @@ public class QueueEntryRejectionService {
         return 1
         """, Long.class);
 
+    // 최신 요청 식별자 저장과 이전 거절 결과 삭제를 하나의 Redis 연산으로 처리한다.
+    private static final DefaultRedisScript<Long> PREPARE_REQUEST_SCRIPT = new DefaultRedisScript<>("""
+        redis.call('SET', KEYS[1], ARGV[1], 'PX', ARGV[2])
+        redis.call('DEL', KEYS[2])
+        return 1
+        """, Long.class);
+
     private final RedisTemplate<String, String> redisTemplate;
 
     // Consumer 거절 결과 key: queue:entry:rejection:game:{gameId}:user:{userId}
@@ -59,6 +68,8 @@ public class QueueEntryRejectionService {
 
     /**
      * 사용자와 경기별 최신 대기열 진입 요청을 기록하고 이전 거절 결과를 삭제한다.
+     * <p>최신 요청 식별자 저장과 이전 거절 결과 삭제를 Redis에서 원자적으로 처리하여
+     * 서로 다른 요청의 갱신이 사이에 끼어들지 못하게 한다.</p>
      *
      * @param gameId 진입을 요청한 경기 ID
      * @param userId 대기열 진입을 요청한 사용자 ID
@@ -69,11 +80,14 @@ public class QueueEntryRejectionService {
         String latestRequestKey = latestRequestKey(gameId, userId);
         String rejectionKey = rejectionKey(gameId, userId);
 
-        // 지연된 이전 이벤트가 최신 요청 결과를 덮어쓰지 못하도록 최신 eventId를 먼저 저장한다.
-        redisTemplate.opsForValue().set(latestRequestKey, eventId.toString(), LATEST_REQUEST_TTL);
-
-        // 새 요청의 SSE 연결에 이전 거절 결과가 전달되지 않도록 기존 거절 결과를 삭제한다.
-        redisTemplate.delete(rejectionKey);
+        // 저장과 삭제 사이에 다른 요청이 끼어들지 않도록 Redis Lua Script에서 원자적으로 처리한다.
+        redisTemplate
+            .execute(
+                PREPARE_REQUEST_SCRIPT,
+                List.of(latestRequestKey, rejectionKey),
+                eventId.toString(),
+                String.valueOf(LATEST_REQUEST_TTL.toMillis())
+            );
     }
 
     /**
