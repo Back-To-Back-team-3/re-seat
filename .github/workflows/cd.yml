@@ -62,7 +62,7 @@ jobs:
             mkdir -p ~/re-seat && cd ~/re-seat
 
             # docker-compose 전용 .env 파일 동적 생성
-            cat <<EOF > .env
+            cat <<'EOF' > .env
             DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
             IMAGE_TAG=${{ github.sha }}
             DB_USERNAME=${{ secrets.DB_USERNAME }}
