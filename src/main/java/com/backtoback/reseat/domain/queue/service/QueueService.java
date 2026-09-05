@@ -16,7 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
+import com.backtoback.reseat.domain.game.exception.BookingNotOpenException;
 import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
 import com.backtoback.reseat.domain.queue.dto.event.QueueEntryRequestedEvent;
@@ -206,7 +208,7 @@ public class QueueService {
     }
 
     /**
-     * 경기와 사용자의 존재 여부를 확인하고 Kafka로 대기열 진입 이벤트를 발행한다.
+     * 경기 존재 여부와 예매 가능 상태, 사용자의 존재 여부를 확인하고 Kafka로 대기열 진입 이벤트를 발행한다.
      *
      * @param gameId 대기열에 진입할 경기 ID
      * @param userId 대기열 진입을 요청한 사용자 ID
@@ -215,9 +217,11 @@ public class QueueService {
     @Transactional(readOnly = true)
     public CompletableFuture<Void> requestQueueEntry(Long gameId, Long userId) {
 
-        // 처리할 수 없는 이벤트가 Kafka에 발행되지 않도록 경기와 사용자의 존재 여부를 먼저 확인한다.
-        if (!gameRepository.existsById(gameId)) {
-            throw new GameNotFoundException(gameId);
+        // 처리할 수 없는 이벤트가 Kafka에 발행되지 않도록 경기 존재 여부와 예매 가능 상태, 사용자의 존재 여부를 먼저 확인한다.
+        Game game = gameRepository.findById(gameId).orElseThrow(() -> new GameNotFoundException(gameId));
+
+        if (game.getBookingStatus() != BookingStatus.OPEN) {
+            throw new BookingNotOpenException();
         }
 
         if (!userRepository.existsById(userId)) {
