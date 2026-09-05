@@ -211,7 +211,7 @@ public class QueueService {
 
     /**
      * 경기 존재 여부와 예매 가능 상태, 사용자의 존재 여부를 확인하고
-     * 이전 거절 결과를 삭제한 뒤 Kafka로 대기열 진입 이벤트를 발행한다.
+     * 최신 요청 식별자를 저장하고 이전 거절 결과를 삭제한 뒤 Kafka로 대기열 진입 이벤트를 발행한다.
      *
      * @param gameId 대기열에 진입할 경기 ID
      * @param userId 대기열 진입을 요청한 사용자 ID
@@ -231,11 +231,11 @@ public class QueueService {
             throw new UserNotFoundException();
         }
 
-        // 이전 비동기 요청의 거절 결과가 새 SSE 연결에 전달되지 않도록 이벤트 발행 전에 삭제한다.
-        queueEntryRejectionService.deleteRejection(gameId, userId);
-
-        // eventId는 이벤트 로그 추적에 사용하고, requestedAt은 Redis ZSet의 대기 순서를 결정하는 기준으로 사용한다.
+        // eventId는 이벤트 로그 추적과 최신 요청 식별에 사용하고, requestedAt은 Redis ZSet의 대기 순서를 결정하는 기준으로 사용한다.
         QueueEntryRequestedEvent event = new QueueEntryRequestedEvent(UUID.randomUUID(), gameId, userId, Instant.now());
+
+        // 지연된 이전 이벤트가 최신 요청 결과를 덮어쓰지 못하도록 최신 요청을 기록하고 이전 거절 결과를 삭제한다.
+        queueEntryRejectionService.prepareRequest(gameId, userId, event.eventId());
 
         // Kafka 발행 실패는 대기열 진입 요청 실패로 변환하여 비동기 작업을 예외 상태로 완료한다.
         return queueEntryEventPublisher.publish(event).thenAccept(result -> {}).exceptionally(exception -> {
