@@ -15,7 +15,7 @@ WHERE recovery_key IS NULL;
 
 -- 외래키가 사용할 단일 인덱스 먼저 추가 FK 종속성 오류 방지
 CREATE INDEX idx_payment_recovery_tasks_payment_id
-    ON payment_recovery_tasks (payment_id)
+    ON payment_recovery_tasks (payment_id);
 
 -- 복구 키를 필수·고유 값으로 전환하고 부분 취소 이력과의 참조 관계를 설정한다.
 ALTER TABLE payment_recovery_tasks
