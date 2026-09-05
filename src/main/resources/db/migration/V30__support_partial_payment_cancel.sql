@@ -13,6 +13,7 @@ UPDATE payment_recovery_tasks
 SET recovery_key = CONCAT(type, ':', payment_id)
 WHERE recovery_key IS NULL;
 
+
 -- 외래키가 사용할 단일 인덱스 먼저 추가 FK 종속성 오류 방지
 CREATE INDEX idx_payment_recovery_tasks_payment_id
     ON payment_recovery_tasks (payment_id)
