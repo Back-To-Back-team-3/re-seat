@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
 import com.backtoback.reseat.domain.queue.dto.event.QueueEntryRequestedEvent;
@@ -81,7 +82,7 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
     private Game game;
 
     /**
-     * 각 테스트 전 Queue 흐름에 필요한 Stadium, Team, User, Game을 저장한다.
+     * 각 테스트 전 Queue 흐름에 필요한 Stadium, Team, User와 예매가 열린 Game을 저장한다.
      */
     @BeforeEach
     void setUp() {
@@ -116,6 +117,7 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
                         .gameAt(LocalDateTime.now().plusDays(1))
                         .bookingOpenAt(LocalDateTime.now().minusHours(1))
                         .bookingCloseAt(LocalDateTime.now().plusHours(5))
+                        .bookingStatus(BookingStatus.OPEN)
                         .title("테스트 경기")
                         .build()
                 );
