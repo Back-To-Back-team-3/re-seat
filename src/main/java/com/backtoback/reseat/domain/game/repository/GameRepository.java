@@ -1,13 +1,16 @@
 package com.backtoback.reseat.domain.game.repository;
 
-import com.backtoback.reseat.domain.game.entity.BookingStatus;
-import com.backtoback.reseat.domain.game.entity.Game;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.Optional;
+import com.backtoback.reseat.domain.game.entity.BookingStatus;
+import com.backtoback.reseat.domain.game.entity.Game;
 
 /**
  * 경기 Repository.
@@ -55,4 +58,13 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
         @Param("expectedCurrent") BookingStatus expectedCurrent,
         @Param("target") BookingStatus target
     );
+
+    /**
+     * 특정 기간(양 끝 포함) 내 시작하는 경기 목록을 조회한다.
+     *
+     * @param start 기간 시작(포함)
+     * @param end 기간 종료(포함)
+     * @return 기간 내 경기 목록
+     */
+    List<Game> findByGameAtBetween(LocalDateTime start, LocalDateTime end);
 }
