@@ -99,4 +99,44 @@ class GameSeatTest {
             assertThatThrownBy(seat::sell).isInstanceOf(InvalidStateTransitionException.class);
         }
     }
+
+    @Nested
+    @DisplayName("refund(): SOLD → AVAILABLE")
+    class Refund {
+
+        @Test
+        @DisplayName("SOLD 좌석은 AVAILABLE로 돌아가고 판매 시각이 초기화된다")
+        void success() {
+            GameSeat seat = seatWith(GameSeatStatus.SOLD);
+
+            seat.refund();
+
+            assertThat(seat.getStatus()).isEqualTo(GameSeatStatus.AVAILABLE);
+            assertThat(seat.getSoldAt()).isNull();
+        }
+
+        @Test
+        @DisplayName("AVAILABLE 좌석을 refund()하면 예외")
+        void available_throws() {
+            GameSeat seat = seatWith(GameSeatStatus.AVAILABLE);
+
+            assertThatThrownBy(seat::refund).isInstanceOf(InvalidStateTransitionException.class);
+        }
+
+        @Test
+        @DisplayName("HELD 좌석을 refund()하면 예외 (아직 판매되지 않은 좌석은 환불 대상이 아님)")
+        void held_throws() {
+            GameSeat seat = seatWith(GameSeatStatus.HELD);
+
+            assertThatThrownBy(seat::refund).isInstanceOf(InvalidStateTransitionException.class);
+        }
+
+        @Test
+        @DisplayName("BLOCKED 좌석을 refund()하면 예외 (기존 available()의 미검증 문제를 재발시키지 않는다)")
+        void blocked_throws() {
+            GameSeat seat = seatWith(GameSeatStatus.BLOCKED);
+
+            assertThatThrownBy(seat::refund).isInstanceOf(InvalidStateTransitionException.class);
+        }
+    }
 }
