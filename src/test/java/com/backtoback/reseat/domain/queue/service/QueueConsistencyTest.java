@@ -17,7 +17,6 @@ import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
@@ -45,8 +44,7 @@ import com.backtoback.reseat.global.service.TestDatabaseCleanUpService;
 @DisplayName("QueueConsistency")
 public class QueueConsistencyTest extends BaseIntegrationTest {
 
-    // test 프로파일에는 RedissonClient Bean이 없으므로 분산 락만 Mock으로 대체한다.
-    @MockitoBean
+    @Autowired
     private RedissonClient redissonClient;
 
     @Autowired

@@ -13,14 +13,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.redisson.Redisson;
-import org.redisson.api.RedissonClient;
-import org.redisson.config.Config;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
@@ -44,7 +38,12 @@ import jakarta.persistence.EntityManager;
  * 동시 오픈 경합이 재현되기 때문이다. 대신 @BeforeEach의 픽스처 생성만
  * TransactionTemplate으로 별도 트랜잭션을 열어 커밋한다.
  */
-@Import(GameSeatCreateConcurrencyTest.RedissonTestConfig.class)
+@ActiveProfiles(
+    {
+        "test",
+        "redis-test"
+    }
+)
 @DisplayName("GameSeatCreateService 재고 오픈 동시성")
 class GameSeatCreateConcurrencyTest extends BaseIntegrationTest {
 
@@ -168,19 +167,5 @@ class GameSeatCreateConcurrencyTest extends BaseIntegrationTest {
                 .build();
         entityManager.persist(game);
         return game;
-    }
-
-    @TestConfiguration
-    static class RedissonTestConfig {
-
-        @Bean(destroyMethod = "shutdown")
-        RedissonClient redissonClient(
-            @Value("${spring.data.redis.host}") String host,
-            @Value("${spring.data.redis.port}") int port
-        ) {
-            Config config = new Config();
-            config.useSingleServer().setAddress("redis://" + host + ":" + port);
-            return Redisson.create(config);
-        }
     }
 }

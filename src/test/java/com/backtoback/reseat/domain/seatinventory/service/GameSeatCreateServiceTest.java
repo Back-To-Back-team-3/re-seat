@@ -19,13 +19,7 @@ import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.redisson.Redisson;
-import org.redisson.api.RedissonClient;
-import org.redisson.config.Config;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,12 +37,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * @BeforeEach에서 직접 만든다. Testcontainers(BaseIntegrationTest)로 매번 빈 DB에서
  * 시작하므로 "이미 시드가 있다"는 가정을 두지 않는다.
  */
-@Import(
-    {
-        QuerydslConfig.class,
-        GameSeatCreateServiceTest.RedissonTestConfig.class
-    }
-)
+@Import(QuerydslConfig.class)
 @Transactional
 class GameSeatCreateServiceTest extends BaseIntegrationTest {
 
@@ -238,19 +227,5 @@ class GameSeatCreateServiceTest extends BaseIntegrationTest {
             join fetch s.zone
             where gs.game.id = :gameId
             """, GameSeat.class).setParameter("gameId", gameId).getResultList();
-    }
-
-    @TestConfiguration
-    static class RedissonTestConfig {
-
-        @Bean(destroyMethod = "shutdown")
-        RedissonClient redissonClient(
-            @Value("${spring.data.redis.host}") String host,
-            @Value("${spring.data.redis.port}") int port
-        ) {
-            Config config = new Config();
-            config.useSingleServer().setAddress("redis://" + host + ":" + port);
-            return Redisson.create(config);
-        }
     }
 }
