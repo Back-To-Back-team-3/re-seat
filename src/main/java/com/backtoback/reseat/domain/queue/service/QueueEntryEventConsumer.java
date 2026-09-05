@@ -88,10 +88,13 @@ public class QueueEntryEventConsumer {
             Optional<QueueEntryRejectionReason> rejectionReason = queueService.registerQueueEntry(event);
 
             // 최신 요청과 일치하는 이벤트만 거절 결과를 저장하거나 요청 식별자를 정리한 뒤 Offset을 커밋한다.
-            rejectionReason.ifPresentOrElse(
-                reason -> queueEntryRejectionService.saveRejectionIfLatest(event.gameId(), event.userId(), event.eventId(), reason),
-                () -> queueEntryRejectionService.completeRequestIfLatest(event.gameId(), event.userId(), event.eventId())
-            );
+            rejectionReason
+                .ifPresentOrElse(
+                    reason -> queueEntryRejectionService
+                        .saveRejectionIfLatest(event.gameId(), event.userId(), event.eventId(), reason),
+                    () -> queueEntryRejectionService
+                        .completeRequestIfLatest(event.gameId(), event.userId(), event.eventId())
+                );
 
             acknowledgment.acknowledge();
 

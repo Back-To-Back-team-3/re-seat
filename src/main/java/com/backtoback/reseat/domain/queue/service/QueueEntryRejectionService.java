@@ -25,29 +25,23 @@ public class QueueEntryRejectionService {
     private static final Duration LATEST_REQUEST_TTL = Duration.ofMinutes(2);
 
     // 최신 eventId와 일치할 때만 거절 결과를 저장하고 최신 요청 식별자를 제거한다.
-    private static final DefaultRedisScript<Long> SAVE_REJECTION_IF_LATEST_SCRIPT = new DefaultRedisScript<>(
-        """
+    private static final DefaultRedisScript<Long> SAVE_REJECTION_IF_LATEST_SCRIPT = new DefaultRedisScript<>("""
         if redis.call('GET', KEYS[1]) ~= ARGV[1] then
             return 0
         end
         redis.call('SET', KEYS[2], ARGV[2], 'PX', ARGV[3])
         redis.call('DEL', KEYS[1])
         return 1
-        """,
-        Long.class
-    );
+        """, Long.class);
 
     // 최신 eventId와 일치할 때만 최신 요청 식별자를 제거한다.
-    private static final DefaultRedisScript<Long> COMPLETE_REQUEST_IF_LATEST_SCRIPT = new DefaultRedisScript<>(
-            """
-            if redis.call('GET', KEYS[1]) ~= ARGV[1] then
-                return 0
-            end
-            redis.call('DEL', KEYS[1])
-            return 1
-            """,
-            Long.class
-    );
+    private static final DefaultRedisScript<Long> COMPLETE_REQUEST_IF_LATEST_SCRIPT = new DefaultRedisScript<>("""
+        if redis.call('GET', KEYS[1]) ~= ARGV[1] then
+            return 0
+        end
+        redis.call('DEL', KEYS[1])
+        return 1
+        """, Long.class);
 
     private final RedisTemplate<String, String> redisTemplate;
 
@@ -99,14 +93,15 @@ public class QueueEntryRejectionService {
         String rejectionKey = rejectionKey(gameId, userId);
 
         // 비교와 저장 사이에 최신 요청이 바뀌지 않도록 Redis Lua Script에서 원자적으로 처리한다.
-        Long scriptResult = redisTemplate
-            .execute(
-                SAVE_REJECTION_IF_LATEST_SCRIPT,
-                List.of(latestRequestKey, rejectionKey),
-                eventId.toString(),
-                reason.name(),
-                String.valueOf(REJECTION_TTL.toMillis())
-            );
+        Long scriptResult
+            = redisTemplate
+                .execute(
+                    SAVE_REJECTION_IF_LATEST_SCRIPT,
+                    List.of(latestRequestKey, rejectionKey),
+                    eventId.toString(),
+                    reason.name(),
+                    String.valueOf(REJECTION_TTL.toMillis())
+                );
 
         return Long.valueOf(1L).equals(scriptResult);
     }
@@ -126,12 +121,8 @@ public class QueueEntryRejectionService {
         String latestRequestKey = latestRequestKey(gameId, userId);
 
         // 비교와 삭제 사이에 최신 요청이 바뀌지 않도록 Redis Lua Script에서 원자적으로 처리한다.
-        Long scriptResult = redisTemplate
-            .execute(
-                COMPLETE_REQUEST_IF_LATEST_SCRIPT,
-                List.of(latestRequestKey),
-                eventId.toString()
-            );
+        Long scriptResult
+            = redisTemplate.execute(COMPLETE_REQUEST_IF_LATEST_SCRIPT, List.of(latestRequestKey), eventId.toString());
 
         return Long.valueOf(1L).equals(scriptResult);
     }

@@ -427,12 +427,9 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
         queueEntryRejectionService.prepareRequest(game.getId(), user.getId(), latestEventId);
 
         // when
-        boolean rejectionSaved = queueEntryRejectionService.saveRejectionIfLatest(
-            game.getId(),
-            user.getId(),
-            latestEventId,
-            rejectionReason
-        );
+        boolean rejectionSaved
+            = queueEntryRejectionService
+                .saveRejectionIfLatest(game.getId(), user.getId(), latestEventId, rejectionReason);
 
         // then
         String storedRejection = redisTemplate.opsForValue().get(rejectionKey);
@@ -461,17 +458,11 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
 
         // when
         // 최신 요청을 정상 완료한 뒤 지연된 이전 이벤트의 거절 결과 저장을 시도한다.
-        boolean latestRequestCompleted = queueEntryRejectionService.completeRequestIfLatest(
-            game.getId(),
-            user.getId(),
-            latestEventId
-        );
-        boolean olderRejectionSaved = queueEntryRejectionService.saveRejectionIfLatest(
-            game.getId(),
-            user.getId(),
-            olderEventId,
-            rejectionReason
-        );
+        boolean latestRequestCompleted
+            = queueEntryRejectionService.completeRequestIfLatest(game.getId(), user.getId(), latestEventId);
+        boolean olderRejectionSaved
+            = queueEntryRejectionService
+                .saveRejectionIfLatest(game.getId(), user.getId(), olderEventId, rejectionReason);
 
         // then
         String storedRejection = redisTemplate.opsForValue().get(rejectionKey);
