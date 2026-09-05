@@ -10,9 +10,11 @@ services:
       - TZ=Asia/Seoul
       - JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Seoul -Dfile.encoding=UTF-8
       - SPRING_PROFILES_ACTIVE=prod
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/reseat?serverTimezone=Asia/Seoul&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/reseat?serverTimezone=%2B09:00&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
+      - SPRING_FLYWAY_REPAIR_ON_MIGRATE=true
+      - SPRING_FLYWAY_VALIDATE_ON_MIGRATE=false
       - JWT_SECRET=${JWT_SECRET}
       - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
       - KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET}

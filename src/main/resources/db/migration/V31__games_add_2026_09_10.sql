@@ -1,5 +1,5 @@
 -- V31__games_add_2026_09_10.sql
--- 09.18~10.07 KBO 잔여 경기 시드 확장
+-- 09.08~10.07 KBO 잔여 경기 시드 확장
 -- id는 V5/V16과 동일하게 AUTO_INCREMENT에 위임한다.
 
 INSERT INTO games (home_team_id, away_team_id, stadium_id, game_at, booking_open_at, booking_close_at, booking_status,
