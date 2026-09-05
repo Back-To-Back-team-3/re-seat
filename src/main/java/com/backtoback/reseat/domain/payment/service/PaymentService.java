@@ -258,7 +258,9 @@ public class PaymentService {
         return cancelApprovedPayment(payment, request);
     }
 
-    /** 티켓 한 장의 부분 취소 이력과 비동기 복구 작업을 접수한다. */
+    /**
+     * 티켓 한 장의 부분 취소 이력과 비동기 복구 작업을 접수한다.
+     */
     @Transactional
     public void requestTicketPaymentCancel(Ticket ticket, String reason) {
         validatePartialCancelTarget(ticket);
@@ -289,7 +291,9 @@ public class PaymentService {
         paymentRecoveryTaskRepository.save(PaymentRecoveryTask.createPartialCancel(paymentCancel));
     }
 
-    /** 실패한 부분 취소 이력과 복구 작업을 새로운 PG 취소 시도로 다시 활성화한다. */
+    /**
+     * 실패한 부분 취소 이력과 복구 작업을 새로운 PG 취소 시도로 다시 활성화한다.
+     */
     private void reopenFailedPartialCancel(PaymentCancel paymentCancel, String reason) {
         PaymentRecoveryTask recoveryTask
             = paymentRecoveryTaskRepository
@@ -304,7 +308,9 @@ public class PaymentService {
         }
     }
 
-    /** 부분 취소 대상 티켓에서 결제와 취소 금액을 확인할 수 있는지 검증한다. */
+    /**
+     * 부분 취소 대상 티켓에서 결제와 취소 금액을 확인할 수 있는지 검증한다.
+     */
     private void validatePartialCancelTarget(Ticket ticket) {
         if (ticket == null || ticket.getId() == null || ticket.getOrderItem() == null
             || ticket.getOrderItem().getOrder() == null) {
@@ -395,10 +401,7 @@ public class PaymentService {
             .map(orderItem -> ticketRepository.findByOrderItemId(orderItem.getId()))
             .flatMap(Optional::stream)
             .filter(ticket -> ticket.getStatus() == TicketStatus.ISSUED)
-            .forEach(ticket -> {
-                ticket.cancel(TicketCancelReason.PAYMENT_CANCELED);
-                ticket.getGameSeat().available();
-            });
+            .forEach(ticket -> ticket.cancel(TicketCancelReason.PAYMENT_CANCELED));
     }
 
     /**
