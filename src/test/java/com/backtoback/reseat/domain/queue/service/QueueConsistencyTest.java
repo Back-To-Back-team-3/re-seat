@@ -27,6 +27,7 @@ import com.backtoback.reseat.domain.queue.entity.AdmissionToken;
 import com.backtoback.reseat.domain.queue.entity.AdmissionTokenStatus;
 import com.backtoback.reseat.domain.queue.entity.QueueEntryHistory;
 import com.backtoback.reseat.domain.queue.entity.QueueEntryHistoryStatus;
+import com.backtoback.reseat.domain.queue.entity.QueueEntryRejectionReason;
 import com.backtoback.reseat.domain.queue.repository.AdmissionTokenRepository;
 import com.backtoback.reseat.domain.queue.repository.QueueEntryHistoryRepository;
 import com.backtoback.reseat.domain.stadium.entity.Stadium;
@@ -49,6 +50,8 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
     private static final String WAITING_QUEUE_REDIS_KEY_FORMAT = "queue:waiting:game:%d";
     private static final String WAITING_QUEUE_REDIS_MEMBER_FORMAT = "user:%d";
     private static final String QUEUE_ENTRY_KEY_FORMAT = "queue:entry:game:%d:user:%d";
+    private static final String REJECTION_KEY_FORMAT = "queue:entry:rejection:game:%d:user:%d";
+    private static final String LATEST_REQUEST_KEY_FORMAT = "queue:entry:request:latest:game:%d:user:%d";
 
     // test 프로파일에는 RedissonClient Bean이 없으므로 분산 락만 Mock으로 대체한다.
     @MockitoBean
@@ -72,6 +75,8 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
 
     @Autowired
     private QueueService queueService;
+    @Autowired
+    private QueueEntryRejectionService queueEntryRejectionService;
     @Autowired
     private AdmissionTokenService admissionTokenService;
 
@@ -406,5 +411,76 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
         // Redis 대기열에는 재진입 요청시간을 점수로 등록해야 한다.
         assertThat(queueScore(waitingQueueRedisKey, waitingQueueRedisMember))
             .isEqualTo(reentryRequestedAt.toEpochMilli());
+    }
+
+    @Test
+    @DisplayName("최신 대기열 진입 이벤트의 거절 결과를 Redis에 저장하고 요청 식별자를 삭제한다.")
+    void saveRejectionIfLatest_withLatestEvent_savesRejection() {
+
+        // given
+        // 최신 이벤트만 거절 결과를 저장할 수 있도록 요청 식별자를 먼저 기록한다.
+        UUID latestEventId = UUID.randomUUID();
+        String rejectionKey = REJECTION_KEY_FORMAT.formatted(game.getId(), user.getId());
+        String latestRequestKey = LATEST_REQUEST_KEY_FORMAT.formatted(game.getId(), user.getId());
+        QueueEntryRejectionReason rejectionReason = QueueEntryRejectionReason.BOOKING_NOT_OPEN;
+
+        queueEntryRejectionService.prepareRequest(game.getId(), user.getId(), latestEventId);
+
+        // when
+        boolean rejectionSaved = queueEntryRejectionService.saveRejectionIfLatest(
+            game.getId(),
+            user.getId(),
+            latestEventId,
+            rejectionReason
+        );
+
+        // then
+        String storedRejection = redisTemplate.opsForValue().get(rejectionKey);
+        String storedLatestRequest = redisTemplate.opsForValue().get(latestRequestKey);
+
+        // 최신 요청의 거절 결과는 저장하고 처리가 끝난 요청 식별자는 제거해야 한다.
+        assertThat(rejectionSaved).isTrue();
+        assertThat(storedRejection).isEqualTo(rejectionReason.name());
+        assertThat(storedLatestRequest).isNull();
+    }
+
+    @Test
+    @DisplayName("최신 요청이 정상 처리된 뒤 지연된 이전 이벤트의 거절 결과를 저장하지 않는다.")
+    void saveRejectionIfLatest_afterLatestRequestCompletes_ignoresOlderEvent() {
+
+        // given
+        // 이전 요청이 지연된 사이 같은 사용자와 경기의 최신 요청이 추가된 상황을 재현한다.
+        UUID olderEventId = UUID.randomUUID();
+        UUID latestEventId = UUID.randomUUID();
+        String rejectionKey = REJECTION_KEY_FORMAT.formatted(game.getId(), user.getId());
+        String latestRequestKey = LATEST_REQUEST_KEY_FORMAT.formatted(game.getId(), user.getId());
+        QueueEntryRejectionReason rejectionReason = QueueEntryRejectionReason.WAITING_IN_OTHER_GAME;
+
+        queueEntryRejectionService.prepareRequest(game.getId(), user.getId(), olderEventId);
+        queueEntryRejectionService.prepareRequest(game.getId(), user.getId(), latestEventId);
+
+        // when
+        // 최신 요청을 정상 완료한 뒤 지연된 이전 이벤트의 거절 결과 저장을 시도한다.
+        boolean latestRequestCompleted = queueEntryRejectionService.completeRequestIfLatest(
+            game.getId(),
+            user.getId(),
+            latestEventId
+        );
+        boolean olderRejectionSaved = queueEntryRejectionService.saveRejectionIfLatest(
+            game.getId(),
+            user.getId(),
+            olderEventId,
+            rejectionReason
+        );
+
+        // then
+        String storedRejection = redisTemplate.opsForValue().get(rejectionKey);
+        String storedLatestRequest = redisTemplate.opsForValue().get(latestRequestKey);
+
+        // 이전 이벤트는 최신 요청 완료 후 거절 결과와 요청 식별자를 다시 만들지 못해야 한다.
+        assertThat(latestRequestCompleted).isTrue();
+        assertThat(olderRejectionSaved).isFalse();
+        assertThat(storedRejection).isNull();
+        assertThat(storedLatestRequest).isNull();
     }
 }
