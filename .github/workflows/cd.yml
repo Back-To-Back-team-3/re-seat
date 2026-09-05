@@ -62,7 +62,7 @@ jobs:
             mkdir -p ~/re-seat && cd ~/re-seat
 
             # docker-compose 전용 .env 파일 동적 생성
-            cat <<EOF > .env
+            cat <<'EOF' > .env
             DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
             IMAGE_TAG=${{ github.sha }}
             DB_USERNAME=${{ secrets.DB_USERNAME }}
@@ -76,6 +76,8 @@ jobs:
             SEOUL_CITYDATA_API_KEY=${{ secrets.SEOUL_CITYDATA_API_KEY }}
             FRONTEND_REDIRECT_URL=${{ secrets.FRONTEND_REDIRECT_URL }}
             CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS }}
+            PORTONE_API_KEY=${{ secrets.PORTONE_API_KEY }}
+            PORTONE_API_SECRET=${{ secrets.PORTONE_API_SECRET }}
             EOF
 
             # 최신 백엔드 이미지 Pull
