@@ -23,6 +23,7 @@ import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.exception.InvalidBookingStatusTransitionException;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
+import com.backtoback.reseat.domain.seatinventory.repository.GameSeatRepository;
 import com.backtoback.reseat.domain.seatinventory.service.GameSeatCreateService;
 import com.backtoback.reseat.domain.stadium.entity.Seat;
 import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
@@ -58,6 +59,8 @@ class AdminGameBookingServiceConcurrencyTest {
     @Autowired
     private GameRepository gameRepository;
     @Autowired
+    private GameSeatRepository gameSeatRepository;
+    @Autowired
     private GameSeatCreateService gameSeatCreateService;
     @Autowired
     private StadiumRepository stadiumRepository;
@@ -72,6 +75,8 @@ class AdminGameBookingServiceConcurrencyTest {
     private Long stadiumId;
     private Long homeTeamId;
     private Long awayTeamId;
+    private Long seatZoneId;
+    private Long seatId;
 
     @BeforeEach
     void setUp() {
@@ -79,25 +84,27 @@ class AdminGameBookingServiceConcurrencyTest {
         stadiumId = stadium.getId();
 
         SeatZone zone = seatZoneRepository.save(SeatZone.of(stadium, "테스트 구역", SeatGrade.INFIELD, 18_000));
-        seatRepository.save(Seat.of(stadium, zone, "A", "1", "1"));
+        seatZoneId = zone.getId();
+
+        Seat seat = seatRepository.save(Seat.of(stadium, zone, "A", "1", "1"));
+        seatId = seat.getId();
 
         Team homeTeam = teamRepository.save(Team.of("홈팀", stadium));
         Team awayTeam = teamRepository.save(Team.of("원정팀", stadium));
         homeTeamId = homeTeam.getId();
         awayTeamId = awayTeam.getId();
 
-        Game game
-            = Game
-                .builder()
-                .homeTeam(homeTeam)
-                .awayTeam(awayTeam)
-                .stadium(stadium)
-                .gameAt(LocalDateTime.now().plusDays(7))
-                .bookingOpenAt(LocalDateTime.now().minusHours(1))
-                .bookingCloseAt(LocalDateTime.now().plusDays(6))
-                .bookingStatus(BookingStatus.SCHEDULED)
-                .title("[이슈 #375] 서비스 계층 동시성 테스트")
-                .build();
+        Game game = Game
+            .builder()
+            .homeTeam(homeTeam)
+            .awayTeam(awayTeam)
+            .stadium(stadium)
+            .gameAt(LocalDateTime.now().plusDays(7))
+            .bookingOpenAt(LocalDateTime.now().minusHours(1))
+            .bookingCloseAt(LocalDateTime.now().plusDays(6))
+            .bookingStatus(BookingStatus.SCHEDULED)
+            .title("[이슈 #375] 서비스 계층 동시성 테스트")
+            .build();
         gameRepository.save(game);
         gameId = game.getId();
 
@@ -110,9 +117,12 @@ class AdminGameBookingServiceConcurrencyTest {
      */
     @AfterEach
     void tearDown() {
+        gameSeatRepository.deleteAllByGameId(gameId);
         gameRepository.deleteById(gameId);
+        seatRepository.deleteById(seatId);
         teamRepository.deleteById(homeTeamId);
         teamRepository.deleteById(awayTeamId);
+        seatZoneRepository.deleteById(seatZoneId);
         stadiumRepository.deleteById(stadiumId);
     }
 
@@ -154,14 +164,14 @@ class AdminGameBookingServiceConcurrencyTest {
 
         Game reloaded = gameRepository.findById(gameId).orElseThrow();
 
-        log.info("=========================================");
+        log.info("============================================================");
         log.info("[이슈 #375] AdminGameBookingService OPEN 동시성 테스트 수치");
-        log.info("  동시 스레드 수      : {}", THREAD_COUNT);
-        log.info("  성공 건수           : {}", successCount.get());
-        log.info("  409(경합 실패) 건수 : {}", conflictCount.get());
-        log.info("  예상치 못한 예외 건수: {}", unexpectedErrorCount.get());
-        log.info("  최종 booking_status : {}", reloaded.getBookingStatus());
-        log.info("=========================================");
+        log.info("  동시 스레드 수        : {}", THREAD_COUNT);
+        log.info("  성공 건수             : {}", successCount.get());
+        log.info("  409(경합 실패) 건수   : {}", conflictCount.get());
+        log.info("  예상치 못한 예외 건수 : {}", unexpectedErrorCount.get());
+        log.info("  최종 booking_status   : {}", reloaded.getBookingStatus());
+        log.info("============================================================");
 
         assertThat(unexpectedErrorCount.get()).as("의도치 않은 예외는 없어야 한다").isZero();
         assertThat(successCount.get() + conflictCount.get()).as("모든 스레드가 경합에 참여해야 한다").isEqualTo(THREAD_COUNT);
