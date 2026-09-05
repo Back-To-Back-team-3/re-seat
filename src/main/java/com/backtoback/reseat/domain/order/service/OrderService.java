@@ -204,7 +204,7 @@ public class OrderService {
             orderItem.cancel();
 
             GameSeat gameSeat = orderItem.getGameSeat();
-            gameSeatStatusService.releaseSeat(gameSeat.getId());
+            gameSeatStatusService.refundSeat(gameSeat.getId());
         });
     }
 
@@ -233,7 +233,7 @@ public class OrderService {
         // 환불 대상 주문 항목과 연결된 경기 좌석만 취소 · 해제한다.
         orderItem.cancel();
         GameSeat gameSeat = orderItem.getGameSeat();
-        gameSeatStatusService.releaseSeat(gameSeat.getId());
+        gameSeatStatusService.refundSeat(gameSeat.getId());
 
         // 대상 취소 후 같은 주문에 취소되지 않은 주문 항목이 남아 있는지 확인한다.
         boolean hasRemainingOrderItems

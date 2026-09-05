@@ -465,7 +465,7 @@ public class OrderServiceTest {
         assertThat(order.getStatus()).isEqualTo(OrderStatus.PARTIALLY_CANCELED);
         assertThat(orderItem.getStatus()).isEqualTo(OrderItemStatus.CANCELED);
 
-        then(gameSeatStatusService).should().releaseSeat(GAME_SEAT_ID);
+        then(gameSeatStatusService).should().refundSeat(GAME_SEAT_ID);
         then(reservationService).shouldHaveNoInteractions();
     }
 
@@ -486,7 +486,7 @@ public class OrderServiceTest {
         assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELED);
         assertThat(orderItem.getStatus()).isEqualTo(OrderItemStatus.CANCELED);
 
-        then(gameSeatStatusService).should().releaseSeat(GAME_SEAT_ID);
+        then(gameSeatStatusService).should().refundSeat(GAME_SEAT_ID);
         then(reservationService).should().cancelConfirmed(RESERVATION_ID);
     }
 
