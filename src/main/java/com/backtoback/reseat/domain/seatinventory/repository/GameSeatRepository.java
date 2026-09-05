@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.backtoback.reseat.domain.seatinventory.dto.ZoneSummaryResponse;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
@@ -22,6 +23,15 @@ public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
      * @return 재고가 1건 이상 존재하면 true
      */
     boolean existsByGameId(Long gameId);
+
+    /**
+     * 특정 경기에 속한 좌석 재고를 전부 삭제한다.
+     * <p>테스트 픽스처 정리 전용 — games 삭제 전에 FK 참조를 먼저 끊어야 한다.
+     *
+     * @param gameId 경기 ID
+     */
+    @Transactional
+    void deleteAllByGameId(Long gameId);
 
     /**
      * 경기의 좌석 현황을 seat·zone과 함께 조회한다.
