@@ -107,7 +107,7 @@ class GameSeatTest {
         @Test
         @DisplayName("SOLD 좌석은 AVAILABLE로 돌아가고 판매 시각이 초기화된다")
         void success() {
-            GameSeat seat = seatWith(GameSeatStatus.SOLD);
+            GameSeat seat = seatWith(GameSeatStatus.HELD);
             seat.sell(); // soldAt이 실제로 채워진 상태를 먼저 만든다
 
             seat.refund();
