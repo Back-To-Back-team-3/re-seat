@@ -42,6 +42,8 @@ public class QueueServiceTest {
 
     private static final Long GAME_ID = 1L;
     private static final Long USER_ID = 1L;
+    private static final String WAITING_QUEUE_REDIS_KEY = "queue:waiting:game:" + GAME_ID;
+    private static final String WAITING_QUEUE_REDIS_MEMBER = "user:" + USER_ID;
 
     @Mock
     private RedisTemplate<String, String> redisTemplate;
@@ -90,7 +92,7 @@ public class QueueServiceTest {
                     any(LocalDateTime.class)
                 )
         ).willReturn(Optional.empty());
-        given(zSetOperations.rank("queue:game:1", "user:1")).willReturn(20L);
+        given(zSetOperations.rank(WAITING_QUEUE_REDIS_KEY, WAITING_QUEUE_REDIS_MEMBER)).willReturn(20L);
 
         // when
         QueueStatusResponse myQueueStatus = queueService.getMyQueueStatus(GAME_ID, USER_ID);
@@ -101,7 +103,7 @@ public class QueueServiceTest {
         assertThat(myQueueStatus.getQueueStatus()).isEqualTo(QueueEntryHistoryStatus.WAITING);
         assertThat(myQueueStatus.isAdmitted()).isFalse();
 
-        then(zSetOperations).should().rank("queue:game:1", "user:1");
+        then(zSetOperations).should().rank(WAITING_QUEUE_REDIS_KEY, WAITING_QUEUE_REDIS_MEMBER);
     }
 
     @Test
