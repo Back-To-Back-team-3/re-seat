@@ -1,4 +1,4 @@
-import {cleanup, fireEvent, render, screen} from "@testing-library/react";
+import {cleanup, fireEvent, render, screen, within} from "@testing-library/react";
 import {afterEach, describe, expect, it, vi} from "vitest";
 
 import {TicketList} from "@/components/tickets/ticket-list";
@@ -111,5 +111,71 @@ describe("티켓 목록", () => {
         expect(
             screen.getByRole("button", {name: "↻ 티켓 새로고침"}),
         ).toBeDisabled();
+    });
+
+    it("REFUND_FAILED 상태의 티켓에는 환불 재시도 버튼이 표시되고 재시도 핸들러가 호출된다", () => {
+        const onRetryCancelTicket = vi.fn();
+        renderTicketList({
+            tickets: [
+                {
+                    ticketId: 10,
+                    ticketNo: "TICKET-FAILED",
+                    gameId: 1,
+                    seat: "1루 응원석 3열 10번",
+                    status: "REFUND_FAILED",
+                    qrToken: "QR-TOKEN-FAILED",
+                    gameAt: "2026-08-08T18:00:00",
+                },
+            ],
+            onRetryCancelTicket,
+        });
+
+        const retryButton = screen.getByRole("button", {name: "환불 재시도"});
+        expect(retryButton).toBeInTheDocument();
+
+        fireEvent.click(retryButton);
+
+        expect(
+            screen.getByRole("heading", {name: "티켓 환불 재시도 요청"}),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByText(
+                "* 환불이 정상 처리되면 예약 좌석이 반환되며, 결제 수단에 따라 1~3 영업일 내 환불 처리됩니다.",
+            ),
+        ).toBeInTheDocument();
+
+        const dialog = screen.getByRole("dialog");
+        const modalConfirmButton = within(dialog).getByRole("button", {name: "환불 재시도"});
+        fireEvent.click(modalConfirmButton);
+
+        expect(onRetryCancelTicket).toHaveBeenCalledWith(10);
+    });
+
+    it("환불 요청 모달에 수정된 좌석 반환 안내 문구가 표시된다", () => {
+        const onCancelTicket = vi.fn();
+        renderTicketList({
+            tickets: [
+                {
+                    ticketId: 11,
+                    ticketNo: "TICKET-ISSUED",
+                    gameId: 1,
+                    seat: "1루 응원석 3열 10번",
+                    status: "ISSUED",
+                    refundable: true,
+                    qrToken: "QR-TOKEN-ISSUED",
+                    gameAt: "2026-08-08T18:00:00",
+                },
+            ],
+            onCancelTicket,
+        });
+
+        const cancelButton = screen.getByRole("button", {name: "환불 요청"});
+        fireEvent.click(cancelButton);
+
+        expect(
+            screen.getByText(
+                "* 환불이 정상 처리되면 예약 좌석이 반환되며, 결제 수단에 따라 1~3 영업일 내 환불 처리됩니다.",
+            ),
+        ).toBeInTheDocument();
     });
 });
