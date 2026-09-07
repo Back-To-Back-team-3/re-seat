@@ -168,14 +168,10 @@ public class OrderService {
         order.cancel();
         reservationService.cancel(reservation.getId());
 
+        // 주문 항목은 상태만 전이한다.
+        // 좌석 반환은 reservationService.cancel()에서 이미 수행된 상태이다.
         List<OrderItem> orderItems = orderItemRepository.findByOrder_Id(orderId);
-
-        // 주문 항목의 경기 좌석을 다시 예매 가능 상태로 되돌린다.
-        orderItems.forEach(orderItem -> {
-            orderItem.cancel();
-            GameSeat gameSeat = orderItem.getGameSeat();
-            gameSeatStatusService.releaseSeat(gameSeat.getId());
-        });
+        orderItems.forEach(OrderItem::cancel);
 
         return OrderCancelResponse.from(order);
     }
