@@ -24,6 +24,7 @@ import com.backtoback.reseat.domain.reservation.repository.ReservationRepository
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
 import com.backtoback.reseat.domain.seatinventory.repository.GameSeatRepository;
+import com.backtoback.reseat.domain.seatinventory.service.GameSeatStatusService;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
 import com.backtoback.reseat.global.exception.BusinessException;
@@ -36,15 +37,7 @@ import lombok.extern.slf4j.Slf4j;
  * 예약(선점) 도메인 서비스.
  * <p>
  * NOTE: 이 서비스는 SeatHoldFacade의 분산 락 안에서 호출된다.
- * holdSeats()}는 락 획득 이후 실행되므로, 좌석 상태 재검증이 over-booking 방어의 최종 게이트 역할을 한다.
- * <p>
- * C-4-1 변경 사항:
- * - HOLD_TTL 5분 → HoldPolicy.HOLD_TTL(10분) 정합.
- * - holdSeats(): gs.updateStatus/updateHoldExpiresAt → gs.hold(expiresAt) 도메인 메서드로 교체.
- * - releaseHold(): updateStatus/updateHoldExpiresAt → rs.getGameSeat().release() 로 교체.
- * - releaseHold(): reservation.updateStatus(CANCELED) → reservation.cancel() 로 교체.
- * C-5-2 변경 사항:
- * - holdSeats() 락 획득 후 재검증 주석 명확화
+ * holdSeats()는 락 획득 이후 실행되므로, 좌석 상태 재검증이 over-booking 방어의 최종 게이트 역할을 한다.
  */
 @Slf4j
 @Service
@@ -56,6 +49,7 @@ public class ReservationService {
     private final GameRepository gameRepository;
     private final UserRepository userRepository;
     private final ReservationNumberGenerator reservationNumberGenerator;
+    private final GameSeatStatusService gameSeatStatusService;
 
     /**
      * 좌석을 선점합니다 (HOLD).
@@ -195,8 +189,8 @@ public class ReservationService {
 
     /**
      * 결제 전 예약을 취소 상태로 변경한다.
-     * <p>HOLDING 상태의 예약을 취소하고,
-     * 이미 취소된 예약은 상태를 다시 변경하지 않는다.</p>
+     * <p>HOLDING 상태의 예약을 취소하고, 묶인 좌석을 모두 반환한다.
+     * 이미 취소된 예약은 상태를 다시 변경하지 않고 좌석 반환도 다시 시도하지 않는다.</p>
      *
      * @param reservationId 취소 처리할 예약 ID
      */
@@ -205,7 +199,7 @@ public class ReservationService {
 
         Reservation reservation
             = reservationRepository
-                .findById(reservationId)
+                .findWithSeatsById(reservationId)
                 .orElseThrow(() -> new ReservationNotFoundException(reservationId));
 
         if (reservation.isCanceled()) {
@@ -213,6 +207,10 @@ public class ReservationService {
         }
 
         reservation.cancel();
+
+        // 결제 전 취소는 예약 전체가 대상이며 부분 취소 개념이 없으므로, 예약에 묶인 좌석을 모두 반환해도 안전하다.
+        // 주의: 좌석은 취소 시점에 HELD 상태이므로 refundSeat()가 아닌 releaseSeat()를 호출한다.
+        reservation.getReservationSeats().forEach(rs -> gameSeatStatusService.releaseSeat(rs.getGameSeat().getId()));
     }
 
     /**
