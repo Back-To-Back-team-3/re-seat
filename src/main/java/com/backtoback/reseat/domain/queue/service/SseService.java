@@ -298,20 +298,17 @@ public class SseService {
         Long gameId,
         Long userId,
         AtomicBoolean terminalEventSent
-    ) throws IOException {
+    )
+        throws IOException {
 
-        Optional<QueueEntryRejectionReason> rejectionReason = queueEntryRejectionService
-            .findRejection(gameId, userId);
+        Optional<QueueEntryRejectionReason> rejectionReason = queueEntryRejectionService.findRejection(gameId, userId);
 
         if (rejectionReason.isEmpty()) {
             return false;
         }
 
-        QueueEntryRejectionEventResponse response = QueueEntryRejectionEventResponse
-            .builder()
-            .rejected(true)
-            .reason(rejectionReason.get())
-            .build();
+        QueueEntryRejectionEventResponse response
+            = QueueEntryRejectionEventResponse.builder().rejected(true).reason(rejectionReason.get()).build();
 
         sseEmitter.send(SseEmitter.event().name("reject").data(response));
         terminalEventSent.set(true);
