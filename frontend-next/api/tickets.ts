@@ -27,3 +27,22 @@ export async function getTickets() {
                 right.ticketId - left.ticketId,
         );
 }
+
+/**
+ * 티켓 1장의 취소(환불)를 접수합니다.
+ *
+ * @param ticketId 취소할 티켓 식별자
+ * @returns 취소 접수 결과
+ */
+export async function cancelTicket(ticketId: number) {
+    const response = await apiRequest<
+        ApiResponse<{
+            ticketId: number;
+            ticketStatus: string;
+            refundRequestedAt: string;
+        }>
+    >(`/tickets/${ticketId}/cancel`, {
+        method: "POST",
+    });
+    return unwrap(response);
+}

@@ -54,3 +54,15 @@ export async function verifyIdentity(impUid: string) {
         body: JSON.stringify({impUid}),
     });
 }
+
+/**
+ * 로그인한 사용자의 회원 탈퇴를 요청합니다.
+ *
+ * @throws 탈퇴 처리가 실패하면 `AppError`
+ */
+export async function withdrawUser() {
+    const response = await apiRequest<ApiResponse<void>>("/users/me", {
+        method: "DELETE",
+    });
+    return unwrap(response);
+}
