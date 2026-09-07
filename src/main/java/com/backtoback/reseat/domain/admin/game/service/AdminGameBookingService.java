@@ -52,6 +52,6 @@ public class AdminGameBookingService {
             throw new InvalidBookingStatusTransitionException(current, target);
         }
 
-        // TODO: admin_audit_logs 스키마 확정 후 감사 로그 기록 추가
+        // TODO: admin_audit_logs 스키마 확정 후 감사 로그 기록 추가 - 작업자·사유·전이 전후 값
     }
 }
