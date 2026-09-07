@@ -6,7 +6,7 @@ import {beforeEach, describe, expect, it} from "vitest";
 
 import {API_BASE_URL} from "@/api/client";
 import {ticketKeys} from "@/api/query-keys/tickets";
-import {useTickets} from "@/hooks/use-tickets";
+import {useCancelTicket, useRetryCancelTicket, useTickets} from "@/hooks/use-tickets";
 import {server} from "@/test/mocks/server";
 
 function wrapper({children}: { children: ReactNode }) {
@@ -104,5 +104,93 @@ describe("useTickets", () => {
         await waitFor(() => {
             expect(result.current.data?.[0].status).toBe("USED");
         });
+    });
+});
+
+describe("useCancelTicket", () => {
+    it("취소 접수 성공 시 캐시의 티켓 상태를 REFUND_PENDING으로 갱신한다", async () => {
+        const queryClient = new QueryClient({
+            defaultOptions: {mutations: {retry: false}},
+        });
+        const issuedTicket = {
+            ticketId: 5,
+            ticketNo: "TKT-5",
+            gameId: 1,
+            seat: "1루 101-A-1",
+            status: "ISSUED" as const,
+            refundable: true,
+            qrToken: "qr-5",
+            gameAt: "2026-08-30T18:30:00",
+        };
+        queryClient.setQueryData(ticketKeys.list(), [issuedTicket]);
+
+        server.use(
+            http.post(`${API_BASE_URL}/tickets/5/cancel`, () =>
+                HttpResponse.json({
+                    success: true,
+                    errorCode: null,
+                    message: "티켓 취소 요청 접수 완료",
+                    data: {
+                        ticketId: 5,
+                        ticketStatus: "REFUND_PENDING",
+                        refundRequestedAt: "2026-08-30T10:00:00",
+                    },
+                }),
+            ),
+        );
+
+        const {result} = renderHook(() => useCancelTicket(), {
+            wrapper: createWrapper(queryClient),
+        });
+
+        await result.current.mutateAsync(5);
+
+        const cached = queryClient.getQueryData<typeof issuedTicket[]>(ticketKeys.list());
+        expect(cached?.[0].status).toBe("REFUND_PENDING");
+        expect(cached?.[0].refundable).toBe(false);
+    });
+});
+
+describe("useRetryCancelTicket", () => {
+    it("환불 재시도 성공 시 캐시의 티켓 상태를 REFUND_PENDING으로 갱신한다", async () => {
+        const queryClient = new QueryClient({
+            defaultOptions: {mutations: {retry: false}},
+        });
+        const failedTicket = {
+            ticketId: 10,
+            ticketNo: "TKT-10",
+            gameId: 1,
+            seat: "1루 101-A-1",
+            status: "REFUND_FAILED" as const,
+            refundable: true,
+            qrToken: "qr-10",
+            gameAt: "2026-08-30T18:30:00",
+        };
+        queryClient.setQueryData(ticketKeys.list(), [failedTicket]);
+
+        server.use(
+            http.post(`${API_BASE_URL}/tickets/10/cancel/retry`, () =>
+                HttpResponse.json({
+                    success: true,
+                    errorCode: null,
+                    message: "티켓 취소 재시도 요청 접수 완료",
+                    data: {
+                        ticketId: 10,
+                        ticketStatus: "REFUND_PENDING",
+                        refundRequestedAt: "2026-08-30T10:00:00",
+                    },
+                }),
+            ),
+        );
+
+        const {result} = renderHook(() => useRetryCancelTicket(), {
+            wrapper: createWrapper(queryClient),
+        });
+
+        await result.current.mutateAsync(10);
+
+        const cached = queryClient.getQueryData<typeof failedTicket[]>(ticketKeys.list());
+        expect(cached?.[0].status).toBe("REFUND_PENDING");
+        expect(cached?.[0].refundable).toBe(false);
     });
 });

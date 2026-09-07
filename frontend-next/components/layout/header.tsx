@@ -25,7 +25,7 @@ export function Header() {
     const auth = useAuth();
     const pathname = usePathname();
     const {theme, toggleTheme} = useTheme();
-    const isMyPageRoute = pathname.startsWith("/mypage") || pathname.startsWith("/tickets");
+    const isMyPageRoute = pathname.startsWith("/mypage");
 
     return (
         <header

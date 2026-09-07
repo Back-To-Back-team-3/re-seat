@@ -7,13 +7,14 @@ import {ProfileSection} from "@/components/mypage/profile-section";
 import {TicketList} from "@/components/tickets/ticket-list";
 import {useAuth} from "@/hooks/use-auth";
 import {useGames} from "@/hooks/use-games";
-import {useCancelTicket, useTickets} from "@/hooks/use-tickets";
+import {useCancelTicket, useRetryCancelTicket, useTickets} from "@/hooks/use-tickets";
 
 export default function MyPage() {
     const auth = useAuth();
     const tickets = useTickets(auth.isAuthed);
     const games = useGames();
     const cancelTicketMutation = useCancelTicket();
+    const retryCancelTicketMutation = useRetryCancelTicket();
 
     if (!auth.isAuthed) {
         return (
@@ -88,8 +89,12 @@ export default function MyPage() {
                 <TicketList
                     games={games.data ?? []}
                     isCanceling={cancelTicketMutation.isPending}
+                    isRetryingCancel={retryCancelTicketMutation.isPending}
                     onCancelTicket={async (ticketId) => {
                         await cancelTicketMutation.mutateAsync(ticketId);
+                    }}
+                    onRetryCancelTicket={async (ticketId) => {
+                        await retryCancelTicketMutation.mutateAsync(ticketId);
                     }}
                     onReload={() => {
                         void tickets.refetch();

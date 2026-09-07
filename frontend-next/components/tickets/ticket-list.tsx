@@ -24,17 +24,23 @@ export function TicketList({
     reloading,
     onReload,
     onCancelTicket,
+    onRetryCancelTicket,
     isCanceling = false,
+    isRetryingCancel = false,
 }: {
     tickets: TicketSummary[];
     games: GameSummary[];
     reloading: boolean;
     onReload: () => void;
     onCancelTicket?: (ticketId: number) => Promise<void> | void;
+    onRetryCancelTicket?: (ticketId: number) => Promise<void> | void;
     isCanceling?: boolean;
+    isRetryingCancel?: boolean;
 }) {
     const [ticketToRefund, setTicketToRefund] = useState<TicketSummary | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+    const isActionPending = isCanceling || isRetryingCancel;
 
     const triggerRef = useRef<HTMLButtonElement | null>(null);
     const dialogRef = useRef<HTMLDivElement>(null);
@@ -88,10 +94,16 @@ export function TicketList({
     }, [ticketToRefund]);
 
     const handleConfirmRefund = async () => {
-        if (!ticketToRefund || !onCancelTicket) return;
+        if (!ticketToRefund) return;
+        const handler =
+            ticketToRefund.status === "REFUND_FAILED"
+                ? (onRetryCancelTicket ?? onCancelTicket)
+                : onCancelTicket;
+        if (!handler) return;
+
         try {
             setErrorMessage(null);
-            await onCancelTicket(ticketToRefund.ticketId);
+            await handler(ticketToRefund.ticketId);
             setTicketToRefund(null);
             triggerRef.current?.focus();
         } catch (error: unknown) {
@@ -180,8 +192,8 @@ export function TicketList({
                                         {ticket.ticketNo}
                                     </strong>
 
-                                    {/* 환불 버튼 바 (환불 콜백이 전달된 경우) */}
-                                    {onCancelTicket && (
+                                    {/* 환불 버튼 바 (환불/재시도 콜백이 전달된 경우) */}
+                                    {(onCancelTicket || onRetryCancelTicket) && (
                                         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border/50 pt-2.5">
                                             <span className="text-[11px] text-muted-foreground">
                                                 * 경기 시작 24시간 전까지 전액 환불
@@ -206,6 +218,18 @@ export function TicketList({
                                                 <span className="text-xs text-muted-foreground">
                                                     환불 완료
                                                 </span>
+                                            ) : ticket.status === "REFUND_FAILED" ? (
+                                                <button
+                                                    className="inline-flex min-h-7 items-center justify-center rounded-control border border-destructive/40 bg-destructive/5 px-2.5 py-1 text-xs font-bold text-destructive transition hover:bg-destructive hover:text-white"
+                                                    onClick={(event) => {
+                                                        triggerRef.current = event.currentTarget;
+                                                        setErrorMessage(null);
+                                                        setTicketToRefund(ticket);
+                                                    }}
+                                                    type="button"
+                                                >
+                                                    환불 재시도
+                                                </button>
                                             ) : (
                                                 <span className="text-xs text-muted-foreground">
                                                     환불 불가
@@ -244,10 +268,14 @@ export function TicketList({
                                 className="mt-2 text-lg font-bold text-foreground"
                                 id="refund-dialog-title"
                             >
-                                티켓 환불(취소) 요청
+                                {ticketToRefund.status === "REFUND_FAILED"
+                                    ? "티켓 환불 재시도 요청"
+                                    : "티켓 환불(취소) 요청"}
                             </h3>
                             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                                다음 티켓의 예매를 취소하고 환불을 요청하시겠습니까?
+                                {ticketToRefund.status === "REFUND_FAILED"
+                                    ? "환불 처리에 실패한 티켓입니다. 환불을 다시 요청하시겠습니까?"
+                                    : "다음 티켓의 예매를 취소하고 환불을 요청하시겠습니까?"}
                             </p>
                             <div className="mt-3 rounded-lg border border-border bg-surface-soft p-3 text-xs leading-relaxed text-foreground">
                                 <div><strong>좌석:</strong> {ticketToRefund.seat}</div>
@@ -255,7 +283,7 @@ export function TicketList({
                                 <div><strong>경기 일시:</strong> {formatGameDate(ticketToRefund.gameAt)}</div>
                             </div>
                             <p className="mt-3 text-xs text-muted-foreground">
-                                * 취소 접수 즉시 예약 좌석이 반환되며, 결제 수단에 따라 1~3 영업일 내 환불 처리됩니다.
+                                * 환불이 정상 처리되면 예약 좌석이 반환되며, 결제 수단에 따라 1~3 영업일 내 환불 처리됩니다.
                             </p>
                             {errorMessage && (
                                 <p className="mt-2 text-xs font-bold text-destructive">
@@ -266,7 +294,7 @@ export function TicketList({
                         <div className="flex justify-end gap-3 pt-2">
                             <button
                                 className="inline-flex min-h-10 items-center justify-center rounded-control border border-border bg-surface px-4 text-xs font-bold text-muted-foreground transition hover:text-foreground"
-                                disabled={isCanceling}
+                                disabled={isActionPending}
                                 onClick={closeModal}
                                 ref={closeButtonRef}
                                 type="button"
@@ -275,11 +303,17 @@ export function TicketList({
                             </button>
                             <button
                                 className="inline-flex min-h-10 items-center justify-center rounded-control bg-destructive px-4 text-xs font-bold text-white transition hover:bg-destructive/90 disabled:opacity-50"
-                                disabled={isCanceling}
+                                disabled={isActionPending}
                                 onClick={handleConfirmRefund}
                                 type="button"
                             >
-                                {isCanceling ? "환불 접수 중..." : "환불 확인"}
+                                {isActionPending
+                                    ? ticketToRefund.status === "REFUND_FAILED"
+                                        ? "재시도 접수 중..."
+                                        : "환불 접수 중..."
+                                    : ticketToRefund.status === "REFUND_FAILED"
+                                      ? "환불 재시도"
+                                      : "환불 확인"}
                             </button>
                         </div>
                     </div>

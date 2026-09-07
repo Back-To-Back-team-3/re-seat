@@ -28,6 +28,12 @@ export async function getTickets() {
         );
 }
 
+export type TicketCancelResponse = {
+    ticketId: number;
+    ticketStatus: TicketStatus;
+    refundRequestedAt: string;
+};
+
 /**
  * 티켓 1장의 취소(환불)를 접수합니다.
  *
@@ -35,14 +41,27 @@ export async function getTickets() {
  * @returns 취소 접수 결과
  */
 export async function cancelTicket(ticketId: number) {
-    const response = await apiRequest<
-        ApiResponse<{
-            ticketId: number;
-            ticketStatus: TicketStatus;
-            refundRequestedAt: string;
-        }>
-    >(`/tickets/${ticketId}/cancel`, {
-        method: "POST",
-    });
+    const response = await apiRequest<ApiResponse<TicketCancelResponse>>(
+        `/tickets/${ticketId}/cancel`,
+        {
+            method: "POST",
+        },
+    );
+    return unwrap(response);
+}
+
+/**
+ * 환불 실패(REFUND_FAILED)한 티켓 1장의 취소(환불)를 재시도합니다.
+ *
+ * @param ticketId 재시도할 티켓 식별자
+ * @returns 취소 재시도 접수 결과
+ */
+export async function retryCancelTicket(ticketId: number) {
+    const response = await apiRequest<ApiResponse<TicketCancelResponse>>(
+        `/tickets/${ticketId}/cancel/retry`,
+        {
+            method: "POST",
+        },
+    );
     return unwrap(response);
 }
