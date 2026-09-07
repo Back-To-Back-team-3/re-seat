@@ -1,15 +1,16 @@
 package com.backtoback.reseat.domain.queue.service;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -18,36 +19,24 @@ import com.backtoback.reseat.domain.queue.exception.QueueEntryCancellationNotAll
 import com.backtoback.reseat.domain.queue.exception.QueueEntryCancellationTokenRequiredException;
 import com.backtoback.reseat.domain.queue.exception.QueueEntryNotFoundException;
 
-import jakarta.annotation.PreDestroy;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * 대기열 상태와 입장 허용 이벤트를 SSE로 주기적으로 전송하고 연결을 관리하는 서비스
+ * <p>예약 작업은 Spring이 관리하는 SSE 전용 TaskScheduler에서 실행한다.</p>
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class SseService {
 
     // 클라이언트의 SSE 연결을 유지하는 최대 시간
     private static final long SSE_TIMEOUT_MILLIS = 60L * 1000L;
 
-    // 여러 SSE 연결의 순번 조회 작업을 동시에 실행할 스케줄러 스레드 수
-    private static final int SSE_SCHEDULER_POOL_SIZE = 8;
-
     // 대기열 상태를 처음 조회하기 전의 지연 시간이며 이후 상태 전송 주기
-    private static final long SSE_SEND_INTERVAL_SECONDS = 3L;
+    private static final Duration SSE_SEND_INTERVAL = Duration.ofSeconds(3L);
 
     // 마지막 SSE 연결 종료 후 대기열 이탈 처리까지 기다리는 재연결 유예시간
-    private static final long SSE_RECONNECT_GRACE_MILLIS = 60L * 1000L;
-
-    // SSE 스케줄러 종료 후 실행 중인 작업을 기다리는 최대 시간
-    private static final long SSE_SCHEDULER_SHUTDOWN_TIMEOUT_SECONDS = 5L;
-
-    // SSE 연결별 대기 순번 조회 작업을 공동으로 실행하는 스케줄러다.
-    // 연결마다 별도 스레드를 생성하지 않고 정해진 스레드 풀에서 주기 작업을 처리한다.
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(SSE_SCHEDULER_POOL_SIZE);
+    private static final Duration SSE_RECONNECT_GRACE = Duration.ofSeconds(60L);
 
     // 동일 사용자와 경기에서 현재 유지 중인 SSE 연결 수를 관리한다.
     private final ConcurrentMap<QueueConnectionKey, Integer> activeConnectionCounts = new ConcurrentHashMap<>();
@@ -57,6 +46,13 @@ public class SseService {
         = new ConcurrentHashMap<>();
 
     private final QueueService queueService;
+
+    private final TaskScheduler scheduler;
+
+    public SseService(QueueService queueService, @Qualifier("sseTaskScheduler") TaskScheduler scheduler) {
+        this.queueService = queueService;
+        this.scheduler = scheduler;
+    }
 
     /**
      * 사용자의 현재 대기 상태를 주기적으로 전송하고 입장 허용 시 토큰 정보를 전송한다.
@@ -89,6 +85,7 @@ public class SseService {
 
         // Kafka Consumer가 DB와 Redis 등록을 완료할 시간을 고려하여 첫 상태 조회를 즉시 실행하지 않고 지연한다.
         // 이후 연결이 유지되는 동안 지정된 주기에 맞춰 대기 상태를 반복해서 조회한다.
+        Instant startTime = Instant.now().plus(SSE_SEND_INTERVAL);
         ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(() -> {
             try {
                 // 현재 순번 또는 입장 허용 여부가 담긴 대기 상태를 rank 이벤트로 전송한다.
@@ -111,32 +108,12 @@ public class SseService {
                 // 상태 조회 또는 SSE 전송 중 복구할 수 없는 예외가 발생하면 오류와 함께 연결을 종료한다.
                 sseEmitter.completeWithError(e);
             }
-        }, SSE_SEND_INTERVAL_SECONDS, SSE_SEND_INTERVAL_SECONDS, TimeUnit.SECONDS);
+        }, startTime, SSE_SEND_INTERVAL);
 
         // 연결 종료 콜백에서 방금 생성한 주기 작업을 취소할 수 있도록 참조를 저장한다.
         futureRef.set(future);
 
         return sseEmitter;
-    }
-
-    /**
-     * 앱 종료 시 SSE 순번 전송과 예약된 대기열 이탈 작업을 모두 종료한다.
-     */
-    @PreDestroy
-    public void shutdownScheduler() {
-
-        // 앱 종료 중 대기열 상태를 변경하지 않도록 실행 중인 작업과 예약된 작업에 즉시 종료를 요청한다.
-        scheduler.shutdownNow();
-
-        try {
-            // 실행 중인 작업이 정리될 시간을 짧게 기다린다.
-            if (!scheduler.awaitTermination(SSE_SCHEDULER_SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-                log.warn("[SseService] 스케줄러 종료 대기 시간 초과 (timeoutSeconds={})", SSE_SCHEDULER_SHUTDOWN_TIMEOUT_SECONDS);
-            }
-        } catch (InterruptedException e) {
-            log.warn("[SseService] 스케줄러 종료 대기 중 스레드가 중단되었습니다.");
-            Thread.currentThread().interrupt();
-        }
     }
 
     /**
@@ -237,6 +214,8 @@ public class SseService {
 
         AtomicReference<ScheduledFuture<?>> queueExitTaskRef = new AtomicReference<>();
 
+        // 마지막 연결 종료 시점부터 재연결 유예시간이 지난 뒤 대기열 이탈을 실행한다.
+        Instant queueExitAt = Instant.now().plus(SSE_RECONNECT_GRACE);
         ScheduledFuture<?> queueExitTask = scheduler.schedule(() -> {
             try {
                 // 유예시간 만료와 재연결이 겹칠 수 있으므로 실행 직전에 활성 연결을 다시 확인한다.
@@ -269,7 +248,7 @@ public class SseService {
                 pendingQueueExitTasks.remove(connectionKey, queueExitTaskRef.get());
             }
 
-        }, SSE_RECONNECT_GRACE_MILLIS, TimeUnit.MILLISECONDS);
+        }, queueExitAt);
 
         queueExitTaskRef.set(queueExitTask);
         pendingQueueExitTasks.put(connectionKey, queueExitTask);

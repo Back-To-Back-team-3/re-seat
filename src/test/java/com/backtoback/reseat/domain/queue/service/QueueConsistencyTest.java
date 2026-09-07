@@ -17,8 +17,8 @@ import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
 import com.backtoback.reseat.domain.queue.dto.event.QueueEntryRequestedEvent;
@@ -26,6 +26,7 @@ import com.backtoback.reseat.domain.queue.entity.AdmissionToken;
 import com.backtoback.reseat.domain.queue.entity.AdmissionTokenStatus;
 import com.backtoback.reseat.domain.queue.entity.QueueEntryHistory;
 import com.backtoback.reseat.domain.queue.entity.QueueEntryHistoryStatus;
+import com.backtoback.reseat.domain.queue.entity.QueueEntryRejectionReason;
 import com.backtoback.reseat.domain.queue.repository.AdmissionTokenRepository;
 import com.backtoback.reseat.domain.queue.repository.QueueEntryHistoryRepository;
 import com.backtoback.reseat.domain.stadium.entity.Stadium;
@@ -45,8 +46,13 @@ import com.backtoback.reseat.global.service.TestDatabaseCleanUpService;
 @DisplayName("QueueConsistency")
 public class QueueConsistencyTest extends BaseIntegrationTest {
 
-    // test 프로파일에는 RedissonClient Bean이 없으므로 분산 락만 Mock으로 대체한다.
-    @MockitoBean
+    private static final String WAITING_QUEUE_REDIS_KEY_FORMAT = "queue:waiting:game:%d";
+    private static final String WAITING_QUEUE_REDIS_MEMBER_FORMAT = "user:%d";
+    private static final String QUEUE_ENTRY_KEY_FORMAT = "queue:entry:game:%d:user:%d";
+    private static final String REJECTION_KEY_FORMAT = "queue:entry:rejection:game:%d:user:%d";
+    private static final String LATEST_REQUEST_KEY_FORMAT = "queue:entry:request:latest:game:%d:user:%d";
+
+    @Autowired
     private RedissonClient redissonClient;
 
     @Autowired
@@ -68,6 +74,8 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
     @Autowired
     private QueueService queueService;
     @Autowired
+    private QueueEntryRejectionService queueEntryRejectionService;
+    @Autowired
     private AdmissionTokenService admissionTokenService;
 
     @Autowired
@@ -77,7 +85,7 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
     private Game game;
 
     /**
-     * 각 테스트 전 Queue 흐름에 필요한 Stadium, Team, User, Game을 저장한다.
+     * 각 테스트 전 Queue 흐름에 필요한 Stadium, Team, User와 예매가 열린 Game을 저장한다.
      */
     @BeforeEach
     void setUp() {
@@ -112,6 +120,7 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
                         .gameAt(LocalDateTime.now().plusDays(1))
                         .bookingOpenAt(LocalDateTime.now().minusHours(1))
                         .bookingCloseAt(LocalDateTime.now().plusHours(5))
+                        .bookingStatus(BookingStatus.OPEN)
                         .title("테스트 경기")
                         .build()
                 );
@@ -138,26 +147,26 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
     }
 
     /**
-     * Queue-Key에 해당하는 DB 대기 이력을 조회한다.
+     * DB 대기 이력 식별키에 해당하는 대기 이력을 조회한다.
      *
-     * @param queueKey 조회할 대기 이력의 Queue-Key
+     * @param queueEntryKey 조회할 DB 대기 이력 식별키
      * @return 조회된 대기 이력
      */
-    private QueueEntryHistory findQueueEntryHistory(String queueKey) {
+    private QueueEntryHistory findQueueEntryHistory(String queueEntryKey) {
 
-        return queueEntryHistoryRepository.findByQueueKey(queueKey).orElseThrow();
+        return queueEntryHistoryRepository.findByQueueKey(queueEntryKey).orElseThrow();
     }
 
     /**
      * Redis 대기열에서 사용자의 점수를 조회한다.
      *
-     * @param redisKey 경기별 Redis 대기열 Key
-     * @param redisMember 사용자 Redis Member
+     * @param waitingQueueRedisKey 경기별 Redis 대기열 Key
+     * @param waitingQueueRedisMember 사용자 Redis Member
      * @return Redis 대기열 점수, 등록되지 않은 경우 null
      */
-    private Double queueScore(String redisKey, String redisMember) {
+    private Double queueScore(String waitingQueueRedisKey, String waitingQueueRedisMember) {
 
-        return redisTemplate.opsForZSet().score(redisKey, redisMember);
+        return redisTemplate.opsForZSet().score(waitingQueueRedisKey, waitingQueueRedisMember);
     }
 
     /**
@@ -192,9 +201,9 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
         // 실제 Queue 진입 흐름으로 DB 이력과 Redis 대기열을 함께 준비한다.
         givenAdmitLockAcquired();
 
-        String redisKey = "queue:game:" + game.getId();
-        String redisMember = "user:" + user.getId();
-        String queueKey = redisKey + ":" + redisMember;
+        String waitingQueueRedisKey = WAITING_QUEUE_REDIS_KEY_FORMAT.formatted(game.getId());
+        String waitingQueueRedisMember = WAITING_QUEUE_REDIS_MEMBER_FORMAT.formatted(user.getId());
+        String queueEntryKey = QUEUE_ENTRY_KEY_FORMAT.formatted(game.getId(), user.getId());
 
         registerQueueEntry(Instant.now());
 
@@ -204,7 +213,7 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
         // then
         // 자동 입장은 DB 이력과 Queue-Token을 커밋한 뒤 Redis 대기열에서 사용자를 제거한다.
         assertThat(admittedCount).isEqualTo(1);
-        QueueEntryHistory admittedHistory = findQueueEntryHistory(queueKey);
+        QueueEntryHistory admittedHistory = findQueueEntryHistory(queueEntryKey);
         assertThat(admittedHistory.getStatus()).isEqualTo(QueueEntryHistoryStatus.ADMITTED);
         assertThat(
             admissionTokenRepository
@@ -215,7 +224,7 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
                     LocalDateTime.now()
                 )
         ).isPresent();
-        assertThat(queueScore(redisKey, redisMember)).isNull();
+        assertThat(queueScore(waitingQueueRedisKey, waitingQueueRedisMember)).isNull();
     }
 
     @Test
@@ -224,9 +233,9 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
 
         // given
         // 실제 Queue 진입 흐름으로 취소 가능한 DB 이력과 Redis 대기열을 함께 준비한다.
-        String redisKey = "queue:game:" + game.getId();
-        String redisMember = "user:" + user.getId();
-        String queueKey = redisKey + ":" + redisMember;
+        String waitingQueueRedisKey = WAITING_QUEUE_REDIS_KEY_FORMAT.formatted(game.getId());
+        String waitingQueueRedisMember = WAITING_QUEUE_REDIS_MEMBER_FORMAT.formatted(user.getId());
+        String queueEntryKey = QUEUE_ENTRY_KEY_FORMAT.formatted(game.getId(), user.getId());
 
         registerQueueEntry(Instant.now());
 
@@ -234,8 +243,8 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
         // 취소 후 더 늦은 요청 시간으로 재진입해 기존 DB 이력과 Redis 순서를 갱신한다.
         queueService.cancelMyQueue(game.getId(), user.getId());
 
-        QueueEntryHistoryStatus statusAfterCancel = findQueueEntryHistory(queueKey).getStatus();
-        Double scoreAfterCancel = queueScore(redisKey, redisMember);
+        QueueEntryHistoryStatus statusAfterCancel = findQueueEntryHistory(queueEntryKey).getStatus();
+        Double scoreAfterCancel = queueScore(waitingQueueRedisKey, waitingQueueRedisMember);
 
         Instant reentryRequestedAt = Instant.now().plusSeconds(1);
         QueueEntryRequestedEvent reentryEvent = queueEntryEvent(reentryRequestedAt);
@@ -246,12 +255,13 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
         assertThat(statusAfterCancel).isEqualTo(QueueEntryHistoryStatus.CANCELED);
         assertThat(scoreAfterCancel).isNull();
 
-        QueueEntryHistory reenteredHistory = findQueueEntryHistory(queueKey);
+        QueueEntryHistory reenteredHistory = findQueueEntryHistory(queueEntryKey);
         assertThat(reenteredHistory.getStatus()).isEqualTo(QueueEntryHistoryStatus.WAITING);
         assertThat(reenteredHistory.getCanceledAt()).isNull();
 
         assertThat(queueEntryHistoryRepository.count()).isEqualTo(1);
-        assertThat(queueScore(redisKey, redisMember)).isEqualTo(reentryRequestedAt.toEpochMilli());
+        assertThat(queueScore(waitingQueueRedisKey, waitingQueueRedisMember))
+            .isEqualTo(reentryRequestedAt.toEpochMilli());
     }
 
     @Test
@@ -292,9 +302,9 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
     void registerQueueEntry_withExpiredActiveToken_reentersQueue() {
 
         // given
-        String redisKey = "queue:game:" + game.getId();
-        String redisMember = "user:" + user.getId();
-        String queueKey = redisKey + ":" + redisMember;
+        String waitingQueueRedisKey = WAITING_QUEUE_REDIS_KEY_FORMAT.formatted(game.getId());
+        String waitingQueueRedisMember = WAITING_QUEUE_REDIS_MEMBER_FORMAT.formatted(user.getId());
+        String queueEntryKey = QUEUE_ENTRY_KEY_FORMAT.formatted(game.getId(), user.getId());
         String token = "qt_test";
 
         LocalDateTime now = LocalDateTime.now();
@@ -304,7 +314,7 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
         LocalDateTime seatBrowsingExpiresAt = issuedAt.plusMinutes(3);
 
         // ADMITTED 이력과 전체 유효시간이 지났지만 아직 ACTIVE인 Queue-Token을 준비한다.
-        QueueEntryHistory queueEntryHistory = QueueEntryHistory.of(game, user, queueKey, issuedAt);
+        QueueEntryHistory queueEntryHistory = QueueEntryHistory.of(game, user, queueEntryKey, issuedAt);
         queueEntryHistory.admit(now);
         queueEntryHistoryRepository.save(queueEntryHistory);
         Long savedQueueEntryHistoryId = queueEntryHistory.getId();
@@ -325,7 +335,7 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
         assertThat(admissionTokenRepository.findByToken(token).orElseThrow().getStatus())
             .isEqualTo(AdmissionTokenStatus.EXPIRED);
 
-        QueueEntryHistory reenteredHistory = findQueueEntryHistory(queueKey);
+        QueueEntryHistory reenteredHistory = findQueueEntryHistory(queueEntryKey);
         assertThat(reenteredHistory.getStatus()).isEqualTo(QueueEntryHistoryStatus.WAITING);
 
         // 만료 정리에서는 기존 DB 이력을 재사용하고 새 이력을 만들지 않아야 한다.
@@ -340,7 +350,8 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
         assertThat(admissionTokenRepository.count()).isEqualTo(1);
 
         // Redis 대기열에는 재진입 요청시간을 점수로 등록해야 한다.
-        assertThat(queueScore(redisKey, redisMember)).isEqualTo(reentryRequestedAt.toEpochMilli());
+        assertThat(queueScore(waitingQueueRedisKey, waitingQueueRedisMember))
+            .isEqualTo(reentryRequestedAt.toEpochMilli());
     }
 
     @Test
@@ -348,9 +359,9 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
     void registerQueueEntry_withBrowsingExpiredActiveToken_reentersQueue() {
 
         // given
-        String redisKey = "queue:game:" + game.getId();
-        String redisMember = "user:" + user.getId();
-        String queueKey = redisKey + ":" + redisMember;
+        String waitingQueueRedisKey = WAITING_QUEUE_REDIS_KEY_FORMAT.formatted(game.getId());
+        String waitingQueueRedisMember = WAITING_QUEUE_REDIS_MEMBER_FORMAT.formatted(user.getId());
+        String queueEntryKey = QUEUE_ENTRY_KEY_FORMAT.formatted(game.getId(), user.getId());
         String token = "qt_test";
 
         LocalDateTime now = LocalDateTime.now();
@@ -360,7 +371,7 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
         LocalDateTime seatBrowsingExpiresAt = issuedAt.plusMinutes(3);
 
         // ADMITTED 이력과 전체 유효시간은 남았지만 좌석 탐색 시간이 지난 ACTIVE Queue-Token을 준비한다.
-        QueueEntryHistory queueEntryHistory = QueueEntryHistory.of(game, user, queueKey, issuedAt);
+        QueueEntryHistory queueEntryHistory = QueueEntryHistory.of(game, user, queueEntryKey, issuedAt);
         queueEntryHistory.admit(now);
         queueEntryHistoryRepository.save(queueEntryHistory);
         Long savedQueueEntryHistoryId = queueEntryHistory.getId();
@@ -381,7 +392,7 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
         assertThat(admissionTokenRepository.findByToken(token).orElseThrow().getStatus())
             .isEqualTo(AdmissionTokenStatus.BROWSING_EXPIRED);
 
-        QueueEntryHistory reenteredHistory = findQueueEntryHistory(queueKey);
+        QueueEntryHistory reenteredHistory = findQueueEntryHistory(queueEntryKey);
         assertThat(reenteredHistory.getStatus()).isEqualTo(QueueEntryHistoryStatus.WAITING);
 
         // 만료 정리에서는 기존 DB 이력을 재사용하고 새 이력을 만들지 않아야 한다.
@@ -396,6 +407,69 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
         assertThat(admissionTokenRepository.count()).isEqualTo(1);
 
         // Redis 대기열에는 재진입 요청시간을 점수로 등록해야 한다.
-        assertThat(queueScore(redisKey, redisMember)).isEqualTo(reentryRequestedAt.toEpochMilli());
+        assertThat(queueScore(waitingQueueRedisKey, waitingQueueRedisMember))
+            .isEqualTo(reentryRequestedAt.toEpochMilli());
+    }
+
+    @Test
+    @DisplayName("최신 대기열 진입 이벤트의 거절 결과를 Redis에 저장하고 요청 식별자를 삭제한다.")
+    void saveRejectionIfLatest_withLatestEvent_savesRejection() {
+
+        // given
+        // 최신 이벤트만 거절 결과를 저장할 수 있도록 요청 식별자를 먼저 기록한다.
+        UUID latestEventId = UUID.randomUUID();
+        String rejectionKey = REJECTION_KEY_FORMAT.formatted(game.getId(), user.getId());
+        String latestRequestKey = LATEST_REQUEST_KEY_FORMAT.formatted(game.getId(), user.getId());
+        QueueEntryRejectionReason rejectionReason = QueueEntryRejectionReason.BOOKING_NOT_OPEN;
+
+        queueEntryRejectionService.prepareRequest(game.getId(), user.getId(), latestEventId);
+
+        // when
+        boolean rejectionSaved
+            = queueEntryRejectionService
+                .saveRejectionIfLatest(game.getId(), user.getId(), latestEventId, rejectionReason);
+
+        // then
+        String storedRejection = redisTemplate.opsForValue().get(rejectionKey);
+        String storedLatestRequest = redisTemplate.opsForValue().get(latestRequestKey);
+
+        // 최신 요청의 거절 결과는 저장하고 처리가 끝난 요청 식별자는 제거해야 한다.
+        assertThat(rejectionSaved).isTrue();
+        assertThat(storedRejection).isEqualTo(rejectionReason.name());
+        assertThat(storedLatestRequest).isNull();
+    }
+
+    @Test
+    @DisplayName("최신 요청이 정상 처리된 뒤 지연된 이전 이벤트의 거절 결과를 저장하지 않는다.")
+    void saveRejectionIfLatest_afterLatestRequestCompletes_ignoresOlderEvent() {
+
+        // given
+        // 이전 요청이 지연된 사이 같은 사용자와 경기의 최신 요청이 추가된 상황을 재현한다.
+        UUID olderEventId = UUID.randomUUID();
+        UUID latestEventId = UUID.randomUUID();
+        String rejectionKey = REJECTION_KEY_FORMAT.formatted(game.getId(), user.getId());
+        String latestRequestKey = LATEST_REQUEST_KEY_FORMAT.formatted(game.getId(), user.getId());
+        QueueEntryRejectionReason rejectionReason = QueueEntryRejectionReason.WAITING_IN_OTHER_GAME;
+
+        queueEntryRejectionService.prepareRequest(game.getId(), user.getId(), olderEventId);
+        queueEntryRejectionService.prepareRequest(game.getId(), user.getId(), latestEventId);
+
+        // when
+        // 최신 요청을 정상 완료한 뒤 지연된 이전 이벤트의 거절 결과 저장을 시도한다.
+        boolean latestRequestCompleted
+            = queueEntryRejectionService.completeRequestIfLatest(game.getId(), user.getId(), latestEventId);
+        boolean olderRejectionSaved
+            = queueEntryRejectionService
+                .saveRejectionIfLatest(game.getId(), user.getId(), olderEventId, rejectionReason);
+
+        // then
+        String storedRejection = redisTemplate.opsForValue().get(rejectionKey);
+        String storedLatestRequest = redisTemplate.opsForValue().get(latestRequestKey);
+
+        // 이전 이벤트는 최신 요청 완료 후 거절 결과와 요청 식별자를 다시 만들지 못해야 한다.
+        assertThat(latestRequestCompleted).isTrue();
+        assertThat(olderRejectionSaved).isFalse();
+        assertThat(storedRejection).isNull();
+        assertThat(storedLatestRequest).isNull();
     }
 }
