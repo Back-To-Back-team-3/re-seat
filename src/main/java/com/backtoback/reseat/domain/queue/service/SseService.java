@@ -26,7 +26,7 @@ import com.backtoback.reseat.domain.queue.exception.QueueEntryNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 대기열 상태와 입장 허용 이벤트를 SSE로 주기적으로 전송하고 연결을 관리하는 서비스
+ * 대기열 상태, 입장 허용과 진입 거절 이벤트를 SSE로 전송하고 연결을 관리하는 서비스.
  * <p>예약 작업은 Spring이 관리하는 SSE 전용 TaskScheduler에서 실행한다.</p>
  */
 @Slf4j
@@ -73,7 +73,7 @@ public class SseService {
     }
 
     /**
-     * 사용자의 현재 대기 상태를 주기적으로 전송하고 입장 허용 시 토큰 정보를 전송한다.
+     * 사용자의 현재 대기 상태를 주기적으로 전송하고 입장 허용 또는 진입 거절 시 연결을 종료한다.
      *
      * @param gameId 경기 ID
      * @param userId 사용자 ID
@@ -192,7 +192,7 @@ public class SseService {
     }
 
     /**
-     * SSE 연결 종료 시 주기 작업과 연결 수를 정리하고 입장 완료 여부에 따라 대기열 이탈을 예약하는 작업을 생성한다.
+     * SSE 연결 종료 시 주기 작업과 연결 수를 정리하고 정상 종료 이벤트 전송 여부에 따라 대기열 이탈을 예약하는 작업을 생성한다.
      *
      * @param futureRef 취소할 주기 작업 참조
      * @param connectionKey SSE 연결 식별값
