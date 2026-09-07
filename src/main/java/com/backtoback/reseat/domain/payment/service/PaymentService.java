@@ -31,6 +31,7 @@ import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelStatusUnknownException;
+import com.backtoback.reseat.domain.payment.exception.PaymentConfirmStatusUnknownException;
 import com.backtoback.reseat.domain.payment.exception.PaymentLockFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
@@ -112,7 +113,12 @@ public class PaymentService {
      * @param request 토스가 클라이언트에 돌려준 paymentKey/orderId/amount
      * @return 확정된 결제 결과
      */
-    @Transactional(noRollbackFor = OrderExpiredException.class)
+    @Transactional(
+        noRollbackFor = {
+            OrderExpiredException.class,
+            PaymentConfirmStatusUnknownException.class
+        }
+    )
     public PaymentCompleteResponse completePayment(
         Long userId,
         Long paymentId,
@@ -149,7 +155,7 @@ public class PaymentService {
             payment.fail("토스 결제 승인 상태를 확인할 수 없습니다.", LocalDateTime.now());
             paymentRecoveryTaskRepository.save(PaymentRecoveryTask.createConfirmUnknown(payment));
             orderService.failOrder(payment.getOrder().getId());
-            return PaymentCompleteResponse.from(payment, List.of());
+            throw new PaymentConfirmStatusUnknownException();
         }
 
         // 승인 API 응답은 받았지만 승인 완료 상태가 아니라면 로컬 결제를 실패로 닫는다.
