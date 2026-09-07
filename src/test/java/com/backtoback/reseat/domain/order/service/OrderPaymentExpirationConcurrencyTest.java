@@ -14,9 +14,7 @@ import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
@@ -52,10 +50,6 @@ class OrderPaymentExpirationConcurrencyTest extends BaseIntegrationTest {
     private static final LocalDateTime PAYMENT_COMPLETION_TIME = PAYMENT_DEADLINE.minusNanos(1_000);
     private static final int TOTAL_AMOUNT = 34_000;
     private static final long TIMEOUT_SECONDS = 10L;
-
-    // test 프로파일에 Redisson 설정이 없으므로 PaymentService의 의존성만 Mock으로 대체한다.
-    @MockitoBean
-    private RedissonClient redissonClient;
 
     @Autowired
     private EntityManager entityManager;
