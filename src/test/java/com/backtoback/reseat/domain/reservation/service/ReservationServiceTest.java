@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
@@ -14,9 +15,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.backtoback.reseat.domain.reservation.entity.Reservation;
+import com.backtoback.reseat.domain.reservation.entity.ReservationSeat;
 import com.backtoback.reseat.domain.reservation.exception.ReservationAccessDeniedException;
 import com.backtoback.reseat.domain.reservation.exception.ReservationNotFoundException;
 import com.backtoback.reseat.domain.reservation.repository.ReservationRepository;
+import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
+import com.backtoback.reseat.domain.seatinventory.service.GameSeatStatusService;
 import com.backtoback.reseat.domain.user.entity.User;
 
 /**
@@ -30,6 +34,9 @@ class ReservationServiceTest {
 
     @Mock
     private ReservationRepository reservationRepository;
+
+    @Mock
+    private GameSeatStatusService gameSeatStatusService;
 
     @InjectMocks
     private ReservationService reservationService;
@@ -102,6 +109,60 @@ class ReservationServiceTest {
         // when & then
         assertThatThrownBy(() -> reservationService.releaseHold(reservationId, intruderId))
             .isInstanceOf(ReservationAccessDeniedException.class);
+    }
+
+    /**
+     * cancel — 좌석 반환
+     **/
+
+    @Test
+    @DisplayName("예약을 취소하면 묶인 모든 좌석이 반환된다")
+    void should_releaseAllSeats_when_cancel() {
+        // given
+        Long reservationId = 1L;
+
+        GameSeat seatA = mock(GameSeat.class);
+        given(seatA.getId()).willReturn(5001L);
+        GameSeat seatB = mock(GameSeat.class);
+        given(seatB.getId()).willReturn(5002L);
+
+        ReservationSeat rsA = mock(ReservationSeat.class);
+        given(rsA.getGameSeat()).willReturn(seatA);
+        ReservationSeat rsB = mock(ReservationSeat.class);
+        given(rsB.getGameSeat()).willReturn(seatB);
+
+        Reservation reservation = mock(Reservation.class);
+        given(reservation.isCanceled()).willReturn(false);
+        given(reservation.getReservationSeats()).willReturn(List.of(rsA, rsB));
+
+        given(reservationRepository.findWithSeatsById(reservationId)).willReturn(Optional.of(reservation));
+
+        // when
+        reservationService.cancel(reservationId);
+
+        // then
+        then(reservation).should().cancel();
+        then(gameSeatStatusService).should().releaseSeat(5001L);
+        then(gameSeatStatusService).should().releaseSeat(5002L);
+    }
+
+    @Test
+    @DisplayName("이미 취소된 예약을 다시 취소하면 좌석 반환을 다시 시도하지 않는다 — 멱등 처리")
+    void should_notReleaseSeatsAgain_when_alreadyCanceled() {
+        // given
+        Long reservationId = 1L;
+
+        Reservation reservation = mock(Reservation.class);
+        given(reservation.isCanceled()).willReturn(true);
+
+        given(reservationRepository.findWithSeatsById(reservationId)).willReturn(Optional.of(reservation));
+
+        // when
+        reservationService.cancel(reservationId);
+
+        // then
+        then(reservation).should(never()).cancel();
+        then(gameSeatStatusService).shouldHaveNoInteractions();
     }
 
     /**
