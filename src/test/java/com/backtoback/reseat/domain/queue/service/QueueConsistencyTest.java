@@ -17,7 +17,6 @@ import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
@@ -53,8 +52,7 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
     private static final String REJECTION_KEY_FORMAT = "queue:entry:rejection:game:%d:user:%d";
     private static final String LATEST_REQUEST_KEY_FORMAT = "queue:entry:request:latest:game:%d:user:%d";
 
-    // test 프로파일에는 RedissonClient Bean이 없으므로 분산 락만 Mock으로 대체한다.
-    @MockitoBean
+    @Autowired
     private RedissonClient redissonClient;
 
     @Autowired

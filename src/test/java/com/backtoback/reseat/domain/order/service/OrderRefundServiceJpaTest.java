@@ -9,9 +9,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
@@ -48,10 +46,6 @@ class OrderRefundServiceJpaTest extends BaseIntegrationTest {
     private static final LocalDateTime PAYMENT_DEADLINE = NOW.plusMinutes(8);
     private static final LocalDateTime HOLD_EXPIRES_AT = NOW.plusMinutes(10);
     private static final int PRICE = 18_000;
-
-    // test 프로필에는 RedissonClient Bean이 없으므로 환불 테스트와 무관한 분산락 의존성만 Mock으로 대체한다.
-    @MockitoBean
-    private RedissonClient redissonClient;
 
     @Autowired
     private EntityManager entityManager;

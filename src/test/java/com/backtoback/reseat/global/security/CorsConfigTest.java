@@ -6,13 +6,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @ActiveProfiles("test")
@@ -22,9 +20,6 @@ class CorsConfigTest {
 
     @Autowired
     private MockMvc mockMvc;
-
-    @MockitoBean
-    private RedissonClient redissonClient;
 
     @Test
     @DisplayName("허용된 Origin(http://localhost:3000)으로 Preflight 요청 시 CORS 헤더가 반환된다")
