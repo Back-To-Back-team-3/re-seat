@@ -140,7 +140,7 @@ public class Ticket extends BaseEntity {
     )
     private TicketStatus status;
 
-    // 티켓 취소(환불) 사유 유형 (USER_REFUND, ADMIN_FORCE_CANCEL, PAYMENT_CANCELED)
+    // 티켓 취소(환불) 사유 유형 (USER_REFUND, ADMIN_FORCE_CANCEL)
     @Enumerated(EnumType.STRING)
     @Column(
         name = "cancel_reason",
@@ -302,29 +302,6 @@ public class Ticket extends BaseEntity {
             throw new InvalidTicketStateException();
         }
         this.status = TicketStatus.REFUND_PENDING;
-    }
-
-    /**
-     * 결제 패키지 호환용 > 결제 전체 취소 시 함께 정리되는 다른 ISSUED 티켓을 즉시 환불 완료로 전환한다.
-     * <p>{@code PaymentService#cancelRemainingIssuedTickets}가 호출하는 기존 계약을 유지하기 위한 메서드다.
-     * 결제 패키지가 이 시점에는 이미 PG 전액 취소를 완료한 뒤이므로, REFUND_PENDING 단계 없이 바로 REFUNDED로 확정한다.
-     * "티켓 1장 단위" 취소 흐름(사용자·관리자 취소)은
-     * {@link #requestRefund(TicketCancelReason, String)} / {@link #completeRefund()}를 사용한다.</p>
-     *
-     * @param cancelReason 취소 사유 유형
-     * @deprecated 결제 패키지가 티켓 단위 부분 취소를 지원하도록 바뀌면 이 메서드는 제거 대상이다.
-     */
-    @Deprecated
-    public void cancel(TicketCancelReason cancelReason) {
-        if (cancelReason == null) {
-            throw new IllegalArgumentException("cancelReason은 필수입니다.");
-        }
-        validateIssuedForTransition();
-
-        this.status = TicketStatus.REFUNDED;
-        this.cancelReason = cancelReason;
-        this.refundRequestedAt = LocalDateTime.now();
-        this.refundedAt = LocalDateTime.now();
     }
 
     /**
