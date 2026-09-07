@@ -29,6 +29,7 @@ import com.backtoback.reseat.domain.queue.entity.AdmissionToken;
 import com.backtoback.reseat.domain.queue.entity.AdmissionTokenStatus;
 import com.backtoback.reseat.domain.queue.entity.QueueEntryHistory;
 import com.backtoback.reseat.domain.queue.entity.QueueEntryHistoryStatus;
+import com.backtoback.reseat.domain.queue.entity.QueueEntryRejectionReason;
 import com.backtoback.reseat.domain.queue.exception.QueueEntryCancellationTokenRequiredException;
 import com.backtoback.reseat.domain.queue.exception.QueueEntryEventGameIdInvalidException;
 import com.backtoback.reseat.domain.queue.exception.QueueEntryEventIdRequiredException;
@@ -63,6 +64,7 @@ public class QueueService {
     private final UserRepository userRepository;
     private final QueueUserRepository queueUserRepository;
     private final QueueEntryEventPublisher queueEntryEventPublisher;
+    private final QueueEntryRejectionService queueEntryRejectionService;
 
     /**
      * 사용자의 현재 대기열 상태를 조회한다.
@@ -208,7 +210,8 @@ public class QueueService {
     }
 
     /**
-     * 경기 존재 여부와 예매 가능 상태, 사용자의 존재 여부를 확인하고 Kafka로 대기열 진입 이벤트를 발행한다.
+     * 경기 존재 여부와 예매 가능 상태, 사용자의 존재 여부를 확인하고
+     * 최신 요청 식별자를 저장하고 이전 거절 결과를 삭제한 뒤 Kafka로 대기열 진입 이벤트를 발행한다.
      *
      * @param gameId 대기열에 진입할 경기 ID
      * @param userId 대기열 진입을 요청한 사용자 ID
@@ -228,8 +231,11 @@ public class QueueService {
             throw new UserNotFoundException();
         }
 
-        // eventId는 이벤트 로그 추적에 사용하고, requestedAt은 Redis ZSet의 대기 순서를 결정하는 기준으로 사용한다.
+        // eventId는 이벤트 로그 추적과 최신 요청 식별에 사용하고, requestedAt은 Redis ZSet의 대기 순서를 결정하는 기준으로 사용한다.
         QueueEntryRequestedEvent event = new QueueEntryRequestedEvent(UUID.randomUUID(), gameId, userId, Instant.now());
+
+        // 지연된 이전 이벤트가 최신 요청 결과를 덮어쓰지 못하도록 최신 요청을 기록하고 이전 거절 결과를 삭제한다.
+        queueEntryRejectionService.prepareRequest(gameId, userId, event.eventId());
 
         // Kafka 발행 실패는 대기열 진입 요청 실패로 변환하여 비동기 작업을 예외 상태로 완료한다.
         return queueEntryEventPublisher.publish(event).thenAccept(result -> {}).exceptionally(exception -> {
@@ -238,19 +244,27 @@ public class QueueService {
     }
 
     /**
-     * kafka 대기열 진입 이벤트를 바탕으로 DB 대기 이력과 Redis 대기열을 등록한다.
+     * Kafka 대기열 진입 이벤트를 바탕으로 DB 대기 이력과 Redis 대기열을 등록한다.
      * <p>사용자 행에 비관적 락을 적용하여 동일 사용자의 여러 경기 대기열 등록을 순서대로 처리한다.</p>
+     * <p>사용자가 정책상 등록할 수 없는 요청은 예외 대신 거절 사유로 반환하여
+     * Consumer가 Redis 결과를 저장하고 이벤트 처리를 완료할 수 있게 한다.</p>
      *
      * @param event 대기열 진입 요청 이벤트
+     * @return 사용자에게 전달할 거절 사유, 거절하지 않으면 빈 값
      */
     @Transactional
-    public void registerQueueEntry(QueueEntryRequestedEvent event) {
+    public Optional<QueueEntryRejectionReason> registerQueueEntry(QueueEntryRequestedEvent event) {
 
         // 잘못된 이벤트는 재시도해도 처리할 수 없으므로 DB와 Redis에 접근하기 전에 검증한다.
         validateQueueEntryEvent(event);
 
         Game game
             = gameRepository.findById(event.gameId()).orElseThrow(() -> new GameNotFoundException(event.gameId()));
+
+        // 이벤트 발행 후 경기 상태가 바뀔 수 있으므로 실제 등록 직전에 예매 가능 상태를 다시 확인한다.
+        if (game.getBookingStatus() != BookingStatus.OPEN) {
+            return Optional.of(QueueEntryRejectionReason.BOOKING_NOT_OPEN);
+        }
 
         // 동일 사용자의 여러 경기 대기열 등록이 동시에 처리되지 않도록 사용자 행을 잠근다.
         User user
@@ -266,14 +280,20 @@ public class QueueService {
         String queueEntryKey = queueEntryKey(event.gameId(), event.userId());
         long score = event.requestedAt().toEpochMilli();
 
-        ActiveTokenCheckResult activeTokenCheckResult = checkActiveTokens(user.getId(), queueEntryKey, now);
+        ActiveTokenCheckResult activeTokenCheckResult
+            = checkActiveTokens(user.getId(), game.getId(), queueEntryKey, now);
         boolean hasWaitingEntryInAnotherGame
             = queueEntryHistoryRepository
                 .existsByUser_IdAndGame_IdNotAndStatus(user.getId(), game.getId(), QueueEntryHistoryStatus.WAITING);
 
-        // 다른 경기에서 대기 중이거나 사용 가능한 활성 입장 토큰이 있다면 새 대기열에 등록하지 않는다.
-        if (activeTokenCheckResult.hasUsableActiveToken() || hasWaitingEntryInAnotherGame) {
-            return;
+        // 현재 경기의 활성 Queue-Token은 기존 admit 흐름을 이어가고,
+        // 다른 경기에서 대기하거나 토큰을 사용 중이면 새 대기열을 만들지 않는다.
+        if (activeTokenCheckResult.hasUsableCurrentGameToken()) {
+            return Optional.empty();
+        } else if (activeTokenCheckResult.hasUsableOtherGameToken()) {
+            return Optional.of(QueueEntryRejectionReason.ACTIVE_QUEUE_TOKEN_IN_ANOTHER_GAME);
+        } else if (hasWaitingEntryInAnotherGame) {
+            return Optional.of(QueueEntryRejectionReason.WAITING_IN_OTHER_GAME);
         }
 
         ZSetOperations<String, String> queueZSet = getZSetOperations();
@@ -303,13 +323,14 @@ public class QueueService {
                 }
             }
 
-            return;
+            return Optional.empty();
         }
 
         // Redis에 등록하기 전에 DB 이력을 즉시 반영하여 queueEntryKey 중복 여부를 먼저 확인한다.
         queueEntryHistoryRepository.saveAndFlush(QueueEntryHistory.of(game, user, queueEntryKey, now));
 
         addRedisQueueEntryIfAbsent(queueZSet, waitingQueueRedisKey, redisMember, score);
+        return Optional.empty();
     }
 
     private ZSetOperations<String, String> getZSetOperations() {
@@ -412,15 +433,17 @@ public class QueueService {
     /**
      * 사용자의 활성 입장 토큰을 비관적 락으로 조회하고 만료 상태를 반영한다.
      * <p>만료된 토큰과 연결된 입장 허용 이력은 함께 취소하고,
-     * 현재 요청 경기의 이력 취소 여부를 반환한다.</p>
+     * 남은 활성 토큰을 현재 요청 경기와 다른 경기로 구분한다.</p>
      *
      * @param userId 조회할 사용자 ID
+     * @param currentGameId 현재 요청한 경기 ID
      * @param currentQueueEntryKey 현재 요청한 경기와 사용자의 DB 대기 이력 식별키
      * @param currentTime 만료 여부를 판단할 시간
-     * @return 사용 가능한 활성 토큰과 현재 요청 경기의 이력 취소 여부
+     * @return 현재 경기 · 다른 경기의 사용 가능한 활성 토큰과 현재 요청 경기의 이력 취소 여부
      */
     private ActiveTokenCheckResult checkActiveTokens(
         Long userId,
+        Long currentGameId,
         String currentQueueEntryKey,
         LocalDateTime currentTime
     ) {
@@ -445,10 +468,27 @@ public class QueueService {
             }
         }
 
-        boolean hasUsableActiveToken
-            = activeTokens.stream().anyMatch(token -> token.getStatus() == AdmissionTokenStatus.ACTIVE);
+        boolean hasUsableCurrentGameToken
+            = activeTokens
+                .stream()
+                .anyMatch(
+                    token -> token.getStatus() == AdmissionTokenStatus.ACTIVE
+                        && token.getGame().getId().equals(currentGameId)
+                );
 
-        return new ActiveTokenCheckResult(hasUsableActiveToken, currentQueueHistoryCanceled);
+        boolean hasUsableOtherGameToken
+            = activeTokens
+                .stream()
+                .anyMatch(
+                    token -> token.getStatus() == AdmissionTokenStatus.ACTIVE
+                        && !token.getGame().getId().equals(currentGameId)
+                );
+
+        return new ActiveTokenCheckResult(
+            hasUsableCurrentGameToken,
+            hasUsableOtherGameToken,
+            currentQueueHistoryCanceled
+        );
     }
 
     /**
@@ -485,9 +525,14 @@ public class QueueService {
     /**
      * 활성 Queue-Token 확인 결과
      *
-     * @param hasUsableActiveToken 사용 가능한 활성 토큰 존재 여부
+     * @param hasUsableCurrentGameToken 현재 요청 경기에서 계속 사용할 수 있는 활성 토큰 존재 여부
+     * @param hasUsableOtherGameToken 다른 경기에서 사용 중인 활성 토큰 존재 여부
      * @param currentQueueHistoryCanceled 현재 요청 경기의 입장 이력이 토큰 만료로 취소됐는지 여부
      */
-    private record ActiveTokenCheckResult(boolean hasUsableActiveToken, boolean currentQueueHistoryCanceled) {
+    private record ActiveTokenCheckResult(
+        boolean hasUsableCurrentGameToken,
+        boolean hasUsableOtherGameToken,
+        boolean currentQueueHistoryCanceled
+    ) {
     }
 }
