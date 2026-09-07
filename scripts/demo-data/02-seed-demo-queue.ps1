@@ -55,7 +55,7 @@ INSERT INTO queue_entry_histories (
 SELECT
     $GameId,
     id,
-    CONCAT('queue:game:${GameId}:user:', id),
+    CONCAT('queue:entry:game:${GameId}:user:', id),
     'WAITING',
     NOW()
 FROM users
@@ -81,7 +81,7 @@ if (@($userIds).Count -ne $UserCount) {
 Write-Host "[3/3] Redis ZSet에 대기 순서를 등록합니다."
 $redisArguments = [System.Collections.Generic.List[string]]::new()
 $redisArguments.Add("ZADD")
-$redisArguments.Add("queue:game:$GameId")
+$redisArguments.Add("queue:waiting:game:$GameId")
 $baseScore = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() - ($UserCount + 10)
 
 for ($index = 0; $index -lt $userIds.Count; $index++) {
@@ -91,6 +91,6 @@ for ($index = 0; $index -lt $userIds.Count; $index++) {
 
 Invoke-DemoRedis -Arguments $redisArguments.ToArray() | Out-Null
 
-$remaining = Invoke-DemoRedis -Arguments @("ZCARD", "queue:game:$GameId")
+$remaining = Invoke-DemoRedis -Arguments @("ZCARD", "queue:waiting:game:$GameId")
 Write-Host "경기 ID ${GameId}에 대기 사용자 ${remaining}명이 등록됐습니다."
 Write-Host "스케줄러가 3초마다 최대 20명씩 입장시키므로 지금 브라우저에서 [대기열 체험] 경기의 예매 시작을 눌러주세요."
