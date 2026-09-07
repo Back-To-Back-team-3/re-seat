@@ -2,6 +2,7 @@ package com.backtoback.reseat.domain.queue.service;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.redis.core.RedisTemplate;
@@ -139,5 +140,36 @@ public class QueueEntryRejectionService {
             = redisTemplate.execute(COMPLETE_REQUEST_IF_LATEST_SCRIPT, List.of(latestRequestKey), eventId.toString());
 
         return Long.valueOf(1L).equals(scriptResult);
+    }
+
+    /**
+     * 사용자와 경기의 대기열 진입 거절 결과를 조회한다.
+     *
+     * @param gameId 진입을 요청한 경기 ID
+     * @param userId 진입을 요청한 사용자 ID
+     * @return 저장된 거절 사유, 결과가 없으면 빈 값
+     */
+    public Optional<QueueEntryRejectionReason> findRejection(Long gameId, Long userId) {
+
+        String rejectionKey = rejectionKey(gameId, userId);
+        String storedReason = redisTemplate.opsForValue().get(rejectionKey);
+
+        if (storedReason == null || storedReason.isEmpty()) {
+            return Optional.empty();
+        }
+
+        return Optional.of(QueueEntryRejectionReason.valueOf(storedReason));
+    }
+
+    /**
+     * 사용자와 경기의 이전 대기열 진입 거절 결과를 삭제한다.
+     *
+     * @param gameId 진입을 요청한 경기 ID
+     * @param userId 진입을 요청한 사용자 ID
+     */
+    public void deleteRejection(Long gameId, Long userId) {
+
+        String rejectionKey = rejectionKey(gameId, userId);
+        redisTemplate.delete(rejectionKey);
     }
 }

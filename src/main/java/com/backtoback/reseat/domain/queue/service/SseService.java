@@ -1,8 +1,10 @@
 package com.backtoback.reseat.domain.queue.service;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledFuture;
@@ -14,7 +16,9 @@ import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import com.backtoback.reseat.domain.queue.dto.response.QueueEntryRejectionEventResponse;
 import com.backtoback.reseat.domain.queue.dto.response.QueueStatusResponse;
+import com.backtoback.reseat.domain.queue.entity.QueueEntryRejectionReason;
 import com.backtoback.reseat.domain.queue.exception.QueueEntryCancellationNotAllowedException;
 import com.backtoback.reseat.domain.queue.exception.QueueEntryCancellationTokenRequiredException;
 import com.backtoback.reseat.domain.queue.exception.QueueEntryNotFoundException;
@@ -46,12 +50,26 @@ public class SseService {
         = new ConcurrentHashMap<>();
 
     private final QueueService queueService;
-
+    private final QueueEntryRejectionService queueEntryRejectionService;
     private final TaskScheduler scheduler;
 
-    public SseService(QueueService queueService, @Qualifier("sseTaskScheduler") TaskScheduler scheduler) {
+    public SseService(
+        QueueService queueService,
+        QueueEntryRejectionService queueEntryRejectionService,
+        @Qualifier("sseTaskScheduler") TaskScheduler scheduler
+    ) {
         this.queueService = queueService;
+        this.queueEntryRejectionService = queueEntryRejectionService;
         this.scheduler = scheduler;
+    }
+
+    /**
+     * 동일 사용자와 경기의 SSE 연결 수를 관리하기 위한 식별값
+     *
+     * @param gameId SSE 연결 대상 경기 ID
+     * @param userId SSE 연결 사용자 ID
+     */
+    private record QueueConnectionKey(Long gameId, Long userId) {
     }
 
     /**
@@ -72,11 +90,11 @@ public class SseService {
         // 아직 생성되지 않은 주기 작업은 나중에 저장하여 종료 콜백에서 조회한다.
         AtomicReference<ScheduledFuture<?>> futureRef = new AtomicReference<>();
 
-        // 입장 허용으로 종료된 연결과 재연결 대상 연결을 구분한다.
-        AtomicBoolean admitted = new AtomicBoolean(false);
+        // admit 또는 reject 이벤트 전송으로 정상 종료된 연결과 재연결 대상 연결을 구분한다.
+        AtomicBoolean terminalEventSent = new AtomicBoolean(false);
 
         // SSE 연결 종료 시 주기 작업과 현재 연결 수를 함께 정리할 작업을 생성한다.
-        Runnable cleanupTask = createConnectionCleanupTask(futureRef, connectionKey, admitted);
+        Runnable cleanupTask = createConnectionCleanupTask(futureRef, connectionKey, terminalEventSent);
 
         // 정상 완료, 시간 만료, 전송 오류 중 어떤 방식으로 연결이 종료되더라도 동일한 정리 작업을 실행한다.
         sseEmitter.onCompletion(cleanupTask);
@@ -88,6 +106,11 @@ public class SseService {
         Instant startTime = Instant.now().plus(SSE_SEND_INTERVAL);
         ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(() -> {
             try {
+                // Consumer 거절 결과가 있으면 순번 조회보다 먼저 전달하고 현재 SSE 연결을 종료한다.
+                if (sendRejectionIfPresent(sseEmitter, gameId, userId, terminalEventSent)) {
+                    return;
+                }
+
                 // 현재 순번 또는 입장 허용 여부가 담긴 대기 상태를 rank 이벤트로 전송한다.
                 QueueStatusResponse response = queueService.getMyQueueStatus(gameId, userId);
 
@@ -98,7 +121,7 @@ public class SseService {
                     // 입장 정보 전송까지 끝나면 더 이상 순번을 조회할 필요가 없으므로 SSE 연결을 정상 종료한다.
                     sseEmitter.send(SseEmitter.event().name("admit").data(queueService.getAdmitEvent(gameId, userId)));
 
-                    admitted.set(true);
+                    terminalEventSent.set(true);
                     sseEmitter.complete();
                 }
             } catch (QueueEntryNotFoundException exception) {
@@ -173,13 +196,13 @@ public class SseService {
      *
      * @param futureRef 취소할 주기 작업 참조
      * @param connectionKey SSE 연결 식별값
-     * @param admitted 입장 허용 이벤트 전송 완료 여부
+     * @param terminalEventSent admit 또는 reject 이벤트 전송 완료 여부
      * @return SSE 연결 종료 시 실행할 정리 작업
      */
     private Runnable createConnectionCleanupTask(
         AtomicReference<ScheduledFuture<?>> futureRef,
         QueueConnectionKey connectionKey,
-        AtomicBoolean admitted
+        AtomicBoolean terminalEventSent
     ) {
 
         // 하나의 연결에서 종료 콜백이 여러 번 호출될 수 있으므로 정리가 시작됐는지 저장한다.
@@ -196,8 +219,8 @@ public class SseService {
                 }
 
                 // 동일 사용자와 경기의 다른 연결은 유지하고 종료된 연결 하나만 현재 연결 수에서 제외한다.
-                // 입장 허용으로 종료된 연결은 재연결 대상이 아니므로 이탈을 예약하지 않는다.
-                if (removeConnection(connectionKey) && !admitted.get()) {
+                // admit 또는 reject 이벤트로 종료된 연결은 재연결 대상이 아니므로 대기열 이탈을 예약하지 않는다.
+                if (removeConnection(connectionKey) && !terminalEventSent.get()) {
                     // 마지막 연결이 종료되면 재연결 유예시간 후 대기열 이탈 처리를 예약한다.
                     scheduleQueueExit(connectionKey);
                 }
@@ -260,11 +283,44 @@ public class SseService {
     }
 
     /**
-     * 동일 사용자와 경기의 SSE 연결 수를 관리하기 위한 식별값
+     * 저장된 Consumer 거절 결과가 있으면 SSE로 전송하고 연결을 종료한다.
+     * <p>전송에 성공한 결과만 Redis에서 삭제하여
+     * 전송 실패 시 재연결한 SSE가 다시 조회할 수 있게 한다.</p>
      *
-     * @param gameId SSE 연결 대상 경기 ID
-     * @param userId SSE 연결 사용자 ID
+     * @param sseEmitter 이벤트를 전송할 SSE 연결
+     * @param gameId 진입을 요청한 경기 ID
+     * @param userId 진입을 요청한 사용자 ID
+     * @param terminalEventSent 정상 종료 이벤트 전송 여부
+     * @return 거절 결과를 전송했다면 true
      */
-    private record QueueConnectionKey(Long gameId, Long userId) {
+    private boolean sendRejectionIfPresent(
+        SseEmitter sseEmitter,
+        Long gameId,
+        Long userId,
+        AtomicBoolean terminalEventSent
+    ) throws IOException {
+
+        Optional<QueueEntryRejectionReason> rejectionReason = queueEntryRejectionService
+            .findRejection(gameId, userId);
+
+        if (rejectionReason.isEmpty()) {
+            return false;
+        }
+
+        QueueEntryRejectionEventResponse response = QueueEntryRejectionEventResponse
+            .builder()
+            .rejected(true)
+            .reason(rejectionReason.get())
+            .build();
+
+        sseEmitter.send(SseEmitter.event().name("reject").data(response));
+        terminalEventSent.set(true);
+
+        // 전송 전에 삭제하면 SSE 오류 시 결과를 복구할 수 없으므로 전송 성공 후 Redis에서 제거한다.
+        queueEntryRejectionService.deleteRejection(gameId, userId);
+
+        sseEmitter.complete();
+
+        return true;
     }
 }
