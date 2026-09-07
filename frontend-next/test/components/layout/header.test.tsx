@@ -60,17 +60,17 @@ describe("Header", () => {
         ).toBeInTheDocument();
     });
 
-    it("비로그인 상태에서는 내 티켓 링크가 비활성 표시된다", async () => {
+    it("비로그인 상태에서는 마이페이지 링크가 비활성 표시된다", async () => {
         renderHeader();
 
-        const ticketsLink = await screen.findByRole("link", {name: "내 티켓"});
+        const ticketsLink = await screen.findByRole("link", {name: "마이페이지"});
         expect(ticketsLink).toHaveAttribute("aria-disabled", "true");
     });
 
-    it("비로그인 상태에서는 내 티켓 링크를 키보드로 활성화할 수 없다", async () => {
+    it("비로그인 상태에서는 마이페이지 링크를 키보드로 활성화할 수 없다", async () => {
         renderHeader();
 
-        const ticketsLink = await screen.findByRole("link", {name: "내 티켓"});
+        const ticketsLink = await screen.findByRole("link", {name: "마이페이지"});
         // tab 순서에서 제외되어 키보드로 포커스할 수 없어야 한다.
         expect(ticketsLink).toHaveAttribute("tabindex", "-1");
 

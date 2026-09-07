@@ -2,11 +2,9 @@ package com.backtoback.reseat.domain.payment.controller;
 
 import org.springframework.http.ResponseEntity;
 
-import com.backtoback.reseat.domain.payment.dto.request.PaymentCancelRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentFailRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentRequest;
-import com.backtoback.reseat.domain.payment.dto.response.PaymentCancelResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCompleteResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCreateResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentFailResponse;
@@ -23,7 +21,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Tag(
     name = "Payment",
-    description = "결제 생성·승인·실패·취소·조회 API"
+    description = "결제 생성·승인·실패·조회 API"
 )
 public interface PaymentControllerDocs {
 
@@ -199,62 +197,6 @@ public interface PaymentControllerDocs {
             required = true
         ) String idempotencyKey,
         PaymentFailRequest request
-    );
-
-    @Operation(
-        summary = "결제 전액 취소",
-        description = """
-            승인된 결제를 Toss 취소 API로 전액 취소합니다.
-            이미 취소된 결제는 Toss를 다시 호출하지 않고 기존 결과를 반환합니다.
-            """,
-        security = @SecurityRequirement(name = "JWT Bearer Token")
-    )
-    @ApiResponses(
-        {
-            @ApiResponse(
-                responseCode = "200",
-                description = "결제 취소 처리 성공 또는 기존 취소 결과 반환"
-            ),
-            @ApiResponse(
-                responseCode = "400",
-                description = "INVALID_REQUEST",
-                content = @Content
-            ),
-            @ApiResponse(
-                responseCode = "401",
-                description = "인증 실패",
-                content = @Content
-            ),
-            @ApiResponse(
-                responseCode = "403",
-                description = "PAYMENT_ACCESS_DENIED",
-                content = @Content
-            ),
-            @ApiResponse(
-                responseCode = "404",
-                description = "PAYMENT_NOT_FOUND",
-                content = @Content
-            ),
-            @ApiResponse(
-                responseCode = "409",
-                description = "PAYMENT_CANCEL_NOT_ALLOWED, PAYMENT_PG_KEY_MISSING",
-                content = @Content
-            ),
-            @ApiResponse(
-                responseCode = "502",
-                description = "PAYMENT_CANCEL_STATUS_UNKNOWN, PAYMENT_CANCEL_RESPONSE_INVALID",
-                content = @Content
-            )
-        }
-    )
-    ResponseEntity<com.backtoback.reseat.global.common.ApiResponse<PaymentCancelResponse>> cancelPayment(
-        @Parameter(hidden = true) CustomUserDetails userDetails,
-        @Parameter(
-            description = "결제 ID",
-            example = "1001",
-            required = true
-        ) Long paymentId,
-        PaymentCancelRequest request
     );
 
     @Operation(

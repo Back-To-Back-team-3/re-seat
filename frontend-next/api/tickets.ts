@@ -1,6 +1,6 @@
 import {apiRequest, unwrap} from "@/api/client";
 import type {ApiResponse, PageResponse} from "@/types/api";
-import type {TicketSummary} from "@/types/ticket";
+import type {TicketStatus, TicketSummary} from "@/types/ticket";
 
 async function getTicketPage(page: number) {
     const response = await apiRequest<ApiResponse<PageResponse<TicketSummary>>>(
@@ -26,4 +26,42 @@ export async function getTickets() {
                 right.gameAt.localeCompare(left.gameAt) ||
                 right.ticketId - left.ticketId,
         );
+}
+
+export type TicketCancelResponse = {
+    ticketId: number;
+    ticketStatus: TicketStatus;
+    refundRequestedAt: string;
+};
+
+/**
+ * 티켓 1장의 취소(환불)를 접수합니다.
+ *
+ * @param ticketId 취소할 티켓 식별자
+ * @returns 취소 접수 결과
+ */
+export async function cancelTicket(ticketId: number) {
+    const response = await apiRequest<ApiResponse<TicketCancelResponse>>(
+        `/tickets/${ticketId}/cancel`,
+        {
+            method: "POST",
+        },
+    );
+    return unwrap(response);
+}
+
+/**
+ * 환불 실패(REFUND_FAILED)한 티켓 1장의 취소(환불)를 재시도합니다.
+ *
+ * @param ticketId 재시도할 티켓 식별자
+ * @returns 취소 재시도 접수 결과
+ */
+export async function retryCancelTicket(ticketId: number) {
+    const response = await apiRequest<ApiResponse<TicketCancelResponse>>(
+        `/tickets/${ticketId}/cancel/retry`,
+        {
+            method: "POST",
+        },
+    );
+    return unwrap(response);
 }
