@@ -189,6 +189,23 @@ public class GameSeat extends BaseEntity {
     }
 
     /**
+     * SOLD → AVAILABLE (환불 확정).
+     * <p>
+     * 티켓 환불이 REFUNDED로 확정된 시점에만 호출해야 한다.
+     * REFUND_PENDING·REFUND_FAILED 구간에 호출하면 환불이 이후 실패했을 때 좌석을 되돌릴 수 없다.
+     * sold_at을 초기화해 정합을 유지한다.
+     *
+     * @throws InvalidStateTransitionException SOLD가 아닌 상태에서 호출 시
+     */
+    public void refund() {
+        if (this.status != GameSeatStatus.SOLD) {
+            throw new InvalidStateTransitionException();
+        }
+        this.status = GameSeatStatus.AVAILABLE;
+        this.soldAt = null;
+    }
+
+    /**
      * 선점 만료 시각 세팅. 해제 시 null로 초기화.
      */
     public void updateHoldExpiresAt(LocalDateTime holdExpiresAt) {

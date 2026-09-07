@@ -29,4 +29,18 @@ public class GameSeatStatusService {
         GameSeat gameSeat = gameSeatRepository.findById(gameSeatId).orElseThrow(GameSeatNotFoundException::new);
         gameSeat.available();
     }
+
+    /**
+     * 판매 완료(SOLD) 좌석을 환불 확정 시점에 예매 가능(AVAILABLE) 상태로 되돌린다.
+     * <p>호출 시점은 반드시 티켓 환불이 REFUNDED로 확정된 이후여야 한다.
+     * REFUND_PENDING·REFUND_FAILED 구간에서 호출하면 환불 실패 시 복구가 불가능해진다.</p>
+     *
+     * @param gameSeatId 환불 확정된 좌석의 경기 좌석 ID
+     */
+    @Transactional
+    public void refundSeat(Long gameSeatId) {
+
+        GameSeat gameSeat = gameSeatRepository.findById(gameSeatId).orElseThrow(GameSeatNotFoundException::new);
+        gameSeat.refund();
+    }
 }

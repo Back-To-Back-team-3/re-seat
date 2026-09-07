@@ -258,7 +258,9 @@ public class PaymentService {
         return cancelApprovedPayment(payment, request);
     }
 
-    /** 티켓 한 장의 부분 취소 이력과 비동기 복구 작업을 접수한다. */
+    /**
+     * 티켓 한 장의 부분 취소 이력과 비동기 복구 작업을 접수한다.
+     */
     @Transactional
     public void requestTicketPaymentCancel(Ticket ticket, String reason) {
         validatePartialCancelTarget(ticket);
@@ -289,7 +291,9 @@ public class PaymentService {
         paymentRecoveryTaskRepository.save(PaymentRecoveryTask.createPartialCancel(paymentCancel));
     }
 
-    /** 실패한 부분 취소 이력과 복구 작업을 새로운 PG 취소 시도로 다시 활성화한다. */
+    /**
+     * 실패한 부분 취소 이력과 복구 작업을 새로운 PG 취소 시도로 다시 활성화한다.
+     */
     private void reopenFailedPartialCancel(PaymentCancel paymentCancel, String reason) {
         PaymentRecoveryTask recoveryTask
             = paymentRecoveryTaskRepository
@@ -304,7 +308,9 @@ public class PaymentService {
         }
     }
 
-    /** 부분 취소 대상 티켓에서 결제와 취소 금액을 확인할 수 있는지 검증한다. */
+    /**
+     * 부분 취소 대상 티켓에서 결제와 취소 금액을 확인할 수 있는지 검증한다.
+     */
     private void validatePartialCancelTarget(Ticket ticket) {
         if (ticket == null || ticket.getId() == null || ticket.getOrderItem() == null
             || ticket.getOrderItem().getOrder() == null) {
@@ -383,10 +389,11 @@ public class PaymentService {
 
     /**
      * 같은 주문에 속한 나머지 ISSUED 티켓을 결제 취소 사유로 일괄 취소
-     * <p>주문 단위 전액 취소만 지원하는 동안, 방금 취소된 티켓 외 나머지 티켓이
-     * "좌석은 반환됐는데 티켓은 ISSUED로 남는" 상태가 되는 것을 막기 위한 임시 방어 로직
-     * <p>Ticket.cancel()은 티켓 상태만 변경하므로, 좌석 반환은 여기서 같은 트랜잭션 안에
-     * 명시적으로 함께 처리한다(다른 메서드의 좌석 반환 로직에 암묵적으로 의존하지 않는다).
+     * <p>주문 단위 전액 취소만 지원하는 동안, 티켓이 ISSUED로 남는 상태가 되는 것을 막기 위한
+     * 임시 방어 로직. 이 메서드는 티켓 상태 전환만 담당한다.
+     * <p>좌석 반환은 이 메서드 호출 직전에 실행되는 {@link OrderService#cancelPaidOrder(Long)}의
+     * refundSeat() 호출에서 이미 처리된다. 여기서 다시 좌석을 건드리면 이미 AVAILABLE인 좌석을
+     * refund() 가드가 있는 상태로 재호출해 예외가 발생하므로, 좌석 관련 코드를 추가하지 않는다.
      */
     private void cancelRemainingIssuedTickets(Long orderId) {
         orderItemRepository
@@ -395,10 +402,7 @@ public class PaymentService {
             .map(orderItem -> ticketRepository.findByOrderItemId(orderItem.getId()))
             .flatMap(Optional::stream)
             .filter(ticket -> ticket.getStatus() == TicketStatus.ISSUED)
-            .forEach(ticket -> {
-                ticket.cancel(TicketCancelReason.PAYMENT_CANCELED);
-                ticket.getGameSeat().available();
-            });
+            .forEach(ticket -> ticket.cancel(TicketCancelReason.PAYMENT_CANCELED));
     }
 
     /**
