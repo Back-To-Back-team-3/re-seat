@@ -435,7 +435,7 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
 
         // 최신 요청의 거절 결과는 저장하고 처리가 끝난 요청 식별자는 제거해야 한다.
         assertThat(rejectionSaved).isTrue();
-        assertThat(storedRejection).isEqualTo(rejectionReason.name());
+        assertThat(storedRejection).isEqualTo("%s:%s".formatted(latestEventId, rejectionReason.name()));
         assertThat(storedLatestRequest).isNull();
     }
 

@@ -18,7 +18,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.backtoback.reseat.domain.queue.dto.response.QueueEntryRejectionEventResponse;
 import com.backtoback.reseat.domain.queue.dto.response.QueueStatusResponse;
-import com.backtoback.reseat.domain.queue.entity.QueueEntryRejectionReason;
 import com.backtoback.reseat.domain.queue.exception.QueueEntryCancellationNotAllowedException;
 import com.backtoback.reseat.domain.queue.exception.QueueEntryCancellationTokenRequiredException;
 import com.backtoback.reseat.domain.queue.exception.QueueEntryNotFoundException;
@@ -284,8 +283,8 @@ public class SseService {
 
     /**
      * 저장된 Consumer 거절 결과가 있으면 SSE로 전송하고 연결을 종료한다.
-     * <p>전송에 성공한 결과만 Redis에서 삭제하여
-     * 전송 실패 시 재연결한 SSE가 다시 조회할 수 있게 한다.</p>
+     * <p>전송한 요청과 현재 Redis에 저장된 요청이 일치할 때만 결과를 삭제하여
+     * 새 요청의 거절 결과가 이전 SSE 처리로 삭제되지 않게 한다.</p>
      *
      * @param sseEmitter 이벤트를 전송할 SSE 연결
      * @param gameId 진입을 요청한 경기 ID
@@ -301,20 +300,22 @@ public class SseService {
     )
         throws IOException {
 
-        Optional<QueueEntryRejectionReason> rejectionReason = queueEntryRejectionService.findRejection(gameId, userId);
+        Optional<QueueEntryRejectionResult> rejectionResult = queueEntryRejectionService.findRejection(gameId, userId);
 
-        if (rejectionReason.isEmpty()) {
+        if (rejectionResult.isEmpty()) {
             return false;
         }
 
+        QueueEntryRejectionResult rejection = rejectionResult.get();
+
         QueueEntryRejectionEventResponse response
-            = QueueEntryRejectionEventResponse.builder().rejected(true).reason(rejectionReason.get()).build();
+            = QueueEntryRejectionEventResponse.builder().rejected(true).reason(rejection.reason()).build();
 
         sseEmitter.send(SseEmitter.event().name("reject").data(response));
         terminalEventSent.set(true);
 
-        // 전송 전에 삭제하면 SSE 오류 시 결과를 복구할 수 없으므로 전송 성공 후 Redis에서 제거한다.
-        queueEntryRejectionService.deleteRejection(gameId, userId);
+        // 전송한 요청과 현재 Redis에 저장된 요청이 일치할 때만 거절 결과를 제거한다.
+        queueEntryRejectionService.deleteRejectionIfMatch(gameId, userId, rejection);
 
         sseEmitter.complete();
 

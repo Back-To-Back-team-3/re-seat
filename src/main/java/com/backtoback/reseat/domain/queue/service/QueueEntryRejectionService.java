@@ -32,7 +32,7 @@ public class QueueEntryRejectionService {
         if redis.call('GET', KEYS[1]) ~= ARGV[1] then
             return 0
         end
-        redis.call('SET', KEYS[2], ARGV[2], 'PX', ARGV[3])
+        redis.call('SET', KEYS[2], ARGV[1] .. ':' .. ARGV[2], 'PX', ARGV[3])
         redis.call('DEL', KEYS[1])
         return 1
         """, Long.class);
@@ -51,6 +51,14 @@ public class QueueEntryRejectionService {
         redis.call('SET', KEYS[1], ARGV[1], 'PX', ARGV[2])
         redis.call('DEL', KEYS[2])
         return 1
+        """, Long.class);
+
+    // 조회했던 거절 결과와 현재 저장된 결과가 일치할 때만 삭제한다.
+    private static final DefaultRedisScript<Long> DELETE_REJECTION_IF_MATCH_SCRIPT = new DefaultRedisScript<>("""
+        if redis.call('GET', KEYS[1]) ~= ARGV[1] then
+            return 0
+        end
+        return redis.call('DEL', KEYS[1])
         """, Long.class);
 
     private final RedisTemplate<String, String> redisTemplate;
@@ -147,29 +155,44 @@ public class QueueEntryRejectionService {
      *
      * @param gameId 진입을 요청한 경기 ID
      * @param userId 진입을 요청한 사용자 ID
-     * @return 저장된 거절 사유, 결과가 없으면 빈 값
+     * @return 저장된 요청 식별자와 거절 사유, 결과가 없으면 빈 값
      */
-    public Optional<QueueEntryRejectionReason> findRejection(Long gameId, Long userId) {
+    public Optional<QueueEntryRejectionResult> findRejection(Long gameId, Long userId) {
 
         String rejectionKey = rejectionKey(gameId, userId);
-        String storedReason = redisTemplate.opsForValue().get(rejectionKey);
+        String storedResult = redisTemplate.opsForValue().get(rejectionKey);
 
-        if (storedReason == null || storedReason.isEmpty()) {
+        if (storedResult == null || storedResult.isEmpty()) {
             return Optional.empty();
         }
 
-        return Optional.of(QueueEntryRejectionReason.valueOf(storedReason));
+        String[] resultValues = storedResult.split(":", 2);
+
+        return Optional
+            .of(
+                new QueueEntryRejectionResult(
+                    UUID.fromString(resultValues[0]),
+                    QueueEntryRejectionReason.valueOf(resultValues[1])
+                )
+            );
     }
 
     /**
-     * 사용자와 경기의 이전 대기열 진입 거절 결과를 삭제한다.
+     * 현재 저장된 값이 전달 완료한 거절 결과와 일치할 때만 삭제한다.
      *
      * @param gameId 진입을 요청한 경기 ID
      * @param userId 진입을 요청한 사용자 ID
+     * @param rejectionResult SSE로 전달한 거절 결과
+     * @return 일치하는 거절 결과를 삭제했다면 true
      */
-    public void deleteRejection(Long gameId, Long userId) {
+    public boolean deleteRejectionIfMatch(Long gameId, Long userId, QueueEntryRejectionResult rejectionResult) {
 
         String rejectionKey = rejectionKey(gameId, userId);
-        redisTemplate.delete(rejectionKey);
+        String expectedResult = "%s:%s".formatted(rejectionResult.eventId(), rejectionResult.reason().name());
+
+        Long scriptResult
+            = redisTemplate.execute(DELETE_REJECTION_IF_MATCH_SCRIPT, List.of(rejectionKey), expectedResult);
+
+        return Long.valueOf(1L).equals(scriptResult);
     }
 }
