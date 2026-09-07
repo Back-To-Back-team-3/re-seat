@@ -80,11 +80,12 @@ class TicketRepositoryTest {
     @Test
     @DisplayName("should_countIssuedRefundPendingRefundFailed_when_activeTicketsExist")
     void should_countIssuedRefundPendingRefundFailed_when_activeTicketsExist() {
-        // given: 동일 사용자·경기에 ISSUED 1건, REFUND_PENDING 1건, REFUNDED 1건을 생성한다.
+        // given: 동일 사용자·경기에 ISSUED 1건, REFUND_PENDING 1건, REFUND_FAILED 1건, REFUNDED 1건을 생성한다.
         User user = createUser("user1@test.com");
         Game game = createGame();
         createTicket(user, game, TicketStatus.ISSUED);
         createTicket(user, game, TicketStatus.REFUND_PENDING);
+        createTicket(user, game, TicketStatus.REFUND_FAILED);
         createTicket(user, game, TicketStatus.REFUNDED);
 
         // when
@@ -96,8 +97,8 @@ class TicketRepositoryTest {
                     List.of(TicketStatus.ISSUED, TicketStatus.REFUND_PENDING, TicketStatus.REFUND_FAILED)
                 );
 
-        // then: REFUNDED는 제외되어 2건만 카운트된다.
-        assertThat(count).isEqualTo(2);
+        // then: REFUNDED는 제외되어 3건만 카운트된다.
+        assertThat(count).isEqualTo(3);
     }
 
     @Test

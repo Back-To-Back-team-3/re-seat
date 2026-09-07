@@ -75,11 +75,11 @@ class TicketCountAdapterIntegrationTest {
     @Test
     @DisplayName("should_returnRealCount_when_userHasIssuedAndRefundPendingTicket")
     void should_returnRealCount_when_userHasIssuedAndRefundPendingTicket() {
-        // given: ISSUED 1매 + REFUND_PENDING 1매 보유
+        // given: ISSUED 1매 + REFUND_FAILED 1매 보유 (실제 보유 가능한 최대치 2매)
         User user = createUser("user1@test.com");
         Game game = createGame();
         createTicket(user, game, TicketStatus.ISSUED);
-        createTicket(user, game, TicketStatus.REFUND_PENDING);
+        createTicket(user, game, TicketStatus.REFUND_FAILED);
 
         // when
         int count = ticketCountAdapter.countActiveTickets(user.getId(), game.getId());
