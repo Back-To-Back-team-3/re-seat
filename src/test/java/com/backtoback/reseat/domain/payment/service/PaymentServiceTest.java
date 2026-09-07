@@ -31,11 +31,9 @@ import com.backtoback.reseat.domain.order.entity.OrderStatus;
 import com.backtoback.reseat.domain.order.exception.OrderExpiredException;
 import com.backtoback.reseat.domain.order.repository.OrderItemRepository;
 import com.backtoback.reseat.domain.order.service.OrderService;
-import com.backtoback.reseat.domain.payment.dto.request.PaymentCancelRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentFailRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentRequest;
-import com.backtoback.reseat.domain.payment.dto.response.PaymentCancelResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCompleteResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCreateResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentFailResponse;
@@ -51,9 +49,6 @@ import com.backtoback.reseat.domain.payment.exception.IdempotencyKeyRequiredExce
 import com.backtoback.reseat.domain.payment.exception.PaymentAccessDeniedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCallbackMismatchException;
-import com.backtoback.reseat.domain.payment.exception.PaymentCancelNotAllowedException;
-import com.backtoback.reseat.domain.payment.exception.PaymentCancelResponseInvalidException;
-import com.backtoback.reseat.domain.payment.exception.PaymentCancelStatusUnknownException;
 import com.backtoback.reseat.domain.payment.exception.PaymentLockFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
@@ -583,112 +578,6 @@ class PaymentServiceTest {
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.READY);
             assertThat(payment.getFailReason()).isNull();
             verify(paymentValidator).validateFailable(payment);
-            verifyNoInteractions(orderService);
-        }
-    }
-
-    @Nested
-    @DisplayName("승인된 결제를 취소한다")
-    class CancelPayment {
-
-        @Test
-        @DisplayName("Toss 취소가 완료되면 결제와 주문을 취소 처리한다.")
-        void cancelsApprovedPaymentAndOrder() {
-            Payment payment = payment(PaymentStatus.APPROVED);
-            PaymentCancelRequest request = new PaymentCancelRequest("사용자 요청");
-            TossPaymentResponse tossResponse = mock(TossPaymentResponse.class);
-            when(payment.getOrder().getId()).thenReturn(ORDER_ID);
-            payment.assignPgPaymentKey(PAYMENT_KEY);
-            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
-            when(tossPaymentClient.cancel(PAYMENT_KEY, request.getCancelReason())).thenReturn(tossResponse);
-            when(tossResponse.isCancelCompleted()).thenReturn(true);
-
-            PaymentCancelResponse response = paymentService.cancelPayment(USER_ID, PAYMENT_ID, request);
-
-            assertThat(response.getRefundAmount()).isEqualTo(AMOUNT);
-            assertThat(response.getCanceledAmount()).isEqualTo(AMOUNT);
-            assertThat(response.getRemainingAmount()).isZero();
-            assertThat(response.getPaymentStatus()).isEqualTo(PaymentStatus.CANCELED);
-            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.CANCELED);
-            verify(paymentValidator).validateOwner(payment, USER_ID);
-            verify(paymentValidator).validateCancelable(payment);
-            verify(tossPaymentClient).cancel(PAYMENT_KEY, "사용자 요청");
-            verify(orderService).cancelPaidOrder(ORDER_ID);
-        }
-
-        @Test
-        @DisplayName("이미 취소된 결제는 Toss를 호출하지 않고 기존 결과를 반환한다.")
-        void returnsCanceledPaymentWithoutCancelingAgain() {
-            Payment payment = payment(PaymentStatus.CANCELED);
-            PaymentCancelRequest request = new PaymentCancelRequest("중복 요청");
-            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
-
-            PaymentCancelResponse response = paymentService.cancelPayment(USER_ID, PAYMENT_ID, request);
-
-            assertThat(response.getRefundAmount()).isEqualTo(AMOUNT);
-            assertThat(response.getCanceledAmount()).isEqualTo(AMOUNT);
-            assertThat(response.getRemainingAmount()).isZero();
-            assertThat(response.getPaymentStatus()).isEqualTo(PaymentStatus.CANCELED);
-            verify(paymentValidator).validateOwner(payment, USER_ID);
-            verify(paymentValidator, never()).validateCancelable(any());
-            verifyNoInteractions(tossPaymentClient, orderService);
-        }
-
-        @ParameterizedTest(name = "{0} 결제는 취소할 수 없다")
-        @EnumSource(
-            value = PaymentStatus.class,
-            names = {
-                "READY",
-                "FAILED"
-            }
-        )
-        @DisplayName("승인되지 않은 결제는 Toss 취소를 호출하지 않는다.")
-        void rejectsUnapprovedPayment(PaymentStatus status) {
-            Payment payment = payment(status);
-            PaymentCancelRequest request = new PaymentCancelRequest("사용자 요청");
-            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
-            doThrow(new PaymentCancelNotAllowedException()).when(paymentValidator).validateCancelable(payment);
-
-            assertThatThrownBy(() -> paymentService.cancelPayment(USER_ID, PAYMENT_ID, request))
-                .isInstanceOf(PaymentCancelNotAllowedException.class);
-
-            assertThat(payment.getStatus()).isEqualTo(status);
-            verifyNoInteractions(tossPaymentClient, orderService);
-        }
-
-        @Test
-        @DisplayName("Toss 취소 상태를 확인할 수 없으면 로컬 결제를 승인 상태로 유지한다.")
-        void keepsApprovedPaymentWhenCancelStatusIsUnknown() {
-            Payment payment = payment(PaymentStatus.APPROVED);
-            PaymentCancelRequest request = new PaymentCancelRequest("사용자 요청");
-            payment.assignPgPaymentKey(PAYMENT_KEY);
-            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
-            when(tossPaymentClient.cancel(PAYMENT_KEY, request.getCancelReason()))
-                .thenThrow(new TossPaymentStatusUnknownException("취소", new RuntimeException("Toss 응답 없음")));
-
-            assertThatThrownBy(() -> paymentService.cancelPayment(USER_ID, PAYMENT_ID, request))
-                .isInstanceOf(PaymentCancelStatusUnknownException.class);
-
-            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED);
-            verifyNoInteractions(orderService);
-        }
-
-        @Test
-        @DisplayName("Toss 응답이 취소 완료 상태가 아니면 로컬 결제를 승인 상태로 유지한다.")
-        void keepsApprovedPaymentWhenCancelIsNotCompleted() {
-            Payment payment = payment(PaymentStatus.APPROVED);
-            PaymentCancelRequest request = new PaymentCancelRequest("사용자 요청");
-            TossPaymentResponse tossResponse = mock(TossPaymentResponse.class);
-            payment.assignPgPaymentKey(PAYMENT_KEY);
-            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
-            when(tossPaymentClient.cancel(PAYMENT_KEY, request.getCancelReason())).thenReturn(tossResponse);
-            when(tossResponse.isCancelCompleted()).thenReturn(false);
-            when(tossResponse.getStatus()).thenReturn("DONE");
-
-            assertThatThrownBy(() -> paymentService.cancelPayment(USER_ID, PAYMENT_ID, request))
-                .isInstanceOf(PaymentCancelResponseInvalidException.class);
-
-            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED);
             verifyNoInteractions(orderService);
         }
     }

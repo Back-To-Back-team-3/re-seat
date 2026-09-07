@@ -37,6 +37,10 @@ public class TicketService {
     private final OrderItemRepository orderItemRepository;
     private final PaymentService paymentService;
 
+    // 클래스 상단에 상수로 선언 — 대상 상태 목록을 한 곳에서 관리한다.
+    private static final List<TicketStatus> ACTIVE_HOLDING_STATUSES
+        = List.of(TicketStatus.ISSUED, TicketStatus.REFUND_PENDING, TicketStatus.REFUND_FAILED);
+
     @Transactional
     public List<Ticket> issue(Order order) {
         List<OrderItem> orderItems = orderItemRepository.findByOrder_Id(order.getId());
@@ -73,6 +77,15 @@ public class TicketService {
         }
 
         return TicketDetailResponse.from(ticket);
+    }
+
+    /**
+     * 사용자가 특정 경기에서 실질적으로 보유 중인 티켓 수를 조회한다.
+     * 예약 도메인의 누적 보유 좌석 수 검증(TicketCountPort 구현체)에서 사용한다.
+     */
+    @Transactional(readOnly = true)
+    public int countActiveTickets(Long userId, Long gameId) {
+        return ticketRepository.countByUserIdAndGameIdAndStatusIn(userId, gameId, ACTIVE_HOLDING_STATUSES);
     }
 
     /**

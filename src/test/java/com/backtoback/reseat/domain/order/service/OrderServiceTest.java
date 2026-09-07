@@ -465,7 +465,7 @@ public class OrderServiceTest {
         assertThat(order.getStatus()).isEqualTo(OrderStatus.PARTIALLY_CANCELED);
         assertThat(orderItem.getStatus()).isEqualTo(OrderItemStatus.CANCELED);
 
-        then(gameSeatStatusService).should().releaseSeat(GAME_SEAT_ID);
+        then(gameSeatStatusService).should().refundSeat(GAME_SEAT_ID);
         then(reservationService).shouldHaveNoInteractions();
     }
 
@@ -486,8 +486,55 @@ public class OrderServiceTest {
         assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELED);
         assertThat(orderItem.getStatus()).isEqualTo(OrderItemStatus.CANCELED);
 
-        then(gameSeatStatusService).should().releaseSeat(GAME_SEAT_ID);
+        then(gameSeatStatusService).should().refundSeat(GAME_SEAT_ID);
         then(reservationService).should().cancelConfirmed(RESERVATION_ID);
+    }
+
+    /**
+     * 결제 완료 후 전액 취소 상태 전이를 검증할 주문, 좌석과 예약을 함께 전달한다.
+     *
+     * @param order 취소 후 CANCELED 상태를 검증할 주문
+     * @param gameSeat 취소 대상 경기 좌석
+     * @param reservation 취소 후 상태를 검증할 예약
+     */
+    private record CancelPaidOrderFixture(Order order, GameSeat gameSeat, Reservation reservation) {
+    }
+
+    private CancelPaidOrderFixture givenPaidOrder() {
+
+        Reservation reservation = Reservation.builder().status(ReservationStatus.CONFIRMED).build();
+        ReflectionTestUtils.setField(reservation, "id", RESERVATION_ID);
+
+        Order order = createdOrder(reservation, PAYMENT_DEADLINE);
+        ReflectionTestUtils.setField(order, "id", ORDER_ID);
+        order.paid();
+
+        GameSeat gameSeat = GameSeat.builder().status(GameSeatStatus.SOLD).build();
+        ReflectionTestUtils.setField(gameSeat, "id", GAME_SEAT_ID);
+        OrderItem orderItem = OrderItem.of(order, gameSeat, PRICE);
+
+        given(orderRepository.findById(ORDER_ID)).willReturn(Optional.of(order));
+        given(orderItemRepository.findByOrder_Id(ORDER_ID)).willReturn(List.of(orderItem));
+
+        return new CancelPaidOrderFixture(order, gameSeat, reservation);
+    }
+
+    @Test
+    @DisplayName("결제 완료된 주문을 전액 취소하면 주문이 CANCELED로 변경되고 좌석이 환불된다.")
+    void cancelPaidOrder_cancelsOrderAndRefundsSeat() {
+
+        // given
+        CancelPaidOrderFixture fixture = givenPaidOrder();
+        Order order = fixture.order();
+
+        // when
+        orderService.cancelPaidOrder(ORDER_ID);
+
+        // then
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELED);
+
+        then(reservationService).should().cancelConfirmed(RESERVATION_ID);
+        then(gameSeatStatusService).should().refundSeat(GAME_SEAT_ID);
     }
 
     // ---------- 주문 생성 시 선점 만료 시간 연장 ----------
