@@ -1,6 +1,6 @@
 "use client";
 
-import {useState} from "react";
+import {useEffect, useRef, useState} from "react";
 
 import {EmptyState} from "@/components/common/empty-state";
 import {formatGameDate} from "@/lib/date";
@@ -36,12 +36,64 @@ export function TicketList({
     const [ticketToRefund, setTicketToRefund] = useState<TicketSummary | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+    const triggerRef = useRef<HTMLButtonElement | null>(null);
+    const dialogRef = useRef<HTMLDivElement>(null);
+    const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+    const closeModal = () => {
+        setTicketToRefund(null);
+        setErrorMessage(null);
+        triggerRef.current?.focus();
+    };
+
+    useEffect(() => {
+        if (!ticketToRefund) return;
+
+        closeButtonRef.current?.focus();
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                event.preventDefault();
+                closeModal();
+                return;
+            }
+
+            if (event.key === "Tab" && dialogRef.current) {
+                const focusableElements = dialogRef.current.querySelectorAll<HTMLElement>(
+                    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                );
+                if (focusableElements.length === 0) return;
+
+                const firstElement = focusableElements[0];
+                const lastElement = focusableElements[focusableElements.length - 1];
+
+                if (event.shiftKey) {
+                    if (document.activeElement === firstElement) {
+                        event.preventDefault();
+                        lastElement.focus();
+                    }
+                } else {
+                    if (document.activeElement === lastElement) {
+                        event.preventDefault();
+                        firstElement.focus();
+                    }
+                }
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [ticketToRefund]);
+
     const handleConfirmRefund = async () => {
         if (!ticketToRefund || !onCancelTicket) return;
         try {
             setErrorMessage(null);
             await onCancelTicket(ticketToRefund.ticketId);
             setTicketToRefund(null);
+            triggerRef.current?.focus();
         } catch (error: unknown) {
             if (error instanceof Error) {
                 setErrorMessage(error.message);
@@ -137,7 +189,8 @@ export function TicketList({
                                             {isRefundable ? (
                                                 <button
                                                     className="inline-flex min-h-7 items-center justify-center rounded-control border border-destructive/40 bg-destructive/5 px-2.5 py-1 text-xs font-bold text-destructive transition hover:bg-destructive hover:text-white"
-                                                    onClick={() => {
+                                                    onClick={(event) => {
+                                                        triggerRef.current = event.currentTarget;
                                                         setErrorMessage(null);
                                                         setTicketToRefund(ticket);
                                                     }}
@@ -178,14 +231,19 @@ export function TicketList({
             {/* 환불 확인 모달 */}
             {ticketToRefund && (
                 <div
+                    aria-labelledby="refund-dialog-title"
                     aria-modal="true"
                     className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm"
+                    ref={dialogRef}
                     role="dialog"
                 >
                     <div className="w-full max-w-md rounded-[16px] border border-border bg-surface p-6 shadow-2xl">
                         <div className="mb-4">
                             <span className="inline-block text-2xl">🎫</span>
-                            <h3 className="mt-2 text-lg font-bold text-foreground">
+                            <h3
+                                className="mt-2 text-lg font-bold text-foreground"
+                                id="refund-dialog-title"
+                            >
                                 티켓 환불(취소) 요청
                             </h3>
                             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
@@ -209,10 +267,8 @@ export function TicketList({
                             <button
                                 className="inline-flex min-h-10 items-center justify-center rounded-control border border-border bg-surface px-4 text-xs font-bold text-muted-foreground transition hover:text-foreground"
                                 disabled={isCanceling}
-                                onClick={() => {
-                                    setTicketToRefund(null);
-                                    setErrorMessage(null);
-                                }}
+                                onClick={closeModal}
+                                ref={closeButtonRef}
                                 type="button"
                             >
                                 닫기

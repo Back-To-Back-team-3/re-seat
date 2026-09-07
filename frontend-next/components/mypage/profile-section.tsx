@@ -1,6 +1,6 @@
 "use client";
 
-import {useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import type {UserProfile, UserRole} from "@/types/auth";
 
 interface ProfileSectionProps {
@@ -21,6 +21,57 @@ export function ProfileSection({
     isWithdrawing = false,
 }: ProfileSectionProps) {
     const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+    const triggerRef = useRef<HTMLButtonElement>(null);
+    const dialogRef = useRef<HTMLDivElement>(null);
+    const cancelButtonRef = useRef<HTMLButtonElement>(null);
+
+    const closeModal = () => {
+        setShowWithdrawModal(false);
+        // 모달을 연 트리거 버튼으로 포커스 복원
+        triggerRef.current?.focus();
+    };
+
+    useEffect(() => {
+        if (!showWithdrawModal) return;
+
+        // 모달이 열리면 첫 조작 요소(취소 버튼)로 포커스 이동
+        cancelButtonRef.current?.focus();
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                event.preventDefault();
+                closeModal();
+                return;
+            }
+
+            if (event.key === "Tab" && dialogRef.current) {
+                const focusableElements = dialogRef.current.querySelectorAll<HTMLElement>(
+                    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                );
+                if (focusableElements.length === 0) return;
+
+                const firstElement = focusableElements[0];
+                const lastElement = focusableElements[focusableElements.length - 1];
+
+                if (event.shiftKey) {
+                    if (document.activeElement === firstElement) {
+                        event.preventDefault();
+                        lastElement.focus();
+                    }
+                } else {
+                    if (document.activeElement === lastElement) {
+                        event.preventDefault();
+                        firstElement.focus();
+                    }
+                }
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [showWithdrawModal]);
 
     return (
         <section className="mx-auto mb-10 w-full max-w-[1120px]">
@@ -72,6 +123,7 @@ export function ProfileSection({
                         <button
                             className="inline-flex min-h-10 items-center justify-center rounded-control border border-destructive/40 bg-destructive/5 px-4 text-xs font-bold text-destructive transition hover:bg-destructive hover:text-white"
                             onClick={() => setShowWithdrawModal(true)}
+                            ref={triggerRef}
                             type="button"
                         >
                             회원 탈퇴
@@ -83,14 +135,19 @@ export function ProfileSection({
             {/* 회원 탈퇴 확인 모달 */}
             {showWithdrawModal && (
                 <div
+                    aria-labelledby="withdraw-dialog-title"
                     aria-modal="true"
                     className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm"
+                    ref={dialogRef}
                     role="dialog"
                 >
                     <div className="w-full max-w-md rounded-[16px] border border-border bg-surface p-6 shadow-2xl">
                         <div className="mb-4">
                             <span className="inline-block text-2xl">⚠️</span>
-                            <h3 className="mt-2 text-lg font-bold text-destructive">
+                            <h3
+                                className="mt-2 text-lg font-bold text-destructive"
+                                id="withdraw-dialog-title"
+                            >
                                 회원 탈퇴 안내
                             </h3>
                             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
@@ -103,7 +160,8 @@ export function ProfileSection({
                             <button
                                 className="inline-flex min-h-10 items-center justify-center rounded-control border border-border bg-surface px-4 text-xs font-bold text-muted-foreground transition hover:text-foreground"
                                 disabled={isWithdrawing}
-                                onClick={() => setShowWithdrawModal(false)}
+                                onClick={closeModal}
+                                ref={cancelButtonRef}
                                 type="button"
                             >
                                 취소

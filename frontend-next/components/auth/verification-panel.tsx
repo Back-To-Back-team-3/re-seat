@@ -223,6 +223,7 @@ export function VerificationPanel({
                                     const isSelected = selectedAgency === agency.id;
                                     return (
                                         <button
+                                            aria-pressed={isSelected}
                                             key={agency.id}
                                             type="button"
                                             onClick={() => setSelectedAgency(agency.id)}

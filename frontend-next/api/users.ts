@@ -61,8 +61,7 @@ export async function verifyIdentity(impUid: string) {
  * @throws 탈퇴 처리가 실패하면 `AppError`
  */
 export async function withdrawUser() {
-    const response = await apiRequest<ApiResponse<void>>("/users/me", {
+    await apiRequest<ApiResponse<void>>("/users/me", {
         method: "DELETE",
     });
-    return unwrap(response);
 }

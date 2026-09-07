@@ -1,6 +1,6 @@
 import {apiRequest, unwrap} from "@/api/client";
 import type {ApiResponse, PageResponse} from "@/types/api";
-import type {TicketSummary} from "@/types/ticket";
+import type {TicketStatus, TicketSummary} from "@/types/ticket";
 
 async function getTicketPage(page: number) {
     const response = await apiRequest<ApiResponse<PageResponse<TicketSummary>>>(
@@ -38,7 +38,7 @@ export async function cancelTicket(ticketId: number) {
     const response = await apiRequest<
         ApiResponse<{
             ticketId: number;
-            ticketStatus: string;
+            ticketStatus: TicketStatus;
             refundRequestedAt: string;
         }>
     >(`/tickets/${ticketId}/cancel`, {
