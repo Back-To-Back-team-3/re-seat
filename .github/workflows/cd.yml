@@ -48,7 +48,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "docker-compose.yml,prometheus.yml"
+          source: "docker-compose.yml,prometheus.yml,nginx"
           target: "~/re-seat"
 
       - name: Deploy to EC2 via Docker Compose

@@ -1,11 +1,27 @@
 services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: reseat-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - certbot-challenge:/var/www/certbot:ro
+    depends_on:
+      - web-app
+    networks:
+      - reseat-network
+
   web-app:
     build: .
     # EC2 배포 시 Docker Hub 이미지를 사용하도록 변경
     image: ${DOCKERHUB_USERNAME:-local-reseat}/re-seat:${IMAGE_TAG:-latest}
     container_name: reseat-app
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     environment:
       - TZ=Asia/Seoul
       - JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Seoul -Dfile.encoding=UTF-8
@@ -134,6 +150,8 @@ volumes:
     name: re-seat_mysql-data
   grafana-data:
     name: re-seat_grafana-data
+  certbot-challenge:
+    name: re-seat_certbot-challenge
 
 networks:
   reseat-network:
