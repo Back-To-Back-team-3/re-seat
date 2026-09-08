@@ -94,7 +94,7 @@ public interface PaymentControllerDocs {
         {
             @ApiResponse(
                 responseCode = "200",
-                description = "결제 승인 처리 성공 또는 기존 종결 결과 반환"
+                description = "결제 승인 처리 성공 또는 이미 승인된 동일 요청 결과 반환"
             ),
             @ApiResponse(
                 responseCode = "400",
@@ -118,12 +118,17 @@ public interface PaymentControllerDocs {
             ),
             @ApiResponse(
                 responseCode = "409",
-                description = "IDEMPOTENCY_KEY_UNAVAILABLE / INVALID_ORDER_STATUS",
+                description = "IDEMPOTENCY_KEY_UNAVAILABLE / PAYMENT_ALREADY_FINALIZED / INVALID_ORDER_STATUS",
                 content = @Content
             ),
             @ApiResponse(
                 responseCode = "410",
                 description = "ORDER_EXPIRED",
+                content = @Content
+            ),
+            @ApiResponse(
+                responseCode = "502",
+                description = "PAYMENT_CONFIRM_STATUS_UNKNOWN",
                 content = @Content
             )
         }

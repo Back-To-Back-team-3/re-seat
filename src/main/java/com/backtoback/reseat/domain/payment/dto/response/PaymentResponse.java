@@ -1,6 +1,7 @@
 package com.backtoback.reseat.domain.payment.dto.response;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
@@ -81,6 +82,21 @@ public class PaymentResponse {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private final LocalDateTime failedAt;
 
+    @Schema(
+        description = "완료된 취소 이력의 누적 환불 금액",
+        example = "18000"
+    )
+    private final Integer canceledAmount;
+
+    @Schema(
+        description = "결제 금액에서 누적 환불 금액을 제외한 잔액",
+        example = "16000"
+    )
+    private final Integer remainingAmount;
+
+    @Schema(description = "티켓 단위 결제 취소 이력")
+    private final List<PaymentCancelHistoryResponse> cancels;
+
     public static PaymentResponse from(Payment payment) {
         return PaymentResponse
             .builder()
@@ -94,6 +110,9 @@ public class PaymentResponse {
             .failReason(payment.getFailReason())
             .approvedAt(payment.getApprovedAt())
             .failedAt(payment.getFailedAt())
+            .canceledAmount(payment.getCanceledAmount())
+            .remainingAmount(payment.getRemainingAmount())
+            .cancels(payment.getCancels().stream().map(PaymentCancelHistoryResponse::from).toList())
             .build();
     }
 }
