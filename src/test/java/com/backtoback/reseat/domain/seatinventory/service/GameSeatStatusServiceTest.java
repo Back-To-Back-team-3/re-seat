@@ -38,7 +38,7 @@ class GameSeatStatusServiceTest {
 
         gameSeatStatusService.releaseSeat(1L);
 
-        verify(gameSeat).available();
+        verify(gameSeat).release();
     }
 
     @Test

@@ -210,7 +210,7 @@ class SeatHoldRepeatValidationTest {
 
         // releaseExpiredSeats()는 hold_expires_at 조건이 있어 사용 불가 → findById → available() → save
         GameSeat gameSeat = gameSeatRepository.findById(targetGameSeatId).orElseThrow();
-        gameSeat.available();
+        gameSeat.release();
         gameSeatRepository.save(gameSeat);
 
         // 토큰 문자열: "qt_repeat-r{회차}-{인덱스}" — 전체 회차에서 uk_admission_tokens_token 유니크 보장
