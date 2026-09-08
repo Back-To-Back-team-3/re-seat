@@ -50,6 +50,7 @@ import com.backtoback.reseat.domain.payment.exception.PaymentAccessDeniedExcepti
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCallbackMismatchException;
 import com.backtoback.reseat.domain.payment.exception.PaymentConfirmStatusUnknownException;
+import com.backtoback.reseat.domain.payment.exception.PaymentLocalApplyFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentLockFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
@@ -366,6 +367,32 @@ class PaymentServiceTest {
             verify(orderService).completeOrder(ORDER_ID);
             verify(ticketService).issue(payment.getOrder());
             verify(paymentRecoveryTaskRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Toss 승인 후 로컬 상태 반영에 실패하면 복구 정보를 담은 예외로 변환한다.")
+        void wrapsLocalApplyFailureAfterConfirm() {
+            Payment payment = payment(PaymentStatus.READY);
+            PaymentCompleteRequest request = completeRequest();
+            TossPaymentResponse tossResponse = mock(TossPaymentResponse.class);
+            RuntimeException cause = new RuntimeException("주문 상태 반영 실패");
+            when(payment.getOrder().getId()).thenReturn(ORDER_ID);
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
+            when(tossResponse.isApproved()).thenReturn(true);
+            when(tossResponse.getPaymentKey()).thenReturn(PAYMENT_KEY);
+            when(tossResponse.getMethod()).thenReturn("CARD");
+            when(tossPaymentClient.confirm(PAYMENT_KEY, PG_ORDER_ID, AMOUNT)).thenReturn(tossResponse);
+            doThrow(cause).when(orderService).completeOrder(ORDER_ID);
+
+            assertThatThrownBy(() -> paymentService.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
+                .isInstanceOfSatisfying(PaymentLocalApplyFailedException.class, exception -> {
+                    assertThat(exception.getPaymentId()).isEqualTo(PAYMENT_ID);
+                    assertThat(exception.getOrderId()).isEqualTo(ORDER_ID);
+                    assertThat(exception.getPaymentKey()).isEqualTo(PAYMENT_KEY);
+                    assertThat(exception.getCause()).isSameAs(cause);
+                });
+
+            verify(tossPaymentClient).confirm(PAYMENT_KEY, PG_ORDER_ID, AMOUNT);
         }
 
         @Test

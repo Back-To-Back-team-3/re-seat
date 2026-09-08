@@ -19,6 +19,7 @@ import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentConfirmStatusUnknownException;
+import com.backtoback.reseat.domain.payment.exception.PaymentLocalApplyFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
@@ -106,12 +107,20 @@ public class PaymentApprovalService {
             return PaymentCompleteResponse.from(payment, List.of());
         }
 
-        // Toss 승인이 확인됐으므로 로컬 결제에 PG 키·수단·승인 시각을 반영한다.
-        payment.assignPgPaymentKey(response.getPaymentKey());
-        payment.approve(response.getMethod(), resolveApprovedAt(response.getApprovedAt()));
-        orderService.completeOrder(payment.getOrder().getId());
-
-        return approvedResponse(payment);
+        try {
+            // Toss 승인이 확인됐으므로 결제·주문·티켓 상태를 로컬에 반영한다.
+            payment.assignPgPaymentKey(response.getPaymentKey());
+            payment.approve(response.getMethod(), resolveApprovedAt(response.getApprovedAt()));
+            orderService.completeOrder(payment.getOrder().getId());
+            return approvedResponse(payment);
+        } catch (RuntimeException e) {
+            throw new PaymentLocalApplyFailedException(
+                payment.getId(),
+                payment.getOrder().getId(),
+                request.getPaymentKey(),
+                e
+            );
+        }
     }
 
     /** 승인된 결제의 주문 항목별 티켓을 확인하고 응답한다. */
