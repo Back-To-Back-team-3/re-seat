@@ -49,6 +49,7 @@ import com.backtoback.reseat.domain.payment.exception.IdempotencyKeyRequiredExce
 import com.backtoback.reseat.domain.payment.exception.PaymentAccessDeniedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCallbackMismatchException;
+import com.backtoback.reseat.domain.payment.exception.PaymentConfirmStatusUnknownException;
 import com.backtoback.reseat.domain.payment.exception.PaymentLockFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
@@ -70,6 +71,7 @@ class PaymentServiceTest {
     private static final Long ORDER_ID = 10L;
     private static final Long PAYMENT_ID = 100L;
     private static final Long ORDER_ITEM_ID = 1000L;
+    private static final Long TICKET_ID = 2000L;
     private static final String IDEMPOTENCY_KEY = "idempotency-key";
     private static final String PAYMENT_KEY = "payment-key";
     private static final String PG_ORDER_ID = "ORD-20260728-000001";
@@ -153,10 +155,10 @@ class PaymentServiceTest {
         Order order = mock(Order.class);
         OrderItem orderItem = mock(OrderItem.class);
         Ticket ticket = mock(Ticket.class);
-        when(order.getId()).thenReturn(ORDER_ID);
-        when(orderItem.getOrder()).thenReturn(order);
+        lenient().when(order.getId()).thenReturn(ORDER_ID);
+        lenient().when(orderItem.getOrder()).thenReturn(order);
         lenient().when(orderItem.getPrice()).thenReturn(price);
-        when(ticket.getId()).thenReturn(ORDER_ITEM_ID);
+        when(ticket.getId()).thenReturn(TICKET_ID);
         when(ticket.getOrderItem()).thenReturn(orderItem);
         return ticket;
     }
@@ -449,7 +451,7 @@ class PaymentServiceTest {
         }
 
         @Test
-        @DisplayName("Toss 승인 상태를 확인할 수 없으면 결제와 주문을 실패 처리하고 복구 작업을 등록한다.")
+        @DisplayName("Toss 승인 상태를 확인할 수 없으면 실패와 복구 작업을 기록하고 상태 확인 불가 예외를 던진다.")
         void registersRecoveryTaskForUnknownConfirmStatus() {
             Payment payment = payment(PaymentStatus.READY);
             PaymentCompleteRequest request = completeRequest();
@@ -458,11 +460,9 @@ class PaymentServiceTest {
             when(tossPaymentClient.confirm(PAYMENT_KEY, PG_ORDER_ID, AMOUNT))
                 .thenThrow(new TossPaymentStatusUnknownException("승인", new RuntimeException("Toss 응답 없음")));
 
-            PaymentCompleteResponse response
-                = paymentService.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request);
+            assertThatThrownBy(() -> paymentService.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
+                .isInstanceOf(PaymentConfirmStatusUnknownException.class);
 
-            assertThat(response.getStatus()).isEqualTo(PaymentStatus.FAILED);
-            assertThat(response.getTickets()).isEmpty();
             assertThat(payment.getPgPaymentKey()).isEqualTo(PAYMENT_KEY);
             assertThat(payment.getFailReason()).isEqualTo("토스 결제 승인 상태를 확인할 수 없습니다.");
             ArgumentCaptor<PaymentRecoveryTask> taskCaptor = ArgumentCaptor.forClass(PaymentRecoveryTask.class);
@@ -593,7 +593,7 @@ class PaymentServiceTest {
             Ticket ticket = ticket(cancelAmount);
             Payment payment = payment(PaymentStatus.APPROVED);
             when(paymentRepository.findByOrderIdWithPessimisticWriteLock(ORDER_ID)).thenReturn(Optional.of(payment));
-            when(paymentCancelRepository.findByTicketIdWithPessimisticWriteLock(ORDER_ITEM_ID))
+            when(paymentCancelRepository.findByTicketIdWithPessimisticWriteLock(TICKET_ID))
                 .thenReturn(Optional.empty());
             when(paymentCancelRepository.save(any(PaymentCancel.class))).thenAnswer(invocation -> {
                 PaymentCancel paymentCancel = invocation.getArgument(0);
@@ -623,7 +623,7 @@ class PaymentServiceTest {
             paymentCancel.complete("transaction-key", LocalDateTime.of(2026, 9, 2, 12, 0));
             payment.cancel();
             when(paymentRepository.findByOrderIdWithPessimisticWriteLock(ORDER_ID)).thenReturn(Optional.of(payment));
-            when(paymentCancelRepository.findByTicketIdWithPessimisticWriteLock(ORDER_ITEM_ID))
+            when(paymentCancelRepository.findByTicketIdWithPessimisticWriteLock(TICKET_ID))
                 .thenReturn(Optional.of(paymentCancel));
 
             paymentService.requestTicketPaymentCancel(ticket, "사용자 티켓 취소");
@@ -646,7 +646,7 @@ class PaymentServiceTest {
             recoveryTask.startProcessing(LocalDateTime.of(2026, 9, 2, 12, 0));
             recoveryTask.fail("Toss 요청 거절");
             when(paymentRepository.findByOrderIdWithPessimisticWriteLock(ORDER_ID)).thenReturn(Optional.of(payment));
-            when(paymentCancelRepository.findByTicketIdWithPessimisticWriteLock(ORDER_ITEM_ID))
+            when(paymentCancelRepository.findByTicketIdWithPessimisticWriteLock(TICKET_ID))
                 .thenReturn(Optional.of(paymentCancel));
             when(paymentRecoveryTaskRepository.findByPaymentCancel_Id(200L)).thenReturn(Optional.of(recoveryTask));
 
@@ -680,6 +680,35 @@ class PaymentServiceTest {
             assertThat(response.getPgProvider()).isEqualTo(PgProvider.TOSS);
             verify(paymentValidator).validateOwner(payment, USER_ID);
             verify(paymentRepository, never()).findByIdWithPessimisticWriteLock(any());
+        }
+
+        @Test
+        @DisplayName("완료된 티켓 취소 이력을 포함해 누적 환불 금액과 잔여 금액을 반환한다.")
+        void returnsCancelHistoryAndRefundAmounts() {
+            Payment payment = payment(PaymentStatus.PARTIALLY_CANCELED);
+            Ticket ticket = ticket(4000);
+            PaymentCancel paymentCancel = PaymentCancel.create(payment, ticket, "사용자 티켓 취소", "cancel-key");
+            LocalDateTime requestedAt = LocalDateTime.of(2026, 9, 7, 12, 0);
+            LocalDateTime completedAt = requestedAt.plusSeconds(2);
+            ReflectionTestUtils.setField(paymentCancel, "id", 200L);
+            ReflectionTestUtils.setField(paymentCancel, "createdAt", requestedAt);
+            paymentCancel.complete("transaction-key", completedAt);
+            when(payment.getOrder().getId()).thenReturn(ORDER_ID);
+            when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(payment));
+
+            PaymentResponse response = paymentService.getPayment(USER_ID, PAYMENT_ID);
+
+            assertThat(response.getCanceledAmount()).isEqualTo(4000);
+            assertThat(response.getRemainingAmount()).isEqualTo(6000);
+            assertThat(response.getCancels()).singleElement().satisfies(cancel -> {
+                assertThat(cancel.getPaymentCancelId()).isEqualTo(200L);
+                assertThat(cancel.getTicketId()).isEqualTo(TICKET_ID);
+                assertThat(cancel.getCancelAmount()).isEqualTo(4000);
+                assertThat(cancel.getCancelStatus()).isEqualTo(PaymentCancelStatus.DONE);
+                assertThat(cancel.getCancelReason()).isEqualTo("사용자 티켓 취소");
+                assertThat(cancel.getRequestedAt()).isEqualTo(requestedAt);
+                assertThat(cancel.getCompletedAt()).isEqualTo(completedAt);
+            });
         }
 
         @Test
