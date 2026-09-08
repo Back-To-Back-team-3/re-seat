@@ -97,4 +97,10 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
         @Param("gameId") Long gameId,
         @Param("statuses") Collection<TicketStatus> statuses
     );
+
+    /**
+     * 사용자가 정산 미완료(ISSUED+환불 기한 남음/REFUND_PENDING/REFUND_FAILED) 티켓을 하나라도 보유 중인지 확인한다.
+     * 회원 탈퇴 가능 여부 판단(User 도메인)에 사용된다.
+     */
+    boolean existsByUserIdAndStatusIn(Long userId, Collection<TicketStatus> statuses);
 }

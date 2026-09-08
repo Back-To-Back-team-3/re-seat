@@ -41,6 +41,9 @@ public class TicketService {
     private static final List<TicketStatus> ACTIVE_HOLDING_STATUSES
         = List.of(TicketStatus.ISSUED, TicketStatus.REFUND_PENDING, TicketStatus.REFUND_FAILED);
 
+    private static final List<TicketStatus> UNSETTLED_REFUND_STATUSES
+        = List.of(TicketStatus.REFUND_PENDING, TicketStatus.REFUND_FAILED);
+
     @Transactional
     public List<Ticket> issue(Order order) {
         List<OrderItem> orderItems = orderItemRepository.findByOrder_Id(order.getId());
@@ -86,6 +89,32 @@ public class TicketService {
     @Transactional(readOnly = true)
     public int countActiveTickets(Long userId, Long gameId) {
         return ticketRepository.countByUserIdAndGameIdAndStatusIn(userId, gameId, ACTIVE_HOLDING_STATUSES);
+    }
+
+    /**
+     * 사용자 탈퇴 전 정산 미완료인 티켓을 보유 중인지 확인한다.
+     * <p>REFUND_PENDING/REFUND_FAILED는 환불 기한과 무관하게 항상 정산 미완료로 본다.
+     * ISSUED+환불 기한이 남은 경우는 아직 본인이 직접 환불 요청할 수 있는 경우만 정산 미완료로 본다.
+     * 회원 탈퇴 가능 여부 판단(User 도메인)에서 사용한다.
+     */
+    @Transactional(readOnly = true)
+    public boolean hasUnsettledTicket(Long userId) {
+        if (ticketRepository.existsByUserIdAndStatusIn(userId, UNSETTLED_REFUND_STATUSES)) {
+            return true;
+        }
+        return ticketRepository.findByUserIdAndStatus(userId, TicketStatus.ISSUED).stream().anyMatch(Ticket::isRefundable);
+    }
+
+    /**
+     * 탈퇴는 허용되지만 ISSUED + 환불 기한 종료 티켓을 보유 중인지 확인한다.
+     * User 도메인이 탈퇴 전 경고 메시지 노출 여부를 판단하는 데 사용한다.
+     */
+    @Transactional(readOnly = true)
+    public boolean hasUnusableTicketAfterWithdrawal(Long userId) {
+        return ticketRepository
+            .findByUserIdAndStatus(userId, TicketStatus.ISSUED)
+            .stream()
+            .anyMatch(ticket -> !ticket.isRefundable());
     }
 
     /**
