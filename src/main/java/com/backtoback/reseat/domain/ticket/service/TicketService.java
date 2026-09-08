@@ -102,7 +102,10 @@ public class TicketService {
         if (ticketRepository.existsByUserIdAndStatusIn(userId, UNSETTLED_REFUND_STATUSES)) {
             return true;
         }
-        return ticketRepository.findByUserIdAndStatus(userId, TicketStatus.ISSUED).stream().anyMatch(Ticket::isRefundable);
+        return ticketRepository
+            .findByUserIdAndStatus(userId, TicketStatus.ISSUED)
+            .stream()
+            .anyMatch(Ticket::isRefundable);
     }
 
     /**
