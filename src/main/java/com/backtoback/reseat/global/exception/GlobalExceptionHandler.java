@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -28,6 +29,20 @@ public class GlobalExceptionHandler {
         log.warn("MethodArgumentNotvalidException 발생: {}", e.getMessage());
 
         ErrorCode errorCode = ErrorCode.INVALID_REQUEST;
+
+        return ResponseEntity
+            .status(errorCode.getHttpStatus())
+            .body(ApiResponse.failure(errorCode.getCode(), errorCode.getMessage()));
+    }
+
+    // 필수 요청 헤더 누락을 400 응답으로 변환하고 멱등키에는 전용 에러 코드를 사용한다.
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMissingRequestHeaderException(MissingRequestHeaderException e) {
+        log.warn("MissingRequestHeaderException 발생: {}", e.getMessage());
+
+        ErrorCode errorCode
+            = "Idempotency-Key".equalsIgnoreCase(e.getHeaderName()) ? ErrorCode.IDEMPOTENCY_KEY_REQUIRED
+                : ErrorCode.INVALID_REQUEST;
 
         return ResponseEntity
             .status(errorCode.getHttpStatus())
