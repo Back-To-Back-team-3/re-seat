@@ -12,11 +12,11 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.redisson.api.RLock;
@@ -117,8 +117,36 @@ class PaymentServiceTest {
     @Mock
     private TicketRepository ticketRepository;
 
-    @InjectMocks
+    private PaymentApprovalService paymentApprovalService;
+
     private PaymentService paymentService;
+
+    @BeforeEach
+    void setUp() {
+        paymentApprovalService
+            = new PaymentApprovalService(
+                paymentRepository,
+                paymentRecoveryTaskRepository,
+                paymentOrderPolicy,
+                tossPaymentClient,
+                paymentValidator,
+                orderService,
+                ticketServiceProvider,
+                orderItemRepository,
+                ticketRepository
+            );
+        paymentService
+            = new PaymentService(
+                paymentRepository,
+                paymentCancelRepository,
+                paymentRecoveryTaskRepository,
+                paymentCreationService,
+                paymentApprovalService,
+                paymentValidator,
+                redissonClient,
+                orderService
+            );
+    }
 
     private PaymentRequest request() {
         PaymentRequest request = mock(PaymentRequest.class);
