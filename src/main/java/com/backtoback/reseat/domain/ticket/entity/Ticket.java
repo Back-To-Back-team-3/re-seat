@@ -47,10 +47,6 @@ import lombok.NoArgsConstructor;
             columnNames = "order_item_id"
         ),
         @UniqueConstraint(
-            name = "uk_tickets_game_seat",
-            columnNames = "game_seat_id"
-        ),
-        @UniqueConstraint(
             name = "uk_tickets_qr_token",
             columnNames = "qr_token"
         )
