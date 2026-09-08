@@ -84,6 +84,23 @@ class PaymentControllerTest {
 
             verifyNoInteractions(paymentService);
         }
+
+        @Test
+        @DisplayName("Idempotency-Key 헤더가 공백이면 400 IDEMPOTENCY_KEY_REQUIRED를 반환한다")
+        void rejectsBlankIdempotencyKey() throws Exception {
+            mockMvc
+                .perform(
+                    post("/api/v1/payments")
+                        .header("Idempotency-Key", "   ")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(PAYMENT_REQUEST_BODY)
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.errorCode").value("IDEMPOTENCY_KEY_REQUIRED"));
+
+            verifyNoInteractions(paymentService);
+        }
     }
 
     @Nested
@@ -105,6 +122,23 @@ class PaymentControllerTest {
 
             verifyNoInteractions(paymentService);
         }
+
+        @Test
+        @DisplayName("Idempotency-Key 헤더가 공백이면 400 IDEMPOTENCY_KEY_REQUIRED를 반환한다")
+        void rejectsBlankIdempotencyKey() throws Exception {
+            mockMvc
+                .perform(
+                    post("/api/v1/payments/{paymentId}/complete", 1001L)
+                        .header("Idempotency-Key", "   ")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(PAYMENT_COMPLETE_REQUEST_BODY)
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.errorCode").value("IDEMPOTENCY_KEY_REQUIRED"));
+
+            verifyNoInteractions(paymentService);
+        }
     }
 
     @Nested
@@ -117,6 +151,23 @@ class PaymentControllerTest {
             mockMvc
                 .perform(
                     post("/api/v1/payments/{paymentId}/fail", 1001L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(PAYMENT_FAIL_REQUEST_BODY)
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.errorCode").value("IDEMPOTENCY_KEY_REQUIRED"));
+
+            verifyNoInteractions(paymentService);
+        }
+
+        @Test
+        @DisplayName("Idempotency-Key 헤더가 공백이면 400 IDEMPOTENCY_KEY_REQUIRED를 반환한다")
+        void rejectsBlankIdempotencyKey() throws Exception {
+            mockMvc
+                .perform(
+                    post("/api/v1/payments/{paymentId}/fail", 1001L)
+                        .header("Idempotency-Key", "   ")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(PAYMENT_FAIL_REQUEST_BODY)
                 )

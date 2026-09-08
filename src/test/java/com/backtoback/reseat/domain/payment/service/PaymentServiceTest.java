@@ -71,6 +71,7 @@ class PaymentServiceTest {
     private static final Long ORDER_ID = 10L;
     private static final Long PAYMENT_ID = 100L;
     private static final Long ORDER_ITEM_ID = 1000L;
+    private static final Long TICKET_ID = 2000L;
     private static final String IDEMPOTENCY_KEY = "idempotency-key";
     private static final String PAYMENT_KEY = "payment-key";
     private static final String PG_ORDER_ID = "ORD-20260728-000001";
@@ -157,7 +158,7 @@ class PaymentServiceTest {
         lenient().when(order.getId()).thenReturn(ORDER_ID);
         lenient().when(orderItem.getOrder()).thenReturn(order);
         lenient().when(orderItem.getPrice()).thenReturn(price);
-        when(ticket.getId()).thenReturn(ORDER_ITEM_ID);
+        when(ticket.getId()).thenReturn(TICKET_ID);
         when(ticket.getOrderItem()).thenReturn(orderItem);
         return ticket;
     }
@@ -592,7 +593,7 @@ class PaymentServiceTest {
             Ticket ticket = ticket(cancelAmount);
             Payment payment = payment(PaymentStatus.APPROVED);
             when(paymentRepository.findByOrderIdWithPessimisticWriteLock(ORDER_ID)).thenReturn(Optional.of(payment));
-            when(paymentCancelRepository.findByTicketIdWithPessimisticWriteLock(ORDER_ITEM_ID))
+            when(paymentCancelRepository.findByTicketIdWithPessimisticWriteLock(TICKET_ID))
                 .thenReturn(Optional.empty());
             when(paymentCancelRepository.save(any(PaymentCancel.class))).thenAnswer(invocation -> {
                 PaymentCancel paymentCancel = invocation.getArgument(0);
@@ -622,7 +623,7 @@ class PaymentServiceTest {
             paymentCancel.complete("transaction-key", LocalDateTime.of(2026, 9, 2, 12, 0));
             payment.cancel();
             when(paymentRepository.findByOrderIdWithPessimisticWriteLock(ORDER_ID)).thenReturn(Optional.of(payment));
-            when(paymentCancelRepository.findByTicketIdWithPessimisticWriteLock(ORDER_ITEM_ID))
+            when(paymentCancelRepository.findByTicketIdWithPessimisticWriteLock(TICKET_ID))
                 .thenReturn(Optional.of(paymentCancel));
 
             paymentService.requestTicketPaymentCancel(ticket, "사용자 티켓 취소");
@@ -645,7 +646,7 @@ class PaymentServiceTest {
             recoveryTask.startProcessing(LocalDateTime.of(2026, 9, 2, 12, 0));
             recoveryTask.fail("Toss 요청 거절");
             when(paymentRepository.findByOrderIdWithPessimisticWriteLock(ORDER_ID)).thenReturn(Optional.of(payment));
-            when(paymentCancelRepository.findByTicketIdWithPessimisticWriteLock(ORDER_ITEM_ID))
+            when(paymentCancelRepository.findByTicketIdWithPessimisticWriteLock(TICKET_ID))
                 .thenReturn(Optional.of(paymentCancel));
             when(paymentRecoveryTaskRepository.findByPaymentCancel_Id(200L)).thenReturn(Optional.of(recoveryTask));
 
@@ -701,7 +702,7 @@ class PaymentServiceTest {
             assertThat(response.getRemainingAmount()).isEqualTo(6000);
             assertThat(response.getCancels()).singleElement().satisfies(cancel -> {
                 assertThat(cancel.getPaymentCancelId()).isEqualTo(200L);
-                assertThat(cancel.getTicketId()).isEqualTo(ORDER_ITEM_ID);
+                assertThat(cancel.getTicketId()).isEqualTo(TICKET_ID);
                 assertThat(cancel.getCancelAmount()).isEqualTo(4000);
                 assertThat(cancel.getCancelStatus()).isEqualTo(PaymentCancelStatus.DONE);
                 assertThat(cancel.getCancelReason()).isEqualTo("사용자 티켓 취소");
