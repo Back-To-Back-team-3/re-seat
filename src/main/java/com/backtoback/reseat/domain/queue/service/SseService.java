@@ -33,13 +33,13 @@ import lombok.extern.slf4j.Slf4j;
 public class SseService {
 
     // 클라이언트의 SSE 연결을 유지하는 최대 시간
-    private static final long SSE_TIMEOUT_MILLIS = 60L * 1000L;
+    private static final Duration SSE_TIMEOUT_MILLIS = Duration.ofSeconds(60L);
 
     // 대기열 상태를 처음 조회하기 전의 지연 시간이며 이후 상태 전송 주기
     private static final Duration SSE_SEND_INTERVAL = Duration.ofSeconds(3L);
 
     // 마지막 SSE 연결 종료 후 대기열 이탈 처리까지 기다리는 재연결 유예시간
-    private static final Duration SSE_RECONNECT_GRACE = Duration.ofSeconds(60L);
+    private static final Duration SSE_RECONNECT_GRACE = Duration.ofSeconds(150L);
 
     // 동일 사용자와 경기에서 현재 유지 중인 SSE 연결 수를 관리한다.
     private final ConcurrentMap<QueueConnectionKey, Integer> activeConnectionCounts = new ConcurrentHashMap<>();
@@ -83,7 +83,7 @@ public class SseService {
         QueueConnectionKey connectionKey = new QueueConnectionKey(gameId, userId);
         registerConnection(connectionKey);
 
-        SseEmitter sseEmitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
+        SseEmitter sseEmitter = new SseEmitter(SSE_TIMEOUT_MILLIS.toMillis());
 
         // 연결 종료를 놓치지 않도록 종료 콜백을 주기 작업보다 먼저 등록한다.
         // 아직 생성되지 않은 주기 작업은 나중에 저장하여 종료 콜백에서 조회한다.
