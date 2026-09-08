@@ -9,7 +9,7 @@ services:
     volumes:
       - ./nginx:/etc/nginx/conf.d:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
-      - certbot-challenge:/var/www/certbot:ro
+      - /var/www/certbot:/var/www/certbot:ro
     depends_on:
       - web-app
     networks:
@@ -150,8 +150,6 @@ volumes:
     name: re-seat_mysql-data
   grafana-data:
     name: re-seat_grafana-data
-  certbot-challenge:
-    name: re-seat_certbot-challenge
 
 networks:
   reseat-network:
