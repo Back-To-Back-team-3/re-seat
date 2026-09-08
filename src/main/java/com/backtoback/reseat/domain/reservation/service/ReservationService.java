@@ -21,6 +21,7 @@ import com.backtoback.reseat.domain.reservation.exception.ReservationAccessDenie
 import com.backtoback.reseat.domain.reservation.exception.ReservationNotFoundException;
 import com.backtoback.reseat.domain.reservation.exception.SeatAlreadyHeldException;
 import com.backtoback.reseat.domain.reservation.repository.ReservationRepository;
+import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
 import com.backtoback.reseat.domain.seatinventory.repository.GameSeatRepository;
@@ -45,6 +46,7 @@ import lombok.extern.slf4j.Slf4j;
 public class ReservationService {
 
     private final ReservationRepository reservationRepository;
+    private final ReservationSeatRepository reservationSeatRepository;
     private final GameSeatRepository gameSeatRepository;
     private final GameRepository gameRepository;
     private final UserRepository userRepository;
@@ -191,6 +193,7 @@ public class ReservationService {
      * 결제 전 예약을 취소 상태로 변경한다.
      * <p>HOLDING 상태의 예약을 취소하고, 묶인 좌석을 모두 반환한다.
      * 이미 취소된 예약은 상태를 다시 변경하지 않고 좌석 반환도 다시 시도하지 않는다.</p>
+     * <p>동시 취소 요청 중 하나만 좌석 반환을 실행하도록 예약 행을 비관적 락으로 잠근다.</p>
      *
      * @param reservationId 취소 처리할 예약 ID
      */
@@ -199,7 +202,7 @@ public class ReservationService {
 
         Reservation reservation
             = reservationRepository
-                .findWithSeatsById(reservationId)
+                .findByIdWithPessimisticWriteLock(reservationId)
                 .orElseThrow(() -> new ReservationNotFoundException(reservationId));
 
         if (reservation.isCanceled()) {
@@ -210,7 +213,9 @@ public class ReservationService {
 
         // 결제 전 취소는 예약 전체가 대상이며 부분 취소 개념이 없으므로, 예약에 묶인 좌석을 모두 반환해도 안전하다.
         // 주의: 좌석은 취소 시점에 HELD 상태이므로 refundSeat()가 아닌 releaseSeat()를 호출한다.
-        reservation.getReservationSeats().forEach(rs -> gameSeatStatusService.releaseSeat(rs.getGameSeat().getId()));
+        // 좌석 목록은 락 범위 밖에서 별도 조회한다(컬렉션 fetch join + 비관적 락 동시 사용 회피).
+        List<ReservationSeat> reservationSeats = reservationSeatRepository.findByReservation_Id(reservationId);
+        reservationSeats.forEach(rs -> gameSeatStatusService.releaseSeat(rs.getGameSeat().getId()));
     }
 
     /**
