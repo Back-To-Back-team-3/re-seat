@@ -23,6 +23,7 @@ import com.backtoback.reseat.domain.reservation.exception.ReservationAccessDenie
 import com.backtoback.reseat.domain.reservation.exception.ReservationNotFoundException;
 import com.backtoback.reseat.domain.reservation.repository.ReservationRepository;
 import com.backtoback.reseat.domain.seatinventory.repository.GameSeatRepository;
+import com.backtoback.reseat.domain.seatinventory.service.GameSeatStatusService;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
 
@@ -44,6 +45,8 @@ class ReservationReleaseGuardTest {
     private UserRepository userRepository;
     @Mock
     private ReservationNumberGenerator reservationNumberGenerator;
+    @Mock
+    private GameSeatStatusService gameSeatStatusService;
 
     private ReservationService reservationService;
 
@@ -55,7 +58,8 @@ class ReservationReleaseGuardTest {
                 gameSeatRepository,
                 gameRepository,
                 userRepository,
-                reservationNumberGenerator
+                reservationNumberGenerator,
+                gameSeatStatusService
             );
     }
 

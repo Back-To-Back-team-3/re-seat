@@ -23,6 +23,7 @@ import com.backtoback.reseat.domain.order.entity.OrderItem;
 import com.backtoback.reseat.domain.order.entity.OrderItemStatus;
 import com.backtoback.reseat.domain.order.entity.OrderStatus;
 import com.backtoback.reseat.domain.order.exception.InvalidOrderStatusException;
+import com.backtoback.reseat.domain.order.exception.OrderAccessDeniedException;
 import com.backtoback.reseat.domain.order.exception.OrderExpiredException;
 import com.backtoback.reseat.domain.order.exception.OrderNotFoundException;
 import com.backtoback.reseat.domain.order.repository.OrderItemRepository;
@@ -444,6 +445,64 @@ public class OrderServiceTest {
 
         // then
         assertThat(response.getHoldExpiresAt()).isEqualTo(response.getPaymentDeadline());
+    }
+
+    // ---------- 주문 취소(결제 전) ----------
+
+    @Test
+    @DisplayName("결제 전 주문을 취소하면 예약 취소만 위임하고 좌석은 직접 건드리지 않는다")
+    void cancelOrder_delegatesSeatReleaseToReservationService() {
+
+        // given
+        User user = User.builder().id(USER_ID).build();
+        ReflectionTestUtils.setField(user, "id", USER_ID);
+
+        Reservation reservation = Reservation.builder().status(ReservationStatus.HOLDING).build();
+        ReflectionTestUtils.setField(reservation, "id", RESERVATION_ID);
+
+        Order order = Order.of(ORDER_NO, user, reservation, TOTAL_AMOUNT, PAYMENT_DEADLINE);
+        ReflectionTestUtils.setField(order, "id", ORDER_ID);
+
+        GameSeat gameSeat = GameSeat.builder().status(GameSeatStatus.HELD).build();
+        ReflectionTestUtils.setField(gameSeat, "id", GAME_SEAT_ID);
+        OrderItem orderItem = OrderItem.of(order, gameSeat, PRICE);
+
+        given(orderRepository.findById(ORDER_ID)).willReturn(Optional.of(order));
+        given(orderItemRepository.findByOrder_Id(ORDER_ID)).willReturn(List.of(orderItem));
+
+        // when
+        orderService.cancelOrder(USER_ID, ORDER_ID);
+
+        // then
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELED);
+        assertThat(orderItem.getStatus()).isEqualTo(OrderItemStatus.CANCELED);
+
+        then(reservationService).should().cancel(RESERVATION_ID);
+        then(gameSeatStatusService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("타인 주문을 취소하면 OrderAccessDeniedException이 발생하고 아무 상태도 바뀌지 않는다")
+    void cancelOrder_throws_whenNotOwner() {
+
+        // given
+        User owner = User.builder().id(USER_ID).build();
+        ReflectionTestUtils.setField(owner, "id", USER_ID);
+
+        Reservation reservation = Reservation.builder().status(ReservationStatus.HOLDING).build();
+        Order order = Order.of(ORDER_NO, owner, reservation, TOTAL_AMOUNT, PAYMENT_DEADLINE);
+        ReflectionTestUtils.setField(order, "id", ORDER_ID);
+
+        given(orderRepository.findById(ORDER_ID)).willReturn(Optional.of(order));
+
+        Long intruderId = 999L;
+
+        // when & then
+        assertThatThrownBy(() -> orderService.cancelOrder(intruderId, ORDER_ID))
+            .isInstanceOf(OrderAccessDeniedException.class);
+
+        then(reservationService).shouldHaveNoInteractions();
+        then(gameSeatStatusService).shouldHaveNoInteractions();
     }
 
     // ---------- 주문 환불 ----------
