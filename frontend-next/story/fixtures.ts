@@ -95,6 +95,9 @@ export const storyPayment = {
     failReason: null,
     approvedAt: null,
     failedAt: null,
+    canceledAmount: 0,
+    remainingAmount: storyOrder.totalAmount,
+    cancels: [],
 } satisfies PaymentResponse;
 
 export const storyQueue = {

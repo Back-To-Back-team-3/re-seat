@@ -15,8 +15,6 @@ const STATUS_BADGE_VARIANTS: Record<
     REFUNDED: "secondary",
     USED_ENTERED: "secondary",
     USED_NO_SHOW: "secondary",
-    USED: "secondary",
-    CANCELED: "destructive",
 };
 
 interface TicketCardProps {

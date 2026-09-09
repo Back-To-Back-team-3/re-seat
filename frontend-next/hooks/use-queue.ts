@@ -8,6 +8,13 @@ import {storage} from "@/lib/storage";
 import {useBookingStore} from "@/providers/booking-store-provider";
 import type {QueueViewState} from "@/types/game";
 
+const QUEUE_REJECTION_MESSAGES = {
+    WAITING_IN_OTHER_GAME: "다른 경기의 대기열에 이미 참여하고 있습니다.",
+    ACTIVE_QUEUE_TOKEN_IN_ANOTHER_GAME:
+        "다른 경기에서 사용할 수 있는 입장 토큰이 있습니다.",
+    BOOKING_NOT_OPEN: "현재 예매할 수 없는 경기입니다.",
+} as const;
+
 /**
  * 대기열 등록부터 SSE 입장 허가까지의 연결 생명주기를 관리합니다.
  *
@@ -76,6 +83,14 @@ export function useQueue(gameId: number) {
                                     : current,
                             );
                             router.push(`/games/${gameId}/seats`);
+                        },
+                        onReject(event) {
+                            setQueue((current) =>
+                                current
+                                    ? {...current, registrationPending: false}
+                                    : current,
+                            );
+                            setError(QUEUE_REJECTION_MESSAGES[event.reason]);
                         },
                     },
                     abortController.signal,

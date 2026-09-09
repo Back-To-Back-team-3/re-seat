@@ -54,7 +54,11 @@ export function PaymentScreen({
     if (error) return <Alert message={error} variant="error"/>;
     if (!payment) return <p>결제 정보를 불러오고 있습니다.</p>;
 
-    const approved = payment.status === "APPROVED" || order?.status === "PAID";
+    const approved =
+        payment.status === "APPROVED" ||
+        payment.status === "PARTIALLY_CANCELED" ||
+        order?.status === "PAID" ||
+        order?.status === "PARTIALLY_CANCELED";
     const deadlineExpired =
         (deadline !== null && expiredDeadline === deadline) ||
         isDeadlineExpired(deadline);
