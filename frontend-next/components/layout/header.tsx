@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import {usePathname} from "next/navigation";
+import {Moon, Sun} from "lucide-react";
 
 import {LoginPanel} from "@/components/auth/login-panel";
+import {Button} from "@/components/ui/button";
 import {useAuth} from "@/hooks/use-auth";
 import {useTheme} from "@/hooks/use-theme";
 
@@ -70,14 +72,20 @@ export function Header() {
                 </Link>
             </nav>
             <div className="flex items-center justify-end gap-2.5">
-                <button
+                <Button
                     aria-label="화면 테마 변경"
-                    className="grid size-[38px] place-items-center rounded-full border border-border bg-surface max-sm:hidden"
+                    className="size-[38px] rounded-full max-sm:hidden"
                     onClick={toggleTheme}
+                    size="icon-sm"
                     type="button"
+                    variant="outline"
                 >
-                    {theme === "dark" ? "☀" : "☾"}
-                </button>
+                    {theme === "dark" ? (
+                        <Sun aria-hidden="true"/>
+                    ) : (
+                        <Moon aria-hidden="true"/>
+                    )}
+                </Button>
                 <LoginPanel
                     isAuthed={auth.isAuthed}
                     onLogin={auth.login}

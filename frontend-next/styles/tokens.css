@@ -9,6 +9,7 @@
     --brand: #e03535;
     --brand-dark: #b9232b;
     --highlight: #f5a623;
+    --warning-foreground: #8a5a00;
     --success: #16815b;
     --card: var(--surface);
     --card-foreground: var(--foreground);
@@ -48,6 +49,7 @@ html[data-theme="dark"] {
     --brand: #ef5555;
     --brand-dark: #d93e46;
     --highlight: #ffb648;
+    --warning-foreground: #ffb648;
     --success: #50c895;
     --card-shadow: 0 20px 60px rgb(0 0 0 / 28%);
 }
@@ -62,6 +64,7 @@ html[data-theme="dark"] {
     --color-brand: var(--brand);
     --color-brand-dark: var(--brand-dark);
     --color-highlight: var(--highlight);
+    --color-warning-foreground: var(--warning-foreground);
     --color-accent: var(--accent);
     --color-accent-foreground: var(--accent-foreground);
     --color-success: var(--success);

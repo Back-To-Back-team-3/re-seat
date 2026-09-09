@@ -1,21 +1,35 @@
 "use client";
 
-import {useEffect, useRef, useState} from "react";
+import {RefreshCw, TicketX} from "lucide-react";
+import {type ComponentProps, useRef, useState} from "react";
 
 import {EmptyState} from "@/components/common/empty-state";
+import {Badge} from "@/components/ui/badge";
+import {Button} from "@/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import {formatGameDate} from "@/lib/date";
 import type {GameSummary} from "@/types/game";
 import type {TicketStatus, TicketSummary} from "@/types/ticket";
 
-const STATUS_PILL_CLASSES: Record<TicketStatus, string> = {
-    ISSUED: "bg-success/10 text-success",
-    REFUND_PENDING: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-    REFUND_FAILED: "bg-destructive/10 text-destructive",
-    REFUNDED: "bg-muted text-muted-foreground",
-    USED_ENTERED: "bg-surface-soft text-muted-foreground",
-    USED_NO_SHOW: "bg-surface-soft text-muted-foreground",
-    USED: "bg-surface-soft text-muted-foreground",
-    CANCELED: "bg-brand/10 text-brand",
+const STATUS_BADGE_VARIANTS: Record<
+    TicketStatus,
+    ComponentProps<typeof Badge>["variant"]
+> = {
+    ISSUED: "success",
+    REFUND_PENDING: "warning",
+    REFUND_FAILED: "destructive",
+    REFUNDED: "secondary",
+    USED_ENTERED: "secondary",
+    USED_NO_SHOW: "secondary",
+    USED: "secondary",
+    CANCELED: "destructive",
 };
 
 export function TicketList({
@@ -43,55 +57,12 @@ export function TicketList({
     const isActionPending = isCanceling || isRetryingCancel;
 
     const triggerRef = useRef<HTMLButtonElement | null>(null);
-    const dialogRef = useRef<HTMLDivElement>(null);
-    const closeButtonRef = useRef<HTMLButtonElement>(null);
 
     const closeModal = () => {
         setTicketToRefund(null);
         setErrorMessage(null);
         triggerRef.current?.focus();
     };
-
-    useEffect(() => {
-        if (!ticketToRefund) return;
-
-        closeButtonRef.current?.focus();
-
-        const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key === "Escape") {
-                event.preventDefault();
-                closeModal();
-                return;
-            }
-
-            if (event.key === "Tab" && dialogRef.current) {
-                const focusableElements = dialogRef.current.querySelectorAll<HTMLElement>(
-                    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-                );
-                if (focusableElements.length === 0) return;
-
-                const firstElement = focusableElements[0];
-                const lastElement = focusableElements[focusableElements.length - 1];
-
-                if (event.shiftKey) {
-                    if (document.activeElement === firstElement) {
-                        event.preventDefault();
-                        lastElement.focus();
-                    }
-                } else {
-                    if (document.activeElement === lastElement) {
-                        event.preventDefault();
-                        firstElement.focus();
-                    }
-                }
-            }
-        };
-
-        window.addEventListener("keydown", handleKeyDown);
-        return () => {
-            window.removeEventListener("keydown", handleKeyDown);
-        };
-    }, [ticketToRefund]);
 
     const handleConfirmRefund = async () => {
         if (!ticketToRefund) return;
@@ -129,14 +100,15 @@ export function TicketList({
                         결제 완료 후 발급된 모바일 티켓을 확인하고 취소(환불)를 요청할 수 있습니다.
                     </p>
                 </div>
-                <button
-                    className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-3.5 rounded-control border border-border bg-surface px-[18px] text-[13px] font-extrabold text-foreground transition enabled:hover:-translate-y-px enabled:hover:border-foreground disabled:cursor-not-allowed disabled:opacity-[0.48]"
+                <Button
                     disabled={reloading}
+                    loading={reloading}
                     onClick={onReload}
-                    type="button"
+                    variant="outline"
                 >
-                    ↻ 티켓 새로고침
-                </button>
+                    {!reloading && <RefreshCw aria-hidden="true"/>}
+                    티켓 새로고침
+                </Button>
             </div>
 
             {tickets.length === 0 ? (
@@ -168,13 +140,9 @@ export function TicketList({
                                 </div>
                                 <div className="grid content-center gap-[5px] p-[22px]">
                                     <div className="flex flex-wrap items-center gap-2">
-                                        <span
-                                            className={`w-fit rounded-full px-[9px] py-[5px] text-[11px] font-black ${
-                                                STATUS_PILL_CLASSES[ticket.status] ?? "bg-surface-soft text-muted-foreground"
-                                            }`}
-                                        >
+                                        <Badge variant={STATUS_BADGE_VARIANTS[ticket.status]}>
                                             {ticket.status}
-                                        </span>
+                                        </Badge>
                                         {ticket.refundDeadline && ticket.status === "ISSUED" && (
                                             <span className="text-[11px] text-muted-foreground">
                                                 (취소 마감: {formatGameDate(ticket.refundDeadline)})
@@ -199,19 +167,19 @@ export function TicketList({
                                                 * 경기 시작 24시간 전까지 전액 환불
                                             </span>
                                             {isRefundable ? (
-                                                <button
-                                                    className="inline-flex min-h-7 items-center justify-center rounded-control border border-destructive/40 bg-destructive/5 px-2.5 py-1 text-xs font-bold text-destructive transition hover:bg-destructive hover:text-white"
+                                                <Button
                                                     onClick={(event) => {
                                                         triggerRef.current = event.currentTarget;
                                                         setErrorMessage(null);
                                                         setTicketToRefund(ticket);
                                                     }}
-                                                    type="button"
+                                                    size="sm"
+                                                    variant="destructive"
                                                 >
                                                     환불 요청
-                                                </button>
+                                                </Button>
                                             ) : ticket.status === "REFUND_PENDING" ? (
-                                                <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+                                                <span className="text-xs font-semibold text-warning-foreground">
                                                     환불 처리 진행 중
                                                 </span>
                                             ) : ticket.status === "REFUNDED" ? (
@@ -219,17 +187,17 @@ export function TicketList({
                                                     환불 완료
                                                 </span>
                                             ) : ticket.status === "REFUND_FAILED" ? (
-                                                <button
-                                                    className="inline-flex min-h-7 items-center justify-center rounded-control border border-destructive/40 bg-destructive/5 px-2.5 py-1 text-xs font-bold text-destructive transition hover:bg-destructive hover:text-white"
+                                                <Button
                                                     onClick={(event) => {
                                                         triggerRef.current = event.currentTarget;
                                                         setErrorMessage(null);
                                                         setTicketToRefund(ticket);
                                                     }}
-                                                    type="button"
+                                                    size="sm"
+                                                    variant="destructive"
                                                 >
                                                     환불 재시도
-                                                </button>
+                                                </Button>
                                             ) : (
                                                 <span className="text-xs text-muted-foreground">
                                                     환불 불가
@@ -252,60 +220,52 @@ export function TicketList({
                 </div>
             )}
 
-            {/* 환불 확인 모달 */}
-            {ticketToRefund && (
-                <div
-                    aria-labelledby="refund-dialog-title"
-                    aria-modal="true"
-                    className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm"
-                    ref={dialogRef}
-                    role="dialog"
-                >
-                    <div className="w-full max-w-md rounded-[16px] border border-border bg-surface p-6 shadow-2xl">
-                        <div className="mb-4">
-                            <span className="inline-block text-2xl">🎫</span>
-                            <h3
-                                className="mt-2 text-lg font-bold text-foreground"
-                                id="refund-dialog-title"
-                            >
+            <Dialog
+                onOpenChange={(open) => {
+                    if (!open && !isActionPending) closeModal();
+                }}
+                open={ticketToRefund !== null}
+            >
+                {ticketToRefund && (
+                    <DialogContent showCloseButton={false}>
+                        <DialogHeader>
+                            <TicketX aria-hidden="true" className="size-7 text-brand"/>
+                            <DialogTitle>
                                 {ticketToRefund.status === "REFUND_FAILED"
                                     ? "티켓 환불 재시도 요청"
                                     : "티켓 환불(취소) 요청"}
-                            </h3>
-                            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                            </DialogTitle>
+                            <DialogDescription>
                                 {ticketToRefund.status === "REFUND_FAILED"
                                     ? "환불 처리에 실패한 티켓입니다. 환불을 다시 요청하시겠습니까?"
                                     : "다음 티켓의 예매를 취소하고 환불을 요청하시겠습니까?"}
-                            </p>
-                            <div className="mt-3 rounded-lg border border-border bg-surface-soft p-3 text-xs leading-relaxed text-foreground">
-                                <div><strong>좌석:</strong> {ticketToRefund.seat}</div>
-                                <div><strong>티켓 번호:</strong> {ticketToRefund.ticketNo}</div>
-                                <div><strong>경기 일시:</strong> {formatGameDate(ticketToRefund.gameAt)}</div>
-                            </div>
-                            <p className="mt-3 text-xs text-muted-foreground">
-                                * 환불이 정상 처리되면 예약 좌석이 반환되며, 결제 수단에 따라 1~3 영업일 내 환불 처리됩니다.
-                            </p>
-                            {errorMessage && (
-                                <p className="mt-2 text-xs font-bold text-destructive">
-                                    {errorMessage}
-                                </p>
-                            )}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="rounded-control border border-border bg-surface-soft p-3 text-xs leading-relaxed text-foreground">
+                            <div><strong>좌석:</strong> {ticketToRefund.seat}</div>
+                            <div><strong>티켓 번호:</strong> {ticketToRefund.ticketNo}</div>
+                            <div><strong>경기 일시:</strong> {formatGameDate(ticketToRefund.gameAt)}</div>
                         </div>
-                        <div className="flex justify-end gap-3 pt-2">
-                            <button
-                                className="inline-flex min-h-10 items-center justify-center rounded-control border border-border bg-surface px-4 text-xs font-bold text-muted-foreground transition hover:text-foreground"
+                        <p className="text-xs text-muted-foreground">
+                            환불이 정상 처리되면 예약 좌석이 반환되며, 결제 수단에 따라 1~3 영업일 내 환불 처리됩니다.
+                        </p>
+                        {errorMessage && (
+                            <p className="text-xs font-bold text-destructive">
+                                {errorMessage}
+                            </p>
+                        )}
+                        <DialogFooter>
+                            <Button
                                 disabled={isActionPending}
                                 onClick={closeModal}
-                                ref={closeButtonRef}
-                                type="button"
+                                variant="outline"
                             >
                                 닫기
-                            </button>
-                            <button
-                                className="inline-flex min-h-10 items-center justify-center rounded-control bg-destructive px-4 text-xs font-bold text-white transition hover:bg-destructive/90 disabled:opacity-50"
-                                disabled={isActionPending}
+                            </Button>
+                            <Button
+                                loading={isActionPending}
                                 onClick={handleConfirmRefund}
-                                type="button"
+                                variant="destructive"
                             >
                                 {isActionPending
                                     ? ticketToRefund.status === "REFUND_FAILED"
@@ -314,11 +274,11 @@ export function TicketList({
                                     : ticketToRefund.status === "REFUND_FAILED"
                                       ? "환불 재시도"
                                       : "환불 확인"}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                )}
+            </Dialog>
         </section>
     );
 }

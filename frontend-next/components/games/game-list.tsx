@@ -1,10 +1,19 @@
 "use client";
 
 import {useMemo, useState} from "react";
+import {RotateCcw} from "lucide-react";
 
 import {EmptyState} from "@/components/common/empty-state";
 import {GameCalendar} from "@/components/games/game-calendar";
 import {GAME_STATUS_META, GameCard} from "@/components/games/game-card";
+import {Button} from "@/components/ui/button";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import {KST_TIME_ZONE} from "@/lib/constants";
 import type {GameSummary} from "@/types/game";
 
@@ -105,64 +114,96 @@ export function GameList({
         <>
             <label className="grid gap-[5px] text-[11px] font-bold text-muted-foreground">
                 구단별
-                <select
-                    className="h-[38px] min-w-[132px] rounded-[9px] border border-border bg-surface px-[11px] text-sm text-foreground"
-                    onChange={(event) =>
+                <Select
+                    onValueChange={(value) =>
                         setTeamId(
-                            event.target.value === "ALL"
+                            value === "ALL"
                                 ? "ALL"
-                                : Number(event.target.value),
+                                : Number(value),
                         )
                     }
-                    value={teamId}
+                    value={String(teamId)}
                 >
-                    <option value="ALL">전체 구단</option>
-                    {teams.map(([id, name]) => (
-                        <option key={id} value={id}>
-                            {name}
-                        </option>
-                    ))}
-                </select>
+                    <SelectTrigger className="min-w-[132px]" size="sm">
+                        <SelectValue>
+                            {(value) =>
+                                value === "ALL"
+                                    ? "전체 구단"
+                                    : teams.find(([id]) => String(id) === value)?.[1]
+                            }
+                        </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="ALL">전체 구단</SelectItem>
+                        {teams.map(([id, name]) => (
+                            <SelectItem key={id} value={String(id)}>
+                                {name}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </label>
             <label className="grid gap-[5px] text-[11px] font-bold text-muted-foreground">
                 구장별
-                <select
-                    className="h-[38px] min-w-[132px] rounded-[9px] border border-border bg-surface px-[11px] text-sm text-foreground"
-                    onChange={(event) =>
+                <Select
+                    onValueChange={(value) =>
                         setStadiumId(
-                            event.target.value === "ALL"
+                            value === "ALL"
                                 ? "ALL"
-                                : Number(event.target.value),
+                                : Number(value),
                         )
                     }
-                    value={stadiumId}
+                    value={String(stadiumId)}
                 >
-                    <option value="ALL">전체 구장</option>
-                    {stadiums.map(([id, name]) => (
-                        <option key={id} value={id}>
-                            {name}
-                        </option>
-                    ))}
-                </select>
+                    <SelectTrigger className="min-w-[132px]" size="sm">
+                        <SelectValue>
+                            {(value) =>
+                                value === "ALL"
+                                    ? "전체 구장"
+                                    : stadiums.find(([id]) => String(id) === value)?.[1]
+                            }
+                        </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="ALL">전체 구장</SelectItem>
+                        {stadiums.map(([id, name]) => (
+                            <SelectItem key={id} value={String(id)}>
+                                {name}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </label>
             <label className="grid gap-[5px] text-[11px] font-bold text-muted-foreground">
                 상태
-                <select
-                    className="h-[38px] min-w-[132px] rounded-[9px] border border-border bg-surface px-[11px] text-sm text-foreground"
-                    onChange={(event) =>
+                <Select
+                    onValueChange={(value) =>
                         setStatus(
-                            event.target.value as GameSummary["bookingStatus"] | "ALL",
+                            value as GameSummary["bookingStatus"] | "ALL",
                         )
                     }
                     value={status}
                 >
-                    <option value="ALL">전체 상태</option>
-                    {Object.entries(GAME_STATUS_META).map(([value, meta]) => (
-                        <option key={value} value={value}>
-                            {meta.label}
-                        </option>
-                    ))}
-                </select>
+                    <SelectTrigger className="min-w-[132px]" size="sm">
+                        <SelectValue>
+                            {(value) =>
+                                value === "ALL"
+                                    ? "전체 상태"
+                                    : GAME_STATUS_META[
+                                          value as GameSummary["bookingStatus"]
+                                      ]?.label
+                            }
+                        </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="ALL">전체 상태</SelectItem>
+                        {Object.entries(GAME_STATUS_META).map(([value, meta]) => (
+                            <SelectItem key={value} value={value}>
+                                {meta.label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </label>
         </>
     );
@@ -182,14 +223,15 @@ export function GameList({
                         날짜와 구단, 구장을 선택해 전체 예매 상태를 확인하세요.
                     </p>
                 </div>
-                <button
-                    className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-3.5 rounded-control border border-border bg-surface px-[18px] text-[13px] font-extrabold text-foreground transition enabled:hover:-translate-y-px enabled:hover:border-foreground disabled:cursor-not-allowed disabled:opacity-[0.48]"
+                <Button
                     disabled={reloading}
+                    loading={reloading}
                     onClick={onReload}
-                    type="button"
+                    variant="outline"
                 >
-                    ↻ 일정 새로고침
-                </button>
+                    {!reloading && <RotateCcw aria-hidden="true"/>}
+                    일정 새로고침
+                </Button>
             </div>
 
             <GameCalendar
@@ -211,13 +253,14 @@ export function GameList({
           </span>
                 </div>
                 {selectedDate && (
-                    <button
-                        className="cursor-pointer rounded-control border-0 bg-transparent px-2 py-2 text-sm font-bold text-muted-foreground"
+                    <Button
+                        className="text-muted-foreground"
                         onClick={() => setSelectedDate(null)}
-                        type="button"
+                        size="sm"
+                        variant="ghost"
                     >
                         날짜 선택 해제
-                    </button>
+                    </Button>
                 )}
             </div>
 

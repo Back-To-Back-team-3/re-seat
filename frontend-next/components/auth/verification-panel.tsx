@@ -2,6 +2,9 @@
 
 import Script from "next/script";
 import {useState} from "react";
+import {LogOut, ShieldCheck} from "lucide-react";
+
+import {Button} from "@/components/ui/button";
 
 const PORTONE_CODE =
     process.env.NEXT_PUBLIC_PORTONE_CODE ?? "imp31640540";
@@ -252,21 +255,25 @@ export function VerificationPanel({
                                 </small>
                             </div>
                         </div>
-                        <button
-                            className="min-h-11 w-full cursor-pointer rounded-control border border-brand bg-brand px-[22px] text-[13px] font-extrabold text-white shadow-[0_8px_20px_rgb(224_53_53/20%)] transition duration-fast hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
-                            disabled={busy}
+                        <Button
+                            className="w-full text-[13px]"
+                            loading={busy}
                             onClick={startVerification}
                             type="button"
                         >
+                            {!busy && <ShieldCheck aria-hidden="true"/>}
                             {busy ? "인증 요청 처리 중..." : "본인인증 시작하기"}
-                        </button>
-                        <button
-                            className="mt-2 min-h-9 cursor-pointer border-0 bg-transparent px-2 text-[10px] text-muted-foreground"
+                        </Button>
+                        <Button
+                            className="mt-2 w-full text-[10px] text-muted-foreground"
                             onClick={onLogout}
+                            size="sm"
                             type="button"
+                            variant="ghost"
                         >
+                            <LogOut aria-hidden="true"/>
                             로그아웃 후 다른 계정으로 로그인
-                        </button>
+                        </Button>
                     </div>
                 </section>
             </main>

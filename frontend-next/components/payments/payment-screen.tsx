@@ -1,20 +1,16 @@
 "use client";
 
 import {useState} from "react";
+import {ArrowLeft, ArrowRight, RefreshCw, TicketCheck} from "lucide-react";
 
 import {Alert} from "@/components/common/alert";
 import {Countdown} from "@/components/common/countdown";
+import {Button} from "@/components/ui/button";
 import {formatPrice} from "@/lib/currency";
 import {isDeadlineExpired} from "@/lib/date";
 import type {GameSummary} from "@/types/game";
 import type {OrderResponse} from "@/types/order";
 import type {PaymentResponse} from "@/types/payment";
-
-const PRIMARY_BUTTON =
-    "inline-flex min-h-11 items-center justify-center gap-3.5 rounded-control border border-brand bg-brand px-[22px] text-[13px] font-extrabold text-white shadow-[0_8px_20px_rgba(224,53,53,0.2)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-[0.48]";
-
-const OUTLINE_BUTTON =
-    "inline-flex min-h-11 items-center justify-center gap-3.5 rounded-control border border-border bg-surface px-[18px] text-[13px] font-extrabold text-foreground transition-colors hover:border-foreground disabled:cursor-not-allowed disabled:opacity-[0.48]";
 
 type PaymentScreenProps = {
     game: GameSummary | null;
@@ -68,14 +64,16 @@ export function PaymentScreen({
             <div
                 className="w-[min(660px,100%)] rounded-modal border border-border bg-surface p-12 text-center shadow-card">
                 {!approved && (
-                    <button
-                        className="mb-6 flex min-h-9 w-fit items-center border-0 bg-transparent p-0 text-[10px] font-extrabold text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-[0.45]"
+                    <Button
+                        className="mb-6 px-0 text-[10px] text-muted-foreground"
                         disabled={busy}
                         onClick={onBack}
-                        type="button"
+                        size="sm"
+                        variant="ghost"
                     >
-                        ← 주문으로 돌아가기
-                    </button>
+                        <ArrowLeft aria-hidden="true"/>
+                        주문으로 돌아가기
+                    </Button>
                 )}
 
                 <div
@@ -152,35 +150,31 @@ export function PaymentScreen({
 
                 {approved ? (
                     <div className="flex flex-wrap justify-center gap-2.5">
-                        <button
-                            className={PRIMARY_BUTTON}
-                            onClick={onTickets}
-                            type="button"
-                        >
-                            내 티켓 확인 →
-                        </button>
-                        <button className={OUTLINE_BUTTON} onClick={onGames} type="button">
+                        <Button onClick={onTickets}>
+                            <TicketCheck aria-hidden="true"/>
+                            내 티켓 확인
+                        </Button>
+                        <Button onClick={onGames} variant="outline">
                             경기 목록으로 돌아가기
-                        </button>
+                        </Button>
                     </div>
                 ) : (
                     <div className="flex justify-center gap-2.5">
-                        <button
-                            className={PRIMARY_BUTTON}
+                        <Button
                             disabled={payment.status !== "READY" || busy || deadlineExpired}
                             onClick={onOpenPayment}
-                            type="button"
                         >
-                            {deadlineExpired ? "결제 시간 만료" : "Toss 결제창 열기 →"}
-                        </button>
-                        <button
-                            className={OUTLINE_BUTTON}
+                            {deadlineExpired ? "결제 시간 만료" : "Toss 결제창 열기"}
+                            {!deadlineExpired && <ArrowRight aria-hidden="true"/>}
+                        </Button>
+                        <Button
                             disabled={!order || busy}
                             onClick={onRefreshOrder}
-                            type="button"
+                            variant="outline"
                         >
+                            <RefreshCw aria-hidden="true"/>
                             주문 상태 확인
-                        </button>
+                        </Button>
                     </div>
                 )}
             </div>

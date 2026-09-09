@@ -1,15 +1,9 @@
+import {ArrowRight, RefreshCw, X} from "lucide-react";
+
 import {Alert} from "@/components/common/alert";
+import {Button} from "@/components/ui/button";
 import {formatGameDate, formatShortDate} from "@/lib/date";
 import type {GameSummary, QueueViewState} from "@/types/game";
-
-const PRIMARY_BUTTON =
-    "inline-flex min-h-11 items-center justify-center gap-3.5 rounded-control border border-brand bg-brand px-[22px] text-[13px] font-extrabold text-white shadow-[0_8px_20px_rgba(224,53,53,0.2)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-[0.48]";
-
-const OUTLINE_BUTTON =
-    "inline-flex min-h-11 items-center justify-center gap-3.5 rounded-control border border-border bg-surface px-[18px] text-[13px] font-extrabold text-foreground transition-colors hover:border-foreground disabled:cursor-not-allowed disabled:opacity-[0.48]";
-
-const TEXT_BUTTON_DANGER =
-    "mt-2.5 inline-flex min-h-9 items-center justify-center gap-3.5 px-2 text-[13px] font-extrabold text-brand disabled:cursor-not-allowed disabled:opacity-[0.48]";
 
 /**
  * 대기열 화면. Vite의 QueueScreen(App.tsx)과 같은 순서로 선택 경기 요약,
@@ -149,32 +143,36 @@ export function QueueScreen({
                 </div>
 
                 <div className="flex justify-center gap-2.5 max-sm:flex-col">
-                    <button
-                        className={OUTLINE_BUTTON}
+                    <Button
                         disabled={busy}
                         onClick={onRefresh}
                         type="button"
+                        variant="outline"
                     >
+                        <RefreshCw aria-hidden="true"/>
                         상태 확인
-                    </button>
-                    <button
-                        className={PRIMARY_BUTTON}
+                    </Button>
+                    <Button
                         disabled={!admitted || busy}
                         onClick={onContinue}
                         type="button"
                     >
-                        좌석 선택으로 이동 →
-                    </button>
+                        좌석 선택으로 이동
+                        <ArrowRight aria-hidden="true"/>
+                    </Button>
                 </div>
                 {!admitted && (
-                    <button
-                        className={TEXT_BUTTON_DANGER}
+                    <Button
+                        className="mt-2.5 text-[13px]"
                         disabled={busy}
                         onClick={onCancel}
+                        size="sm"
                         type="button"
+                        variant="destructive"
                     >
+                        <X aria-hidden="true"/>
                         예매 취소하고 돌아가기
-                    </button>
+                    </Button>
                 )}
             </div>
 

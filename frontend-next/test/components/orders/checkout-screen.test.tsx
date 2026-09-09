@@ -86,7 +86,7 @@ describe("주문 화면", () => {
         expect(screen.getByText("선점 남은 시간")).toBeInTheDocument();
         expect(screen.queryByText("결제 남은 시간")).not.toBeInTheDocument();
         expect(
-            screen.getByRole("button", {name: "주문 생성하기 →"}),
+            screen.getByRole("button", {name: "주문 생성하기"}),
         ).toBeEnabled();
         expect(
             screen.queryByRole("button", {name: "주문 상태 확인"}),
@@ -116,14 +116,14 @@ describe("주문 화면", () => {
         expect(screen.getByText("O-1")).toBeInTheDocument();
         expect(screen.getByText("CREATED")).toBeInTheDocument();
         expect(
-            screen.getByRole("button", {name: "20,000원 결제 준비 →"}),
+            screen.getByRole("button", {name: "20,000원 결제 준비"}),
         ).toBeEnabled();
         expect(
             screen.getByRole("button", {name: "주문 상태 확인"}),
         ).toBeEnabled();
         expect(screen.getByRole("button", {name: "주문 취소"})).toBeEnabled();
         expect(
-            screen.queryByRole("button", {name: "주문 생성하기 →"}),
+            screen.queryByRole("button", {name: "주문 생성하기"}),
         ).not.toBeInTheDocument();
     });
 
@@ -142,7 +142,7 @@ describe("주문 화면", () => {
         );
 
         expect(
-            screen.getByRole("button", {name: "20,000원 결제 준비 →"}),
+            screen.getByRole("button", {name: "20,000원 결제 준비"}),
         ).toBeDisabled();
         expect(screen.getByRole("button", {name: "주문 취소"})).toBeDisabled();
         expect(
@@ -186,7 +186,7 @@ describe("주문 화면", () => {
         );
 
         expect(
-            screen.getByRole("button", {name: "← 좌석 선택으로"}),
+            screen.getByRole("button", {name: "좌석 선택으로"}),
         ).toBeDisabled();
     });
 });

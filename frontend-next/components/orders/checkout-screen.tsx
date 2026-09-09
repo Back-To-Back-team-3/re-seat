@@ -2,22 +2,15 @@
 
 import Link from "next/link";
 import {useState} from "react";
+import {ArrowLeft, ArrowRight, RefreshCw, X} from "lucide-react";
 
 import {Countdown} from "@/components/common/countdown";
 import {OrderSummary} from "@/components/orders/order-summary";
+import {Button} from "@/components/ui/button";
 import {formatPrice} from "@/lib/currency";
 import type {GameSeat, GameSummary} from "@/types/game";
 import type {OrderResponse} from "@/types/order";
 import type {ReservationResponse} from "@/types/reservation";
-
-const PRIMARY_BUTTON_FULL =
-    "mb-2 inline-flex min-h-11 w-full items-center justify-center gap-3.5 rounded-control border border-brand bg-brand px-[22px] text-[13px] font-extrabold text-white shadow-[0_8px_20px_rgba(224,53,53,0.2)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-[0.48]";
-
-const OUTLINE_BUTTON_FULL =
-    "mb-2 inline-flex min-h-11 w-full items-center justify-center gap-3.5 rounded-control border border-border bg-surface px-[18px] text-[13px] font-extrabold text-foreground transition-colors hover:border-foreground disabled:cursor-not-allowed disabled:opacity-[0.48]";
-
-const TEXT_BUTTON_DANGER =
-    "inline-flex min-h-9 items-center justify-center gap-3.5 border-0 bg-transparent px-2 text-[13px] font-extrabold text-brand disabled:cursor-not-allowed disabled:opacity-[0.48]";
 
 type CheckoutScreenBaseProps = {
     game: GameSummary | null;
@@ -74,14 +67,16 @@ export function CheckoutScreen(props: CheckoutScreenProps) {
     return (
         <section className="mx-auto w-[min(1120px,100%)]">
             <div className="mb-7">
-                <button
-                    className="mb-[18px] flex min-h-9 w-fit items-center border-0 bg-transparent p-0 text-[10px] font-extrabold text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-[0.45]"
+                <Button
+                    className="mb-[18px] px-0 text-[10px] text-muted-foreground"
                     disabled={busy}
                     onClick={onBack}
-                    type="button"
+                    size="sm"
+                    variant="ghost"
                 >
-                    ← 좌석 선택으로
-                </button>
+                    <ArrowLeft aria-hidden="true"/>
+                    좌석 선택으로
+                </Button>
                 <span className="text-xs font-extrabold tracking-[0.1em] text-brand">
           CHECKOUT
         </span>
@@ -135,14 +130,14 @@ export function CheckoutScreen(props: CheckoutScreenProps) {
                         </p>
                     )}
                     {!order ? (
-                        <button
-                            className={PRIMARY_BUTTON_FULL}
+                        <Button
+                            className="mb-2 w-full"
                             disabled={!reservation || busy || deadlineExpired}
                             onClick={props.onCreateOrder}
-                            type="button"
                         >
-                            주문 생성하기 →
-                        </button>
+                            주문 생성하기
+                            <ArrowRight aria-hidden="true"/>
+                        </Button>
                     ) : (
                         <>
                             <div
@@ -157,32 +152,33 @@ export function CheckoutScreen(props: CheckoutScreenProps) {
                                     {order.status}
                                 </small>
                             </div>
-                            <button
-                                className={PRIMARY_BUTTON_FULL}
+                            <Button
+                                className="mb-2 w-full"
                                 disabled={order.status !== "CREATED" || busy || deadlineExpired}
                                 onClick={props.onPayment}
-                                type="button"
                             >
                                 {deadlineExpired
                                     ? "결제 시간 만료"
-                                    : `${formatPrice(order.totalAmount)} 결제 준비 →`}
-                            </button>
-                            <button
-                                className={OUTLINE_BUTTON_FULL}
+                                    : `${formatPrice(order.totalAmount)} 결제 준비`}
+                                {!deadlineExpired && <ArrowRight aria-hidden="true"/>}
+                            </Button>
+                            <Button
+                                className="mb-2 w-full"
                                 disabled={busy}
                                 onClick={props.onRefreshOrder}
-                                type="button"
+                                variant="outline"
                             >
+                                <RefreshCw aria-hidden="true"/>
                                 주문 상태 확인
-                            </button>
-                            <button
-                                className={TEXT_BUTTON_DANGER}
+                            </Button>
+                            <Button
                                 disabled={order.status !== "CREATED" || busy}
                                 onClick={props.onCancelOrder}
-                                type="button"
+                                variant="destructive"
                             >
+                                <X aria-hidden="true"/>
                                 주문 취소
-                            </button>
+                            </Button>
                         </>
                     )}
                     <p className="mt-[9px] text-center text-xs text-muted-foreground">

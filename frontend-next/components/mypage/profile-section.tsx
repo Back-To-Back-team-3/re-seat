@@ -1,6 +1,20 @@
 "use client";
 
-import {useEffect, useRef, useState} from "react";
+import {LogOut, TriangleAlert, UserRoundX} from "lucide-react";
+import {useState} from "react";
+
+import {Badge} from "@/components/ui/badge";
+import {Button} from "@/components/ui/button";
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
 import type {UserProfile, UserRole} from "@/types/auth";
 
 interface ProfileSectionProps {
@@ -21,57 +35,6 @@ export function ProfileSection({
     isWithdrawing = false,
 }: ProfileSectionProps) {
     const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-    const triggerRef = useRef<HTMLButtonElement>(null);
-    const dialogRef = useRef<HTMLDivElement>(null);
-    const cancelButtonRef = useRef<HTMLButtonElement>(null);
-
-    const closeModal = () => {
-        setShowWithdrawModal(false);
-        // 모달을 연 트리거 버튼으로 포커스 복원
-        triggerRef.current?.focus();
-    };
-
-    useEffect(() => {
-        if (!showWithdrawModal) return;
-
-        // 모달이 열리면 첫 조작 요소(취소 버튼)로 포커스 이동
-        cancelButtonRef.current?.focus();
-
-        const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key === "Escape") {
-                event.preventDefault();
-                closeModal();
-                return;
-            }
-
-            if (event.key === "Tab" && dialogRef.current) {
-                const focusableElements = dialogRef.current.querySelectorAll<HTMLElement>(
-                    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-                );
-                if (focusableElements.length === 0) return;
-
-                const firstElement = focusableElements[0];
-                const lastElement = focusableElements[focusableElements.length - 1];
-
-                if (event.shiftKey) {
-                    if (document.activeElement === firstElement) {
-                        event.preventDefault();
-                        lastElement.focus();
-                    }
-                } else {
-                    if (document.activeElement === lastElement) {
-                        event.preventDefault();
-                        firstElement.focus();
-                    }
-                }
-            }
-        };
-
-        window.addEventListener("keydown", handleKeyDown);
-        return () => {
-            window.removeEventListener("keydown", handleKeyDown);
-        };
-    }, [showWithdrawModal]);
 
     return (
         <section className="mx-auto mb-10 w-full max-w-[1120px]">
@@ -87,19 +50,13 @@ export function ProfileSection({
                                     {profile?.name ?? profile?.nickname ?? "사용자"}
                                 </h2>
                                 {role === "ADMIN" && (
-                                    <span className="rounded-full bg-brand px-2 py-0.5 text-[11px] font-bold text-white">
-                                        관리자
-                                    </span>
+                                    <Badge>관리자</Badge>
                                 )}
-                                <span
-                                    className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                                        isVerified
-                                            ? "bg-success/10 text-success"
-                                            : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                                    }`}
+                                <Badge
+                                    variant={isVerified ? "success" : "warning"}
                                 >
                                     {isVerified ? "본인인증 완료" : "본인 미인증"}
-                                </span>
+                                </Badge>
                             </div>
                             <p className="mt-1 text-sm text-muted-foreground">
                                 {profile?.email ?? "이메일 정보 없음"}
@@ -113,73 +70,80 @@ export function ProfileSection({
                     </div>
 
                     <div className="flex items-center gap-2.5">
-                        <button
-                            className="inline-flex min-h-10 items-center justify-center rounded-control border border-border bg-surface px-4 text-xs font-bold text-foreground transition hover:bg-muted"
+                        <Button
+                            className="h-10"
                             onClick={onLogout}
+                            size="sm"
                             type="button"
+                            variant="outline"
                         >
+                            <LogOut aria-hidden="true"/>
                             로그아웃
-                        </button>
-                        <button
-                            className="inline-flex min-h-10 items-center justify-center rounded-control border border-destructive/40 bg-destructive/5 px-4 text-xs font-bold text-destructive transition hover:bg-destructive hover:text-white"
-                            onClick={() => setShowWithdrawModal(true)}
-                            ref={triggerRef}
-                            type="button"
+                        </Button>
+                        <Dialog
+                            onOpenChange={setShowWithdrawModal}
+                            open={showWithdrawModal}
                         >
-                            회원 탈퇴
-                        </button>
+                            <DialogTrigger
+                                render={
+                                    <Button
+                                        className="h-10"
+                                        size="sm"
+                                        type="button"
+                                        variant="destructive"
+                                    />
+                                }
+                            >
+                                <UserRoundX aria-hidden="true"/>
+                                회원 탈퇴
+                            </DialogTrigger>
+                            <DialogContent showCloseButton={!isWithdrawing}>
+                                <DialogHeader>
+                                    <TriangleAlert
+                                        aria-hidden="true"
+                                        className="size-6 text-destructive"
+                                    />
+                                    <DialogTitle className="text-destructive">
+                                        회원 탈퇴 안내
+                                    </DialogTitle>
+                                    <DialogDescription>
+                                        정말로 탈퇴하시겠습니까?
+                                        <br/>
+                                        회원 탈퇴 시 보유 중인{" "}
+                                        <strong className="text-foreground">
+                                            모바일 티켓, 예매 내역 및 계정 정보가 모두 삭제
+                                        </strong>
+                                        되며 즉시 로그아웃됩니다.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <DialogFooter>
+                                    <DialogClose
+                                        disabled={isWithdrawing}
+                                        render={
+                                            <Button
+                                                size="sm"
+                                                type="button"
+                                                variant="outline"
+                                            />
+                                        }
+                                    >
+                                        취소
+                                    </DialogClose>
+                                    <Button
+                                        loading={isWithdrawing}
+                                        onClick={onWithdraw}
+                                        size="sm"
+                                        type="button"
+                                        variant="destructive"
+                                    >
+                                        {isWithdrawing ? "탈퇴 처리 중..." : "탈퇴 확인"}
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
                     </div>
                 </div>
             </div>
-
-            {/* 회원 탈퇴 확인 모달 */}
-            {showWithdrawModal && (
-                <div
-                    aria-labelledby="withdraw-dialog-title"
-                    aria-modal="true"
-                    className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm"
-                    ref={dialogRef}
-                    role="dialog"
-                >
-                    <div className="w-full max-w-md rounded-[16px] border border-border bg-surface p-6 shadow-2xl">
-                        <div className="mb-4">
-                            <span className="inline-block text-2xl">⚠️</span>
-                            <h3
-                                className="mt-2 text-lg font-bold text-destructive"
-                                id="withdraw-dialog-title"
-                            >
-                                회원 탈퇴 안내
-                            </h3>
-                            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                                정말로 탈퇴하시겠습니까?
-                                <br />
-                                회원 탈퇴 시 보유 중인 <strong className="text-foreground">모바일 티켓, 예매 내역 및 계정 정보가 모두 삭제</strong>되며 즉시 로그아웃됩니다.
-                            </p>
-                        </div>
-                        <div className="flex justify-end gap-3 pt-2">
-                            <button
-                                className="inline-flex min-h-10 items-center justify-center rounded-control border border-border bg-surface px-4 text-xs font-bold text-muted-foreground transition hover:text-foreground"
-                                disabled={isWithdrawing}
-                                onClick={closeModal}
-                                ref={cancelButtonRef}
-                                type="button"
-                            >
-                                취소
-                            </button>
-                            <button
-                                className="inline-flex min-h-10 items-center justify-center rounded-control bg-destructive px-4 text-xs font-bold text-white transition hover:bg-destructive/90 disabled:opacity-50"
-                                disabled={isWithdrawing}
-                                onClick={() => {
-                                    onWithdraw();
-                                }}
-                                type="button"
-                            >
-                                {isWithdrawing ? "탈퇴 처리 중..." : "탈퇴 확인"}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </section>
     );
 }

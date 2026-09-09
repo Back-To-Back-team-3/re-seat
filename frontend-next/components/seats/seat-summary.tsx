@@ -1,13 +1,12 @@
+import {ArrowRight, RotateCcw} from "lucide-react";
+
 import {Countdown} from "@/components/common/countdown";
+import {Button} from "@/components/ui/button";
 import {formatPrice} from "@/lib/currency";
 import type {GameSeat} from "@/types/game";
 import type {ReservationResponse} from "@/types/reservation";
 
-const PRIMARY_BUTTON_FULL =
-    "mx-[14px] mb-2 inline-flex min-h-11 w-[calc(100%-28px)] items-center justify-center gap-3.5 rounded-control border border-brand bg-brand px-[22px] text-[13px] font-extrabold text-white shadow-[0_8px_20px_rgba(224,53,53,0.2)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-[0.48]";
-
-const OUTLINE_BUTTON_FULL =
-    "mx-[14px] mb-2 inline-flex min-h-11 w-[calc(100%-28px)] items-center justify-center gap-3.5 rounded-control border border-border bg-surface px-[18px] text-[13px] font-extrabold text-foreground transition-colors hover:border-foreground disabled:cursor-not-allowed disabled:opacity-[0.48]";
+const FULL_WIDTH_BUTTON = "mx-[14px] mb-2 w-[calc(100%-28px)] text-[13px]";
 
 export function SeatSummary({
                                 seats,
@@ -47,14 +46,14 @@ export function SeatSummary({
           </span>
                 ))}
                 <strong>{formatPrice(total)}</strong>
-                <button
-                    className="rounded-control bg-brand px-5 py-3 font-bold text-white disabled:bg-muted"
+                <Button
+                    className="w-full"
                     disabled={busy || locked || seats.length === 0}
                     onClick={onReserve}
                     type="button"
                 >
                     {locked ? "예약 완료" : "선택 좌석 예약"}
-                </button>
+                </Button>
             </aside>
         );
     }
@@ -132,32 +131,36 @@ export function SeatSummary({
             </div>
 
             {!reservation ? (
-                <button
-                    className={PRIMARY_BUTTON_FULL}
+                <Button
+                    className={FULL_WIDTH_BUTTON}
                     disabled={seats.length === 0 || locked}
                     onClick={onReserve}
                     type="button"
                 >
-                    {timerExpired ? "좌석 선택 시간 만료" : `${seats.length}석 선점하기 →`}
-                </button>
+                    {timerExpired ? "좌석 선택 시간 만료" : `${seats.length}석 선점하기`}
+                    {!timerExpired && <ArrowRight aria-hidden="true"/>}
+                </Button>
             ) : (
                 <>
-                    <button
-                        className={PRIMARY_BUTTON_FULL}
+                    <Button
+                        className={FULL_WIDTH_BUTTON}
                         disabled={timerExpired || busy}
                         onClick={onContinue}
                         type="button"
                     >
-                        주문 정보 입력 →
-                    </button>
-                    <button
-                        className={OUTLINE_BUTTON_FULL}
+                        주문 정보 입력
+                        <ArrowRight aria-hidden="true"/>
+                    </Button>
+                    <Button
+                        className={FULL_WIDTH_BUTTON}
                         disabled={busy}
                         onClick={onCancelReservation}
                         type="button"
+                        variant="outline"
                     >
+                        <RotateCcw aria-hidden="true"/>
                         선점 해제
-                    </button>
+                    </Button>
                 </>
             )}
 

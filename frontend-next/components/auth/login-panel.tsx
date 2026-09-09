@@ -1,3 +1,6 @@
+import {LogOut} from "lucide-react";
+
+import {Button} from "@/components/ui/button";
 import type {UserProfile, UserRole} from "@/types/auth";
 
 type LoginPanelProps = {
@@ -22,13 +25,14 @@ export function LoginPanel({
                            }: LoginPanelProps) {
     if (!isAuthed) {
         return (
-            <button
-                className="cursor-pointer rounded-control border-0 bg-[#fee500] px-[17px] py-[11px] text-[13px] font-extrabold text-[#191919]"
+            <Button
+                className="h-10 border-0 bg-[#fee500] px-[17px] text-[13px] text-[#191919] shadow-none hover:bg-[#f2d900]"
                 onClick={onLogin}
+                size="sm"
                 type="button"
             >
                 카카오 로그인
-            </button>
+            </Button>
         );
     }
 
@@ -53,13 +57,16 @@ export function LoginPanel({
                     {role}
                 </small>
             </div>
-            <button
-                className="cursor-pointer border-0 bg-transparent p-1.5 text-[11px] text-muted-foreground max-sm:hidden"
+            <Button
+                className="h-8 px-2 text-[11px] text-muted-foreground max-sm:hidden"
                 onClick={onLogout}
+                size="sm"
                 type="button"
+                variant="ghost"
             >
+                <LogOut aria-hidden="true"/>
                 로그아웃
-            </button>
+            </Button>
         </div>
     );
 }

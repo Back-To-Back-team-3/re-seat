@@ -108,10 +108,10 @@ describe("결제 화면", () => {
         );
 
         expect(
-            screen.getByRole("button", {name: "← 주문으로 돌아가기"}),
+            screen.getByRole("button", {name: "주문으로 돌아가기"}),
         ).toBeInTheDocument();
         expect(
-            screen.getByRole("button", {name: "Toss 결제창 열기 →"}),
+            screen.getByRole("button", {name: "Toss 결제창 열기"}),
         ).toBeEnabled();
         expect(screen.getByText("O-2")).toBeInTheDocument();
         expect(screen.getByText("P-1")).toBeInTheDocument();
@@ -131,10 +131,10 @@ describe("결제 화면", () => {
 
         expect(screen.getByText("FAILED")).toBeInTheDocument();
         expect(
-            screen.getByRole("button", {name: "Toss 결제창 열기 →"}),
+            screen.getByRole("button", {name: "Toss 결제창 열기"}),
         ).toBeDisabled();
         expect(
-            screen.queryByRole("button", {name: "내 티켓 확인 →"}),
+            screen.queryByRole("button", {name: "내 티켓 확인"}),
         ).not.toBeInTheDocument();
     });
 
@@ -174,16 +174,16 @@ describe("결제 화면", () => {
 
         expect(screen.getByText("예매가 완료되었습니다!")).toBeInTheDocument();
         expect(
-            screen.getByRole("button", {name: "내 티켓 확인 →"}),
+            screen.getByRole("button", {name: "내 티켓 확인"}),
         ).toBeInTheDocument();
         expect(
             screen.getByRole("button", {name: "경기 목록으로 돌아가기"}),
         ).toBeInTheDocument();
         expect(
-            screen.queryByRole("button", {name: "Toss 결제창 열기 →"}),
+            screen.queryByRole("button", {name: "Toss 결제창 열기"}),
         ).not.toBeInTheDocument();
         expect(
-            screen.queryByRole("button", {name: "← 주문으로 돌아가기"}),
+            screen.queryByRole("button", {name: "주문으로 돌아가기"}),
         ).not.toBeInTheDocument();
     });
 });

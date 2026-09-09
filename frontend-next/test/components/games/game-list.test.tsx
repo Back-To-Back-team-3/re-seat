@@ -183,7 +183,7 @@ describe("경기 목록", () => {
         const onReload = vi.fn();
         renderGameList({onReload});
 
-        const button = screen.getByRole("button", {name: "↻ 일정 새로고침"});
+        const button = screen.getByRole("button", {name: "일정 새로고침"});
         fireEvent.click(button);
 
         expect(onReload).toHaveBeenCalledTimes(1);
@@ -193,7 +193,7 @@ describe("경기 목록", () => {
         renderGameList({reloading: true});
 
         expect(
-            screen.getByRole("button", {name: "↻ 일정 새로고침"}),
+            screen.getByRole("button", {name: "일정 새로고침"}),
         ).toBeDisabled();
     });
 

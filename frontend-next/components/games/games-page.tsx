@@ -2,6 +2,7 @@
 
 import {useRouter} from "next/navigation";
 import {useState} from "react";
+import {ArrowRight, RefreshCw} from "lucide-react";
 
 import {VerificationPanel} from "@/components/auth/verification-panel";
 import {Alert} from "@/components/common/alert";
@@ -10,6 +11,7 @@ import {StadiumCongestionSection} from "@/components/congestion/stadium-congesti
 import {GAME_STATUS_META} from "@/components/games/game-card";
 import {GameList} from "@/components/games/game-list";
 import {TodayGamesPanel} from "@/components/games/today-games-panel";
+import {Button} from "@/components/ui/button";
 import {useAuth} from "@/hooks/use-auth";
 import {useGames} from "@/hooks/use-games";
 import {getCompletedGameIds} from "@/lib/completed-games";
@@ -172,8 +174,8 @@ export function GamesPage() {
                                             {selectedGame.stadium.name}
                                         </small>
                                     </div>
-                                    <button
-                                        className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-3 rounded-control border-0 bg-brand px-[22px] font-extrabold text-white shadow-[0_8px_20px_rgba(224,53,53,0.2)] disabled:cursor-not-allowed max-sm:w-full"
+                                    <Button
+                                        className="max-sm:w-full"
                                         disabled={
                                             auth.busy ||
                                             selectedGame.bookingStatus !== "OPEN" ||
@@ -187,8 +189,8 @@ export function GamesPage() {
                                             : auth.isAuthed
                                                 ? selectedMeta?.action
                                                 : "로그인 후 예매"}
-                                        <span aria-hidden="true">→</span>
-                                    </button>
+                                        <ArrowRight aria-hidden="true"/>
+                                    </Button>
                                 </div>
                             )}
                         </div>
@@ -228,15 +230,18 @@ export function GamesPage() {
                                     description={gamesQuery.error.message}
                                     title="경기 일정을 불러오지 못했습니다."
                                 />
-                                <button
-                                    className="justify-self-center rounded-control border border-border bg-surface px-5 py-2 text-sm font-bold cursor-pointer"
+                                <Button
+                                    className="justify-self-center"
                                     onClick={() => {
                                         void gamesQuery.refetch();
                                     }}
+                                    size="sm"
                                     type="button"
+                                    variant="outline"
                                 >
+                                    <RefreshCw aria-hidden="true"/>
                                     일정 다시 불러오기
-                                </button>
+                                </Button>
                             </div>
                         ) : (
                             <GameList
