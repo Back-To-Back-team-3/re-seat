@@ -13,16 +13,10 @@ import {SeatMap} from "@/components/seats/seat-map";
 import {SeatSummary} from "@/components/seats/seat-summary";
 import {useReservation} from "@/hooks/use-reservation";
 import {useSeats} from "@/hooks/use-seats";
-import {parseApiDateTime} from "@/lib/date";
 import {STADIUM_IMAGE_URL} from "@/lib/constants";
 import {formatPrice} from "@/lib/currency";
+import {isDeadlineExpired} from "@/lib/date";
 import {useBookingStore} from "@/providers/booking-store-provider";
-
-function isDeadlineExpired(target: string | null) {
-    const targetDate = parseApiDateTime(target);
-    if (!targetDate) return false;
-    return Math.max(0, Math.ceil((targetDate.getTime() - Date.now()) / 1000)) === 0;
-}
 
 export default function SeatsPage() {
     const params = useParams<{ gameId: string }>();
