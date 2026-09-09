@@ -105,8 +105,11 @@ public class PaymentService {
             return paymentApprovalService.approve(userId, paymentId, idempotencyKey, request);
         } catch (PaymentLocalApplyFailedException e) {
             // 승인 트랜잭션이 롤백된 뒤 별도 트랜잭션으로 PG 승인 취소 작업을 보존한다.
-            paymentApprovalService.registerApprovalCompensation(e.getPaymentId(), e.getPaymentKey());
-            failOrderAfterLocalApplyFailure(e.getOrderId());
+            boolean compensationRegistered
+                = paymentApprovalService.registerApprovalCompensation(e.getPaymentId(), e.getPaymentKey());
+            if (compensationRegistered) {
+                failOrderAfterLocalApplyFailure(e.getOrderId());
+            }
             throw e;
         }
     }

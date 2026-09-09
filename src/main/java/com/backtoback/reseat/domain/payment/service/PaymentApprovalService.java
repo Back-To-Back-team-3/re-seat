@@ -127,13 +127,19 @@ public class PaymentApprovalService {
 
     /** 승인 후 로컬 반영에 실패한 결제를 실패 처리하고 PG 승인 취소 작업을 등록한다. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void registerApprovalCompensation(Long paymentId, String paymentKey) {
+    public boolean registerApprovalCompensation(Long paymentId, String paymentKey) {
         Payment payment
             = paymentRepository.findByIdWithPessimisticWriteLock(paymentId).orElseThrow(PaymentNotFoundException::new);
+
+        // 다른 승인 요청이 먼저 완료했다면 확정된 결제 상태를 보상 작업으로 덮어쓰지 않는다.
+        if (!payment.isReady()) {
+            return false;
+        }
 
         payment.assignPgPaymentKey(paymentKey);
         payment.fail(ErrorCode.PAYMENT_LOCAL_APPLY_FAILED.getMessage(), LocalDateTime.now());
         paymentRecoveryTaskRepository.save(PaymentRecoveryTask.createApprovalCompensation(payment));
+        return true;
     }
 
     /** 승인된 결제의 주문 항목별 티켓을 확인하고 응답한다. */

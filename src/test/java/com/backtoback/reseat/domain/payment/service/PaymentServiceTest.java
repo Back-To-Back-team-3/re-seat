@@ -421,6 +421,7 @@ class PaymentServiceTest {
                     orderService
                 );
             when(approvalService.approve(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request)).thenThrow(failure);
+            when(approvalService.registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY)).thenReturn(true);
             doThrow(new RuntimeException("주문 실패 전이 오류")).when(orderService).failOrder(ORDER_ID);
 
             assertThatThrownBy(() -> service.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
@@ -429,6 +430,35 @@ class PaymentServiceTest {
             InOrder inOrder = inOrder(approvalService, orderService);
             inOrder.verify(approvalService).registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY);
             inOrder.verify(orderService).failOrder(ORDER_ID);
+        }
+
+        @Test
+        @DisplayName("다른 승인 요청이 먼저 완료했다면 주문을 실패 처리하지 않는다.")
+        void skipsOrderFailureWhenCompensationIsNotRegistered() {
+            PaymentCompleteRequest request = mock(PaymentCompleteRequest.class);
+            RuntimeException cause = new RuntimeException("주문 상태 반영 실패");
+            PaymentLocalApplyFailedException failure
+                = new PaymentLocalApplyFailedException(PAYMENT_ID, ORDER_ID, PAYMENT_KEY, cause);
+            PaymentApprovalService approvalService = mock(PaymentApprovalService.class);
+            PaymentService service
+                = new PaymentService(
+                    paymentRepository,
+                    paymentCancelRepository,
+                    paymentRecoveryTaskRepository,
+                    paymentCreationService,
+                    approvalService,
+                    paymentValidator,
+                    redissonClient,
+                    orderService
+                );
+            when(approvalService.approve(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request)).thenThrow(failure);
+            when(approvalService.registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY)).thenReturn(false);
+
+            assertThatThrownBy(() -> service.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
+                .isSameAs(failure);
+
+            verify(approvalService).registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY);
+            verify(orderService, never()).failOrder(anyLong());
         }
 
         @Test
@@ -611,8 +641,9 @@ class PaymentServiceTest {
             Payment payment = payment(PaymentStatus.READY);
             when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
 
-            paymentApprovalService.registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY);
+            boolean registered = paymentApprovalService.registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY);
 
+            assertThat(registered).isTrue();
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.FAILED);
             assertThat(payment.getPgPaymentKey()).isEqualTo(PAYMENT_KEY);
             assertThat(payment.getFailReason()).isEqualTo(ErrorCode.PAYMENT_LOCAL_APPLY_FAILED.getMessage());
@@ -621,6 +652,21 @@ class PaymentServiceTest {
             assertThat(taskCaptor.getValue().getPayment()).isSameAs(payment);
             assertThat(taskCaptor.getValue().getType()).isEqualTo(PaymentRecoveryType.APPROVAL_COMPENSATION);
             assertThat(taskCaptor.getValue().getStatus()).isEqualTo(PaymentRecoveryStatus.PENDING);
+        }
+
+        @Test
+        @DisplayName("다른 승인 요청이 먼저 완료한 결제에는 보상 작업을 등록하지 않는다.")
+        void skipsApprovalCompensationForApprovedPayment() {
+            Payment payment = payment(PaymentStatus.APPROVED);
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
+
+            boolean registered = paymentApprovalService.registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY);
+
+            assertThat(registered).isFalse();
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED);
+            assertThat(payment.getPgPaymentKey()).isNull();
+            assertThat(payment.getFailReason()).isNull();
+            verify(paymentRecoveryTaskRepository, never()).save(any());
         }
 
         @Test
