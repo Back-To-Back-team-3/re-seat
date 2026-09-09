@@ -8,8 +8,10 @@ import {API_BASE_URL} from "@/api/client";
 import {Header} from "@/components/layout/header";
 import {server} from "@/test/mocks/server";
 
+const navigation = vi.hoisted(() => ({pathname: "/games" as string | null}));
+
 vi.mock("next/navigation", () => ({
-    usePathname: () => "/games",
+    usePathname: () => navigation.pathname,
 }));
 
 function profileResponse(isVerified: boolean) {
@@ -42,6 +44,7 @@ function renderHeader() {
 
 describe("Header", () => {
     beforeEach(() => {
+        navigation.pathname = "/games";
         localStorage.clear();
         document.documentElement.removeAttribute("data-theme");
         clearAuthNotice();
@@ -101,6 +104,16 @@ describe("Header", () => {
 
         const homeLink = await screen.findByRole("link", {name: "Re:Seat 홈"});
         expect(homeLink).toHaveAttribute("href", "/games");
+    });
+
+    it("현재 경로가 제공되지 않아도 기본 메뉴를 렌더링한다", async () => {
+        navigation.pathname = null;
+
+        renderHeader();
+
+        expect(
+            await screen.findByRole("link", {name: "경기 예매"}),
+        ).toBeInTheDocument();
     });
 
     it("로그인한 사용자의 닉네임을 표시한다", async () => {

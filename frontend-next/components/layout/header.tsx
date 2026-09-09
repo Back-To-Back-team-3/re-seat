@@ -25,7 +25,7 @@ const DISABLED_NAV_LINK =
  */
 export function Header() {
     const auth = useAuth();
-    const pathname = usePathname();
+    const pathname = usePathname() ?? "";
     const {theme, toggleTheme} = useTheme();
     const isMyPageRoute = pathname.startsWith("/mypage");
 
