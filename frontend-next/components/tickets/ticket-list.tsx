@@ -4,6 +4,7 @@ import {RefreshCw, TicketX} from "lucide-react";
 import {type ComponentProps, useRef, useState} from "react";
 
 import {EmptyState} from "@/components/common/empty-state";
+import {PageIntro} from "@/components/common/page-intro";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {
@@ -89,17 +90,11 @@ export function TicketList({
     return (
         <section className="mx-auto w-full max-w-[1120px]">
             <div className="mb-[30px] flex items-end justify-between gap-6 max-[640px]:flex-col max-[640px]:items-start">
-                <div>
-                    <span className="inline-block text-xs font-extrabold tracking-[0.1em] text-brand">
-                        MY TICKETS
-                    </span>
-                    <h1 className="mt-[7px] mb-1.5 text-[clamp(32px,3.5vw,46px)] tracking-[-0.04em]">
-                        내 티켓
-                    </h1>
-                    <p className="m-0 text-sm text-muted-foreground">
-                        결제 완료 후 발급된 모바일 티켓을 확인하고 취소(환불)를 요청할 수 있습니다.
-                    </p>
-                </div>
+                <PageIntro
+                    description="결제 완료 후 발급된 모바일 티켓을 확인하고 취소(환불)를 요청할 수 있습니다."
+                    eyebrow="MY TICKETS"
+                    title="내 티켓"
+                />
                 <Button
                     disabled={reloading}
                     loading={reloading}

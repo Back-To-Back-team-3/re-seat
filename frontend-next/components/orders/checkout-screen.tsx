@@ -5,6 +5,7 @@ import {useState} from "react";
 import {ArrowLeft, ArrowRight, RefreshCw, X} from "lucide-react";
 
 import {DeadlinePanel} from "@/components/booking/deadline-panel";
+import {PageIntro} from "@/components/common/page-intro";
 import {OrderSummary} from "@/components/orders/order-summary";
 import {Button} from "@/components/ui/button";
 import {formatPrice} from "@/lib/currency";
@@ -77,15 +78,11 @@ export function CheckoutScreen(props: CheckoutScreenProps) {
                     <ArrowLeft aria-hidden="true"/>
                     좌석 선택으로
                 </Button>
-                <span className="text-xs font-extrabold tracking-[0.1em] text-brand">
-          CHECKOUT
-        </span>
-                <h1 className="mt-[7px] mb-[6px] text-[clamp(32px,3.5vw,46px)] tracking-[-0.04em]">
-                    예매 정보 확인
-                </h1>
-                <p className="m-0 text-sm text-muted-foreground">
-                    선택한 경기와 좌석을 확인한 뒤 주문을 생성해주세요.
-                </p>
+                <PageIntro
+                    description="선택한 경기와 좌석을 확인한 뒤 주문을 생성해주세요."
+                    eyebrow="CHECKOUT"
+                    title="예매 정보 확인"
+                />
             </div>
 
             <div

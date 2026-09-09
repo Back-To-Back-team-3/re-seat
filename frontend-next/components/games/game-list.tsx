@@ -7,6 +7,7 @@ import {EmptyState} from "@/components/common/empty-state";
 import {GameCalendar} from "@/components/games/game-calendar";
 import {GAME_STATUS_META, GameCard} from "@/components/games/game-card";
 import {Button} from "@/components/ui/button";
+import {PageIntro} from "@/components/common/page-intro";
 import {
     Select,
     SelectContent,
@@ -212,17 +213,12 @@ export function GameList({
         <div className="grid gap-6">
             <div
                 className="flex flex-wrap items-end justify-between gap-6 max-[640px]:flex-col max-[640px]:items-start">
-                <div>
-          <span className="inline-block text-xs font-extrabold tracking-[0.1em] text-brand">
-            — GAME CALENDAR
-          </span>
-                    <h2 className="mt-[7px] mb-1.5 text-[clamp(32px,3.5vw,46px)] tracking-[-0.04em]">
-                        경기 일정
-                    </h2>
-                    <p className="m-0 text-sm text-muted-foreground">
-                        날짜와 구단, 구장을 선택해 전체 예매 상태를 확인하세요.
-                    </p>
-                </div>
+                <PageIntro
+                    description="날짜와 구단, 구장을 선택해 전체 예매 상태를 확인하세요."
+                    eyebrow="— GAME CALENDAR"
+                    headingLevel={2}
+                    title="경기 일정"
+                />
                 <Button
                     disabled={reloading}
                     loading={reloading}
