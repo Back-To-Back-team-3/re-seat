@@ -13,7 +13,7 @@ import {GameList} from "@/components/games/game-list";
 import {Button} from "@/components/ui/button";
 import {useAuth} from "@/hooks/use-auth";
 import {useGames} from "@/hooks/use-games";
-import {getCompletedGameIds} from "@/lib/completed-games";
+import {useTickets} from "@/hooks/use-tickets";
 import {getKstDateKey} from "@/lib/date";
 import type {GameSummary} from "@/types/game";
 
@@ -43,6 +43,7 @@ export function GamesPage() {
     const router = useRouter();
     const auth = useAuth();
     const gamesQuery = useGames();
+    const ticketsQuery = useTickets(auth.isAuthed && auth.isVerified);
     const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
     const [verificationError, setVerificationError] = useState<string | null>(
         null,
@@ -52,10 +53,18 @@ export function GamesPage() {
         games.find((game) => game.gameId === selectedGameId) ??
         chooseInitialGame(games);
     const message =
-        verificationError ?? gamesQuery.error?.message ?? auth.message;
+        verificationError ??
+        gamesQuery.error?.message ??
+        ticketsQuery.error?.message ??
+        auth.message;
     const today = getKstDateKey();
     const todayGames = games.filter((game) => game.gameAt.startsWith(today));
-    const completedGameIds = getCompletedGameIds();
+    // 환불이 완료되지 않은 서버 티켓만 현재 사용자가 예매한 경기로 판단한다.
+    const completedGameIds = new Set(
+        (ticketsQuery.data ?? [])
+            .filter((ticket) => ticket.status !== "REFUNDED")
+            .map((ticket) => ticket.gameId),
+    );
     const selectedCompleted = selectedGame
         ? completedGameIds.has(selectedGame.gameId)
         : false;
@@ -101,7 +110,11 @@ export function GamesPage() {
                 <>
                     <GamesHero
                         authenticated={auth.isAuthed}
-                        bookingBusy={auth.busy}
+                        bookingBusy={
+                            auth.busy ||
+                            ticketsQuery.isLoading ||
+                            Boolean(ticketsQuery.error)
+                        }
                         onSelect={selectGame}
                         onStartBooking={startBooking}
                         selectedCompleted={selectedCompleted}

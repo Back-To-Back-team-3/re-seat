@@ -7,7 +7,6 @@ import {completePayment, failPayment, getPayment, requestPayment,} from "@/api/p
 import {orderKeys} from "@/api/query-keys/orders";
 import {paymentKeys} from "@/api/query-keys/payments";
 import {ticketKeys} from "@/api/query-keys/tickets";
-import {rememberCompletedGame} from "@/lib/completed-games";
 import {
     beginPaymentCallback,
     clearPendingPayment,
@@ -22,7 +21,6 @@ import type {TicketSummary} from "@/types/ticket";
 export function usePayment(paymentId?: number) {
     const queryClient = useQueryClient();
     const setPaymentId = useBookingStore((state) => state.setPaymentId);
-    const selectedGameId = useBookingStore((state) => state.selectedGameId);
     const callbackStarted = useRef(false);
     const detail = useQuery({
         queryKey: paymentKeys.detail(paymentId ?? 0),
@@ -38,17 +36,8 @@ export function usePayment(paymentId?: number) {
         },
         onSuccess: ({payment}) => {
             setPaymentId(payment.paymentId);
-            if (payment.status === "APPROVED") {
-                rememberCompletedGame(selectedGameId);
-            }
         },
     });
-
-    useEffect(() => {
-        if (detail.data?.status === "APPROVED") {
-            rememberCompletedGame(selectedGameId);
-        }
-    }, [detail.data?.status, selectedGameId]);
 
     useEffect(() => {
         if (!paymentId || callbackStarted.current) return;
@@ -77,8 +66,6 @@ export function usePayment(paymentId?: number) {
                         },
                     );
                     if (action.status === "APPROVED") {
-                        rememberCompletedGame(pending!.gameId);
-
                         /*
                          * 승인 응답에는 이번 결제로 발급된 실제 티켓이 포함됩니다.
                          * 기존 캐시의 과거 티켓은 유지하고 같은 ticketId는 최신 승인
