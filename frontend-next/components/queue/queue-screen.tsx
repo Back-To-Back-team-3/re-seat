@@ -1,8 +1,8 @@
 import {ArrowRight, RefreshCw, X} from "lucide-react";
 
+import {GameSummaryBar} from "@/components/booking/game-summary-bar";
 import {Alert} from "@/components/common/alert";
 import {Button} from "@/components/ui/button";
-import {formatGameDate, formatShortDate} from "@/lib/date";
 import type {GameSummary, QueueViewState} from "@/types/game";
 
 /**
@@ -47,27 +47,7 @@ export function QueueScreen({
         <section className="mx-auto w-[min(820px,100%)]">
             {error && <Alert message={error} variant="error"/>}
 
-            {game && (
-                <div
-                    className="mb-6 flex min-h-[72px] items-center gap-3.5 rounded-[10px] border border-border bg-surface px-[18px] py-3 max-sm:items-start">
-          <span
-              className="grid size-[42px] place-items-center rounded-lg bg-foreground font-mono font-black text-surface">
-            {formatShortDate(game.gameAt).day}
-          </span>
-                    <div className="grid gap-[3px]">
-                        <strong className="text-[17px]">
-                            {game.homeTeam.name}{" "}
-                            <em className="mx-1.5 font-mono text-[9px] not-italic text-brand">
-                                VS
-                            </em>{" "}
-                            {game.awayTeam.name}
-                        </strong>
-                        <small className="text-xs text-muted-foreground">
-                            {formatGameDate(game.gameAt)} · {game.stadium.name}
-                        </small>
-                    </div>
-                </div>
-            )}
+            {game && <GameSummaryBar game={game}/>}
 
             <div
                 className={`rounded-modal border bg-surface px-[62px] pt-12 pb-[38px] text-center shadow-card max-sm:px-5 max-sm:pt-[38px] max-sm:pb-7 ${

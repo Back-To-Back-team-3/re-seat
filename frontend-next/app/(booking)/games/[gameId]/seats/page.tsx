@@ -6,12 +6,13 @@ import {useState} from "react";
 
 import {getGame} from "@/api/games";
 import {gameKeys} from "@/api/query-keys/games";
+import {GameSummaryBar} from "@/components/booking/game-summary-bar";
 import {Alert} from "@/components/common/alert";
 import {SeatMap} from "@/components/seats/seat-map";
 import {SeatSummary} from "@/components/seats/seat-summary";
 import {useReservation} from "@/hooks/use-reservation";
 import {useSeats} from "@/hooks/use-seats";
-import {formatGameDate, formatShortDate, parseApiDateTime} from "@/lib/date";
+import {parseApiDateTime} from "@/lib/date";
 import {STADIUM_IMAGE_URL} from "@/lib/constants";
 import {formatPrice} from "@/lib/currency";
 import {useBookingStore} from "@/providers/booking-store-provider";
@@ -89,24 +90,7 @@ export default function SeatsPage() {
                 cancelNotice && <Alert message={cancelNotice} variant="success"/>
             )}
             {game.data && (
-                <div
-                    className="mb-6 flex min-h-[72px] items-center gap-3.5 rounded-[10px] border border-border bg-surface px-[18px] py-3 max-sm:items-start">
-          <span
-              className="grid size-[42px] place-items-center rounded-lg bg-foreground font-mono font-black text-surface">
-            {formatShortDate(game.data.gameAt).day}
-          </span>
-                    <div className="grid gap-[3px]">
-                        <strong className="text-[17px]">
-                            {game.data.homeTeam.name}{" "}
-                            <em className="mx-1.5 font-mono text-[9px] not-italic text-brand">
-                                VS
-                            </em>{" "}
-                            {game.data.awayTeam.name}
-                        </strong>
-                        <small className="text-xs text-muted-foreground">
-                            {formatGameDate(game.data.gameAt)} · {game.data.stadium.name}
-                        </small>
-                    </div>
+                <GameSummaryBar game={game.data}>
                     <div className="ml-auto flex items-center gap-[7px] text-xs text-muted-foreground max-sm:hidden">
                         <span className="ml-2 size-[11px] rounded-[3px] border border-border bg-surface"/>
                         <span>선택 가능</span>
@@ -115,7 +99,7 @@ export default function SeatsPage() {
                         <span className="ml-2 size-[11px] rounded-[3px] bg-[#d9dce4]"/>
                         <span>선택 불가</span>
                     </div>
-                </div>
+                </GameSummaryBar>
             )}
 
             <div className="grid grid-cols-[minmax(0,1fr)_310px] items-start gap-[14px] max-[1024px]:grid-cols-1">
