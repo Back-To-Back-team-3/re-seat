@@ -8,8 +8,23 @@
     --border: rgb(15 17 23 / 10%);
     --brand: #e03535;
     --brand-dark: #b9232b;
-    --accent: #f5a623;
+    --highlight: #f5a623;
     --success: #16815b;
+    --card: var(--surface);
+    --card-foreground: var(--foreground);
+    --popover: var(--surface);
+    --popover-foreground: var(--foreground);
+    --primary: var(--brand);
+    --primary-foreground: #ffffff;
+    --secondary: var(--surface-soft);
+    --secondary-foreground: var(--foreground);
+    --muted: var(--surface-soft);
+    --accent: var(--surface-soft);
+    --accent-foreground: var(--foreground);
+    --destructive: var(--brand);
+    --input: var(--border);
+    --ring: var(--brand);
+    --radius: var(--control-radius);
     --card-shadow: 0 20px 60px rgb(20 28 50 / 8%);
     --control-radius: 8px;
     --panel-radius: 12px;
@@ -32,7 +47,7 @@ html[data-theme="dark"] {
     --border: rgb(255 255 255 / 11%);
     --brand: #ef5555;
     --brand-dark: #d93e46;
-    --accent: #ffb648;
+    --highlight: #ffb648;
     --success: #50c895;
     --card-shadow: 0 20px 60px rgb(0 0 0 / 28%);
 }
@@ -46,12 +61,30 @@ html[data-theme="dark"] {
     --color-border: var(--border);
     --color-brand: var(--brand);
     --color-brand-dark: var(--brand-dark);
+    --color-highlight: var(--highlight);
     --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
     --color-success: var(--success);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-destructive: var(--destructive);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
     --shadow-card: var(--card-shadow);
     --radius-control: var(--control-radius);
     --radius-panel: var(--panel-radius);
     --radius-modal: var(--modal-radius);
+    --radius-sm: calc(var(--radius) * 0.75);
+    --radius-md: var(--radius);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.5);
     --duration-fast: var(--fast-duration);
     /* Vite frontend/src/styles.css의 .brand, .footer > div > strong이 공유하는
        브랜드 워드마크 서체. Header, Footer가 같은 값을 쓰게 한다. */

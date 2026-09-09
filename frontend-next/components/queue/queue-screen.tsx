@@ -122,7 +122,7 @@ export function QueueScreen({
 
                 <div className="mb-6 h-[7px] overflow-hidden rounded-[20px] bg-surface-soft">
           <span
-              className="block h-full rounded-[inherit] bg-gradient-to-r from-brand to-accent transition-[width] duration-500 [transition-timing-function:ease]"
+              className="block h-full rounded-[inherit] bg-gradient-to-r from-brand to-highlight transition-[width] duration-500 [transition-timing-function:ease]"
               style={{width: `${progress}%`}}
           />
                 </div>
