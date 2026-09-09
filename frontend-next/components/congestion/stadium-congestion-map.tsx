@@ -114,7 +114,7 @@ export function StadiumCongestionMap({
         // 안전한 DOM API를 통한 오버레이 요소 구성 (XSS 방지)
         const overlayContent = document.createElement("div");
         overlayContent.className =
-            "relative -translate-y-3 rounded-xl border border-border/80 bg-surface/95 p-3.5 shadow-2xl backdrop-blur-md text-foreground min-w-[240px] max-w-[280px] pointer-events-auto transition-all";
+            "relative min-w-60 max-w-70 -translate-y-3 rounded-xl border border-border/80 bg-surface/95 p-3.5 text-foreground shadow-2xl backdrop-blur-md transition-all pointer-events-auto";
 
         // 헤더 영역
         const headerEl = document.createElement("div");
@@ -199,7 +199,7 @@ export function StadiumCongestionMap({
     if (!kakaoApiKey || sdkError) {
         return (
             <figure
-                className={`relative m-0 h-[210px] overflow-hidden rounded-[18px] shadow-card after:absolute after:inset-0 after:bg-[linear-gradient(180deg,transparent_40%,rgba(9,13,21,0.7))] after:content-[''] max-sm:h-[170px] ${className}`}
+                className={`relative m-0 h-52.5 overflow-hidden rounded-[18px] shadow-card after:absolute after:inset-0 after:bg-[linear-gradient(180deg,transparent_40%,rgba(9,13,21,0.7))] after:content-[''] max-sm:h-42.5 ${className}`}
             >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -208,7 +208,7 @@ export function StadiumCongestionMap({
                     src={STADIUM_IMAGE_URL}
                 />
 
-                <figcaption className="absolute inset-x-[18px] bottom-[14px] z-[1] flex justify-between text-xs text-white">
+                <figcaption className="absolute inset-x-4.5 bottom-3.5 z-[1] flex justify-between text-xs text-white">
                     <span className="font-extrabold tracking-[0.12em]">
                         JAMSIL
                     </span>
@@ -220,7 +220,7 @@ export function StadiumCongestionMap({
 
     return (
         <div
-            className={`relative h-[210px] w-full overflow-hidden rounded-[18px] border border-border bg-surface shadow-card max-sm:h-[170px] ${className}`}
+            className={`relative h-52.5 w-full overflow-hidden rounded-[18px] border border-border bg-surface shadow-card max-sm:h-42.5 ${className}`}
         >
             <Script
                 id="kakao-maps-sdk-small"

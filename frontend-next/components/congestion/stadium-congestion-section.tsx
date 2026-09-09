@@ -182,7 +182,7 @@ export function StadiumCongestionSection({
         // 상세 팝업 DOM API 안전 구성 (XSS 방지)
         const popupEl = document.createElement("div");
         popupEl.className =
-            "relative -translate-y-8 rounded-xl border border-border bg-surface/95 p-3.5 shadow-2xl backdrop-blur-md text-foreground min-w-[260px] max-w-[300px] pointer-events-auto transition-all";
+            "relative min-w-65 max-w-75 -translate-y-8 rounded-xl border border-border bg-surface/95 p-3.5 text-foreground shadow-2xl backdrop-blur-md transition-all pointer-events-auto";
 
         // 1. 헤더
         const header = document.createElement("div");
@@ -293,7 +293,7 @@ export function StadiumCongestionSection({
             />
 
             {/* 2. 메인 컨텐츠: 좌측 리스트 (420px) + 우측 지도 뷰 (1fr) */}
-            <div className="grid grid-cols-[420px_1fr] max-lg:grid-cols-1 min-h-[580px]">
+            <div className="grid min-h-145 grid-cols-[420px_1fr] max-lg:grid-cols-1">
                 <CongestionSpotList
                     error={Boolean(error)}
                     onRetry={() => void refetch()}
@@ -303,7 +303,7 @@ export function StadiumCongestionSection({
                 />
 
                 {/* 우측: 카카오 지도 뷰 */}
-                <div className="relative min-h-[460px] w-full bg-surface-elevated max-lg:min-h-[380px]">
+                <div className="relative min-h-115 w-full bg-surface-elevated max-lg:min-h-95">
                     <Script
                         id="kakao-maps-sdk"
                         onError={() => {

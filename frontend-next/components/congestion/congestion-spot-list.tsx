@@ -128,7 +128,7 @@ export function CongestionSpotList({
                 </div>
             )}
 
-            <div className="max-h-[520px] flex-1 space-y-2.5 overflow-y-auto p-3">
+            <div className="max-h-130 flex-1 space-y-2.5 overflow-y-auto p-3">
                 {filteredSpots.map((spot) => {
                     const selected = selectedSpotId === spot.id;
 

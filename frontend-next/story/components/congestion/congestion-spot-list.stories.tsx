@@ -21,7 +21,7 @@ const meta = {
     component: CongestionSpotList,
     decorators: [
         (Story) => (
-            <div className="h-[580px] w-[420px] border border-border bg-surface">
+            <div className="h-145 w-105 border border-border bg-surface">
                 <Story/>
             </div>
         ),
