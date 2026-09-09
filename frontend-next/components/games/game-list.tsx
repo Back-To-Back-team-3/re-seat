@@ -6,17 +6,14 @@ import {RotateCcw} from "lucide-react";
 import {EmptyState} from "@/components/common/empty-state";
 import {GameCalendar} from "@/components/games/game-calendar";
 import {GameCard} from "@/components/games/game-card";
+import {
+    GameFilters,
+    type GameFilterId,
+    type GameFilterStatus,
+} from "@/components/games/game-filters";
 import {Button} from "@/components/ui/button";
 import {PageIntro} from "@/components/common/page-intro";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import {getKstDateKey} from "@/lib/date";
-import {GAME_STATUS_META} from "@/lib/game-status";
 import type {GameSummary} from "@/types/game";
 
 type GameListProps = {
@@ -56,30 +53,9 @@ export function GameList({
          */
         return getKstDateKey();
     });
-    const [status, setStatus] = useState<
-        GameSummary["bookingStatus"] | "ALL"
-    >("ALL");
-    const [teamId, setTeamId] = useState<number | "ALL">("ALL");
-    const [stadiumId, setStadiumId] = useState<number | "ALL">("ALL");
-    const teams = useMemo(() => {
-        const entries = new Map<number, string>();
-        games.forEach((game) => {
-            entries.set(game.homeTeam.teamId, game.homeTeam.name);
-            entries.set(game.awayTeam.teamId, game.awayTeam.name);
-        });
-        return [...entries.entries()].sort((left, right) =>
-            left[1].localeCompare(right[1], "ko"),
-        );
-    }, [games]);
-    const stadiums = useMemo(() => {
-        const entries = new Map<number, string>();
-        games.forEach((game) =>
-            entries.set(game.stadium.stadiumId, game.stadium.name),
-        );
-        return [...entries.entries()].sort((left, right) =>
-            left[1].localeCompare(right[1], "ko"),
-        );
-    }, [games]);
+    const [status, setStatus] = useState<GameFilterStatus>("ALL");
+    const [teamId, setTeamId] = useState<GameFilterId>("ALL");
+    const [stadiumId, setStadiumId] = useState<GameFilterId>("ALL");
     const calendarGames = useMemo(
         () =>
             games.filter(
@@ -108,101 +84,15 @@ export function GameList({
     );
 
     const filters = (
-        <>
-            <label className="grid gap-[5px] text-[11px] font-bold text-muted-foreground">
-                구단별
-                <Select
-                    onValueChange={(value) =>
-                        setTeamId(
-                            value === "ALL"
-                                ? "ALL"
-                                : Number(value),
-                        )
-                    }
-                    value={String(teamId)}
-                >
-                    <SelectTrigger className="min-w-[132px]" size="sm">
-                        <SelectValue>
-                            {(value) =>
-                                value === "ALL"
-                                    ? "전체 구단"
-                                    : teams.find(([id]) => String(id) === value)?.[1]
-                            }
-                        </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="ALL">전체 구단</SelectItem>
-                        {teams.map(([id, name]) => (
-                            <SelectItem key={id} value={String(id)}>
-                                {name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </label>
-            <label className="grid gap-[5px] text-[11px] font-bold text-muted-foreground">
-                구장별
-                <Select
-                    onValueChange={(value) =>
-                        setStadiumId(
-                            value === "ALL"
-                                ? "ALL"
-                                : Number(value),
-                        )
-                    }
-                    value={String(stadiumId)}
-                >
-                    <SelectTrigger className="min-w-[132px]" size="sm">
-                        <SelectValue>
-                            {(value) =>
-                                value === "ALL"
-                                    ? "전체 구장"
-                                    : stadiums.find(([id]) => String(id) === value)?.[1]
-                            }
-                        </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="ALL">전체 구장</SelectItem>
-                        {stadiums.map(([id, name]) => (
-                            <SelectItem key={id} value={String(id)}>
-                                {name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </label>
-            <label className="grid gap-[5px] text-[11px] font-bold text-muted-foreground">
-                상태
-                <Select
-                    onValueChange={(value) =>
-                        setStatus(
-                            value as GameSummary["bookingStatus"] | "ALL",
-                        )
-                    }
-                    value={status}
-                >
-                    <SelectTrigger className="min-w-[132px]" size="sm">
-                        <SelectValue>
-                            {(value) =>
-                                value === "ALL"
-                                    ? "전체 상태"
-                                    : GAME_STATUS_META[
-                                          value as GameSummary["bookingStatus"]
-                                      ]?.label
-                            }
-                        </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="ALL">전체 상태</SelectItem>
-                        {Object.entries(GAME_STATUS_META).map(([value, meta]) => (
-                            <SelectItem key={value} value={value}>
-                                {meta.label}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </label>
-        </>
+        <GameFilters
+            games={games}
+            onStadiumChange={setStadiumId}
+            onStatusChange={setStatus}
+            onTeamChange={setTeamId}
+            stadiumId={stadiumId}
+            status={status}
+            teamId={teamId}
+        />
     );
 
     return (
