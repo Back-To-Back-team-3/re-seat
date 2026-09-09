@@ -208,9 +208,12 @@ class SeatHoldRepeatValidationTest {
         reservationSeatRepository.deleteAll();
         reservationRepository.deleteAll();
 
-        // releaseExpiredSeats()는 hold_expires_at 조건이 있어 사용 불가 → findById → available() → save
+        // releaseExpiredSeats()는 hold_expires_at 조건이 있어 사용 불가 → findById → 현재 상태에 맞는 가드된 메서드로 리셋 → save
+        // 1회차 시작 전에는 좌석이 아직 AVAILABLE이라 release() 호출 대상이 아니다.
         GameSeat gameSeat = gameSeatRepository.findById(targetGameSeatId).orElseThrow();
-        gameSeat.release();
+        if (gameSeat.getStatus() == GameSeatStatus.HELD) {
+            gameSeat.release();
+        }
         gameSeatRepository.save(gameSeat);
 
         // 토큰 문자열: "qt_repeat-r{회차}-{인덱스}" — 전체 회차에서 uk_admission_tokens_token 유니크 보장
