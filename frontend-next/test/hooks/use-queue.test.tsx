@@ -84,4 +84,12 @@ describe("useQueue", () => {
         });
         expect(mocks.router.push).not.toHaveBeenCalled();
     });
+
+    it("복원 검증 중에는 새 대기열에 진입하지 않는다", async () => {
+        renderHook(() => useQueue(111, false));
+
+        expect(enterQueue).not.toHaveBeenCalled();
+        expect(streamQueue).not.toHaveBeenCalled();
+        expect(mocks.setGame).not.toHaveBeenCalled();
+    });
 });
