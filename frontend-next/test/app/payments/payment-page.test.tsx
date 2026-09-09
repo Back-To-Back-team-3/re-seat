@@ -86,6 +86,9 @@ function makePayment(overrides: Partial<PaymentResponse> = {}): PaymentResponse 
         failReason: null,
         approvedAt: null,
         failedAt: null,
+        canceledAmount: 0,
+        remainingAmount: 15000,
+        cancels: [],
         ...overrides,
     };
 }

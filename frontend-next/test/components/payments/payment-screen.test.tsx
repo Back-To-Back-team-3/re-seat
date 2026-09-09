@@ -43,6 +43,9 @@ function makePayment(overrides: Partial<PaymentResponse> = {}): PaymentResponse 
         failReason: null,
         approvedAt: null,
         failedAt: null,
+        canceledAmount: 0,
+        remainingAmount: 20000,
+        cancels: [],
         ...overrides,
     };
 }
@@ -184,6 +187,28 @@ describe("결제 화면", () => {
         ).not.toBeInTheDocument();
         expect(
             screen.queryByRole("button", {name: "주문으로 돌아가기"}),
+        ).not.toBeInTheDocument();
+    });
+
+    it("부분 취소된 결제도 완료된 결제로 표시하고 PG 버튼을 숨긴다", () => {
+        render(
+            <PaymentScreen
+                {...noop}
+                busy={false}
+                error={null}
+                game={game}
+                order={makeOrder({status: "PARTIALLY_CANCELED"})}
+                payment={makePayment({
+                    status: "PARTIALLY_CANCELED",
+                    canceledAmount: 10000,
+                    remainingAmount: 10000,
+                })}
+            />,
+        );
+
+        expect(screen.getByText("예매가 완료되었습니다!")).toBeInTheDocument();
+        expect(
+            screen.queryByRole("button", {name: "Toss 결제창 열기"}),
         ).not.toBeInTheDocument();
     });
 });

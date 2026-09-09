@@ -72,7 +72,7 @@ describe("티켓 목록", () => {
                     ticketNo: "TICKET-2",
                     gameId: 99,
                     seat: "내야 1열 1번",
-                    status: "USED",
+                    status: "USED_ENTERED",
                     qrToken: "QR-TOKEN-2",
                     gameAt: "2026-08-08T18:00:00",
                 },

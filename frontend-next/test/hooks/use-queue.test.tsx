@@ -66,4 +66,22 @@ describe("useQueue", () => {
         expect(localStorage.getItem("queueToken")).toBe("queue-token");
         expect(mocks.router.push).toHaveBeenCalledWith("/games/111/seats");
     });
+
+    it("대기열 진입이 거절되면 사유를 사용자 오류로 표시한다", async () => {
+        vi.mocked(streamQueue).mockImplementation(async (_gameId, handlers) => {
+            handlers.onReject({
+                rejected: true,
+                reason: "ACTIVE_QUEUE_TOKEN_IN_ANOTHER_GAME",
+            });
+        });
+
+        const {result} = renderHook(() => useQueue(111));
+
+        await waitFor(() => {
+            expect(result.current.error).toBe(
+                "다른 경기에서 사용할 수 있는 입장 토큰이 있습니다.",
+            );
+        });
+        expect(mocks.router.push).not.toHaveBeenCalled();
+    });
 });
