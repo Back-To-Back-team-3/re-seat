@@ -1,5 +1,6 @@
 package com.backtoback.reseat.domain.ticket.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -78,4 +79,28 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
         @Param("status") TicketStatus status,
         Pageable pageable
     );
+
+    /**
+     * 사용자·경기 단위로 "실질 보유" 상태인 티켓 수를 센다.
+     * 예약 도메인의 누적 보유 좌석 수 집계(TicketCountPort)에 사용된다.
+     * 대상 상태: ISSUED, REFUND_PENDING, REFUND_FAILED.
+     */
+    @Query("""
+        SELECT COUNT(t)
+        FROM Ticket t
+        WHERE t.user.id = :userId
+          AND t.game.id = :gameId
+          AND t.status IN :statuses
+        """)
+    int countByUserIdAndGameIdAndStatusIn(
+        @Param("userId") Long userId,
+        @Param("gameId") Long gameId,
+        @Param("statuses") Collection<TicketStatus> statuses
+    );
+
+    /**
+     * 사용자·상태 목록 기준으로 해당하는 티켓이 하나라도 존재하는지 확인한다.
+     * 회원 탈퇴 가능 여부 판단(User 도메인, TicketService.hasUnsettledTicket) 등에 사용된다.
+     */
+    boolean existsByUserIdAndStatusIn(Long userId, Collection<TicketStatus> statuses);
 }

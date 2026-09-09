@@ -77,7 +77,7 @@ function PaymentDetail({paymentId}: { paymentId: number }) {
             onRefreshOrder={() => {
                 void order.detail.refetch();
             }}
-            onTickets={() => router.push("/tickets")}
+            onTickets={() => router.push("/mypage")}
             order={order.detail.data ?? null}
             payment={payment.detail.data ?? null}
         />

@@ -117,6 +117,12 @@ public class PaymentRecoveryTask extends BaseEntity {
         return create(payment, null, PaymentRecoveryType.CONFIRM_UNKNOWN, payment.getId());
     }
 
+    /** 승인 후 로컬 반영에 실패한 결제의 보상 작업을 생성한다. */
+    public static PaymentRecoveryTask createApprovalCompensation(Payment payment) {
+        validateId(payment == null ? null : payment.getId(), "결제");
+        return create(payment, null, PaymentRecoveryType.APPROVAL_COMPENSATION, payment.getId());
+    }
+
     /** 처리 결과를 확인할 수 없는 부분 취소의 복구 작업을 생성한다. */
     public static PaymentRecoveryTask createPartialCancel(PaymentCancel paymentCancel) {
         validateId(paymentCancel == null ? null : paymentCancel.getId(), "결제 취소 이력");

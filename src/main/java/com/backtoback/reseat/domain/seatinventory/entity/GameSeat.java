@@ -130,16 +130,6 @@ public class GameSeat extends BaseEntity {
     }
 
     /**
-     * 경기 좌석을 예매 가능 상태로 되돌린다.
-     * <p>선점 해제 또는 주문 취소 시 좌석 상태를 AVAILABLE로 변경하고 선점 만료 시간을 초기화 한다.</p>
-     */
-    public void available() {
-
-        this.status = GameSeatStatus.AVAILABLE;
-        this.holdExpiresAt = null;
-    }
-
-    /**
      * AVAILABLE → HELD (선점).
      * <p>
      * 선점 만료 시각(hold_expires_at)을 상태 전이와 원자적으로 함께 세팅한다.
@@ -186,6 +176,23 @@ public class GameSeat extends BaseEntity {
         this.status = GameSeatStatus.SOLD;
         this.holdExpiresAt = null;
         this.soldAt = LocalDateTime.now();
+    }
+
+    /**
+     * SOLD → AVAILABLE (환불 확정).
+     * <p>
+     * 티켓 환불이 REFUNDED로 확정된 시점에만 호출해야 한다.
+     * REFUND_PENDING·REFUND_FAILED 구간에 호출하면 환불이 이후 실패했을 때 좌석을 되돌릴 수 없다.
+     * sold_at을 초기화해 정합을 유지한다.
+     *
+     * @throws InvalidStateTransitionException SOLD가 아닌 상태에서 호출 시
+     */
+    public void refund() {
+        if (this.status != GameSeatStatus.SOLD) {
+            throw new InvalidStateTransitionException();
+        }
+        this.status = GameSeatStatus.AVAILABLE;
+        this.soldAt = null;
     }
 
     /**

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -111,7 +112,8 @@ class PartialCancelRecoveryHandlerTest {
 
             assertThat(result.successful()).isTrue();
             verify(ticketService).completeTicketRefund(TICKET_ID);
-            verifyNoInteractions(tossPaymentClient, orderService);
+            verify(orderService).refundOrder(ORDER_ITEM_ID);
+            verifyNoInteractions(tossPaymentClient);
         }
 
         @Test
@@ -130,8 +132,11 @@ class PartialCancelRecoveryHandlerTest {
             assertThat(task.getPaymentCancel().getCompletedAt()).isEqualTo(LocalDateTime.of(2026, 9, 2, 12, 0));
             assertThat(task.getPayment().getStatus()).isEqualTo(PaymentStatus.PARTIALLY_CANCELED);
             assertThat(task.getPayment().getRemainingAmount()).isEqualTo(6000);
-            verify(orderService).refundOrder(ORDER_ITEM_ID);
-            verify(ticketService).completeTicketRefund(TICKET_ID);
+
+            // 좌석 반환은 반드시 티켓 REFUNDED 확정 이후에 실행되어야 한다 (회귀 방지).
+            InOrder inOrder = inOrder(ticketService, orderService);
+            inOrder.verify(ticketService).completeTicketRefund(TICKET_ID);
+            inOrder.verify(orderService).refundOrder(ORDER_ITEM_ID);
         }
 
         @Test

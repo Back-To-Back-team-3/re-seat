@@ -25,7 +25,7 @@ export function Header() {
     const auth = useAuth();
     const pathname = usePathname();
     const {theme, toggleTheme} = useTheme();
-    const isTicketsRoute = pathname.startsWith("/tickets");
+    const isMyPageRoute = pathname.startsWith("/mypage");
 
     return (
         <header
@@ -42,7 +42,7 @@ export function Header() {
                 className="flex h-[70px] justify-center gap-[30px] max-[900px]:hidden"
             >
                 <Link
-                    className={isTicketsRoute ? INACTIVE_NAV_LINK : ACTIVE_NAV_LINK}
+                    className={isMyPageRoute ? INACTIVE_NAV_LINK : ACTIVE_NAV_LINK}
                     href="/games"
                 >
                     경기 예매
@@ -52,11 +52,11 @@ export function Header() {
                     className={
                         !auth.isAuthed
                             ? DISABLED_NAV_LINK
-                            : isTicketsRoute
+                            : isMyPageRoute
                                 ? ACTIVE_NAV_LINK
                                 : INACTIVE_NAV_LINK
                     }
-                    href="/tickets"
+                    href="/mypage"
                     onClick={
                         auth.isAuthed
                             ? undefined
@@ -66,7 +66,7 @@ export function Header() {
                     }
                     tabIndex={auth.isAuthed ? undefined : -1}
                 >
-                    내 티켓
+                    마이페이지
                 </Link>
             </nav>
             <div className="flex items-center justify-end gap-2.5">

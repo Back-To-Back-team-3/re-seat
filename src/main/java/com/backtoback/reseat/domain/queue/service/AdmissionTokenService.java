@@ -109,12 +109,12 @@ public class AdmissionTokenService {
 
             ZSetOperations<String, String> queueZSet = getZSetOperations();
 
-            String redisKey = redisKey(gameId);
+            String waitingQueueRedisKey = waitingQueueRedisKey(gameId);
 
             // 과도한 일괄 처리를 막기 위해 요청된 limit을 최대 허용 범위로 제한한다.
             // Redis ZSet의 점수가 낮은 사용자부터 safeLimit명까지 이번 처리 대상으로 조회한다.
             int safeLimit = Math.min(limit, MAX_ADMIT_LIMIT);
-            Set<String> members = queueZSet.range(redisKey, 0, safeLimit - 1);
+            Set<String> members = queueZSet.range(waitingQueueRedisKey, 0, safeLimit - 1);
 
             if (members == null || members.isEmpty()) {
                 return 0;
@@ -130,11 +130,11 @@ public class AdmissionTokenService {
 
             for (String member : members) {
                 Long userId = parseUserId(member);
-                String queueKey = queueKey(gameId, userId);
+                String queueEntryKey = queueEntryKey(gameId, userId);
 
                 // 대기 취소와 입장 허용이 동시에 변경하지 않도록 대기 이력을 비관적 락으로 조회한다.
                 QueueEntryHistory queueEntryHistory
-                    = queueEntryHistoryRepository.findByQueueKeyWithPessimisticWriteLock(queueKey).orElse(null);
+                    = queueEntryHistoryRepository.findByQueueKeyWithPessimisticWriteLock(queueEntryKey).orElse(null);
 
                 // Redis에는 존재하지만 DB 이력이 없거나 이미 대기 상태가 끝난 사용자는 새 토큰을 발행하지 않는다.
                 if (queueEntryHistory == null || queueEntryHistory.getStatus() != QueueEntryHistoryStatus.WAITING) {
@@ -186,7 +186,7 @@ public class AdmissionTokenService {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
-                    members.forEach(member -> queueZSet.remove(redisKey, member));
+                    members.forEach(member -> queueZSet.remove(waitingQueueRedisKey, member));
                 }
             });
 
@@ -293,9 +293,10 @@ public class AdmissionTokenService {
         return redisTemplate.opsForZSet();
     }
 
-    // 경기별 대기열 Redis ZSet key: queue:game:{gameId}
-    private String redisKey(Long gameId) {
-        return "queue:game:" + gameId;
+    // 경기별 대기열 Redis ZSet key: queue:waiting:game:{gameId}
+    private String waitingQueueRedisKey(Long gameId) {
+
+        return "queue:waiting:game:%d".formatted(gameId);
     }
 
     // 대기열 사용자: user:{userId}
@@ -303,9 +304,10 @@ public class AdmissionTokenService {
         return "user:" + userId;
     }
 
-    // DB 이력 중복 방지 key: queue:game:{gameId}:user:{userId}
-    private String queueKey(Long gameId, Long userId) {
-        return redisKey(gameId) + ":" + redisMember(userId);
+    // DB 대기 이력 식별 key: queue:entry:game:{gameId}:user:{userId}
+    private String queueEntryKey(Long gameId, Long userId) {
+
+        return "queue:entry:game:%d:user:%d".formatted(gameId, userId);
     }
 
     // Redis 대기열 구성원 형식을 검증하고 사용자 ID를 추출한다.

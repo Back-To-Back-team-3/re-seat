@@ -16,7 +16,7 @@ import {
     subscribeAuth,
 } from "@/api/auth";
 import {userKeys} from "@/api/query-keys/users";
-import {getMyProfile, verifyIdentity} from "@/api/users";
+import {getMyProfile, verifyIdentity, withdrawUser} from "@/api/users";
 
 /**
  * 브라우저 인증 상태와 백엔드 사용자 상태를 하나의 화면용 인터페이스로 제공합니다.
@@ -76,8 +76,18 @@ export function useAuth() {
         },
     });
 
+    const withdrawal = useMutation({
+        mutationFn: withdrawUser,
+        onSuccess: () => {
+            clearAuth();
+            queryClient.clear();
+            window.location.href = "/games";
+        },
+    });
+
     // 사용자가 먼저 확인해야 하는 요청 오류를 성공 알림보다 우선해서 표시한다.
     const currentMessage =
+        withdrawal.error?.message ??
         verification.error?.message ??
         profileQuery.error?.message ??
         session.notice ??
@@ -89,10 +99,10 @@ export function useAuth() {
         isVerified: profileQuery.data?.isVerified ?? session.isVerified,
         profile: profileQuery.data ?? null,
         role: session.role,
-        busy: profileQuery.isLoading || verification.isPending,
+        busy: profileQuery.isLoading || verification.isPending || withdrawal.isPending,
         message,
         messageVariant:
-            verification.error || profileQuery.error
+            withdrawal.error || verification.error || profileQuery.error
                 ? ("error" as const)
                 : ("success" as const),
         login() {
@@ -107,6 +117,10 @@ export function useAuth() {
             // PortOne 콜백은 반환값을 기다리지 않으므로 오류 상태를 훅이 관리하는 mutate를 사용한다.
             verification.mutate(impUid);
         },
+        withdraw() {
+            withdrawal.mutate();
+        },
+        isWithdrawing: withdrawal.isPending,
         dismissMessage() {
             // Query 오류와 메모리 알림을 같은 닫기 동작으로 숨기되 서버 오류 상태 자체는 변경하지 않는다.
             setHiddenMessage(currentMessage);

@@ -1,53 +1,45 @@
 package com.backtoback.reseat.domain.queue.service;
 
+import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import com.backtoback.reseat.domain.queue.dto.response.QueueEntryRejectionEventResponse;
 import com.backtoback.reseat.domain.queue.dto.response.QueueStatusResponse;
 import com.backtoback.reseat.domain.queue.exception.QueueEntryCancellationNotAllowedException;
 import com.backtoback.reseat.domain.queue.exception.QueueEntryCancellationTokenRequiredException;
 import com.backtoback.reseat.domain.queue.exception.QueueEntryNotFoundException;
 
-import jakarta.annotation.PreDestroy;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 대기열 상태와 입장 허용 이벤트를 SSE로 주기적으로 전송하고 연결을 관리하는 서비스
+ * 대기열 상태, 입장 허용과 진입 거절 이벤트를 SSE로 전송하고 연결을 관리하는 서비스.
+ * <p>예약 작업은 Spring이 관리하는 SSE 전용 TaskScheduler에서 실행한다.</p>
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class SseService {
 
     // 클라이언트의 SSE 연결을 유지하는 최대 시간
-    private static final long SSE_TIMEOUT_MILLIS = 60L * 1000L;
-
-    // 여러 SSE 연결의 순번 조회 작업을 동시에 실행할 스케줄러 스레드 수
-    private static final int SSE_SCHEDULER_POOL_SIZE = 8;
+    private static final Duration SSE_TIMEOUT_MILLIS = Duration.ofSeconds(60L);
 
     // 대기열 상태를 처음 조회하기 전의 지연 시간이며 이후 상태 전송 주기
-    private static final long SSE_SEND_INTERVAL_SECONDS = 3L;
+    private static final Duration SSE_SEND_INTERVAL = Duration.ofSeconds(3L);
 
     // 마지막 SSE 연결 종료 후 대기열 이탈 처리까지 기다리는 재연결 유예시간
-    private static final long SSE_RECONNECT_GRACE_MILLIS = 60L * 1000L;
-
-    // SSE 스케줄러 종료 후 실행 중인 작업을 기다리는 최대 시간
-    private static final long SSE_SCHEDULER_SHUTDOWN_TIMEOUT_SECONDS = 5L;
-
-    // SSE 연결별 대기 순번 조회 작업을 공동으로 실행하는 스케줄러다.
-    // 연결마다 별도 스레드를 생성하지 않고 정해진 스레드 풀에서 주기 작업을 처리한다.
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(SSE_SCHEDULER_POOL_SIZE);
+    private static final Duration SSE_RECONNECT_GRACE = Duration.ofSeconds(150L);
 
     // 동일 사용자와 경기에서 현재 유지 중인 SSE 연결 수를 관리한다.
     private final ConcurrentMap<QueueConnectionKey, Integer> activeConnectionCounts = new ConcurrentHashMap<>();
@@ -57,9 +49,30 @@ public class SseService {
         = new ConcurrentHashMap<>();
 
     private final QueueService queueService;
+    private final QueueEntryRejectionService queueEntryRejectionService;
+    private final TaskScheduler scheduler;
+
+    public SseService(
+        QueueService queueService,
+        QueueEntryRejectionService queueEntryRejectionService,
+        @Qualifier("sseTaskScheduler") TaskScheduler scheduler
+    ) {
+        this.queueService = queueService;
+        this.queueEntryRejectionService = queueEntryRejectionService;
+        this.scheduler = scheduler;
+    }
 
     /**
-     * 사용자의 현재 대기 상태를 주기적으로 전송하고 입장 허용 시 토큰 정보를 전송한다.
+     * 동일 사용자와 경기의 SSE 연결 수를 관리하기 위한 식별값
+     *
+     * @param gameId SSE 연결 대상 경기 ID
+     * @param userId SSE 연결 사용자 ID
+     */
+    private record QueueConnectionKey(Long gameId, Long userId) {
+    }
+
+    /**
+     * 사용자의 현재 대기 상태를 주기적으로 전송하고 입장 허용 또는 진입 거절 시 연결을 종료한다.
      *
      * @param gameId 경기 ID
      * @param userId 사용자 ID
@@ -70,17 +83,17 @@ public class SseService {
         QueueConnectionKey connectionKey = new QueueConnectionKey(gameId, userId);
         registerConnection(connectionKey);
 
-        SseEmitter sseEmitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
+        SseEmitter sseEmitter = new SseEmitter(SSE_TIMEOUT_MILLIS.toMillis());
 
         // 연결 종료를 놓치지 않도록 종료 콜백을 주기 작업보다 먼저 등록한다.
         // 아직 생성되지 않은 주기 작업은 나중에 저장하여 종료 콜백에서 조회한다.
         AtomicReference<ScheduledFuture<?>> futureRef = new AtomicReference<>();
 
-        // 입장 허용으로 종료된 연결과 재연결 대상 연결을 구분한다.
-        AtomicBoolean admitted = new AtomicBoolean(false);
+        // admit 또는 reject 이벤트 전송으로 정상 종료된 연결과 재연결 대상 연결을 구분한다.
+        AtomicBoolean terminalEventSent = new AtomicBoolean(false);
 
         // SSE 연결 종료 시 주기 작업과 현재 연결 수를 함께 정리할 작업을 생성한다.
-        Runnable cleanupTask = createConnectionCleanupTask(futureRef, connectionKey, admitted);
+        Runnable cleanupTask = createConnectionCleanupTask(futureRef, connectionKey, terminalEventSent);
 
         // 정상 완료, 시간 만료, 전송 오류 중 어떤 방식으로 연결이 종료되더라도 동일한 정리 작업을 실행한다.
         sseEmitter.onCompletion(cleanupTask);
@@ -89,8 +102,14 @@ public class SseService {
 
         // Kafka Consumer가 DB와 Redis 등록을 완료할 시간을 고려하여 첫 상태 조회를 즉시 실행하지 않고 지연한다.
         // 이후 연결이 유지되는 동안 지정된 주기에 맞춰 대기 상태를 반복해서 조회한다.
+        Instant startTime = Instant.now().plus(SSE_SEND_INTERVAL);
         ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(() -> {
             try {
+                // Consumer 거절 결과가 있으면 순번 조회보다 먼저 전달하고 현재 SSE 연결을 종료한다.
+                if (sendRejectionIfPresent(sseEmitter, gameId, userId, terminalEventSent)) {
+                    return;
+                }
+
                 // 현재 순번 또는 입장 허용 여부가 담긴 대기 상태를 rank 이벤트로 전송한다.
                 QueueStatusResponse response = queueService.getMyQueueStatus(gameId, userId);
 
@@ -101,7 +120,7 @@ public class SseService {
                     // 입장 정보 전송까지 끝나면 더 이상 순번을 조회할 필요가 없으므로 SSE 연결을 정상 종료한다.
                     sseEmitter.send(SseEmitter.event().name("admit").data(queueService.getAdmitEvent(gameId, userId)));
 
-                    admitted.set(true);
+                    terminalEventSent.set(true);
                     sseEmitter.complete();
                 }
             } catch (QueueEntryNotFoundException exception) {
@@ -111,32 +130,12 @@ public class SseService {
                 // 상태 조회 또는 SSE 전송 중 복구할 수 없는 예외가 발생하면 오류와 함께 연결을 종료한다.
                 sseEmitter.completeWithError(e);
             }
-        }, SSE_SEND_INTERVAL_SECONDS, SSE_SEND_INTERVAL_SECONDS, TimeUnit.SECONDS);
+        }, startTime, SSE_SEND_INTERVAL);
 
         // 연결 종료 콜백에서 방금 생성한 주기 작업을 취소할 수 있도록 참조를 저장한다.
         futureRef.set(future);
 
         return sseEmitter;
-    }
-
-    /**
-     * 앱 종료 시 SSE 순번 전송과 예약된 대기열 이탈 작업을 모두 종료한다.
-     */
-    @PreDestroy
-    public void shutdownScheduler() {
-
-        // 앱 종료 중 대기열 상태를 변경하지 않도록 실행 중인 작업과 예약된 작업에 즉시 종료를 요청한다.
-        scheduler.shutdownNow();
-
-        try {
-            // 실행 중인 작업이 정리될 시간을 짧게 기다린다.
-            if (!scheduler.awaitTermination(SSE_SCHEDULER_SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-                log.warn("[SseService] 스케줄러 종료 대기 시간 초과 (timeoutSeconds={})", SSE_SCHEDULER_SHUTDOWN_TIMEOUT_SECONDS);
-            }
-        } catch (InterruptedException e) {
-            log.warn("[SseService] 스케줄러 종료 대기 중 스레드가 중단되었습니다.");
-            Thread.currentThread().interrupt();
-        }
     }
 
     /**
@@ -192,17 +191,17 @@ public class SseService {
     }
 
     /**
-     * SSE 연결 종료 시 주기 작업과 연결 수를 정리하고 입장 완료 여부에 따라 대기열 이탈을 예약하는 작업을 생성한다.
+     * SSE 연결 종료 시 주기 작업과 연결 수를 정리하고 정상 종료 이벤트 전송 여부에 따라 대기열 이탈을 예약하는 작업을 생성한다.
      *
      * @param futureRef 취소할 주기 작업 참조
      * @param connectionKey SSE 연결 식별값
-     * @param admitted 입장 허용 이벤트 전송 완료 여부
+     * @param terminalEventSent admit 또는 reject 이벤트 전송 완료 여부
      * @return SSE 연결 종료 시 실행할 정리 작업
      */
     private Runnable createConnectionCleanupTask(
         AtomicReference<ScheduledFuture<?>> futureRef,
         QueueConnectionKey connectionKey,
-        AtomicBoolean admitted
+        AtomicBoolean terminalEventSent
     ) {
 
         // 하나의 연결에서 종료 콜백이 여러 번 호출될 수 있으므로 정리가 시작됐는지 저장한다.
@@ -219,8 +218,8 @@ public class SseService {
                 }
 
                 // 동일 사용자와 경기의 다른 연결은 유지하고 종료된 연결 하나만 현재 연결 수에서 제외한다.
-                // 입장 허용으로 종료된 연결은 재연결 대상이 아니므로 이탈을 예약하지 않는다.
-                if (removeConnection(connectionKey) && !admitted.get()) {
+                // admit 또는 reject 이벤트로 종료된 연결은 재연결 대상이 아니므로 대기열 이탈을 예약하지 않는다.
+                if (removeConnection(connectionKey) && !terminalEventSent.get()) {
                     // 마지막 연결이 종료되면 재연결 유예시간 후 대기열 이탈 처리를 예약한다.
                     scheduleQueueExit(connectionKey);
                 }
@@ -237,6 +236,8 @@ public class SseService {
 
         AtomicReference<ScheduledFuture<?>> queueExitTaskRef = new AtomicReference<>();
 
+        // 마지막 연결 종료 시점부터 재연결 유예시간이 지난 뒤 대기열 이탈을 실행한다.
+        Instant queueExitAt = Instant.now().plus(SSE_RECONNECT_GRACE);
         ScheduledFuture<?> queueExitTask = scheduler.schedule(() -> {
             try {
                 // 유예시간 만료와 재연결이 겹칠 수 있으므로 실행 직전에 활성 연결을 다시 확인한다.
@@ -269,7 +270,7 @@ public class SseService {
                 pendingQueueExitTasks.remove(connectionKey, queueExitTaskRef.get());
             }
 
-        }, SSE_RECONNECT_GRACE_MILLIS, TimeUnit.MILLISECONDS);
+        }, queueExitAt);
 
         queueExitTaskRef.set(queueExitTask);
         pendingQueueExitTasks.put(connectionKey, queueExitTask);
@@ -281,11 +282,43 @@ public class SseService {
     }
 
     /**
-     * 동일 사용자와 경기의 SSE 연결 수를 관리하기 위한 식별값
+     * 저장된 Consumer 거절 결과가 있으면 SSE로 전송하고 연결을 종료한다.
+     * <p>전송한 요청과 현재 Redis에 저장된 요청이 일치할 때만 결과를 삭제하여
+     * 새 요청의 거절 결과가 이전 SSE 처리로 삭제되지 않게 한다.</p>
      *
-     * @param gameId SSE 연결 대상 경기 ID
-     * @param userId SSE 연결 사용자 ID
+     * @param sseEmitter 이벤트를 전송할 SSE 연결
+     * @param gameId 진입을 요청한 경기 ID
+     * @param userId 진입을 요청한 사용자 ID
+     * @param terminalEventSent 정상 종료 이벤트 전송 여부
+     * @return 거절 결과를 전송했다면 true
      */
-    private record QueueConnectionKey(Long gameId, Long userId) {
+    private boolean sendRejectionIfPresent(
+        SseEmitter sseEmitter,
+        Long gameId,
+        Long userId,
+        AtomicBoolean terminalEventSent
+    )
+        throws IOException {
+
+        Optional<QueueEntryRejectionResult> rejectionResult = queueEntryRejectionService.findRejection(gameId, userId);
+
+        if (rejectionResult.isEmpty()) {
+            return false;
+        }
+
+        QueueEntryRejectionResult rejection = rejectionResult.get();
+
+        QueueEntryRejectionEventResponse response
+            = QueueEntryRejectionEventResponse.builder().rejected(true).reason(rejection.reason()).build();
+
+        sseEmitter.send(SseEmitter.event().name("reject").data(response));
+        terminalEventSent.set(true);
+
+        // 전송한 요청과 현재 Redis에 저장된 요청이 일치할 때만 거절 결과를 제거한다.
+        queueEntryRejectionService.deleteRejectionIfMatch(gameId, userId, rejection);
+
+        sseEmitter.complete();
+
+        return true;
     }
 }

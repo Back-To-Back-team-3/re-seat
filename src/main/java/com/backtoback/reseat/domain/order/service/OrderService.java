@@ -168,14 +168,10 @@ public class OrderService {
         order.cancel();
         reservationService.cancel(reservation.getId());
 
+        // 주문 항목은 상태만 전이한다.
+        // 좌석 반환은 reservationService.cancel()에서 이미 수행된 상태이다.
         List<OrderItem> orderItems = orderItemRepository.findByOrder_Id(orderId);
-
-        // 주문 항목의 경기 좌석을 다시 예매 가능 상태로 되돌린다.
-        orderItems.forEach(orderItem -> {
-            orderItem.cancel();
-            GameSeat gameSeat = orderItem.getGameSeat();
-            gameSeatStatusService.releaseSeat(gameSeat.getId());
-        });
+        orderItems.forEach(OrderItem::cancel);
 
         return OrderCancelResponse.from(order);
     }
@@ -204,7 +200,7 @@ public class OrderService {
             orderItem.cancel();
 
             GameSeat gameSeat = orderItem.getGameSeat();
-            gameSeatStatusService.releaseSeat(gameSeat.getId());
+            gameSeatStatusService.refundSeat(gameSeat.getId());
         });
     }
 
@@ -233,7 +229,7 @@ public class OrderService {
         // 환불 대상 주문 항목과 연결된 경기 좌석만 취소 · 해제한다.
         orderItem.cancel();
         GameSeat gameSeat = orderItem.getGameSeat();
-        gameSeatStatusService.releaseSeat(gameSeat.getId());
+        gameSeatStatusService.refundSeat(gameSeat.getId());
 
         // 대상 취소 후 같은 주문에 취소되지 않은 주문 항목이 남아 있는지 확인한다.
         boolean hasRemainingOrderItems

@@ -10,15 +10,14 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.backtoback.reseat.domain.payment.dto.request.PaymentCancelRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentFailRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentRequest;
-import com.backtoback.reseat.domain.payment.dto.response.PaymentCancelResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCompleteResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCreateResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentFailResponse;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentResponse;
+import com.backtoback.reseat.domain.payment.exception.IdempotencyKeyRequiredException;
 import com.backtoback.reseat.domain.payment.service.PaymentService;
 import com.backtoback.reseat.global.common.ApiResponse;
 import com.backtoback.reseat.global.security.CustomUserDetails;
@@ -40,6 +39,7 @@ public class PaymentController implements PaymentControllerDocs {
         @RequestHeader("Idempotency-Key") String idempotencyKey,
         @Valid @RequestBody PaymentRequest request
     ) {
+        validateIdempotencyKeyHeader(idempotencyKey);
         PaymentCreateResponse response = paymentService.requestPayment(userDetails.getId(), idempotencyKey, request);
 
         return ResponseEntity.ok(ApiResponse.success("결제 요청 처리 완료", response));
@@ -53,6 +53,7 @@ public class PaymentController implements PaymentControllerDocs {
         @RequestHeader("Idempotency-Key") String idempotencyKey,
         @Valid @RequestBody PaymentCompleteRequest request
     ) {
+        validateIdempotencyKeyHeader(idempotencyKey);
         PaymentCompleteResponse response
             = paymentService.completePayment(userDetails.getId(), paymentId, idempotencyKey, request);
 
@@ -67,22 +68,11 @@ public class PaymentController implements PaymentControllerDocs {
         @RequestHeader("Idempotency-Key") String idempotencyKey,
         @Valid @RequestBody PaymentFailRequest request
     ) {
+        validateIdempotencyKeyHeader(idempotencyKey);
         PaymentFailResponse response
             = paymentService.failPayment(userDetails.getId(), paymentId, idempotencyKey, request);
 
         return ResponseEntity.ok(ApiResponse.success("결제 실패 처리 완료", response));
-    }
-
-    @Override
-    @PostMapping("/{paymentId}/cancel")
-    public ResponseEntity<ApiResponse<PaymentCancelResponse>> cancelPayment(
-        @AuthenticationPrincipal CustomUserDetails userDetails,
-        @PathVariable Long paymentId,
-        @Valid @RequestBody PaymentCancelRequest request
-    ) {
-        PaymentCancelResponse response = paymentService.cancelPayment(userDetails.getId(), paymentId, request);
-
-        return ResponseEntity.ok(ApiResponse.success("결제 취소 완료", response));
     }
 
     @Override
@@ -94,5 +84,12 @@ public class PaymentController implements PaymentControllerDocs {
         PaymentResponse response = paymentService.getPayment(userDetails.getId(), paymentId);
 
         return ResponseEntity.ok(ApiResponse.success("결제 조회 완료", response));
+    }
+
+    /** 공백인 멱등키 헤더가 결제 서비스까지 전달되지 않도록 검증한다. */
+    private void validateIdempotencyKeyHeader(String idempotencyKey) {
+        if (idempotencyKey.isBlank()) {
+            throw new IdempotencyKeyRequiredException();
+        }
     }
 }

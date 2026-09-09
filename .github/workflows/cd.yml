@@ -48,7 +48,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "docker-compose.yml,prometheus.yml"
+          source: "docker-compose.yml,prometheus.yml,nginx"
           target: "~/re-seat"
 
       - name: Deploy to EC2 via Docker Compose
@@ -60,6 +60,7 @@ jobs:
           script: |
             # EC2 내 배포 작업 디렉터리로 이동 (없을 경우 생성)
             mkdir -p ~/re-seat && cd ~/re-seat
+            sudo mkdir -p /var/www/certbot
 
             # docker-compose 전용 .env 파일 동적 생성
             cat <<'EOF' > .env
@@ -89,10 +90,10 @@ jobs:
             # 미사용 구형 이미지 정리
             sudo docker image prune -f
 
-            # 배포 후 헬스체크 (Smoke Test)
+            # 배포 후 헬스체크 (Smoke Test: Nginx HTTPS -> Spring Boot 프록시 전체 경로 검증)
             echo "Waiting for application to start..."
             for i in {1..12}; do
-              HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/actuator/health || true)
+              HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --resolve reseat-api.duckdns.org:443:127.0.0.1 https://reseat-api.duckdns.org/actuator/health || true)
               if [ "$HTTP_STATUS" -eq 200 ] || [ "$HTTP_STATUS" -eq 401 ]; then
                 echo "Health check passed! HTTP Status: $HTTP_STATUS"
                 exit 0
