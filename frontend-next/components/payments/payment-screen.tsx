@@ -3,8 +3,8 @@
 import {useState} from "react";
 import {ArrowLeft, ArrowRight, RefreshCw, TicketCheck} from "lucide-react";
 
+import {DeadlinePanel} from "@/components/booking/deadline-panel";
 import {Alert} from "@/components/common/alert";
-import {Countdown} from "@/components/common/countdown";
 import {Button} from "@/components/ui/button";
 import {formatPrice} from "@/lib/currency";
 import {isDeadlineExpired} from "@/lib/date";
@@ -100,25 +100,15 @@ export function PaymentScreen({
                 </p>
 
                 {!approved && deadline && (
-                    <div
-                        className={`m-3.5 flex items-center justify-between gap-4 rounded-[10px] border px-4 py-3.5 text-sm font-bold ${
-                            deadlineExpired
-                                ? "border-brand/40 bg-brand/12"
-                                : "border-[color-mix(in_srgb,var(--brand)_28%,var(--border))] bg-brand/[0.07]"
-                        }`}
-                    >
-                        <span>결제 남은 시간</span>
-                        <Countdown
-                            onExpire={() => setExpiredDeadline(deadline)}
-                            target={deadline}
-                        />
-                    </div>
-                )}
-
-                {!approved && deadlineExpired && (
-                    <p className="mt-[10px] mr-3.5 mb-3.5 ml-3.5 text-center text-xs font-bold text-brand">
-                        결제시간이 만료되었습니다. 주문 상태를 확인해주세요.
-                    </p>
+                    <DeadlinePanel
+                        className="m-3.5"
+                        expired={deadlineExpired}
+                        expiredMessage="결제시간이 만료되었습니다. 주문 상태를 확인해주세요."
+                        label="결제 남은 시간"
+                        messageClassName="mt-[10px] mr-3.5 mb-3.5 ml-3.5 text-center"
+                        onExpire={() => setExpiredDeadline(deadline)}
+                        target={deadline}
+                    />
                 )}
 
                 <div className="mb-6 grid rounded-[9px] border border-border bg-surface-soft px-5 py-[17px] text-left">

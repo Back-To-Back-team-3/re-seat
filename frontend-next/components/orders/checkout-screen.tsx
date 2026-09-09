@@ -4,7 +4,7 @@ import Link from "next/link";
 import {useState} from "react";
 import {ArrowLeft, ArrowRight, RefreshCw, X} from "lucide-react";
 
-import {Countdown} from "@/components/common/countdown";
+import {DeadlinePanel} from "@/components/booking/deadline-panel";
 import {OrderSummary} from "@/components/orders/order-summary";
 import {Button} from "@/components/ui/button";
 import {formatPrice} from "@/lib/currency";
@@ -110,24 +110,15 @@ export function CheckoutScreen(props: CheckoutScreenProps) {
                         </strong>
                     </div>
                     {deadlineTarget && (
-                        <div
-                            className={`my-3.5 flex items-center justify-between gap-4 rounded-[10px] border px-4 py-3.5 text-sm font-bold ${
-                                deadlineExpired
-                                    ? "border-brand/40 bg-brand/12"
-                                    : "border-[color-mix(in_srgb,var(--brand)_28%,var(--border))] bg-brand/[0.07]"
-                            }`}
-                        >
-                            <span>{order ? "결제 남은 시간" : "선점 남은 시간"}</span>
-                            <Countdown
-                                onExpire={() => setDeadlineExpired(true)}
-                                target={deadlineTarget}
-                            />
-                        </div>
-                    )}
-                    {deadlineExpired && (
-                        <p className="mt-[10px] mb-[14px] mx-[14px] text-xs font-bold text-brand">
-                            제한시간이 만료되어 더 이상 진행할 수 없습니다.
-                        </p>
+                        <DeadlinePanel
+                            className="my-3.5"
+                            expired={deadlineExpired}
+                            expiredMessage="제한시간이 만료되어 더 이상 진행할 수 없습니다."
+                            label={order ? "결제 남은 시간" : "선점 남은 시간"}
+                            messageClassName="mx-[14px] mt-[10px] mb-[14px]"
+                            onExpire={() => setDeadlineExpired(true)}
+                            target={deadlineTarget}
+                        />
                     )}
                     {!order ? (
                         <Button

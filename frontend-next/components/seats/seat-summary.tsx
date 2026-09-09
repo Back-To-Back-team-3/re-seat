@@ -1,7 +1,7 @@
 import {ArrowRight, RotateCcw} from "lucide-react";
 
 import {BookingPanelHeader} from "@/components/booking/booking-panel-header";
-import {Countdown} from "@/components/common/countdown";
+import {DeadlinePanel} from "@/components/booking/deadline-panel";
 import {Button} from "@/components/ui/button";
 import {formatPrice} from "@/lib/currency";
 import type {GameSeat} from "@/types/game";
@@ -68,31 +68,22 @@ export function SeatSummary({
                 title="선택 확인"
             />
 
-            {timerTarget ? (
-                <div
-                    className={`m-[14px] flex items-center justify-between gap-4 rounded-[10px] border px-4 py-3.5 text-sm font-bold ${
-                        timerExpired
-                            ? "border-brand/40 bg-brand/12"
-                            : "border-[color-mix(in_srgb,var(--brand)_28%,var(--border))] bg-brand/[0.07]"
-                    }`}
-                >
-          <span>
-            {reservation ? "좌석 선점 남은 시간" : "좌석 선택 남은 시간"}
-          </span>
-                    <Countdown onExpire={onTimerExpire} target={timerTarget}/>
-                </div>
-            ) : (
-                <div
-                    className="m-[14px] flex items-center justify-between gap-4 rounded-[10px] border border-brand/40 bg-brand/12 px-4 py-3.5 text-sm font-bold">
-                    <span>입장 토큰</span>
-                    <strong>사용 완료</strong>
-                </div>
-            )}
-            {timerExpired && (
-                <p className="mx-[14px] mt-[10px] mb-[14px] text-xs font-bold text-brand">
-                    제한시간이 끝났습니다. 다음 단계로 진행할 수 없습니다.
-                </p>
-            )}
+            <DeadlinePanel
+                className="m-[14px]"
+                expired={timerExpired}
+                expiredMessage="제한시간이 끝났습니다. 다음 단계로 진행할 수 없습니다."
+                fallbackValue="사용 완료"
+                label={
+                    timerTarget
+                        ? reservation
+                            ? "좌석 선점 남은 시간"
+                            : "좌석 선택 남은 시간"
+                        : "입장 토큰"
+                }
+                messageClassName="mx-[14px] mt-[10px] mb-[14px]"
+                onExpire={onTimerExpire}
+                target={timerTarget ?? null}
+            />
 
             <div
                 className="grid min-h-[120px] content-start gap-2 p-[14px] max-[1180px]:min-h-[auto] max-[1180px]:grid-cols-2 max-sm:grid-cols-1">
