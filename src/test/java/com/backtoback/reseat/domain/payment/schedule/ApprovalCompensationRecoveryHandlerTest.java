@@ -7,6 +7,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -86,10 +88,17 @@ class ApprovalCompensationRecoveryHandlerTest {
             verify(orderService).failOrder(ORDER_ID);
         }
 
-        @Test
+        @ParameterizedTest
+        @EnumSource(
+            value = OrderStatus.class,
+            names = {
+                "CANCELED",
+                "EXPIRED"
+            }
+        )
         @DisplayName("PG 취소와 주문 종결이 이미 완료됐다면 외부 요청과 상태 전이를 반복하지 않는다.")
-        void completesAlreadyReconciledTask() {
-            PaymentRecoveryTask task = compensationTask(OrderStatus.CANCELED);
+        void completesAlreadyReconciledTask(OrderStatus orderStatus) {
+            PaymentRecoveryTask task = compensationTask(orderStatus);
             TossPaymentResponse paymentResponse = mock(TossPaymentResponse.class);
             when(paymentResponse.isCancelCompleted()).thenReturn(true);
             when(tossPaymentClient.getPayment(PAYMENT_KEY)).thenReturn(paymentResponse);
@@ -98,6 +107,36 @@ class ApprovalCompensationRecoveryHandlerTest {
 
             assertThat(result.successful()).isTrue();
             verify(tossPaymentClient, never()).cancel(anyString(), anyString());
+            verifyNoInteractions(orderService);
+        }
+
+        @Test
+        @DisplayName("PG 결제가 승인 또는 취소 상태가 아니면 주문을 변경하지 않고 재시도를 요청한다.")
+        void retriesWhenPgStatusIsUnknown() {
+            PaymentRecoveryTask task = compensationTask(OrderStatus.CREATED);
+            TossPaymentResponse paymentResponse = mock(TossPaymentResponse.class);
+            when(tossPaymentClient.getPayment(PAYMENT_KEY)).thenReturn(paymentResponse);
+
+            PaymentRecoveryResult result = handler.recover(task);
+
+            assertThat(result.successful()).isFalse();
+            assertThat(result.retryable()).isTrue();
+            assertThat(result.error()).isEqualTo("Toss 승인 결제 상태를 확인할 수 없습니다.");
+            verify(tossPaymentClient, never()).cancel(anyString(), anyString());
+            verifyNoInteractions(orderService);
+        }
+
+        @Test
+        @DisplayName("PG 조회 중 예외가 발생하면 주문을 변경하지 않고 재시도를 요청한다.")
+        void retriesWhenPgRequestFails() {
+            PaymentRecoveryTask task = compensationTask(OrderStatus.CREATED);
+            when(tossPaymentClient.getPayment(PAYMENT_KEY)).thenThrow(new RuntimeException("Toss 조회 실패"));
+
+            PaymentRecoveryResult result = handler.recover(task);
+
+            assertThat(result.successful()).isFalse();
+            assertThat(result.retryable()).isTrue();
+            assertThat(result.error()).isEqualTo("Toss 결제 조회 또는 자동 환불 요청에 실패했습니다.");
             verifyNoInteractions(orderService);
         }
 
@@ -132,6 +171,23 @@ class ApprovalCompensationRecoveryHandlerTest {
             doThrow(failure).when(orderService).failOrder(ORDER_ID);
 
             assertThatThrownBy(() -> handler.recover(task)).isSameAs(failure);
+        }
+
+        @Test
+        @DisplayName("PG 취소 후 주문이 종결할 수 없는 상태라면 재시도를 요청한다.")
+        void retriesWhenOrderCannotBeReconciled() {
+            PaymentRecoveryTask task = compensationTask(OrderStatus.PAID);
+            TossPaymentResponse paymentResponse = mock(TossPaymentResponse.class);
+            when(paymentResponse.isCancelCompleted()).thenReturn(true);
+            when(tossPaymentClient.getPayment(PAYMENT_KEY)).thenReturn(paymentResponse);
+
+            PaymentRecoveryResult result = handler.recover(task);
+
+            assertThat(result.successful()).isFalse();
+            assertThat(result.retryable()).isTrue();
+            assertThat(result.error()).isEqualTo("결제 실패에 맞게 주문 상태를 종결할 수 없습니다.");
+            verify(tossPaymentClient, never()).cancel(anyString(), anyString());
+            verifyNoInteractions(orderService);
         }
     }
 
