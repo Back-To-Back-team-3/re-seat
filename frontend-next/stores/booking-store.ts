@@ -3,7 +3,7 @@ import {createStore} from "zustand/vanilla";
 import type {GameSeat} from "@/types/game";
 import type {ReservationResponse} from "@/types/reservation";
 
-type BookingData = {
+export type BookingData = {
     selectedGameId: number | null;
     selectedZoneId: number | null;
     selectedSeats: GameSeat[];
@@ -14,6 +14,8 @@ type BookingData = {
 };
 
 type BookingActions = {
+    hydrated: boolean;
+    hydrate: (progress: BookingData | null) => void;
     setGame: (gameId: number | null) => void;
     setZone: (zoneId: number | null) => void;
     toggleSeat: (seat: GameSeat) => void;
@@ -46,6 +48,9 @@ const initialBookingState: BookingData = {
 export function createBookingStore() {
     return createStore<BookingState>()((set) => ({
         ...initialBookingState,
+        hydrated: false,
+        hydrate: (progress) =>
+            set({...(progress ?? initialBookingState), hydrated: true}),
         setGame: (selectedGameId) => set({selectedGameId}),
         setZone: (selectedZoneId) => set({selectedZoneId}),
         toggleSeat: (seat) =>
@@ -72,7 +77,7 @@ export function createBookingStore() {
         setOrderId: (orderId) => set({orderId}),
         setPaymentId: (paymentId) => set({paymentId}),
         setQueueExpiry: (queueTokenExpiresAt) => set({queueTokenExpiresAt}),
-        reset: () => set(initialBookingState),
+        reset: () => set({...initialBookingState, hydrated: true}),
     }));
 }
 
