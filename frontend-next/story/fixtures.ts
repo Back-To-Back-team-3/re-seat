@@ -1,4 +1,5 @@
 import type {UserProfile} from "@/types/auth";
+import type {StadiumCongestion} from "@/types/congestion";
 import type {GameSeat, GameSummary, QueueViewState} from "@/types/game";
 import type {OrderResponse} from "@/types/order";
 import type {PaymentResponse} from "@/types/payment";
@@ -118,3 +119,16 @@ export const storyTicket = {
     refundable: true,
     refundDeadline: "2099-09-11 18:30:00",
 } satisfies TicketSummary;
+
+export const storyCongestion = {
+    stadiumNum: 1,
+    stadiumName: "잠실야구장",
+    areaName: "잠실종합운동장",
+    congestionLevel: "약간 붐빔",
+    congestionMessage: "경기 시작 전 관람객이 늘고 있습니다.",
+    populationMin: 12_000,
+    populationMax: 14_000,
+    latitude: 37.5121,
+    longitude: 127.0719,
+    observedAt: "2099-09-12 17:30:00",
+} satisfies StadiumCongestion;
