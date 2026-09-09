@@ -108,7 +108,8 @@ class ReservationServiceTest {
         Reservation reservation = mock(Reservation.class);
         given(reservation.getUser()).willReturn(owner);
 
-        given(reservationRepository.findWithSeatsById(reservationId)).willReturn(Optional.of(reservation));
+        given(reservationRepository.findByIdWithPessimisticWriteLock(reservationId))
+            .willReturn(Optional.of(reservation));
 
         // when & then
         assertThatThrownBy(() -> reservationService.releaseHold(reservationId, intruderId))
