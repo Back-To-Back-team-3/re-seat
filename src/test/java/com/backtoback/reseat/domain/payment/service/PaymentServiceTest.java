@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.LoggerFactory;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,10 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.entity.OrderItem;
@@ -459,6 +464,51 @@ class PaymentServiceTest {
 
             verify(approvalService).registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY);
             verify(orderService, never()).failOrder(anyLong());
+        }
+
+        @Test
+        @DisplayName("로컬 반영 실패 로그에 최초 원인 예외의 stack trace를 남긴다.")
+        void logsLocalApplyFailureWithCause() {
+            PaymentCompleteRequest request = mock(PaymentCompleteRequest.class);
+            RuntimeException cause = new RuntimeException("주문 상태 반영 실패");
+            PaymentLocalApplyFailedException failure
+                = new PaymentLocalApplyFailedException(PAYMENT_ID, ORDER_ID, PAYMENT_KEY, cause);
+            PaymentApprovalService approvalService = mock(PaymentApprovalService.class);
+            PaymentService service
+                = new PaymentService(
+                    paymentRepository,
+                    paymentCancelRepository,
+                    paymentRecoveryTaskRepository,
+                    paymentCreationService,
+                    approvalService,
+                    paymentValidator,
+                    redissonClient,
+                    orderService
+                );
+            when(approvalService.approve(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request)).thenThrow(failure);
+
+            Logger logger = (Logger)LoggerFactory.getLogger(PaymentService.class);
+            ListAppender<ILoggingEvent> appender = new ListAppender<>();
+            appender.start();
+            logger.addAppender(appender);
+
+            try {
+                assertThatThrownBy(() -> service.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
+                    .isSameAs(failure);
+            } finally {
+                logger.detachAppender(appender);
+                appender.stop();
+            }
+
+            ILoggingEvent failureLog
+                = appender.list
+                    .stream()
+                    .filter(event -> event.getFormattedMessage().contains("승인 후 로컬 반영 실패"))
+                    .findFirst()
+                    .orElseThrow();
+            assertThat(failureLog.getThrowableProxy()).isNotNull();
+            assertThat(failureLog.getThrowableProxy().getCause().getClassName())
+                .isEqualTo(RuntimeException.class.getName());
         }
 
         @Test

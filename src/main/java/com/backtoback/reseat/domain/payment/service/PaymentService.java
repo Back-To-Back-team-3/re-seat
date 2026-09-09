@@ -104,6 +104,13 @@ public class PaymentService {
         try {
             return paymentApprovalService.approve(userId, paymentId, idempotencyKey, request);
         } catch (PaymentLocalApplyFailedException e) {
+            log
+                .error(
+                    "토스 승인 후 로컬 반영 실패 - 승인 취소 보상 처리 시작 (paymentId={}, orderId={})",
+                    e.getPaymentId(),
+                    e.getOrderId(),
+                    e
+                );
             // 승인 트랜잭션이 롤백된 뒤 별도 트랜잭션으로 PG 승인 취소 작업을 보존한다.
             boolean compensationRegistered
                 = paymentApprovalService.registerApprovalCompensation(e.getPaymentId(), e.getPaymentKey());
