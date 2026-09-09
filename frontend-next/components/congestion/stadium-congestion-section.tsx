@@ -2,19 +2,14 @@
 
 import Script from "next/script";
 import {useEffect, useMemo, useRef, useState} from "react";
-import {MapPinned, RefreshCw} from "lucide-react";
+import {MapPinned} from "lucide-react";
 
-import {
-    CONGESTION_CONFIG,
-    CongestionBadge,
-} from "@/components/congestion/congestion-badge";
+import {CONGESTION_CONFIG} from "@/components/congestion/congestion-badge";
+import {CongestionSectionHeader} from "@/components/congestion/congestion-section-header";
+import {CongestionSpotList} from "@/components/congestion/congestion-spot-list";
 import {Button} from "@/components/ui/button";
 import {useStadiumCongestion} from "@/hooks/use-stadium-congestion";
 import {calculateStadiumZones} from "@/lib/stadium-zones";
-import type {
-    CongestionLevel,
-    ZoneCategory,
-} from "@/types/congestion";
 
 interface StadiumCongestionSectionProps {
     stadiumNum?: number;
@@ -23,23 +18,6 @@ interface StadiumCongestionSectionProps {
 
 const DEFAULT_CENTER_LAT = 37.5122;
 const DEFAULT_CENTER_LNG = 127.0725;
-
-type SortOption = "default" | "busy" | "free";
-type FilterCategory = "ALL" | ZoneCategory;
-
-const CATEGORY_TABS: {id: FilterCategory; label: string}[] = [
-    {id: "ALL", label: "전체"},
-    {id: "출입구/게이트", label: "출입구"},
-    {id: "지하철/대중교통", label: "대중교통"},
-    {id: "먹거리/주차", label: "먹거리/주차"},
-];
-
-const LEVEL_PRIORITY: Record<CongestionLevel, number> = {
-    붐빔: 4,
-    "약간 붐빔": 3,
-    보통: 2,
-    여유: 1,
-};
 
 export function StadiumCongestionSection({
     stadiumNum = 1,
@@ -59,9 +37,6 @@ export function StadiumCongestionSection({
     const [sdkError, setSdkError] = useState(false);
     const [mapReady, setMapReady] = useState(false);
     const [selectedSpotId, setSelectedSpotId] = useState<string | null>(null);
-    const [sortOption, setSortOption] = useState<SortOption>("default");
-    const [selectedCategory, setSelectedCategory] =
-        useState<FilterCategory>("ALL");
 
     const {
         data: congestion,
@@ -76,31 +51,6 @@ export function StadiumCongestionSection({
     const zoneSpots = useMemo(() => {
         return calculateStadiumZones(congestion);
     }, [congestion]);
-
-    // 필터 및 정렬된 구역 목록
-    const filteredSpots = useMemo(() => {
-        let list = [...zoneSpots];
-
-        if (selectedCategory !== "ALL") {
-            list = list.filter((spot) => spot.category === selectedCategory);
-        }
-
-        if (sortOption === "busy") {
-            list.sort(
-                (a, b) =>
-                    LEVEL_PRIORITY[b.congestionLevel] -
-                    LEVEL_PRIORITY[a.congestionLevel],
-            );
-        } else if (sortOption === "free") {
-            list.sort(
-                (a, b) =>
-                    LEVEL_PRIORITY[a.congestionLevel] -
-                    LEVEL_PRIORITY[b.congestionLevel],
-            );
-        }
-
-        return list;
-    }, [zoneSpots, selectedCategory, sortOption]);
 
     // 1. 지도 초기화
     useEffect(() => {
@@ -331,211 +281,26 @@ export function StadiumCongestionSection({
         }
     };
 
-    const overallPopulationText =
-        congestion?.populationMin != null && congestion?.populationMax != null
-            ? `${congestion.populationMin.toLocaleString()} ~ ${congestion.populationMax.toLocaleString()}명`
-            : null;
-
     return (
         <section
             aria-label="잠실야구장 주변 실시간 구역별 혼잡도"
             className={`overflow-hidden rounded-panel border border-border bg-surface shadow-card ${className}`}
         >
-            {/* 1. 상단 대시보드 헤더 */}
-            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-6 py-5 max-sm:px-4 max-sm:py-4">
-                <div className="grid gap-1">
-                    <div className="flex flex-wrap items-center gap-2.5">
-                        <span className="inline-block size-2 rounded-full bg-brand animate-pulse" />
-                        <h2 className="text-lg font-black tracking-tight text-foreground max-sm:text-base">
-                            잠실야구장 주변 실시간 구역별 혼잡도
-                        </h2>
-                        {congestion && (
-                            <CongestionBadge
-                                level={congestion.congestionLevel}
-                            />
-                        )}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                        서울시 실시간 도시데이터 기반 잠실종합운동장 전체 인구 현황과
-                        주요 게이트·지하철역 이동 팁을 안내합니다.
-                        {overallPopulationText && (
-                            <span className="ml-1 text-foreground/90 font-mono font-medium">
-                                (실시간 인구: 약 {overallPopulationText})
-                            </span>
-                        )}
-                    </p>
-                </div>
-
-                {/* 상태 및 컨트롤 */}
-                <div className="flex items-center gap-3 max-sm:w-full max-sm:justify-between">
-                    {/* 혼잡도 범례 */}
-                    <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-elevated px-3 py-1.5 text-[11px] font-medium text-muted-foreground max-sm:hidden">
-                        <span className="flex items-center gap-1">
-                            <span className="size-1.5 rounded-full bg-emerald-500" />
-                            여유
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <span className="size-1.5 rounded-full bg-blue-500" />
-                            보통
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <span className="size-1.5 rounded-full bg-amber-500" />
-                            약간 붐빔
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <span className="size-1.5 rounded-full bg-brand" />
-                            붐빔
-                        </span>
-                    </div>
-
-                    {congestion?.observedAt && (
-                        <span className="text-xs text-muted-foreground font-mono">
-                            {congestion.observedAt.slice(11, 16)} 갱신
-                        </span>
-                    )}
-
-                    <Button
-                        className="bg-surface-elevated"
-                        loading={isLoading}
-                        onClick={() => void refetch()}
-                        size="sm"
-                        type="button"
-                        variant="outline"
-                    >
-                        {!isLoading && <RefreshCw aria-hidden="true"/>}
-                        새로고침
-                    </Button>
-                </div>
-            </div>
+            <CongestionSectionHeader
+                congestion={congestion}
+                loading={isLoading}
+                onRefresh={() => void refetch()}
+            />
 
             {/* 2. 메인 컨텐츠: 좌측 리스트 (420px) + 우측 지도 뷰 (1fr) */}
             <div className="grid grid-cols-[420px_1fr] max-lg:grid-cols-1 min-h-[580px]">
-                {/* 좌측: 구역 필터 및 목록 패널 */}
-                <div className="flex flex-col border-r border-border max-lg:border-r-0 max-lg:border-b bg-surface/50">
-                    {/* 카테고리 필터 탭 */}
-                    <div className="flex items-center gap-1.5 border-b border-border/70 p-3 overflow-x-auto scrollbar-none">
-                        {CATEGORY_TABS.map((tab) => (
-                            <button
-                                className={`cursor-pointer rounded-full px-3 py-1 text-xs font-bold transition-all whitespace-nowrap ${
-                                    selectedCategory === tab.id
-                                        ? "bg-brand text-white shadow-sm"
-                                        : "bg-surface-elevated text-muted-foreground hover:text-foreground"
-                                }`}
-                                key={tab.id}
-                                onClick={() => setSelectedCategory(tab.id)}
-                                type="button"
-                            >
-                                {tab.label}
-                            </button>
-                        ))}
-
-                        <div className="ml-auto flex items-center gap-1 text-[11px] text-muted-foreground pl-2 whitespace-nowrap">
-                            <button
-                                className={`cursor-pointer font-bold ${
-                                    sortOption === "default"
-                                        ? "text-brand"
-                                        : "text-muted-foreground hover:text-foreground"
-                                }`}
-                                onClick={() => setSortOption("default")}
-                                type="button"
-                            >
-                                기본순
-                            </button>
-                            <span>·</span>
-                            <button
-                                className={`cursor-pointer font-bold ${
-                                    sortOption === "busy"
-                                        ? "text-brand"
-                                        : "text-muted-foreground hover:text-foreground"
-                                }`}
-                                onClick={() => setSortOption("busy")}
-                                type="button"
-                            >
-                                붐빔순
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* 에러 상태 안내 */}
-                    {error && (
-                        <div className="m-3 flex items-center justify-between rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
-                            <span>혼잡도 데이터를 불러오지 못했습니다.</span>
-                            <Button
-                                className="h-auto p-0 text-destructive"
-                                onClick={() => void refetch()}
-                                size="sm"
-                                type="button"
-                                variant="link"
-                            >
-                                재시도
-                            </Button>
-                        </div>
-                    )}
-
-                    {/* 구역 리스트 */}
-                    <div className="flex-1 overflow-y-auto max-h-[520px] p-3 space-y-2.5">
-                        {filteredSpots.map((spot) => {
-                            const isSelected = selectedSpotId === spot.id;
-
-                            return (
-                                <div
-                                    className={`group relative flex cursor-pointer flex-col gap-2 rounded-xl border p-3.5 transition-all ${
-                                        isSelected
-                                            ? "border-brand bg-brand/5 shadow-sm ring-1 ring-brand/30"
-                                            : "border-border/80 bg-surface hover:border-border hover:bg-surface-elevated"
-                                    }`}
-                                    key={spot.id}
-                                    onClick={() => setSelectedSpotId(spot.id)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter" || e.key === " ") {
-                                            e.preventDefault();
-                                            setSelectedSpotId(spot.id);
-                                        }
-                                    }}
-                                    role="button"
-                                    tabIndex={0}
-                                >
-                                    <div className="flex items-center justify-between gap-2">
-                                        <div className="flex items-center gap-1.5 min-w-0">
-                                            <span className="text-[10px] font-bold text-muted-foreground bg-surface-elevated px-1.5 py-0.5 rounded border border-border/60">
-                                                [{spot.category}]
-                                            </span>
-                                            <strong className="text-xs truncate font-extrabold text-foreground group-hover:text-brand transition-colors">
-                                                {spot.name}
-                                            </strong>
-                                        </div>
-                                        <CongestionBadge
-                                            level={spot.congestionLevel}
-                                        />
-                                    </div>
-
-                                    <p className="text-xs text-muted-foreground leading-relaxed">
-                                        {spot.description}
-                                    </p>
-
-                                    {/* 💡 동선 가이드 팁 */}
-                                    <div className="rounded-lg bg-surface-elevated/80 border border-border/60 p-2 text-xs">
-                                        <div className="flex items-start gap-1">
-                                            <span className="font-extrabold text-brand text-[11px] shrink-0">
-                                                동선 팁:
-                                            </span>
-                                            <span className="text-[11px] text-foreground/90 font-medium">
-                                                {spot.guideTip}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-between text-[11px] text-muted-foreground font-mono pt-0.5">
-                                        <span>⏱️ {spot.waitTimeEst}</span>
-                                        <span className="text-brand font-medium">
-                                            {isSelected ? "선택됨" : "위치 보기 →"}
-                                        </span>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
+                <CongestionSpotList
+                    error={Boolean(error)}
+                    onRetry={() => void refetch()}
+                    onSelect={setSelectedSpotId}
+                    selectedSpotId={selectedSpotId}
+                    spots={zoneSpots}
+                />
 
                 {/* 우측: 카카오 지도 뷰 */}
                 <div className="relative min-h-[460px] w-full bg-surface-elevated max-lg:min-h-[380px]">
