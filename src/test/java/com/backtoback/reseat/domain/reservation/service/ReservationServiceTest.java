@@ -137,7 +137,6 @@ class ReservationServiceTest {
 
         Reservation reservation = mock(Reservation.class);
         given(reservation.isCanceled()).willReturn(false);
-        given(reservation.getReservationSeats()).willReturn(List.of(rsA, rsB));
 
         given(reservationRepository.findByIdWithPessimisticWriteLock(reservationId))
             .willReturn(Optional.of(reservation));
@@ -161,7 +160,8 @@ class ReservationServiceTest {
         Reservation reservation = mock(Reservation.class);
         given(reservation.isCanceled()).willReturn(true);
 
-        given(reservationRepository.findWithSeatsById(reservationId)).willReturn(Optional.of(reservation));
+        given(reservationRepository.findByIdWithPessimisticWriteLock(reservationId))
+            .willReturn(Optional.of(reservation));
 
         // when
         reservationService.cancel(reservationId);
