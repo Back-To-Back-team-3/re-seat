@@ -7,9 +7,42 @@ import {API_BASE_URL} from "@/api/client";
 import {GamesPage} from "@/components/games/games-page";
 import {server} from "@/test/mocks/server";
 import type {GameSummary} from "@/types/game";
+import type {TicketSummary} from "@/types/ticket";
+
+const mocks = vi.hoisted(() => ({
+    routerPush: vi.fn(),
+    auth: {
+        isAuthed: false,
+        isVerified: false,
+        busy: false,
+        message: null,
+        messageVariant: "success" as const,
+        login: vi.fn(),
+        logout: vi.fn(),
+        verify: vi.fn(),
+        dismissMessage: vi.fn(),
+    },
+    tickets: [] as TicketSummary[],
+}));
 
 vi.mock("next/navigation", () => ({
-    useRouter: () => ({push: vi.fn()}),
+    useRouter: () => ({push: mocks.routerPush}),
+}));
+
+vi.mock("@/hooks/use-auth", () => ({
+    useAuth: () => mocks.auth,
+}));
+
+vi.mock("@/hooks/use-tickets", () => ({
+    useTickets: () => ({
+        data: mocks.tickets,
+        error: null,
+        isLoading: false,
+    }),
+}));
+
+vi.mock("@/components/congestion/stadium-congestion-section", () => ({
+    StadiumCongestionSection: () => <div>혼잡도</div>,
 }));
 
 function gamesResponse(games: GameSummary[]) {
@@ -95,6 +128,10 @@ const tomorrowGame: GameSummary = {
 describe("홈 화면 히어로", () => {
     beforeEach(() => {
         localStorage.clear();
+        mocks.auth.isAuthed = false;
+        mocks.auth.isVerified = false;
+        mocks.tickets = [];
+        vi.clearAllMocks();
         // shouldAdvanceTime을 켜서 날짜만 고정하고, MSW 응답을 기다리는 findBy*의
         // 내부 폴링(setTimeout)은 실제 시간처럼 계속 흐르게 한다.
         vi.useFakeTimers({shouldAdvanceTime: true});
@@ -174,5 +211,44 @@ describe("홈 화면 히어로", () => {
                 name: /로그인 후 예매/,
             }),
         ).toBeInTheDocument();
+    });
+
+    it("브라우저에 과거 완료 기록이 남아도 서버 티켓이 없으면 예매를 허용한다", async () => {
+        localStorage.setItem("completedGameIds", JSON.stringify([1]));
+        mocks.auth.isAuthed = true;
+        mocks.auth.isVerified = true;
+        mockGames([todayOpenGame]);
+
+        renderGamesPage();
+
+        const bookingButton = await within(heroSection()).findByRole("button", {
+            name: "경기 선택",
+        });
+        expect(bookingButton).toBeEnabled();
+    });
+
+    it("서버에 환불 완료되지 않은 티켓이 있으면 해당 경기를 예매 완료로 표시한다", async () => {
+        mocks.auth.isAuthed = true;
+        mocks.auth.isVerified = true;
+        mocks.tickets = [
+            {
+                ticketId: 10,
+                ticketNo: "TKT-10",
+                gameId: 1,
+                seat: "1루 101-A-1",
+                status: "ISSUED",
+                qrToken: "qr-10",
+                gameAt: todayOpenGame.gameAt,
+            },
+        ];
+        mockGames([todayOpenGame]);
+
+        renderGamesPage();
+
+        expect(
+            await within(heroSection()).findByRole("button", {
+                name: "예매 완료",
+            }),
+        ).toBeDisabled();
     });
 });
