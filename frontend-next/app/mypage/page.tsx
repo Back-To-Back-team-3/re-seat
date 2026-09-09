@@ -5,6 +5,7 @@ import Link from "next/link";
 import {Alert} from "@/components/common/alert";
 import {ProfileSection} from "@/components/mypage/profile-section";
 import {TicketList} from "@/components/tickets/ticket-list";
+import {Button} from "@/components/ui/button";
 import {useAuth} from "@/hooks/use-auth";
 import {useGames} from "@/hooks/use-games";
 import {useCancelTicket, useRetryCancelTicket, useTickets} from "@/hooks/use-tickets";
@@ -24,13 +25,13 @@ export default function MyPage() {
                     <p className="mt-2 text-sm text-muted-foreground">
                         마이페이지 및 티켓 관리를 위해 먼저 로그인해 주세요.
                     </p>
-                    <button
-                        className="mt-6 inline-flex min-h-11 items-center justify-center rounded-control bg-brand px-6 text-sm font-bold text-white transition hover:bg-brand/90"
+                    <Button
+                        className="mt-6"
                         onClick={auth.login}
                         type="button"
                     >
                         로그인하기
-                    </button>
+                    </Button>
                     <div className="mt-4">
                         <Link className="text-xs text-muted-foreground hover:underline" href="/games">
                             경기 목록으로 돌아가기

@@ -2,7 +2,9 @@
 
 import type {ReactNode} from "react";
 import {useState} from "react";
+import {ChevronLeft, ChevronRight} from "lucide-react";
 
+import {Button} from "@/components/ui/button";
 import {KST_TIME_ZONE} from "@/lib/constants";
 import type {GameSummary} from "@/types/game";
 
@@ -78,35 +80,39 @@ export function GameCalendar({
             <div
                 className="flex items-end justify-between gap-6 border-b border-border px-[22px] py-5 max-[1024px]:flex-col max-[1024px]:items-stretch">
                 <div className="flex items-center gap-2 whitespace-nowrap">
-                    <button
+                    <Button
                         aria-label="이전 달"
-                        className="grid size-9 cursor-pointer place-items-center rounded-[9px] border border-border bg-surface"
                         onClick={() => moveMonth(-1)}
+                        size="icon-sm"
                         type="button"
+                        variant="outline"
                     >
-                        ‹
-                    </button>
+                        <ChevronLeft aria-hidden="true"/>
+                    </Button>
                     <strong className="min-w-[120px] text-center text-lg">
                         {cursor.year}년 {cursor.month + 1}월
                     </strong>
-                    <button
+                    <Button
                         aria-label="다음 달"
-                        className="grid size-9 cursor-pointer place-items-center rounded-[9px] border border-border bg-surface"
                         onClick={() => moveMonth(1)}
+                        size="icon-sm"
                         type="button"
+                        variant="outline"
                     >
-                        ›
-                    </button>
-                    <button
-                        className="cursor-pointer px-3 text-[13px] font-bold text-brand"
+                        <ChevronRight aria-hidden="true"/>
+                    </Button>
+                    <Button
+                        className="text-brand"
                         onClick={() => {
                             setCursor({year: todayYear, month: todayMonth - 1});
                             onSelectDate(today);
                         }}
+                        size="sm"
                         type="button"
+                        variant="ghost"
                     >
                         오늘
-                    </button>
+                    </Button>
                 </div>
                 <div className="flex flex-wrap justify-end gap-2.5 max-[1024px]:justify-start">
                     {filters}

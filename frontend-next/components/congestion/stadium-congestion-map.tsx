@@ -7,6 +7,7 @@ import {
     CONGESTION_CONFIG,
     CongestionBadge,
 } from "@/components/congestion/congestion-badge";
+import {Button} from "@/components/ui/button";
 import {useStadiumCongestion} from "@/hooks/use-stadium-congestion";
 import {STADIUM_IMAGE_URL} from "@/lib/constants";
 
@@ -251,13 +252,15 @@ export function StadiumCongestionMap({
             {error && !isLoading && (
                 <div className="absolute top-3 left-3 z-10 flex items-center gap-2 rounded-lg border border-border/70 bg-surface/90 px-2.5 py-1 text-xs text-muted-foreground backdrop-blur-md">
                     <span>혼잡도 조회 실패</span>
-                    <button
-                        className="rounded border border-border px-1.5 py-0.5 text-[11px] font-bold text-brand hover:bg-surface-elevated"
+                    <Button
+                        className="h-auto px-1.5 py-0.5 text-[11px]"
                         onClick={() => void refetch()}
+                        size="sm"
                         type="button"
+                        variant="outline"
                     >
                         재시도
-                    </button>
+                    </Button>
                 </div>
             )}
 
@@ -273,4 +276,3 @@ export function StadiumCongestionMap({
         </div>
     );
 }
-

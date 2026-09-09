@@ -2,11 +2,13 @@
 
 import Script from "next/script";
 import {useEffect, useMemo, useRef, useState} from "react";
+import {MapPinned, RefreshCw} from "lucide-react";
 
 import {
     CONGESTION_CONFIG,
     CongestionBadge,
 } from "@/components/congestion/congestion-badge";
+import {Button} from "@/components/ui/button";
 import {useStadiumCongestion} from "@/hooks/use-stadium-congestion";
 import {calculateStadiumZones} from "@/lib/stadium-zones";
 import type {
@@ -392,17 +394,17 @@ export function StadiumCongestionSection({
                         </span>
                     )}
 
-                    <button
-                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-control border border-border bg-surface-elevated px-3 py-1.5 text-xs font-bold text-foreground hover:border-brand/40 transition-colors"
+                    <Button
+                        className="bg-surface-elevated"
+                        loading={isLoading}
                         onClick={() => void refetch()}
+                        size="sm"
                         type="button"
+                        variant="outline"
                     >
-                        {isLoading ? (
-                            <span className="size-3 animate-spin rounded-full border-2 border-brand border-t-transparent" />
-                        ) : (
-                            <span>새로고침</span>
-                        )}
-                    </button>
+                        {!isLoading && <RefreshCw aria-hidden="true"/>}
+                        새로고침
+                    </Button>
                 </div>
             </div>
 
@@ -458,13 +460,15 @@ export function StadiumCongestionSection({
                     {error && (
                         <div className="m-3 flex items-center justify-between rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
                             <span>혼잡도 데이터를 불러오지 못했습니다.</span>
-                            <button
-                                className="font-bold underline cursor-pointer"
+                            <Button
+                                className="h-auto p-0 text-destructive"
                                 onClick={() => void refetch()}
+                                size="sm"
                                 type="button"
+                                variant="link"
                             >
                                 재시도
-                            </button>
+                            </Button>
                         </div>
                     )}
 
@@ -558,14 +562,17 @@ export function StadiumCongestionSection({
                     />
 
                     {/* 지도 컨트롤: 전체 위치 리셋 버튼 */}
-                    <button
-                        className="absolute bottom-4 right-4 z-10 flex cursor-pointer items-center gap-1.5 rounded-lg border border-border/80 bg-surface/90 px-3 py-1.5 text-xs font-bold text-foreground shadow-md backdrop-blur-md hover:bg-surface-elevated transition-all"
+                    <Button
+                        className="absolute right-4 bottom-4 z-10 bg-surface/90 shadow-md backdrop-blur-md"
                         onClick={resetMapCenter}
+                        size="sm"
                         title="전체 거점 중심으로 이동"
                         type="button"
+                        variant="outline"
                     >
-                        <span>📍 전체 거점 보기</span>
-                    </button>
+                        <MapPinned aria-hidden="true"/>
+                        전체 거점 보기
+                    </Button>
 
                     {/* SDK 로드 실패 시 안내 */}
                     {(!kakaoApiKey || sdkError) && (
