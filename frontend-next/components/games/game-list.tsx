@@ -15,7 +15,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import {KST_TIME_ZONE} from "@/lib/constants";
+import {getKstDateKey} from "@/lib/date";
 import type {GameSummary} from "@/types/game";
 
 type GameListProps = {
@@ -53,12 +53,7 @@ export function GameList({
          * 있어도 기존 화면과 같은 날짜가 선택되도록 로컬 시간이 아닌 KST 날짜를
          * 초기값으로 사용합니다.
          */
-        return new Intl.DateTimeFormat("en-CA", {
-            timeZone: KST_TIME_ZONE,
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-        }).format(new Date());
+        return getKstDateKey();
     });
     const [status, setStatus] = useState<
         GameSummary["bookingStatus"] | "ALL"

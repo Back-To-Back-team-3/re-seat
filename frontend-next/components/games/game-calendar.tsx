@@ -5,7 +5,7 @@ import {useState} from "react";
 import {ChevronLeft, ChevronRight} from "lucide-react";
 
 import {Button} from "@/components/ui/button";
-import {KST_TIME_ZONE} from "@/lib/constants";
+import {getKstDateKey} from "@/lib/date";
 import type {GameSummary} from "@/types/game";
 
 const LEGEND_ITEMS: Array<{
@@ -40,12 +40,7 @@ export function GameCalendar({
                                  onSelectDate,
                                  filters,
                              }: GameCalendarProps) {
-    const today = new Intl.DateTimeFormat("en-CA", {
-        timeZone: KST_TIME_ZONE,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-    }).format(new Date());
+    const today = getKstDateKey();
     const [todayYear, todayMonth] = today.split("-").map(Number);
     const [cursor, setCursor] = useState(() => ({
         year: todayYear,

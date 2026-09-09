@@ -15,25 +15,12 @@ import {Button} from "@/components/ui/button";
 import {useAuth} from "@/hooks/use-auth";
 import {useGames} from "@/hooks/use-games";
 import {getCompletedGameIds} from "@/lib/completed-games";
-import {KST_TIME_ZONE, STADIUM_IMAGE_URL} from "@/lib/constants";
-import {formatGameDate} from "@/lib/date";
+import {STADIUM_IMAGE_URL} from "@/lib/constants";
+import {formatGameDate, getKstDateKey} from "@/lib/date";
 import type {GameSummary} from "@/types/game";
 
-
-
-/**
- * KST(Asia/Seoul) 기준 오늘 날짜를 YYYY-MM-DD로 반환한다.
- *
- * 초기 선택 경기(chooseInitialGame)와 오늘의 경기 패널이 같은 "오늘" 정의를
- * 공유하도록 이 함수 하나만 사용한다. 브라우저 로컬 시간대가 달라도 백엔드
- * 경기 일시의 기준(KST)과 항상 일치시키기 위함이다.
- */
-function getKstToday() {
-    return new Date().toLocaleDateString("sv-SE", {timeZone: KST_TIME_ZONE});
-}
-
 function chooseInitialGame(games: GameSummary[]) {
-    const today = getKstToday();
+    const today = getKstDateKey();
 
     return (
         games.find(
@@ -68,7 +55,7 @@ export function GamesPage() {
         chooseInitialGame(games);
     const message =
         verificationError ?? gamesQuery.error?.message ?? auth.message;
-    const today = getKstToday();
+    const today = getKstDateKey();
     const todayGames = games.filter((game) => game.gameAt.startsWith(today));
     const selectedMeta = selectedGame
         ? GAME_STATUS_META[selectedGame.bookingStatus]
