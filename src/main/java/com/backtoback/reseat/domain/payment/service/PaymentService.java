@@ -24,6 +24,7 @@ import com.backtoback.reseat.domain.payment.entity.PaymentCancel;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelStatusUnknownException;
+import com.backtoback.reseat.domain.payment.exception.PaymentLocalApplyFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentLockFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
 import com.backtoback.reseat.domain.payment.repository.PaymentCancelRepository;
@@ -100,7 +101,14 @@ public class PaymentService {
         String idempotencyKey,
         PaymentCompleteRequest request
     ) {
-        return paymentApprovalService.approve(userId, paymentId, idempotencyKey, request);
+        try {
+            return paymentApprovalService.approve(userId, paymentId, idempotencyKey, request);
+        } catch (PaymentLocalApplyFailedException e) {
+            // 승인 트랜잭션이 롤백된 뒤 별도 트랜잭션으로 PG 승인 취소 작업을 보존한다.
+            paymentApprovalService.registerApprovalCompensation(e.getPaymentId(), e.getPaymentKey());
+            failOrderAfterLocalApplyFailure(e.getOrderId());
+            throw e;
+        }
     }
 
     /**
@@ -226,6 +234,15 @@ public class PaymentService {
      */
     private String paymentCreationLockKey(Long orderId) {
         return "payment:create:order:" + orderId;
+    }
+
+    /** 승인 보상 작업 등록 후 주문 실패 전이를 시도하고, 실패는 복구 작업에서 다시 처리할 수 있도록 기록한다. */
+    private void failOrderAfterLocalApplyFailure(Long orderId) {
+        try {
+            orderService.failOrder(orderId);
+        } catch (RuntimeException e) {
+            log.error("승인 보상 작업 등록 후 주문 실패 전이 실패 - 복구 작업에서 재시도 (orderId={})", orderId, e);
+        }
     }
 
 }

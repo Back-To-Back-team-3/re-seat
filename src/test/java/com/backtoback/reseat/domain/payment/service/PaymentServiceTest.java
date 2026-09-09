@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.mockito.InOrder;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -398,6 +399,36 @@ class PaymentServiceTest {
                 });
 
             verify(tossPaymentClient).confirm(PAYMENT_KEY, PG_ORDER_ID, AMOUNT);
+        }
+
+        @Test
+        @DisplayName("로컬 반영 실패 시 보상 작업을 먼저 등록하고 주문 실패 전이 오류와 관계없이 최초 예외를 전달한다.")
+        void registersCompensationBeforeFailingOrder() {
+            PaymentCompleteRequest request = mock(PaymentCompleteRequest.class);
+            RuntimeException cause = new RuntimeException("주문 상태 반영 실패");
+            PaymentLocalApplyFailedException failure
+                = new PaymentLocalApplyFailedException(PAYMENT_ID, ORDER_ID, PAYMENT_KEY, cause);
+            PaymentApprovalService approvalService = mock(PaymentApprovalService.class);
+            PaymentService service
+                = new PaymentService(
+                    paymentRepository,
+                    paymentCancelRepository,
+                    paymentRecoveryTaskRepository,
+                    paymentCreationService,
+                    approvalService,
+                    paymentValidator,
+                    redissonClient,
+                    orderService
+                );
+            when(approvalService.approve(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request)).thenThrow(failure);
+            doThrow(new RuntimeException("주문 실패 전이 오류")).when(orderService).failOrder(ORDER_ID);
+
+            assertThatThrownBy(() -> service.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
+                .isSameAs(failure);
+
+            InOrder inOrder = inOrder(approvalService, orderService);
+            inOrder.verify(approvalService).registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY);
+            inOrder.verify(orderService).failOrder(ORDER_ID);
         }
 
         @Test
