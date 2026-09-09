@@ -130,16 +130,6 @@ public class GameSeat extends BaseEntity {
     }
 
     /**
-     * 경기 좌석을 예매 가능 상태로 되돌린다.
-     * <p>선점 해제 또는 주문 취소 시 좌석 상태를 AVAILABLE로 변경하고 선점 만료 시간을 초기화 한다.</p>
-     */
-    public void available() {
-
-        this.status = GameSeatStatus.AVAILABLE;
-        this.holdExpiresAt = null;
-    }
-
-    /**
      * AVAILABLE → HELD (선점).
      * <p>
      * 선점 만료 시각(hold_expires_at)을 상태 전이와 원자적으로 함께 세팅한다.
