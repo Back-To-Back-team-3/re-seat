@@ -105,6 +105,7 @@ public enum ErrorCode {
     PAYMENT_ALREADY_FINALIZED(HttpStatus.CONFLICT, "이미 처리 완료된 결제입니다."),
     PAYMENT_CALLBACK_MISMATCH(HttpStatus.BAD_REQUEST, "결제 콜백 정보가 결제 내역과 일치하지 않습니다."),
     PAYMENT_CONFIRM_STATUS_UNKNOWN(HttpStatus.BAD_GATEWAY, "PG 결제 승인 상태를 확인할 수 없습니다."),
+    PAYMENT_LOCAL_APPLY_FAILED(HttpStatus.BAD_GATEWAY, "PG 승인 후 결제 상태 반영에 실패하여 환불을 진행합니다."),
     PAYMENT_CANCEL_NOT_ALLOWED(HttpStatus.CONFLICT, "취소할 수 없는 결제 상태입니다."),
     PAYMENT_PG_KEY_MISSING(HttpStatus.CONFLICT, "PG 결제 키가 없어 결제를 취소할 수 없습니다."),
     PAYMENT_CANCEL_STATUS_UNKNOWN(HttpStatus.BAD_GATEWAY, "PG 결제 취소 상태를 확인할 수 없습니다."),

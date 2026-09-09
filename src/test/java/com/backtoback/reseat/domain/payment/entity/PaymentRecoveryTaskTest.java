@@ -80,12 +80,30 @@ class PaymentRecoveryTaskTest {
         }
 
         @Test
+        @DisplayName("승인 후 로컬 반영에 실패한 결제의 보상 작업을 생성한다.")
+        void createsApprovalCompensationTask() {
+            Payment payment = mock(Payment.class);
+            when(payment.getId()).thenReturn(PAYMENT_ID);
+
+            PaymentRecoveryTask task = PaymentRecoveryTask.createApprovalCompensation(payment);
+
+            assertThat(task.getType()).isEqualTo(PaymentRecoveryType.APPROVAL_COMPENSATION);
+            assertThat(task.getPayment()).isSameAs(payment);
+            assertThat(task.getPaymentCancel()).isNull();
+            assertThat(task.getRecoveryKey()).isEqualTo("APPROVAL_COMPENSATION:" + PAYMENT_ID);
+            assertThat(task.getStatus()).isEqualTo(PaymentRecoveryStatus.PENDING);
+            assertThat(task.getAttemptCount()).isZero();
+        }
+
+        @Test
         @DisplayName("영속화되지 않은 결제 또는 부분 취소 이력으로는 복구 작업을 생성할 수 없다.")
         void rejectsTargetWithoutId() {
             Payment payment = Payment.builder().build();
             PaymentCancel paymentCancel = mock(PaymentCancel.class);
 
             assertThatThrownBy(() -> PaymentRecoveryTask.createConfirmUnknown(payment))
+                .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> PaymentRecoveryTask.createApprovalCompensation(payment))
                 .isInstanceOf(IllegalArgumentException.class);
             assertThatThrownBy(() -> PaymentRecoveryTask.createPartialCancel(paymentCancel))
                 .isInstanceOf(IllegalArgumentException.class);
