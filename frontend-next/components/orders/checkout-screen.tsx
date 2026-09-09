@@ -8,7 +8,7 @@ import {DeadlinePanel} from "@/components/booking/deadline-panel";
 import {PageIntro} from "@/components/common/page-intro";
 import {OrderSummary} from "@/components/orders/order-summary";
 import {Button} from "@/components/ui/button";
-import {formatPrice} from "@/lib/currency";
+import {calculateTotalPrice, formatPrice} from "@/lib/currency";
 import type {GameSeat, GameSummary} from "@/types/game";
 import type {OrderResponse} from "@/types/order";
 import type {ReservationResponse} from "@/types/reservation";
@@ -61,8 +61,7 @@ export function CheckoutScreen(props: CheckoutScreenProps) {
 
     const order = props.order;
     const reservation = props.order ? null : props.reservation;
-    const amount =
-        order?.totalAmount ?? seats.reduce((sum, seat) => sum + seat.price, 0);
+    const amount = order?.totalAmount ?? calculateTotalPrice(seats);
     const deadlineTarget = order?.paymentDeadline ?? reservation?.holdExpiresAt ?? null;
 
     return (

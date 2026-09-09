@@ -3,7 +3,7 @@ import {ArrowRight, RotateCcw} from "lucide-react";
 import {BookingPanelHeader} from "@/components/booking/booking-panel-header";
 import {DeadlinePanel} from "@/components/booking/deadline-panel";
 import {Button} from "@/components/ui/button";
-import {formatPrice} from "@/lib/currency";
+import {calculateTotalPrice, formatPrice} from "@/lib/currency";
 import type {GameSeat} from "@/types/game";
 import type {ReservationResponse} from "@/types/reservation";
 
@@ -32,7 +32,7 @@ export function SeatSummary({
     onCancelReservation?: () => void;
     onContinue?: () => void;
 }) {
-    const total = seats.reduce((sum, seat) => sum + seat.price, 0);
+    const total = calculateTotalPrice(seats);
 
     // onContinue가 없으면 좌석 선택 화면 전용 흐름(선점 해제·주문 이동 버튼과
     // 선점 타이머)이 아직 필요 없는 다른 화면(예: 주문 화면 요약)에서 이 컴포넌트를
