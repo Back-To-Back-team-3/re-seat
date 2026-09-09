@@ -8,7 +8,6 @@ import {VerificationPanel} from "@/components/auth/verification-panel";
 import {Alert} from "@/components/common/alert";
 import {EmptyState} from "@/components/common/empty-state";
 import {StadiumCongestionSection} from "@/components/congestion/stadium-congestion-section";
-import {GAME_STATUS_META} from "@/components/games/game-card";
 import {GameList} from "@/components/games/game-list";
 import {TodayGamesPanel} from "@/components/games/today-games-panel";
 import {Button} from "@/components/ui/button";
@@ -17,6 +16,7 @@ import {useGames} from "@/hooks/use-games";
 import {getCompletedGameIds} from "@/lib/completed-games";
 import {STADIUM_IMAGE_URL} from "@/lib/constants";
 import {formatGameDate, getKstDateKey} from "@/lib/date";
+import {GAME_STATUS_META} from "@/lib/game-status";
 import type {GameSummary} from "@/types/game";
 
 function chooseInitialGame(games: GameSummary[]) {

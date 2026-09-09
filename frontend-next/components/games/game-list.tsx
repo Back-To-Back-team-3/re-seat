@@ -5,7 +5,7 @@ import {RotateCcw} from "lucide-react";
 
 import {EmptyState} from "@/components/common/empty-state";
 import {GameCalendar} from "@/components/games/game-calendar";
-import {GAME_STATUS_META, GameCard} from "@/components/games/game-card";
+import {GameCard} from "@/components/games/game-card";
 import {Button} from "@/components/ui/button";
 import {PageIntro} from "@/components/common/page-intro";
 import {
@@ -16,6 +16,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import {getKstDateKey} from "@/lib/date";
+import {GAME_STATUS_META} from "@/lib/game-status";
 import type {GameSummary} from "@/types/game";
 
 type GameListProps = {

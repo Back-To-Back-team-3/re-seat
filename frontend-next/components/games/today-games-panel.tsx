@@ -1,4 +1,7 @@
-import {GAME_STATUS_META, STATUS_PILL_CLASSES,} from "@/components/games/game-card";
+import {
+    GAME_STATUS_BADGE_CLASSES,
+    GAME_STATUS_META,
+} from "@/lib/game-status";
 import {KST_TIME_ZONE} from "@/lib/constants";
 import {formatGameDate} from "@/lib/date";
 import type {GameSummary} from "@/types/game";
@@ -60,7 +63,7 @@ export function TodayGamesPanel({
                             type="button"
                         >
               <span
-                  className={`w-fit justify-self-start rounded-full px-[9px] py-[5px] text-[11px] font-black ${STATUS_PILL_CLASSES[game.bookingStatus]}`}
+                  className={`w-fit justify-self-start rounded-full px-[9px] py-[5px] text-[11px] font-black ${GAME_STATUS_BADGE_CLASSES[game.bookingStatus]}`}
               >
                 {GAME_STATUS_META[game.bookingStatus].label}
               </span>

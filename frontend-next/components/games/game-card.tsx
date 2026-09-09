@@ -1,48 +1,9 @@
 import {formatGameDate, formatShortDate} from "@/lib/date";
+import {
+    GAME_STATUS_BADGE_CLASSES,
+    GAME_STATUS_META,
+} from "@/lib/game-status";
 import type {GameSummary} from "@/types/game";
-
-/**
- * Vite의 gameStatusMeta(App.tsx)를 그대로 옮긴 상태별 라벨.
- *
- * 히어로의 SELECTED GAME 버튼, 오늘의 경기 패널, 이 카드가 모두 이 맵 하나를
- * 공유하므로 라벨을 여기서만 고치면 세 곳이 함께 Vite와 맞는다.
- */
-export const GAME_STATUS_META: Record<
-    GameSummary["bookingStatus"],
-    { label: string; action: string; description: string }
-> = {
-    SCHEDULED: {
-        label: "예매 예정",
-        action: "예매 준비 중",
-        description: "예매 오픈 전입니다.",
-    },
-    OPEN: {
-        label: "예매중",
-        action: "경기 선택",
-        description: "지금 예매할 수 있습니다.",
-    },
-    CLOSED: {
-        label: "예매 종료",
-        action: "예매 종료",
-        description: "예매가 마감되었습니다.",
-    },
-    CANCELLED: {
-        label: "경기 취소",
-        action: "경기 취소",
-        description: "취소된 경기입니다.",
-    },
-};
-
-/**
- * Vite의 .status-pill.* 색상 변형(styles.css). 이 카드와 오늘의 경기 패널이
- * 함께 사용해 상태 색이 화면마다 달라지지 않게 한다.
- */
-export const STATUS_PILL_CLASSES: Record<GameSummary["bookingStatus"], string> = {
-    SCHEDULED: "bg-[rgba(43,103,203,0.1)] text-[#2b67cb]",
-    OPEN: "bg-success/10 text-success",
-    CLOSED: "bg-[rgba(91,97,112,0.12)] text-muted-foreground",
-    CANCELLED: "bg-brand/10 text-brand",
-};
 
 type GameCardProps = {
     game: GameSummary;
@@ -95,7 +56,7 @@ export function GameCard({
                 </div>
                 <div className="grid min-w-0 content-start gap-1.5">
           <span
-              className={`w-fit rounded-full px-[7px] py-[3px] text-[11px] font-black ${STATUS_PILL_CLASSES[game.bookingStatus]}`}
+              className={`w-fit rounded-full px-[7px] py-[3px] text-[11px] font-black ${GAME_STATUS_BADGE_CLASSES[game.bookingStatus]}`}
           >
             {completed ? "예매 완료" : meta.label}
           </span>
