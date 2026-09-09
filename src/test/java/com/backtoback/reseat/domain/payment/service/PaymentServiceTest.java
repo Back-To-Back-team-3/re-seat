@@ -4,19 +4,22 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.LoggerFactory;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.mockito.InOrder;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.redisson.api.RLock;
@@ -24,6 +27,12 @@ import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.entity.OrderItem;
@@ -43,6 +52,7 @@ import com.backtoback.reseat.domain.payment.entity.PaymentCancel;
 import com.backtoback.reseat.domain.payment.entity.PaymentCancelStatus;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
+import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryType;
 import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
 import com.backtoback.reseat.domain.payment.entity.PgProvider;
 import com.backtoback.reseat.domain.payment.exception.IdempotencyKeyRequiredException;
@@ -50,6 +60,7 @@ import com.backtoback.reseat.domain.payment.exception.PaymentAccessDeniedExcepti
 import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCallbackMismatchException;
 import com.backtoback.reseat.domain.payment.exception.PaymentConfirmStatusUnknownException;
+import com.backtoback.reseat.domain.payment.exception.PaymentLocalApplyFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentLockFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
@@ -62,6 +73,7 @@ import com.backtoback.reseat.domain.ticket.entity.Ticket;
 import com.backtoback.reseat.domain.ticket.repository.TicketRepository;
 import com.backtoback.reseat.domain.ticket.service.TicketService;
 import com.backtoback.reseat.domain.user.entity.User;
+import com.backtoback.reseat.global.exception.ErrorCode;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PaymentService 결제 처리")
@@ -117,8 +129,36 @@ class PaymentServiceTest {
     @Mock
     private TicketRepository ticketRepository;
 
-    @InjectMocks
+    private PaymentApprovalService paymentApprovalService;
+
     private PaymentService paymentService;
+
+    @BeforeEach
+    void setUp() {
+        paymentApprovalService
+            = new PaymentApprovalService(
+                paymentRepository,
+                paymentRecoveryTaskRepository,
+                paymentOrderPolicy,
+                tossPaymentClient,
+                paymentValidator,
+                orderService,
+                ticketServiceProvider,
+                orderItemRepository,
+                ticketRepository
+            );
+        paymentService
+            = new PaymentService(
+                paymentRepository,
+                paymentCancelRepository,
+                paymentRecoveryTaskRepository,
+                paymentCreationService,
+                paymentApprovalService,
+                paymentValidator,
+                redissonClient,
+                orderService
+            );
+    }
 
     private PaymentRequest request() {
         PaymentRequest request = mock(PaymentRequest.class);
@@ -341,6 +381,137 @@ class PaymentServiceTest {
         }
 
         @Test
+        @DisplayName("Toss 승인 후 로컬 상태 반영에 실패하면 복구 정보를 담은 예외로 변환한다.")
+        void wrapsLocalApplyFailureAfterConfirm() {
+            Payment payment = payment(PaymentStatus.READY);
+            PaymentCompleteRequest request = completeRequest();
+            TossPaymentResponse tossResponse = mock(TossPaymentResponse.class);
+            RuntimeException cause = new RuntimeException("주문 상태 반영 실패");
+            when(payment.getOrder().getId()).thenReturn(ORDER_ID);
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
+            when(tossResponse.isApproved()).thenReturn(true);
+            when(tossResponse.getPaymentKey()).thenReturn(PAYMENT_KEY);
+            when(tossResponse.getMethod()).thenReturn("CARD");
+            when(tossPaymentClient.confirm(PAYMENT_KEY, PG_ORDER_ID, AMOUNT)).thenReturn(tossResponse);
+            doThrow(cause).when(orderService).completeOrder(ORDER_ID);
+
+            assertThatThrownBy(() -> paymentService.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
+                .isInstanceOfSatisfying(PaymentLocalApplyFailedException.class, exception -> {
+                    assertThat(exception.getPaymentId()).isEqualTo(PAYMENT_ID);
+                    assertThat(exception.getOrderId()).isEqualTo(ORDER_ID);
+                    assertThat(exception.getPaymentKey()).isEqualTo(PAYMENT_KEY);
+                    assertThat(exception.getCause()).isSameAs(cause);
+                });
+
+            verify(tossPaymentClient).confirm(PAYMENT_KEY, PG_ORDER_ID, AMOUNT);
+        }
+
+        @Test
+        @DisplayName("로컬 반영 실패 시 보상 작업을 먼저 등록하고 주문 실패 전이 오류와 관계없이 최초 예외를 전달한다.")
+        void registersCompensationBeforeFailingOrder() {
+            PaymentCompleteRequest request = mock(PaymentCompleteRequest.class);
+            RuntimeException cause = new RuntimeException("주문 상태 반영 실패");
+            PaymentLocalApplyFailedException failure
+                = new PaymentLocalApplyFailedException(PAYMENT_ID, ORDER_ID, PAYMENT_KEY, cause);
+            PaymentApprovalService approvalService = mock(PaymentApprovalService.class);
+            PaymentService service
+                = new PaymentService(
+                    paymentRepository,
+                    paymentCancelRepository,
+                    paymentRecoveryTaskRepository,
+                    paymentCreationService,
+                    approvalService,
+                    paymentValidator,
+                    redissonClient,
+                    orderService
+                );
+            when(approvalService.approve(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request)).thenThrow(failure);
+            when(approvalService.registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY)).thenReturn(true);
+            doThrow(new RuntimeException("주문 실패 전이 오류")).when(orderService).failOrder(ORDER_ID);
+
+            assertThatThrownBy(() -> service.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
+                .isSameAs(failure);
+
+            InOrder inOrder = inOrder(approvalService, orderService);
+            inOrder.verify(approvalService).registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY);
+            inOrder.verify(orderService).failOrder(ORDER_ID);
+        }
+
+        @Test
+        @DisplayName("다른 승인 요청이 먼저 완료했다면 주문을 실패 처리하지 않는다.")
+        void skipsOrderFailureWhenCompensationIsNotRegistered() {
+            PaymentCompleteRequest request = mock(PaymentCompleteRequest.class);
+            RuntimeException cause = new RuntimeException("주문 상태 반영 실패");
+            PaymentLocalApplyFailedException failure
+                = new PaymentLocalApplyFailedException(PAYMENT_ID, ORDER_ID, PAYMENT_KEY, cause);
+            PaymentApprovalService approvalService = mock(PaymentApprovalService.class);
+            PaymentService service
+                = new PaymentService(
+                    paymentRepository,
+                    paymentCancelRepository,
+                    paymentRecoveryTaskRepository,
+                    paymentCreationService,
+                    approvalService,
+                    paymentValidator,
+                    redissonClient,
+                    orderService
+                );
+            when(approvalService.approve(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request)).thenThrow(failure);
+            when(approvalService.registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY)).thenReturn(false);
+
+            assertThatThrownBy(() -> service.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
+                .isSameAs(failure);
+
+            verify(approvalService).registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY);
+            verify(orderService, never()).failOrder(anyLong());
+        }
+
+        @Test
+        @DisplayName("로컬 반영 실패 로그에 최초 원인 예외의 stack trace를 남긴다.")
+        void logsLocalApplyFailureWithCause() {
+            PaymentCompleteRequest request = mock(PaymentCompleteRequest.class);
+            RuntimeException cause = new RuntimeException("주문 상태 반영 실패");
+            PaymentLocalApplyFailedException failure
+                = new PaymentLocalApplyFailedException(PAYMENT_ID, ORDER_ID, PAYMENT_KEY, cause);
+            PaymentApprovalService approvalService = mock(PaymentApprovalService.class);
+            PaymentService service
+                = new PaymentService(
+                    paymentRepository,
+                    paymentCancelRepository,
+                    paymentRecoveryTaskRepository,
+                    paymentCreationService,
+                    approvalService,
+                    paymentValidator,
+                    redissonClient,
+                    orderService
+                );
+            when(approvalService.approve(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request)).thenThrow(failure);
+
+            Logger logger = (Logger)LoggerFactory.getLogger(PaymentService.class);
+            ListAppender<ILoggingEvent> appender = new ListAppender<>();
+            appender.start();
+            logger.addAppender(appender);
+
+            try {
+                assertThatThrownBy(() -> service.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, request))
+                    .isSameAs(failure);
+            } finally {
+                logger.detachAppender(appender);
+                appender.stop();
+            }
+
+            ILoggingEvent failureLog
+                = appender.list
+                    .stream()
+                    .filter(event -> event.getFormattedMessage().contains("승인 후 로컬 반영 실패"))
+                    .findFirst()
+                    .orElseThrow();
+            assertThat(failureLog.getThrowableProxy()).isNotNull();
+            assertThat(failureLog.getThrowableProxy().getCause().getClassName())
+                .isEqualTo(RuntimeException.class.getName());
+        }
+
+        @Test
         @DisplayName("이미 실패한 결제에 승인 완료를 요청하면 이미 종결된 결제 예외를 던진다.")
         void rejectsFailedPayment() {
             Payment payment = payment(PaymentStatus.FAILED);
@@ -507,6 +678,58 @@ class PaymentServiceTest {
 
             verifyNoInteractions(tossPaymentClient, orderService, paymentRecoveryTaskRepository);
             assertThat(payment.getPgPaymentKey()).isNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("승인 보상 작업을 등록한다")
+    class RegisterApprovalCompensation {
+
+        @Test
+        @DisplayName("결제를 실패 처리하고 PG 승인 취소를 위한 복구 작업을 저장한다.")
+        void registersApprovalCompensationTask() {
+            Payment payment = payment(PaymentStatus.READY);
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
+
+            boolean registered = paymentApprovalService.registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY);
+
+            assertThat(registered).isTrue();
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.FAILED);
+            assertThat(payment.getPgPaymentKey()).isEqualTo(PAYMENT_KEY);
+            assertThat(payment.getFailReason()).isEqualTo(ErrorCode.PAYMENT_LOCAL_APPLY_FAILED.getMessage());
+            ArgumentCaptor<PaymentRecoveryTask> taskCaptor = ArgumentCaptor.forClass(PaymentRecoveryTask.class);
+            verify(paymentRecoveryTaskRepository).save(taskCaptor.capture());
+            assertThat(taskCaptor.getValue().getPayment()).isSameAs(payment);
+            assertThat(taskCaptor.getValue().getType()).isEqualTo(PaymentRecoveryType.APPROVAL_COMPENSATION);
+            assertThat(taskCaptor.getValue().getStatus()).isEqualTo(PaymentRecoveryStatus.PENDING);
+        }
+
+        @Test
+        @DisplayName("다른 승인 요청이 먼저 완료한 결제에는 보상 작업을 등록하지 않는다.")
+        void skipsApprovalCompensationForApprovedPayment() {
+            Payment payment = payment(PaymentStatus.APPROVED);
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
+
+            boolean registered = paymentApprovalService.registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY);
+
+            assertThat(registered).isFalse();
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED);
+            assertThat(payment.getPgPaymentKey()).isNull();
+            assertThat(payment.getFailReason()).isNull();
+            verify(paymentRecoveryTaskRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("기존 승인 트랜잭션과 분리된 새 트랜잭션에서 등록한다.")
+        void usesNewTransaction() throws NoSuchMethodException {
+            Method method
+                = PaymentApprovalService.class
+                    .getDeclaredMethod("registerApprovalCompensation", Long.class, String.class);
+
+            Transactional transactional = method.getAnnotation(Transactional.class);
+
+            assertThat(transactional).isNotNull();
+            assertThat(transactional.propagation()).isEqualTo(Propagation.REQUIRES_NEW);
         }
     }
 

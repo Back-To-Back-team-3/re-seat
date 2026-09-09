@@ -128,7 +128,7 @@ public interface PaymentControllerDocs {
             ),
             @ApiResponse(
                 responseCode = "502",
-                description = "PAYMENT_CONFIRM_STATUS_UNKNOWN",
+                description = "PAYMENT_CONFIRM_STATUS_UNKNOWN / PAYMENT_LOCAL_APPLY_FAILED",
                 content = @Content
             )
         }
