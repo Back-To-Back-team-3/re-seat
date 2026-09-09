@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +25,8 @@ import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.order.entity.OrderItem;
@@ -43,6 +46,7 @@ import com.backtoback.reseat.domain.payment.entity.PaymentCancel;
 import com.backtoback.reseat.domain.payment.entity.PaymentCancelStatus;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
+import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryType;
 import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
 import com.backtoback.reseat.domain.payment.entity.PgProvider;
 import com.backtoback.reseat.domain.payment.exception.IdempotencyKeyRequiredException;
@@ -63,6 +67,7 @@ import com.backtoback.reseat.domain.ticket.entity.Ticket;
 import com.backtoback.reseat.domain.ticket.repository.TicketRepository;
 import com.backtoback.reseat.domain.ticket.service.TicketService;
 import com.backtoback.reseat.domain.user.entity.User;
+import com.backtoback.reseat.global.exception.ErrorCode;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PaymentService 결제 처리")
@@ -562,6 +567,42 @@ class PaymentServiceTest {
 
             verifyNoInteractions(tossPaymentClient, orderService, paymentRecoveryTaskRepository);
             assertThat(payment.getPgPaymentKey()).isNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("승인 보상 작업을 등록한다")
+    class RegisterApprovalCompensation {
+
+        @Test
+        @DisplayName("결제를 실패 처리하고 PG 승인 취소를 위한 복구 작업을 저장한다.")
+        void registersApprovalCompensationTask() {
+            Payment payment = payment(PaymentStatus.READY);
+            when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
+
+            paymentApprovalService.registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY);
+
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.FAILED);
+            assertThat(payment.getPgPaymentKey()).isEqualTo(PAYMENT_KEY);
+            assertThat(payment.getFailReason()).isEqualTo(ErrorCode.PAYMENT_LOCAL_APPLY_FAILED.getMessage());
+            ArgumentCaptor<PaymentRecoveryTask> taskCaptor = ArgumentCaptor.forClass(PaymentRecoveryTask.class);
+            verify(paymentRecoveryTaskRepository).save(taskCaptor.capture());
+            assertThat(taskCaptor.getValue().getPayment()).isSameAs(payment);
+            assertThat(taskCaptor.getValue().getType()).isEqualTo(PaymentRecoveryType.APPROVAL_COMPENSATION);
+            assertThat(taskCaptor.getValue().getStatus()).isEqualTo(PaymentRecoveryStatus.PENDING);
+        }
+
+        @Test
+        @DisplayName("기존 승인 트랜잭션과 분리된 새 트랜잭션에서 등록한다.")
+        void usesNewTransaction() throws NoSuchMethodException {
+            Method method
+                = PaymentApprovalService.class
+                    .getDeclaredMethod("registerApprovalCompensation", Long.class, String.class);
+
+            Transactional transactional = method.getAnnotation(Transactional.class);
+
+            assertThat(transactional).isNotNull();
+            assertThat(transactional.propagation()).isEqualTo(Propagation.REQUIRES_NEW);
         }
     }
 

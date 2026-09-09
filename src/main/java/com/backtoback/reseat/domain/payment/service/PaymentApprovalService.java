@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.backtoback.reseat.domain.order.entity.OrderItem;
@@ -29,6 +30,7 @@ import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
 import com.backtoback.reseat.domain.ticket.dto.response.TicketListResponse;
 import com.backtoback.reseat.domain.ticket.repository.TicketRepository;
 import com.backtoback.reseat.domain.ticket.service.TicketService;
+import com.backtoback.reseat.global.exception.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -121,6 +123,17 @@ public class PaymentApprovalService {
                 e
             );
         }
+    }
+
+    /** 승인 후 로컬 반영에 실패한 결제를 실패 처리하고 PG 승인 취소 작업을 등록한다. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void registerApprovalCompensation(Long paymentId, String paymentKey) {
+        Payment payment
+            = paymentRepository.findByIdWithPessimisticWriteLock(paymentId).orElseThrow(PaymentNotFoundException::new);
+
+        payment.assignPgPaymentKey(paymentKey);
+        payment.fail(ErrorCode.PAYMENT_LOCAL_APPLY_FAILED.getMessage(), LocalDateTime.now());
+        paymentRecoveryTaskRepository.save(PaymentRecoveryTask.createApprovalCompensation(payment));
     }
 
     /** 승인된 결제의 주문 항목별 티켓을 확인하고 응답한다. */
