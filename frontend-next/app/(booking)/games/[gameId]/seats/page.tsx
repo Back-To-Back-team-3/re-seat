@@ -6,6 +6,7 @@ import {useState} from "react";
 
 import {getGame} from "@/api/games";
 import {gameKeys} from "@/api/query-keys/games";
+import {BookingPanelHeader} from "@/components/booking/booking-panel-header";
 import {GameSummaryBar} from "@/components/booking/game-summary-bar";
 import {Alert} from "@/components/common/alert";
 import {SeatMap} from "@/components/seats/seat-map";
@@ -105,18 +106,12 @@ export default function SeatsPage() {
             <div className="grid grid-cols-[minmax(0,1fr)_310px] items-start gap-[14px] max-[1024px]:grid-cols-1">
                 <div
                     className="col-start-1 row-start-1 grid grid-cols-[minmax(240px,0.7fr)_minmax(0,1.3fr)] overflow-hidden rounded-panel border border-border bg-surface max-[1024px]:col-start-auto max-[1024px]:row-start-auto max-[640px]:grid-cols-1">
-                    <div
-                        className="col-span-2 flex items-center gap-2.5 border-b border-border px-[18px] py-[17px] max-[640px]:col-span-1">
-            <span className="text-xs font-black tracking-[0.1em] text-brand">
-              01
-            </span>
-                        <div className="grid gap-0.5">
-                            <strong className="text-[13px]">구역 선택</strong>
-                            <small className="text-xs text-muted-foreground">
-                                원하는 구역을 먼저 선택하세요.
-                            </small>
-                        </div>
-                    </div>
+                    <BookingPanelHeader
+                        className="col-span-2 max-[640px]:col-span-1"
+                        description="원하는 구역을 먼저 선택하세요."
+                        step="01"
+                        title="구역 선택"
+                    />
 
                     <div
                         className="relative m-[14px] min-h-[220px] overflow-hidden rounded-[9px] bg-surface-soft max-[640px]:h-[155px] max-[640px]:min-h-[155px]">

@@ -1,5 +1,6 @@
 import {ArrowRight, RotateCcw} from "lucide-react";
 
+import {BookingPanelHeader} from "@/components/booking/booking-panel-header";
 import {Countdown} from "@/components/common/countdown";
 import {Button} from "@/components/ui/button";
 import {formatPrice} from "@/lib/currency";
@@ -61,17 +62,11 @@ export function SeatSummary({
     return (
         <aside
             className="sticky top-[100px] col-start-2 row-start-1 row-span-2 overflow-hidden rounded-panel border border-border bg-surface max-[1180px]:static max-[1024px]:col-start-auto max-[1024px]:row-start-auto max-[1024px]:row-span-1">
-            <div className="flex items-center gap-2.5 border-b border-border px-[18px] py-[17px]">
-        <span className="text-xs font-black tracking-[0.1em] text-brand">
-          03
-        </span>
-                <div className="grid gap-0.5">
-                    <strong className="text-[13px]">선택 확인</strong>
-                    <small className="text-xs text-muted-foreground">
-                        최대 2석까지 선택할 수 있습니다.
-                    </small>
-                </div>
-            </div>
+            <BookingPanelHeader
+                description="최대 2석까지 선택할 수 있습니다."
+                step="03"
+                title="선택 확인"
+            />
 
             {timerTarget ? (
                 <div
