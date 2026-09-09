@@ -22,7 +22,7 @@ const QUEUE_REJECTION_MESSAGES = {
  * 페이지를 벗어나면 AbortController가 fetch와 스트림 reader를 함께 중단해 이전
  * 화면의 이벤트가 새 화면 상태를 바꾸지 못하게 합니다.
  */
-export function useQueue(gameId: number) {
+export function useQueue(gameId: number, enabled = true) {
     const router = useRouter();
     const setGame = useBookingStore((state) => state.setGame);
     const setQueueExpiry = useBookingStore((state) => state.setQueueExpiry);
@@ -32,7 +32,7 @@ export function useQueue(gameId: number) {
     const controller = useRef<AbortController | null>(null);
 
     useEffect(() => {
-        if (!Number.isFinite(gameId)) return;
+        if (!enabled || !Number.isFinite(gameId)) return;
         setGame(gameId);
         const abortController = new AbortController();
         controller.current = abortController;
@@ -111,7 +111,7 @@ export function useQueue(gameId: number) {
             // 4. unmount cleanup은 등록 이후 어느 단계에 있더라도 같은 연결을 중단한다.
             abortController.abort();
         };
-    }, [gameId, router, setGame, setQueueExpiry]);
+    }, [enabled, gameId, router, setGame, setQueueExpiry]);
 
     return {
         queue,

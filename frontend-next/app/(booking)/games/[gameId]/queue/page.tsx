@@ -8,6 +8,7 @@ import {getGame} from "@/api/games";
 import {getQueueStatus} from "@/api/queues";
 import {gameKeys} from "@/api/query-keys/games";
 import {QueueScreen} from "@/components/queue/queue-screen";
+import {useBookingResume} from "@/hooks/use-booking-resume";
 import {useQueue} from "@/hooks/use-queue";
 import type {QueueStatusResponse, QueueViewState} from "@/types/game";
 
@@ -15,7 +16,8 @@ export default function QueuePage() {
     const params = useParams<{ gameId: string }>();
     const router = useRouter();
     const gameId = Number(params.gameId);
-    const queue = useQueue(gameId);
+    const resume = useBookingResume(gameId);
+    const queue = useQueue(gameId, resume.shouldEnterQueue);
     const gameQuery = useQuery({
         queryKey: gameKeys.detail(gameId),
         queryFn: () => getGame(gameId),
@@ -56,7 +58,7 @@ export default function QueuePage() {
     return (
         <QueueScreen
             busy={refreshing}
-            error={queue.error}
+            error={resume.error ?? queue.error}
             game={gameQuery.data}
             initialRank={queue.initialRank}
             onCancel={() => {
