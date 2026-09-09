@@ -5,6 +5,9 @@
 -- active_seat_key를 NULL로 만들지 않는다 (해당 좌석은 여전히 점유 중).
 
 ALTER TABLE tickets
+    ADD INDEX idx_tickets_game_seat_id (game_seat_id);
+
+ALTER TABLE tickets
 DROP INDEX uk_tickets_game_seat;
 
 ALTER TABLE tickets
