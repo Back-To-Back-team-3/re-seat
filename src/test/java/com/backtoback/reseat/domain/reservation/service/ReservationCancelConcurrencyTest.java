@@ -248,10 +248,16 @@ class ReservationCancelConcurrencyTest {
             });
         }
 
-        readyLatch.await();
-        startLatch.countDown();
-        executor.shutdown();
-        boolean finished = executor.awaitTermination(AWAIT_SECONDS, TimeUnit.SECONDS);
+        boolean finished = false;
+        try {
+            readyLatch.await();
+            startLatch.countDown();
+            executor.shutdown();
+            finished = executor.awaitTermination(AWAIT_SECONDS, TimeUnit.SECONDS);
+        } finally {
+            startLatch.countDown();
+            executor.shutdownNow();
+        }
 
         // then
         Reservation finalReservation = reservationRepository.findById(targetReservationId).orElseThrow();
