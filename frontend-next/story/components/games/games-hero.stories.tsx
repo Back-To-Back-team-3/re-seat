@@ -9,11 +9,9 @@ const meta = {
     parameters: {layout: "fullscreen"},
     args: {
         selectedGame: storyGames[0],
-        todayGames: storyGames,
         authenticated: true,
         bookingBusy: false,
         selectedCompleted: false,
-        onSelect: () => undefined,
         onStartBooking: () => undefined,
     },
 } satisfies Meta<typeof GamesHero>;

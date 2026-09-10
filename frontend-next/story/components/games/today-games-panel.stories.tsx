@@ -25,6 +25,15 @@ type Story = StoryObj<typeof meta>;
 
 export const Selected: Story = {};
 
+export const Overflow: Story = {
+    args: {
+        games: Array.from({length: 6}, (_, index) => ({
+            ...storyGames[index % storyGames.length],
+            gameId: index + 1,
+        })),
+    },
+};
+
 export const Empty: Story = {
     args: {games: [], selectedGameId: null},
 };

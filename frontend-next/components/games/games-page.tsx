@@ -10,6 +10,7 @@ import {EmptyState} from "@/components/common/empty-state";
 import {StadiumCongestionSection} from "@/components/congestion/stadium-congestion-section";
 import {GamesHero} from "@/components/games/games-hero";
 import {GameList} from "@/components/games/game-list";
+import {TodayGamesPanel} from "@/components/games/today-games-panel";
 import {Button} from "@/components/ui/button";
 import {useAuth} from "@/hooks/use-auth";
 import {useGames} from "@/hooks/use-games";
@@ -123,14 +124,18 @@ export function GamesPage() {
                             ticketsQuery.isLoading ||
                             Boolean(ticketsQuery.error)
                         }
-                        onSelect={selectGame}
                         onStartBooking={startBooking}
                         selectedCompleted={selectedCompleted}
                         selectedGame={selectedGame}
-                        todayGames={todayGames}
                     />
 
                     <main className="mx-auto grid w-full max-w-[1440px] gap-10 px-[5vw] py-14 max-sm:px-4">
+                        <TodayGamesPanel
+                            games={todayGames}
+                            onSelect={selectGame}
+                            selectedGameId={selectedGame?.gameId ?? null}
+                        />
+
                         {gamesQuery.isLoading ? (
                             <p className="py-16 text-center text-muted-foreground">
                                 경기 일정을 불러오고 있습니다.

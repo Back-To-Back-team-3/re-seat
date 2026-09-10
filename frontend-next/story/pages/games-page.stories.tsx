@@ -3,6 +3,7 @@ import type {Meta, StoryObj} from "@storybook/nextjs-vite";
 
 import {GameList} from "@/components/games/game-list";
 import {GamesHero} from "@/components/games/games-hero";
+import {TodayGamesPanel} from "@/components/games/today-games-panel";
 import {getKstDateKey} from "@/lib/date";
 import {storyGames} from "@/story/fixtures";
 import type {GameSummary} from "@/types/game";
@@ -32,13 +33,16 @@ export const Default: Story = {
                 <GamesHero
                     authenticated
                     bookingBusy={false}
-                    onSelect={setSelectedGame}
                     onStartBooking={() => undefined}
                     selectedCompleted={false}
                     selectedGame={selectedGame}
-                    todayGames={currentGames}
                 />
                 <section className="mx-auto max-w-[1120px] px-6 py-12">
+                    <TodayGamesPanel
+                        games={currentGames}
+                        onSelect={setSelectedGame}
+                        selectedGameId={selectedGame?.gameId ?? null}
+                    />
                     <GameList
                         completedGameIds={new Set<number>()}
                         games={currentGames}
