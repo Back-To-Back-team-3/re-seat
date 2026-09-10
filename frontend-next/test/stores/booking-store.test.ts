@@ -106,4 +106,27 @@ describe("bookingStore", () => {
             queueTokenExpiresAt: null,
         });
     });
+
+    it("세션에서 읽은 예매 진행 상태를 한 번에 복원한다", () => {
+        const store = createBookingStore();
+
+        store.getState().hydrate({
+            selectedGameId: 1,
+            selectedZoneId: 10,
+            selectedSeats: [seat],
+            reservation,
+            orderId: 200,
+            paymentId: 300,
+            queueTokenExpiresAt: "2026-08-06 19:00:00",
+        });
+
+        expect(store.getState()).toMatchObject({
+            hydrated: true,
+            selectedGameId: 1,
+            selectedSeats: [seat],
+            reservation,
+            orderId: 200,
+            paymentId: 300,
+        });
+    });
 });

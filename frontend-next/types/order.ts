@@ -1,4 +1,9 @@
-export type OrderStatus = "CREATED" | "PAID" | "CANCELED" | "EXPIRED";
+export type OrderStatus =
+    | "CREATED"
+    | "PAID"
+    | "PARTIALLY_CANCELED"
+    | "CANCELED"
+    | "EXPIRED";
 
 export type OrderResponse = {
     orderId: number;

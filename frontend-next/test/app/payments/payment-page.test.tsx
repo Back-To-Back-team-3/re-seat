@@ -86,6 +86,9 @@ function makePayment(overrides: Partial<PaymentResponse> = {}): PaymentResponse 
         failReason: null,
         approvedAt: null,
         failedAt: null,
+        canceledAmount: 0,
+        remainingAmount: 15000,
+        cancels: [],
         ...overrides,
     };
 }
@@ -151,7 +154,7 @@ describe("결제 상세 페이지", () => {
         expect(await screen.findByText("O-2")).toBeInTheDocument();
         expect(screen.getByText("P-1")).toBeInTheDocument();
         expect(
-            screen.getByRole("button", {name: "Toss 결제창 열기 →"}),
+            screen.getByRole("button", {name: "Toss 결제창 열기"}),
         ).toBeEnabled();
     });
 
@@ -165,10 +168,10 @@ describe("결제 상세 페이지", () => {
 
         expect(await screen.findByText("예매가 완료되었습니다!")).toBeInTheDocument();
         expect(
-            screen.getByRole("button", {name: "내 티켓 확인 →"}),
+            screen.getByRole("button", {name: "내 티켓 확인"}),
         ).toBeInTheDocument();
         expect(
-            screen.queryByRole("button", {name: "Toss 결제창 열기 →"}),
+            screen.queryByRole("button", {name: "Toss 결제창 열기"}),
         ).not.toBeInTheDocument();
     });
 
@@ -196,7 +199,7 @@ describe("결제 상세 페이지", () => {
 
         renderPaymentPage();
         fireEvent.click(
-            await screen.findByRole("button", {name: "← 주문으로 돌아가기"}),
+            await screen.findByRole("button", {name: "주문으로 돌아가기"}),
         );
 
         expect(mocks.routerPush).toHaveBeenCalledWith("/orders/2");

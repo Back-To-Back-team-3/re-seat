@@ -92,9 +92,14 @@ describe("apiRequest", () => {
             // apiRequest가 401을 받으면 호출할 토큰 재발급 API를 재현한다.
             http.post(`${API_BASE_URL}/auth/reissue`, () =>
                 HttpResponse.json({
-                    grantType: "Bearer",
-                    accessToken: "new-access-token",
-                    refreshToken: "new-refresh-token",
+                    success: true,
+                    errorCode: null,
+                    message: "토큰 재발급 완료",
+                    data: {
+                        grantType: "Bearer",
+                        accessToken: "new-access-token",
+                        refreshToken: "new-refresh-token",
+                    },
                 }),
             ),
         );
@@ -174,9 +179,14 @@ describe("apiRequest", () => {
             ),
             http.post(`${API_BASE_URL}/auth/reissue`, () =>
                 HttpResponse.json({
-                    grantType: "Bearer",
-                    accessToken: "rejected-access-token",
-                    refreshToken: "new-refresh-token",
+                    success: true,
+                    errorCode: null,
+                    message: "토큰 재발급 완료",
+                    data: {
+                        grantType: "Bearer",
+                        accessToken: "rejected-access-token",
+                        refreshToken: "new-refresh-token",
+                    },
                 }),
             ),
         );
@@ -215,9 +225,14 @@ describe("apiRequest", () => {
                 await delay(20);
 
                 return HttpResponse.json({
-                    grantType: "Bearer",
-                    accessToken: "new-access-token",
-                    refreshToken: "new-refresh-token",
+                    success: true,
+                    errorCode: null,
+                    message: "토큰 재발급 완료",
+                    data: {
+                        grantType: "Bearer",
+                        accessToken: "new-access-token",
+                        refreshToken: "new-refresh-token",
+                    },
                 });
             }),
         );
