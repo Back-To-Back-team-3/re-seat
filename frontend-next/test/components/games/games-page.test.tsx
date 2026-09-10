@@ -157,19 +157,15 @@ describe("홈 화면 히어로", () => {
         vi.useRealTimers();
     });
 
-    it("구단·좌석·최대 선택 통계를 표시한다", async () => {
+    it("히어로에서 데모 통계를 표시하지 않는다", async () => {
         mockGames([todayOpenGame]);
         renderGamesPage();
 
-        // 통계 행은 경기 목록 로딩과 무관하게 즉시 렌더링된다.
         const hero = within(heroSection());
 
-        expect(hero.getByText("10개")).toBeInTheDocument();
-        expect(hero.getByText("구단")).toBeInTheDocument();
-        expect(hero.getByText("500")).toBeInTheDocument();
-        expect(hero.getByText("데모 좌석/경기")).toBeInTheDocument();
-        expect(hero.getByText("2석")).toBeInTheDocument();
-        expect(hero.getByText("최대 선택")).toBeInTheDocument();
+        expect(hero.queryByText("10개")).not.toBeInTheDocument();
+        expect(hero.queryByText("데모 좌석/경기")).not.toBeInTheDocument();
+        expect(hero.queryByText("최대 선택")).not.toBeInTheDocument();
     });
 
     it("홈에서는 전체 경기 일정을 표시하지 않는다", async () => {
@@ -190,17 +186,14 @@ describe("홈 화면 히어로", () => {
         const todayGamesSection = (await screen.findByText(/오늘의 경기/)).closest(
             "section",
         );
+        const todayGamesList = screen.getByRole("list", {
+            name: "오늘 경기 목록",
+        });
 
         expect(heroSection()).not.toContainElement(todayGamesSection);
-        expect(
-            screen.getByRole("button", {name: /원정팀 하나/}),
-        ).toBeInTheDocument();
-        expect(
-            screen.getByRole("button", {name: /원정팀 둘/}),
-        ).toBeInTheDocument();
-        expect(
-            screen.queryByRole("button", {name: /원정팀 셋/}),
-        ).not.toBeInTheDocument();
+        expect(todayGamesList).toHaveTextContent("원정팀 하나");
+        expect(todayGamesList).toHaveTextContent("원정팀 둘");
+        expect(todayGamesList).not.toHaveTextContent("원정팀 셋");
     });
 
     it("오늘 예정된 경기가 없으면 안내 문구를 표시한다", async () => {
@@ -212,32 +205,32 @@ describe("홈 화면 히어로", () => {
         ).toBeInTheDocument();
     });
 
-    it("오늘의 경기 카드를 클릭하면 히어로의 선택 경기가 바뀐다", async () => {
-        mockGames([todayOpenGame, todayScheduledGame]);
+    it("오늘의 경기에서 히어로와 별개로 바로 예매를 시작한다", async () => {
+        mocks.auth.isAuthed = true;
+        mocks.auth.isVerified = true;
+        mockGames([todayOpenGame]);
         renderGamesPage();
 
-        // chooseInitialGame 규칙상 오늘 경기 중 OPEN 상태가 먼저 선택된다.
-        expect(
-            await within(heroSection()).findByText(todayOpenGame.title),
-        ).toBeInTheDocument();
+        const todayGamesSection = (await screen.findByText(/오늘의 경기/)).closest(
+            "section",
+        )!;
 
-        fireEvent.click(screen.getByRole("button", {name: /원정팀 둘/}));
+        fireEvent.click(
+            within(todayGamesSection).getByRole("button", {
+                name: "예매하기",
+            }),
+        );
 
-        expect(
-            await within(heroSection()).findByText(todayScheduledGame.title),
-        ).toBeInTheDocument();
-        expect(
-            within(heroSection()).queryByText(todayOpenGame.title),
-        ).not.toBeInTheDocument();
+        expect(mocks.routerPush).toHaveBeenCalledWith("/games/1/queue");
     });
 
-    it("로그아웃 상태에서는 예매 버튼에 로그인 후 예매를 표시한다", async () => {
+    it("로그아웃 상태에서도 예매 가능한 경기는 예매하기로 표시한다", async () => {
         mockGames([todayOpenGame]);
         renderGamesPage();
 
         expect(
             await within(heroSection()).findByRole("button", {
-                name: /로그인 후 예매/,
+                name: /예매하기/,
             }),
         ).toBeInTheDocument();
     });
@@ -251,7 +244,7 @@ describe("홈 화면 히어로", () => {
         renderGamesPage();
 
         const bookingButton = await within(heroSection()).findByRole("button", {
-            name: "경기 선택",
+            name: /예매하기/,
         });
         expect(bookingButton).toBeEnabled();
     });

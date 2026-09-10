@@ -39,9 +39,11 @@ describe("TodayGamesPanel 컴포넌트", () => {
     it("오늘의 경기 카드를 수평 스냅 목록으로 표시한다", () => {
         render(
             <TodayGamesPanel
+                authenticated
+                bookingBusy={false}
+                completedGameIds={new Set()}
                 games={[game, {...game, gameId: 2}]}
-                onSelect={vi.fn()}
-                selectedGameId={game.gameId}
+                onStartBooking={vi.fn()}
             />,
         );
 
@@ -67,9 +69,11 @@ describe("TodayGamesPanel 컴포넌트", () => {
 
         render(
             <TodayGamesPanel
+                authenticated
+                bookingBusy={false}
+                completedGameIds={new Set()}
                 games={[game, {...game, gameId: 2}, {...game, gameId: 3}]}
-                onSelect={vi.fn()}
-                selectedGameId={game.gameId}
+                onStartBooking={vi.fn()}
             />,
         );
 
@@ -89,5 +93,55 @@ describe("TodayGamesPanel 컴포넌트", () => {
             behavior: "smooth",
             left: 510,
         });
+    });
+
+    it("예매 가능한 경기 카드에서 바로 예매를 시작한다", () => {
+        const onStartBooking = vi.fn();
+
+        render(
+            <TodayGamesPanel
+                authenticated
+                bookingBusy={false}
+                completedGameIds={new Set()}
+                games={[game]}
+                onStartBooking={onStartBooking}
+            />,
+        );
+
+        fireEvent.click(screen.getByRole("button", {name: "예매하기"}));
+
+        expect(onStartBooking).toHaveBeenCalledWith(game);
+    });
+
+    it("예매 예정 경기는 상태 문구를 표시하고 버튼을 비활성화한다", () => {
+        render(
+            <TodayGamesPanel
+                authenticated
+                bookingBusy={false}
+                completedGameIds={new Set()}
+                games={[{...game, bookingStatus: "SCHEDULED"}]}
+                onStartBooking={vi.fn()}
+            />,
+        );
+
+        expect(
+            screen.getByRole("button", {name: "예매 준비 중"}),
+        ).toBeDisabled();
+    });
+
+    it("로그아웃 상태에서도 예매 가능한 경기는 예매하기로 표시한다", () => {
+        render(
+            <TodayGamesPanel
+                authenticated={false}
+                bookingBusy={false}
+                completedGameIds={new Set()}
+                games={[game]}
+                onStartBooking={vi.fn()}
+            />,
+        );
+
+        expect(
+            screen.getByRole("button", {name: "예매하기"}),
+        ).toBeEnabled();
     });
 });

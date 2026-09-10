@@ -14,9 +14,11 @@ const meta = {
         ),
     ],
     args: {
+        authenticated: true,
+        bookingBusy: false,
+        completedGameIds: new Set<number>(),
         games: storyGames,
-        selectedGameId: storyGames[0].gameId,
-        onSelect: () => undefined,
+        onStartBooking: () => undefined,
     },
 } satisfies Meta<typeof TodayGamesPanel>;
 
@@ -35,5 +37,5 @@ export const Overflow: Story = {
 };
 
 export const Empty: Story = {
-    args: {games: [], selectedGameId: null},
+    args: {games: []},
 };

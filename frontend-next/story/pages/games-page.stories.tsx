@@ -33,15 +33,19 @@ function GamesPagePreview({view}: {view: "home" | "booking"}) {
                 <GamesHero
                     authenticated
                     bookingBusy={false}
+                    games={currentGames}
+                    onSelect={setSelectedGame}
                     onStartBooking={() => undefined}
                     selectedCompleted={false}
                     selectedGame={selectedGame}
                 />
                 <section className="mx-auto max-w-[1120px] px-6 py-12">
                     <TodayGamesPanel
+                        authenticated
+                        bookingBusy={false}
+                        completedGameIds={new Set<number>()}
                         games={currentGames}
-                        onSelect={setSelectedGame}
-                        selectedGameId={selectedGame?.gameId ?? null}
+                        onStartBooking={() => undefined}
                     />
                 </section>
             </main>
