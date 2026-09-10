@@ -3,6 +3,7 @@ import {describe, expect, it, vi} from "vitest";
 
 import {AdminUserFilters} from "@/components/admin/users/admin-user-filters";
 import {AdminUserList} from "@/components/admin/users/admin-user-list";
+import {AdminUserTickets} from "@/components/admin/users/admin-user-tickets";
 
 const user = {
     id: 7,
@@ -37,5 +38,39 @@ describe("관리자 회원 관리", () => {
         fireEvent.click(screen.getByRole("button", {name: /fan@example.com/}));
 
         expect(onSelect).toHaveBeenCalledWith(7);
+    });
+
+    it("재접수 API가 없는 환불 실패 티켓은 직권 취소를 비활성화한다", () => {
+        render(
+            <AdminUserTickets
+                isCanceling={false}
+                onCancel={vi.fn()}
+                tickets={[
+                    {
+                        ticketId: 4,
+                        ticketNo: "TKT-DEMO-01",
+                        status: "REFUND_FAILED",
+                        qrToken: "QR-DEMO-01",
+                        issuedAt: "2026-09-09 18:00:00",
+                        usedAt: null,
+                        canceledAt: null,
+                        gameId: 111,
+                        gameTitle: "LG 트윈스 vs 두산 베어스",
+                        stadiumName: "잠실야구장",
+                        homeTeamName: "LG 트윈스",
+                        awayTeamName: "두산 베어스",
+                        gameAt: "2026-09-12 18:30:00",
+                        seat: "1루 A 1열 1번",
+                        gameSeatId: 1,
+                        zoneName: "1루 A",
+                        seatBlock: "A",
+                        seatRow: "1",
+                        seatNumber: "1",
+                    },
+                ]}
+            />,
+        );
+
+        expect(screen.getByRole("button", {name: "직권 취소"})).toBeDisabled();
     });
 });
