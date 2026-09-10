@@ -262,7 +262,9 @@ export function StadiumZoneMap({
                 strategy="afterInteractive"
             />
 
-            <div className="size-full h-full w-full" ref={mapContainerRef}/>
+            <div className="absolute inset-0" data-testid="stadium-zone-map-canvas">
+                <div className="size-full" ref={mapContainerRef}/>
+            </div>
 
             <Button
                 className="absolute right-4 bottom-4 z-10 bg-surface/90 shadow-md backdrop-blur-md"
