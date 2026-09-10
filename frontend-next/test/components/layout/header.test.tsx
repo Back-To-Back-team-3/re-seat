@@ -30,6 +30,11 @@ function profileResponse(isVerified: boolean) {
     };
 }
 
+function accessToken(role: "USER" | "ADMIN") {
+    const payload = btoa(JSON.stringify({userRole: role}));
+    return `header.${payload}.signature`;
+}
+
 function renderHeader() {
     const queryClient = new QueryClient({
         defaultOptions: {queries: {retry: false}},
@@ -99,11 +104,28 @@ describe("Header", () => {
         expect(document.documentElement.dataset.theme).toBe("dark");
     });
 
-    it("Re:Seat 로고는 경기 목록으로 이동한다", async () => {
+    it("Re:Seat 로고는 홈으로 이동한다", async () => {
         renderHeader();
 
         const homeLink = await screen.findByRole("link", {name: "Re:Seat 홈"});
-        expect(homeLink).toHaveAttribute("href", "/games");
+        expect(homeLink).toHaveAttribute("href", "/");
+    });
+
+    it("홈, 예매, 마이페이지 메뉴를 각 경로에 연결한다", async () => {
+        renderHeader();
+
+        expect(await screen.findByRole("link", {name: "홈"})).toHaveAttribute(
+            "href",
+            "/",
+        );
+        expect(screen.getByRole("link", {name: "예매"})).toHaveAttribute(
+            "href",
+            "/games",
+        );
+        expect(screen.getByRole("link", {name: "마이페이지"})).toHaveAttribute(
+            "href",
+            "/mypage",
+        );
     });
 
     it("현재 경로가 제공되지 않아도 기본 메뉴를 렌더링한다", async () => {
@@ -111,13 +133,11 @@ describe("Header", () => {
 
         renderHeader();
 
-        expect(
-            await screen.findByRole("link", {name: "경기 예매"}),
-        ).toBeInTheDocument();
+        expect(await screen.findByRole("link", {name: "예매"})).toBeInTheDocument();
     });
 
     it("로그인한 사용자의 닉네임을 표시한다", async () => {
-        localStorage.setItem("accessToken", "access-token");
+        localStorage.setItem("accessToken", accessToken("USER"));
         server.use(
             http.get(`${API_BASE_URL}/users/me`, () =>
                 HttpResponse.json(profileResponse(true)),
@@ -127,6 +147,63 @@ describe("Header", () => {
         renderHeader();
 
         expect(await screen.findByText("야구팬")).toBeInTheDocument();
+    });
+
+    it("프로필을 누르면 마이페이지와 로그아웃 메뉴를 보여준다", async () => {
+        localStorage.setItem("accessToken", accessToken("USER"));
+        server.use(
+            http.get(`${API_BASE_URL}/users/me`, () =>
+                HttpResponse.json(profileResponse(true)),
+            ),
+        );
+
+        renderHeader();
+        fireEvent.click(await screen.findByRole("button", {name: "프로필 메뉴"}));
+
+        expect(screen.getByRole("menuitem", {name: "마이페이지"})).toHaveAttribute(
+            "href",
+            "/mypage",
+        );
+        expect(screen.getByRole("menuitem", {name: "로그아웃"})).toBeInTheDocument();
+        expect(
+            screen.queryByRole("menuitem", {name: "관리자 페이지"}),
+        ).not.toBeInTheDocument();
+    });
+
+    it("관리자 프로필 메뉴에만 관리자 페이지 이동을 보여준다", async () => {
+        localStorage.setItem("accessToken", accessToken("ADMIN"));
+        server.use(
+            http.get(`${API_BASE_URL}/users/me`, () =>
+                HttpResponse.json(profileResponse(true)),
+            ),
+        );
+
+        renderHeader();
+        fireEvent.click(await screen.findByRole("button", {name: "프로필 메뉴"}));
+
+        expect(
+            screen.getByRole("menuitem", {name: "관리자 페이지"}),
+        ).toHaveAttribute("href", "/admin");
+    });
+
+    it("모바일 메뉴 버튼으로 사이드 메뉴를 열 수 있다", async () => {
+        localStorage.setItem("accessToken", accessToken("USER"));
+        server.use(
+            http.get(`${API_BASE_URL}/users/me`, () =>
+                HttpResponse.json(profileResponse(true)),
+            ),
+        );
+
+        renderHeader();
+        fireEvent.click(await screen.findByRole("button", {name: "전체 메뉴 열기"}));
+
+        const mobileNavigation = screen.getByRole("navigation", {
+            name: "모바일 주요 메뉴",
+        });
+        expect(mobileNavigation).toBeInTheDocument();
+        expect(
+            screen.getByRole("link", {name: "홈", hidden: false}),
+        ).toHaveAttribute("href", "/");
     });
 
     it("OAuth 콜백으로 돌아온 사용자는 토큰 저장 후 알림 구독으로 프로필이 갱신된다", async () => {
@@ -152,7 +229,7 @@ describe("Header", () => {
     });
 
     it("로그아웃하면 인증 저장소를 비우고 로그인 버튼으로 돌아간다", async () => {
-        localStorage.setItem("accessToken", "access-token");
+        localStorage.setItem("accessToken", accessToken("USER"));
         localStorage.setItem("refreshToken", "refresh-token");
         localStorage.setItem("queueToken", "queue-token");
         localStorage.setItem("isVerified", "true");
@@ -163,7 +240,8 @@ describe("Header", () => {
         );
 
         renderHeader();
-        fireEvent.click(await screen.findByRole("button", {name: "로그아웃"}));
+        fireEvent.click(await screen.findByRole("button", {name: "프로필 메뉴"}));
+        fireEvent.click(screen.getByRole("menuitem", {name: "로그아웃"}));
 
         await waitFor(() => {
             expect(
