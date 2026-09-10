@@ -155,15 +155,18 @@ export function CongestionSpotList({
                             tabIndex={0}
                         >
                             <div className="flex items-center justify-between gap-2">
-                                <div className="flex min-w-0 items-center gap-1.5">
-                                    <span className="rounded border border-border/60 bg-surface-elevated px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+                                <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                                    <span className="shrink-0 whitespace-nowrap rounded border border-border/60 bg-surface-elevated px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
                                         [{spot.category}]
                                     </span>
-                                    <strong className="truncate text-xs font-extrabold text-foreground transition-colors group-hover:text-brand">
+                                    <strong className="min-w-0 flex-1 truncate text-xs font-extrabold text-foreground transition-colors group-hover:text-brand">
                                         {spot.name}
                                     </strong>
                                 </div>
-                                <CongestionBadge level={spot.congestionLevel}/>
+                                <CongestionBadge
+                                    className="shrink-0 whitespace-nowrap"
+                                    level={spot.congestionLevel}
+                                />
                             </div>
 
                             <p className="text-xs leading-relaxed text-muted-foreground">
