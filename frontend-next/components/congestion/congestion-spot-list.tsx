@@ -69,7 +69,11 @@ export function CongestionSpotList({
     }, [spots, selectedCategory, sortOption]);
 
     return (
-        <div className="flex flex-col border-r border-border bg-surface/50 max-lg:border-r-0 max-lg:border-b">
+        <div
+            aria-label="혼잡도 구역 목록"
+            className="flex min-w-0 flex-col overflow-hidden rounded-control border border-border bg-surface"
+            role="group"
+        >
             <div className="scrollbar-none flex items-center gap-1.5 overflow-x-auto border-b border-border/70 p-3">
                 {CATEGORY_TABS.map((tab) => (
                     <button

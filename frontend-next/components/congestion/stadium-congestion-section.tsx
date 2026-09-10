@@ -41,7 +41,7 @@ export function StadiumCongestionSection({
                 onRefresh={() => void refetch()}
             />
 
-            <div className="grid min-h-145 grid-cols-[420px_1fr] max-lg:grid-cols-1">
+            <div className="grid min-h-145 grid-cols-[420px_minmax(0,1fr)] gap-3 bg-surface-elevated/40 p-3 max-lg:grid-cols-1">
                 <CongestionSpotList
                     error={Boolean(error)}
                     onRetry={() => void refetch()}
@@ -49,11 +49,17 @@ export function StadiumCongestionSection({
                     selectedSpotId={selectedSpotId}
                     spots={zoneSpots}
                 />
-                <StadiumZoneMap
-                    onSelect={setSelectedSpotId}
-                    selectedSpotId={selectedSpotId}
-                    spots={zoneSpots}
-                />
+                <div
+                    aria-label="혼잡도 지도"
+                    className="min-w-0 overflow-hidden rounded-control border border-border bg-surface"
+                    role="group"
+                >
+                    <StadiumZoneMap
+                        onSelect={setSelectedSpotId}
+                        selectedSpotId={selectedSpotId}
+                        spots={zoneSpots}
+                    />
+                </div>
             </div>
         </section>
     );

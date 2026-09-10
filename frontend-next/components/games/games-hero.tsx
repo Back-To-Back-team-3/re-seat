@@ -33,7 +33,7 @@ export function GamesHero({
 
     return (
         <section className="relative mx-auto grid min-h-[660px] w-full max-w-[var(--width-shell)] grid-cols-[minmax(0,1.08fr)_minmax(390px,0.92fr)] gap-[34px] overflow-hidden bg-[radial-gradient(circle_at_78%_38%,rgba(224,53,53,0.1),transparent_34%)] pr-[7vw] max-[1024px]:grid-cols-1 max-[1024px]:pr-0">
-            <div className="z-[2] self-center pt-[70px] pb-[58px] pl-[7vw] max-[900px]:pr-[7vw] max-[900px]:pb-[35px]">
+            <div className="z-[2] min-w-0 self-center pt-[70px] pb-[58px] pl-[7vw] max-[900px]:pr-[7vw] max-[900px]:pb-[35px]">
                 <span className="inline-block text-xs font-extrabold tracking-[0.1em] text-brand">
                     2026 KBO LEAGUE
                 </span>
@@ -64,7 +64,11 @@ export function GamesHero({
                     </div>
                 </div>
                 {selectedGame && (
-                    <div className="grid w-[min(590px,calc(100vw-40px))] grid-cols-[1fr_auto] items-center gap-5 rounded-panel border border-border bg-surface/90 px-[18px] py-[17px] shadow-card backdrop-blur-md max-sm:grid-cols-1">
+                    <div
+                        aria-label="선택 경기"
+                        className="grid w-full max-w-[590px] grid-cols-[1fr_auto] items-center gap-5 rounded-panel border border-border bg-surface/90 px-[18px] py-[17px] shadow-card backdrop-blur-md max-sm:grid-cols-1"
+                        role="group"
+                    >
                         <div className="grid min-w-0 gap-[3px]">
                             <span className="text-xs font-extrabold tracking-[0.1em] text-brand">
                                 SELECTED GAME · {selectedMeta?.label}

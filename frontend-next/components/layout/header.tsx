@@ -127,6 +127,20 @@ export function Header() {
                         role={auth.role}
                     />
                 </div>
+                <Button
+                    aria-label="모바일 화면 테마 변경"
+                    className="hidden rounded-full max-[900px]:inline-flex"
+                    onClick={toggleTheme}
+                    size="icon-sm"
+                    type="button"
+                    variant="ghost"
+                >
+                    {theme === "dark" ? (
+                        <Sun aria-hidden="true"/>
+                    ) : (
+                        <Moon aria-hidden="true"/>
+                    )}
+                </Button>
                 <Dialog open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                     <DialogTrigger
                         render={
@@ -185,14 +199,6 @@ export function Header() {
                             )}
                         </nav>
                         <div className="mt-auto grid gap-2 border-t border-border p-4">
-                            <Button onClick={toggleTheme} type="button" variant="outline">
-                                {theme === "dark" ? (
-                                    <Sun aria-hidden="true"/>
-                                ) : (
-                                    <Moon aria-hidden="true"/>
-                                )}
-                                화면 테마 변경
-                            </Button>
                             {auth.isAuthed ? (
                                 <Button onClick={auth.logout} type="button" variant="destructive">
                                     로그아웃
