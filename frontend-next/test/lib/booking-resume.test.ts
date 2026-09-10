@@ -112,6 +112,32 @@ describe("resolveBookingResume", () => {
         expect(result.destination).toBe("/checkout");
     });
 
+    it("다른 경기를 선택해도 유효한 좌석 선점이 있으면 주문 전 단계로 복원한다", async () => {
+        const deps = dependencies();
+        deps.getReservationHoldTime.mockResolvedValue({
+            status: "HOLDING",
+            remainingSeconds: 300,
+        });
+
+        const result = await resolveBookingResume(
+            progress({
+                selectedGameId: 117,
+                reservation: {
+                    reservationId: 10,
+                    reservationNo: "R-10",
+                    status: "HOLDING",
+                    gameSeats: [],
+                    holdExpiresAt: FUTURE,
+                    gameAt: FUTURE,
+                },
+            }),
+            GAME_ID,
+            deps,
+        );
+
+        expect(result.destination).toBe("/checkout");
+    });
+
     it("유효한 입장 토큰이 있으면 새 대기열 등록 대신 좌석 화면으로 복원한다", async () => {
         const deps = dependencies();
         deps.queueToken = "queue-token";
@@ -125,14 +151,29 @@ describe("resolveBookingResume", () => {
         expect(result.destination).toBe("/games/111/seats");
     });
 
-    it("다른 경기 또는 만료된 진행 상태는 현재 경기의 새 예매로 초기화한다", async () => {
+    it("다른 경기를 선택해도 유효한 입장 토큰이 있으면 기존 경기 좌석 화면으로 복원한다", async () => {
+        const deps = dependencies();
+        deps.queueToken = "queue-token";
+
+        const result = await resolveBookingResume(
+            progress({
+                selectedGameId: 117,
+                queueTokenExpiresAt: FUTURE,
+            }),
+            GAME_ID,
+            deps,
+        );
+
+        expect(result.destination).toBe("/games/117/seats");
+    });
+
+    it("만료된 진행 상태는 현재 경기의 새 예매로 초기화한다", async () => {
         const deps = dependencies();
         deps.queueToken = "expired-token";
 
         const result = await resolveBookingResume(
             progress({
                 selectedGameId: 222,
-                orderId: 20,
                 queueTokenExpiresAt: "2026-09-10T11:59:00+09:00",
             }),
             GAME_ID,
