@@ -48,3 +48,14 @@ export const RefundFailed: Story = {
         ticket: {...ticket, status: "REFUND_FAILED"},
     },
 };
+
+export const UsedNoShow: Story = {
+    args: {
+        ticket: {
+            ...ticket,
+            status: "USED_NO_SHOW",
+            refundable: false,
+            refundDeadline: null,
+        },
+    },
+};
