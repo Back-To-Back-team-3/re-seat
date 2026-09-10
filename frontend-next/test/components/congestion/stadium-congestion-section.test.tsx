@@ -76,6 +76,12 @@ describe("StadiumCongestionSection 컴포넌트", () => {
         expect(
             screen.getByText("종합운동장역 5·6번 출구 (2·9호선)"),
         ).toBeInTheDocument();
+        expect(
+            screen.getByRole("group", {name: "혼잡도 구역 목록"}),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByRole("group", {name: "혼잡도 지도"}),
+        ).toBeInTheDocument();
     });
 
     it("카테고리 탭 클릭 시 해당 구역 목록만 필터링한다", async () => {

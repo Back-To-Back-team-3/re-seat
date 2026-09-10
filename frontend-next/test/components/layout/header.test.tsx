@@ -104,6 +104,20 @@ describe("Header", () => {
         expect(document.documentElement.dataset.theme).toBe("dark");
     });
 
+    it("모바일 헤더에서도 메뉴를 열지 않고 테마를 바꿀 수 있다", async () => {
+        renderHeader();
+
+        const mobileThemeButton = await screen.findByRole("button", {
+            name: "모바일 화면 테마 변경",
+        });
+        fireEvent.click(mobileThemeButton);
+
+        expect(document.documentElement.dataset.theme).toBe("dark");
+        expect(
+            screen.queryByRole("dialog", {name: "메뉴"}),
+        ).not.toBeInTheDocument();
+    });
+
     it("Re:Seat 로고는 홈으로 이동한다", async () => {
         renderHeader();
 

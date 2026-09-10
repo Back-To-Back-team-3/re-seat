@@ -34,3 +34,10 @@ export const Completed: Story = {
 export const NoSelection: Story = {
     args: {selectedGame: null},
 };
+
+/** 좁은 화면에서 선택 경기 영역과 예매 버튼이 화면 안에 배치되는지 확인한다. */
+export const Mobile: Story = {
+    globals: {
+        viewport: {value: "mobile1"},
+    },
+};
