@@ -1,5 +1,12 @@
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
-import {cleanup, fireEvent, render, screen, within,} from "@testing-library/react";
+import {
+    cleanup,
+    fireEvent,
+    render,
+    screen,
+    waitFor,
+    within,
+} from "@testing-library/react";
 import {http, HttpResponse} from "msw";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 
@@ -67,6 +74,12 @@ function mockGames(games: GameSummary[]) {
         http.get(`${API_BASE_URL}/games`, () =>
             HttpResponse.json(gamesResponse(games)),
         ),
+    );
+}
+
+function mockGamesNetworkError() {
+    server.use(
+        http.get(`${API_BASE_URL}/games`, () => HttpResponse.error()),
     );
 }
 
@@ -250,5 +263,19 @@ describe("홈 화면 히어로", () => {
                 name: "예매 완료",
             }),
         ).toBeDisabled();
+    });
+
+    it("경기 조회 실패 알림을 닫으면 화면에서 제거한다", async () => {
+        mockGamesNetworkError();
+        renderGamesPage();
+
+        const alert = await screen.findByRole("status");
+        expect(within(alert).getByText("Failed to fetch")).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole("button", {name: "알림 닫기"}));
+
+        await waitFor(() => {
+            expect(screen.queryByRole("status")).not.toBeInTheDocument();
+        });
     });
 });
