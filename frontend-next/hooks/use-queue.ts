@@ -8,6 +8,13 @@ import {storage} from "@/lib/storage";
 import {useBookingStore} from "@/providers/booking-store-provider";
 import type {QueueViewState} from "@/types/game";
 
+const QUEUE_REJECTION_MESSAGES = {
+    WAITING_IN_OTHER_GAME: "다른 경기의 대기열에 이미 참여하고 있습니다.",
+    ACTIVE_QUEUE_TOKEN_IN_ANOTHER_GAME:
+        "다른 경기에서 사용할 수 있는 입장 토큰이 있습니다.",
+    BOOKING_NOT_OPEN: "현재 예매할 수 없는 경기입니다.",
+} as const;
+
 /**
  * 대기열 등록부터 SSE 입장 허가까지의 연결 생명주기를 관리합니다.
  *
@@ -15,7 +22,7 @@ import type {QueueViewState} from "@/types/game";
  * 페이지를 벗어나면 AbortController가 fetch와 스트림 reader를 함께 중단해 이전
  * 화면의 이벤트가 새 화면 상태를 바꾸지 못하게 합니다.
  */
-export function useQueue(gameId: number) {
+export function useQueue(gameId: number, enabled = true) {
     const router = useRouter();
     const setGame = useBookingStore((state) => state.setGame);
     const setQueueExpiry = useBookingStore((state) => state.setQueueExpiry);
@@ -25,7 +32,7 @@ export function useQueue(gameId: number) {
     const controller = useRef<AbortController | null>(null);
 
     useEffect(() => {
-        if (!Number.isFinite(gameId)) return;
+        if (!enabled || !Number.isFinite(gameId)) return;
         setGame(gameId);
         const abortController = new AbortController();
         controller.current = abortController;
@@ -77,6 +84,14 @@ export function useQueue(gameId: number) {
                             );
                             router.push(`/games/${gameId}/seats`);
                         },
+                        onReject(event) {
+                            setQueue((current) =>
+                                current
+                                    ? {...current, registrationPending: false}
+                                    : current,
+                            );
+                            setError(QUEUE_REJECTION_MESSAGES[event.reason]);
+                        },
                     },
                     abortController.signal,
                 );
@@ -96,7 +111,7 @@ export function useQueue(gameId: number) {
             // 4. unmount cleanup은 등록 이후 어느 단계에 있더라도 같은 연결을 중단한다.
             abortController.abort();
         };
-    }, [gameId, router, setGame, setQueueExpiry]);
+    }, [enabled, gameId, router, setGame, setQueueExpiry]);
 
     return {
         queue,

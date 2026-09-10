@@ -1,15 +1,9 @@
+import {ArrowRight, RefreshCw, X} from "lucide-react";
+
+import {GameSummaryBar} from "@/components/booking/game-summary-bar";
 import {Alert} from "@/components/common/alert";
-import {formatGameDate, formatShortDate} from "@/lib/date";
+import {Button} from "@/components/ui/button";
 import type {GameSummary, QueueViewState} from "@/types/game";
-
-const PRIMARY_BUTTON =
-    "inline-flex min-h-11 items-center justify-center gap-3.5 rounded-control border border-brand bg-brand px-[22px] text-[13px] font-extrabold text-white shadow-[0_8px_20px_rgba(224,53,53,0.2)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-[0.48]";
-
-const OUTLINE_BUTTON =
-    "inline-flex min-h-11 items-center justify-center gap-3.5 rounded-control border border-border bg-surface px-[18px] text-[13px] font-extrabold text-foreground transition-colors hover:border-foreground disabled:cursor-not-allowed disabled:opacity-[0.48]";
-
-const TEXT_BUTTON_DANGER =
-    "mt-2.5 inline-flex min-h-9 items-center justify-center gap-3.5 px-2 text-[13px] font-extrabold text-brand disabled:cursor-not-allowed disabled:opacity-[0.48]";
 
 /**
  * 대기열 화면. Vite의 QueueScreen(App.tsx)과 같은 순서로 선택 경기 요약,
@@ -53,27 +47,7 @@ export function QueueScreen({
         <section className="mx-auto w-[min(820px,100%)]">
             {error && <Alert message={error} variant="error"/>}
 
-            {game && (
-                <div
-                    className="mb-6 flex min-h-[72px] items-center gap-3.5 rounded-[10px] border border-border bg-surface px-[18px] py-3 max-sm:items-start">
-          <span
-              className="grid size-[42px] place-items-center rounded-lg bg-foreground font-mono font-black text-surface">
-            {formatShortDate(game.gameAt).day}
-          </span>
-                    <div className="grid gap-[3px]">
-                        <strong className="text-[17px]">
-                            {game.homeTeam.name}{" "}
-                            <em className="mx-1.5 font-mono text-[9px] not-italic text-brand">
-                                VS
-                            </em>{" "}
-                            {game.awayTeam.name}
-                        </strong>
-                        <small className="text-xs text-muted-foreground">
-                            {formatGameDate(game.gameAt)} · {game.stadium.name}
-                        </small>
-                    </div>
-                </div>
-            )}
+            {game && <GameSummaryBar game={game}/>}
 
             <div
                 className={`rounded-modal border bg-surface px-[62px] pt-12 pb-[38px] text-center shadow-card max-sm:px-5 max-sm:pt-[38px] max-sm:pb-7 ${
@@ -122,7 +96,7 @@ export function QueueScreen({
 
                 <div className="mb-6 h-[7px] overflow-hidden rounded-[20px] bg-surface-soft">
           <span
-              className="block h-full rounded-[inherit] bg-gradient-to-r from-brand to-accent transition-[width] duration-500 [transition-timing-function:ease]"
+              className="block h-full rounded-[inherit] bg-gradient-to-r from-brand to-highlight transition-[width] duration-500 [transition-timing-function:ease]"
               style={{width: `${progress}%`}}
           />
                 </div>
@@ -149,32 +123,36 @@ export function QueueScreen({
                 </div>
 
                 <div className="flex justify-center gap-2.5 max-sm:flex-col">
-                    <button
-                        className={OUTLINE_BUTTON}
+                    <Button
                         disabled={busy}
                         onClick={onRefresh}
                         type="button"
+                        variant="outline"
                     >
+                        <RefreshCw aria-hidden="true"/>
                         상태 확인
-                    </button>
-                    <button
-                        className={PRIMARY_BUTTON}
+                    </Button>
+                    <Button
                         disabled={!admitted || busy}
                         onClick={onContinue}
                         type="button"
                     >
-                        좌석 선택으로 이동 →
-                    </button>
+                        좌석 선택으로 이동
+                        <ArrowRight aria-hidden="true"/>
+                    </Button>
                 </div>
                 {!admitted && (
-                    <button
-                        className={TEXT_BUTTON_DANGER}
+                    <Button
+                        className="mt-2.5 text-[13px]"
                         disabled={busy}
                         onClick={onCancel}
+                        size="sm"
                         type="button"
+                        variant="destructive"
                     >
+                        <X aria-hidden="true"/>
                         예매 취소하고 돌아가기
-                    </button>
+                    </Button>
                 )}
             </div>
 

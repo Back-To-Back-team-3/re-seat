@@ -15,6 +15,11 @@ type UserProfilePayload = Omit<UserProfile, "isVerified"> & {
     verified?: boolean;
 };
 
+export interface UserProfileUpdateRequest {
+    name: string;
+    phone: string;
+}
+
 /**
  * 로그인한 사용자의 최신 프로필을 조회합니다.
  *
@@ -52,6 +57,19 @@ export async function verifyIdentity(impUid: string) {
     await apiRequest<ApiResponse<void>>("/users/verification", {
         method: "POST",
         body: JSON.stringify({impUid}),
+    });
+}
+
+/**
+ * 로그인한 사용자의 이름과 전화번호를 수정합니다.
+ *
+ * @param request 변경할 이름과 전화번호
+ * @throws 회원정보 수정이 실패하면 `AppError`
+ */
+export async function updateMyProfile(request: UserProfileUpdateRequest) {
+    await apiRequest<ApiResponse<void>>("/users/me", {
+        method: "PUT",
+        body: JSON.stringify(request),
     });
 }
 

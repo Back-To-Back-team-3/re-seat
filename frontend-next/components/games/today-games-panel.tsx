@@ -1,17 +1,27 @@
-import {GAME_STATUS_META, STATUS_PILL_CLASSES,} from "@/components/games/game-card";
+"use client";
+
+import {useCallback, useEffect, useRef, useState} from "react";
+import {ChevronLeft, ChevronRight} from "lucide-react";
+
+import {Button} from "@/components/ui/button";
+import {
+    GAME_STATUS_BADGE_CLASSES,
+    GAME_STATUS_META,
+} from "@/lib/game-status";
 import {KST_TIME_ZONE} from "@/lib/constants";
 import {formatGameDate} from "@/lib/date";
 import type {GameSummary} from "@/types/game";
 
 type TodayGamesPanelProps = {
     games: GameSummary[];
-    selectedGameId: number | null;
-    onSelect: (game: GameSummary) => void;
+    authenticated: boolean;
+    bookingBusy: boolean;
+    completedGameIds: ReadonlySet<number>;
+    onStartBooking: (game: GameSummary) => void;
 };
 
 /**
- * 히어로 우측에서 오늘(KST) 경기만 추려 보여주고, 카드를 누르면 히어로의
- * SELECTED GAME을 바꾼다.
+ * 홈 본문에서 오늘(KST) 경기와 각 경기의 예매 진입 버튼을 표시한다.
  *
  * 목록 전체를 필터링·정렬하는 GameList와는 책임이 다른, 오늘 하루짜리 요약
  * 패널이라 별도 컴포넌트로 분리했다. "오늘"의 기준은 games-page.tsx가
@@ -19,10 +29,15 @@ type TodayGamesPanelProps = {
  * 날짜 계산을 다시 하지 않는다.
  */
 export function TodayGamesPanel({
-                                    games,
-                                    selectedGameId,
-                                    onSelect,
-                                }: TodayGamesPanelProps) {
+    games,
+    authenticated,
+    bookingBusy,
+    completedGameIds,
+    onStartBooking,
+}: TodayGamesPanelProps) {
+    const listRef = useRef<HTMLUListElement>(null);
+    const [canScrollLeft, setCanScrollLeft] = useState(false);
+    const [canScrollRight, setCanScrollRight] = useState(false);
     const heading = new Intl.DateTimeFormat("ko-KR", {
         timeZone: KST_TIME_ZONE,
         year: "numeric",
@@ -30,14 +45,57 @@ export function TodayGamesPanel({
         day: "numeric",
     }).format(new Date());
 
+    const updateScrollControls = useCallback(() => {
+        const list = listRef.current;
+
+        if (!list) {
+            return;
+        }
+
+        const endPosition = list.scrollWidth - list.clientWidth;
+        setCanScrollLeft(list.scrollLeft > 2);
+        setCanScrollRight(endPosition - list.scrollLeft > 2);
+    }, []);
+
+    useEffect(() => {
+        updateScrollControls();
+
+        const list = listRef.current;
+        if (!list) {
+            return;
+        }
+
+        const resizeObserver =
+            typeof ResizeObserver === "undefined"
+                ? null
+                : new ResizeObserver(updateScrollControls);
+        resizeObserver?.observe(list);
+        window.addEventListener("resize", updateScrollControls);
+
+        return () => {
+            resizeObserver?.disconnect();
+            window.removeEventListener("resize", updateScrollControls);
+        };
+    }, [games, updateScrollControls]);
+
+    function scrollGames(direction: -1 | 1) {
+        const list = listRef.current;
+        if (!list) {
+            return;
+        }
+
+        list.scrollBy({
+            behavior: "smooth",
+            left: direction * Math.max(list.clientWidth * 0.85, 260),
+        });
+    }
+
     return (
-        <section
-            className="relative z-[2] overflow-hidden rounded-[18px] border border-border bg-surface/94 shadow-card backdrop-blur-[18px]">
-            <div
-                className="flex items-center justify-between gap-4 border-b border-border px-5 py-[17px] max-sm:flex-col max-sm:items-start max-sm:gap-[3px]">
-        <span className="text-[13px] font-extrabold text-brand">
-          — 오늘의 경기
-        </span>
+        <section className="relative z-[2] min-w-0">
+            <div className="mb-4 flex items-center justify-between gap-4 max-sm:items-end">
+                <span className="text-[13px] font-extrabold text-brand">
+                    — 오늘의 경기
+                </span>
                 <strong className="text-xs font-semibold text-muted-foreground">
                     {heading}
                 </strong>
@@ -47,35 +105,88 @@ export function TodayGamesPanel({
                     오늘 예정된 경기가 없습니다.
                 </p>
             ) : (
-                <div className="grid grid-cols-2 max-sm:max-h-[390px] max-sm:grid-cols-1 max-sm:overflow-y-auto">
-                    {games.map((game) => (
-                        <button
-                            className={`grid w-full min-w-0 cursor-pointer gap-[6px] border-0 border-r border-b border-border bg-transparent px-4 py-3 text-left text-foreground [&:nth-child(2n)]:border-r-0 [&:nth-last-child(-n+2)]:border-b-0 only:border-r-0 hover:bg-[color-mix(in_srgb,var(--brand)_6%,var(--surface))] max-sm:border-r-0 max-sm:border-b max-sm:last:border-b-0 ${
-                                selectedGameId === game.gameId
-                                    ? "bg-[color-mix(in_srgb,var(--brand)_6%,var(--surface))]"
-                                    : ""
-                            }`}
-                            key={game.gameId}
-                            onClick={() => onSelect(game)}
-                            type="button"
-                        >
-              <span
-                  className={`w-fit justify-self-start rounded-full px-[9px] py-[5px] text-[11px] font-black ${STATUS_PILL_CLASSES[game.bookingStatus]}`}
-              >
-                {GAME_STATUS_META[game.bookingStatus].label}
-              </span>
-                            <strong className="truncate text-sm">
-                                {game.homeTeam.name}
-                                <em className="mx-[5px] text-[11px] text-brand not-italic">
-                                    VS
-                                </em>
-                                {game.awayTeam.name}
-                            </strong>
-                            <small className="truncate text-[11px] text-muted-foreground">
-                                {formatGameDate(game.gameAt)} · {game.stadium.name}
-                            </small>
-                        </button>
-                    ))}
+                <div className="grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-2 max-sm:grid-cols-[36px_minmax(0,1fr)_36px] max-sm:gap-1">
+                    <div className="grid place-items-center">
+                        {canScrollLeft && (
+                            <Button
+                                aria-label="이전 경기 보기"
+                                className="border-white/50 bg-surface/80 shadow-card backdrop-blur-md hover:bg-surface max-sm:size-9"
+                                onClick={() => scrollGames(-1)}
+                                size="icon"
+                                type="button"
+                                variant="outline"
+                            >
+                                <ChevronLeft aria-hidden="true"/>
+                            </Button>
+                        )}
+                    </div>
+                    <ul
+                        aria-label="오늘 경기 목록"
+                        className="flex min-w-0 snap-x snap-mandatory gap-4 overflow-x-auto px-1 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                        onScroll={updateScrollControls}
+                        ref={listRef}
+                    >
+                        {games.map((game) => (
+                            <li
+                                className="w-[calc((100%-32px)/3)] min-w-[260px] shrink-0 snap-start max-sm:w-[85%] max-sm:min-w-[85%]"
+                                key={game.gameId}
+                            >
+                                <article className="grid size-full min-w-0 gap-3 rounded-control border border-border bg-surface px-5 py-4 text-left text-foreground shadow-sm">
+                                    <span
+                                        className={`w-fit justify-self-start rounded-full px-[9px] py-[5px] text-[11px] font-black ${GAME_STATUS_BADGE_CLASSES[game.bookingStatus]}`}
+                                    >
+                                        {GAME_STATUS_META[game.bookingStatus].label}
+                                    </span>
+                                    <strong className="truncate text-sm">
+                                        {game.homeTeam.name}
+                                        <em className="mx-[5px] text-[11px] text-brand not-italic">
+                                            VS
+                                        </em>
+                                        {game.awayTeam.name}
+                                    </strong>
+                                    <small className="truncate text-[11px] text-muted-foreground">
+                                        {formatGameDate(game.gameAt)} ·{" "}
+                                        {game.stadium.name}
+                                    </small>
+                                    <Button
+                                        className="mt-1 w-full"
+                                        disabled={
+                                            bookingBusy ||
+                                            game.bookingStatus !== "OPEN" ||
+                                            (authenticated &&
+                                                completedGameIds.has(game.gameId))
+                                        }
+                                        onClick={() => onStartBooking(game)}
+                                        size="sm"
+                                        type="button"
+                                    >
+                                        {authenticated &&
+                                        completedGameIds.has(game.gameId)
+                                            ? "예매 완료"
+                                            : game.bookingStatus === "OPEN"
+                                              ? "예매하기"
+                                              : GAME_STATUS_META[game.bookingStatus]
+                                                    .action}
+                                    </Button>
+                                </article>
+                            </li>
+                        ))}
+                    </ul>
+
+                    <div className="grid place-items-center">
+                        {canScrollRight && (
+                            <Button
+                                aria-label="다음 경기 보기"
+                                className="border-white/50 bg-surface/80 shadow-card backdrop-blur-md hover:bg-surface max-sm:size-9"
+                                onClick={() => scrollGames(1)}
+                                size="icon"
+                                type="button"
+                                variant="outline"
+                            >
+                                <ChevronRight aria-hidden="true"/>
+                            </Button>
+                        )}
+                    </div>
                 </div>
             )}
         </section>

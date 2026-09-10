@@ -15,6 +15,7 @@ import type {TicketSummary} from "@/types/ticket";
 const bookingState = vi.hoisted(() => ({
     selectedGameId: 40 as number | null,
     setPaymentId: vi.fn(),
+    setQueueExpiry: vi.fn(),
 }));
 
 vi.mock("@/providers/booking-store-provider", () => ({
@@ -86,6 +87,7 @@ describe("usePayment", () => {
         localStorage.clear();
         sessionStorage.clear();
         bookingState.setPaymentId.mockClear();
+        bookingState.setQueueExpiry.mockClear();
         window.history.replaceState({}, "", "/payments/10");
     });
 
@@ -110,6 +112,7 @@ describe("usePayment", () => {
             payment: readyPayment,
             idempotencyKey: "idempotency-key",
         });
+        localStorage.setItem("queueToken", "queue-token");
         window.history.replaceState(
             {},
             "",
@@ -167,5 +170,102 @@ describe("usePayment", () => {
         expect(queryClient.getQueryState(ticketKeys.list())?.isInvalidated).toBe(
             false,
         );
+        expect(localStorage.getItem("queueToken")).toBeNull();
+        expect(bookingState.setQueueExpiry).toHaveBeenCalledWith(null);
+    });
+
+    it("결제 실패 응답이 돌아오면 대기열 토큰을 제거한다", async () => {
+        const queryClient = new QueryClient({
+            defaultOptions: {
+                queries: {retry: false},
+                mutations: {retry: false},
+            },
+        });
+        savePendingPayment({
+            orderId: 20,
+            gameId: 40,
+            payment: readyPayment,
+            idempotencyKey: "idempotency-key",
+        });
+        localStorage.setItem("queueToken", "queue-token");
+        window.history.replaceState(
+            {},
+            "",
+            "/payments/10?code=PAY_PROCESS_CANCELED&message=cancel&orderId=PG-20",
+        );
+        server.use(
+            http.get(`${API_BASE_URL}/payments/10`, () =>
+                HttpResponse.json({
+                    success: true,
+                    errorCode: null,
+                    message: "결제 조회 성공",
+                    data: {...readyPayment, failReason: null, approvedAt: null, failedAt: null},
+                }),
+            ),
+            http.post(`${API_BASE_URL}/payments/10/fail`, () =>
+                HttpResponse.json({
+                    success: true,
+                    errorCode: null,
+                    message: "결제 실패 처리 완료",
+                    data: {paymentId: 10, status: "FAILED"},
+                }),
+            ),
+        );
+
+        renderHook(() => usePayment(10), {
+            wrapper: createWrapper(queryClient),
+        });
+
+        await waitFor(() => {
+            expect(localStorage.getItem("queueToken")).toBeNull();
+        });
+        expect(bookingState.setQueueExpiry).toHaveBeenCalledWith(null);
+    });
+
+    it("결제 결과를 확인하지 못하면 대기열 토큰을 유지한다", async () => {
+        const queryClient = new QueryClient({
+            defaultOptions: {
+                queries: {retry: false},
+                mutations: {retry: false},
+            },
+        });
+        savePendingPayment({
+            orderId: 20,
+            gameId: 40,
+            payment: readyPayment,
+            idempotencyKey: "idempotency-key",
+        });
+        localStorage.setItem("queueToken", "queue-token");
+        window.history.replaceState(
+            {},
+            "",
+            "/payments/10?paymentKey=pg-key&orderId=PG-20&amount=36000",
+        );
+        server.use(
+            http.get(`${API_BASE_URL}/payments/10`, () =>
+                HttpResponse.json({
+                    success: true,
+                    errorCode: null,
+                    message: "결제 조회 성공",
+                    data: {...readyPayment, failReason: null, approvedAt: null, failedAt: null},
+                }),
+            ),
+            http.post(`${API_BASE_URL}/payments/10/complete`, () =>
+                HttpResponse.json(
+                    {success: false, errorCode: "PAYMENT_STATUS_UNKNOWN", message: "unknown", data: null},
+                    {status: 502},
+                ),
+            ),
+        );
+
+        renderHook(() => usePayment(10), {
+            wrapper: createWrapper(queryClient),
+        });
+
+        await waitFor(() => {
+            expect(sessionStorage.getItem("tossPaymentCallback:10")).toBeNull();
+        });
+        expect(localStorage.getItem("queueToken")).toBe("queue-token");
+        expect(bookingState.setQueueExpiry).not.toHaveBeenCalled();
     });
 });

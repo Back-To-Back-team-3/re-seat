@@ -1,5 +1,15 @@
 import {KST_OFFSET, KST_TIME_ZONE} from "@/lib/constants";
 
+/** 주어진 시각을 KST 기준 YYYY-MM-DD 형식의 날짜 키로 변환한다. */
+export function getKstDateKey(date: Date = new Date()): string {
+    return new Intl.DateTimeFormat("en-CA", {
+        timeZone: KST_TIME_ZONE,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    }).format(date);
+}
+
 /**
  * 백엔드가 전달한 경기 일시를 JavaScript Date로 변환한다.
  *

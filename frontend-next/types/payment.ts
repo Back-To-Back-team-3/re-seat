@@ -1,7 +1,13 @@
 import type {OrderStatus} from "@/types/order";
 import type {TicketSummary} from "@/types/ticket";
 
-export type PaymentStatus = "READY" | "APPROVED" | "FAILED" | "CANCELED";
+export type PaymentStatus =
+    | "READY"
+    | "APPROVED"
+    | "FAILED"
+    | "PARTIALLY_CANCELED"
+    | "CANCELED";
+export type PaymentCancelStatus = "PENDING" | "DONE" | "FAILED";
 export type PgProvider = "MOCK" | "TOSS" | "KAKAO" | "NAVER";
 
 export type PaymentCreateResponse = {
@@ -42,4 +48,17 @@ export type PaymentResponse = {
     failReason: string | null;
     approvedAt: string | null;
     failedAt: string | null;
+    canceledAmount: number;
+    remainingAmount: number;
+    cancels: PaymentCancelHistory[];
+};
+
+export type PaymentCancelHistory = {
+    paymentCancelId: number;
+    ticketId: number;
+    cancelAmount: number;
+    cancelStatus: PaymentCancelStatus;
+    cancelReason: string;
+    requestedAt: string;
+    completedAt: string | null;
 };

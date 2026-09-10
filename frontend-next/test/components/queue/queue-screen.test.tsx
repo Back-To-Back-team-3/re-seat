@@ -127,7 +127,7 @@ describe("대기열 화면", () => {
             screen.getByRole("button", {name: "예매 취소하고 돌아가기"}),
         ).toBeEnabled();
         expect(
-            screen.getByRole("button", {name: "좌석 선택으로 이동 →"}),
+            screen.getByRole("button", {name: "좌석 선택으로 이동"}),
         ).toBeDisabled();
     });
 
@@ -155,7 +155,7 @@ describe("대기열 화면", () => {
             screen.queryByRole("button", {name: "예매 취소하고 돌아가기"}),
         ).not.toBeInTheDocument();
         expect(
-            screen.getByRole("button", {name: "좌석 선택으로 이동 →"}),
+            screen.getByRole("button", {name: "좌석 선택으로 이동"}),
         ).toBeEnabled();
     });
 
