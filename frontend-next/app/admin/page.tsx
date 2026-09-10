@@ -2,13 +2,19 @@
 
 import Link from "next/link";
 import {LayoutDashboard, ShieldAlert} from "lucide-react";
+import {useState} from "react";
 
+import {AdminGameManagement} from "@/components/admin/games/admin-game-management";
+import {AdminShell} from "@/components/admin/admin-shell";
+import type {AdminTab} from "@/components/admin/admin-navigation";
+import {AdminUserManagement} from "@/components/admin/users/admin-user-management";
 import {buttonVariants} from "@/components/ui/button";
 import {useAuth} from "@/hooks/use-auth";
 
 /** 관리자 기능이 배치될 보호된 진입 화면이다. */
 export default function AdminPage() {
     const auth = useAuth();
+    const [activeTab, setActiveTab] = useState<AdminTab>("users");
 
     if (auth.busy) {
         return (
@@ -37,17 +43,24 @@ export default function AdminPage() {
     }
 
     return (
-        <main className="mx-auto min-h-[60vh] max-w-6xl px-[var(--gutter-desktop)] py-16 max-sm:px-[var(--gutter-mobile)]">
-            <div className="flex items-center gap-3">
+        <main className="mx-auto min-h-[60vh] w-full max-w-[var(--width-shell)] px-[var(--gutter-desktop)] py-12 max-sm:px-[var(--gutter-mobile)]">
+            <div className="mb-8 flex items-center gap-3">
                 <LayoutDashboard aria-hidden="true" className="size-8 text-brand"/>
                 <div>
                     <p className="text-xs font-bold text-brand">ADMIN</p>
                     <h1 className="text-3xl font-black">관리자 페이지</h1>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        회원과 경기 운영 상태를 관리합니다.
+                    </p>
                 </div>
             </div>
-            <p className="mt-6 text-muted-foreground">
-                관리 기능은 다음 화면 개편 단계에서 연결됩니다.
-            </p>
+            <AdminShell activeTab={activeTab} onSelect={setActiveTab}>
+                {activeTab === "users" ? (
+                    <AdminUserManagement/>
+                ) : (
+                    <AdminGameManagement/>
+                )}
+            </AdminShell>
         </main>
     );
 }
