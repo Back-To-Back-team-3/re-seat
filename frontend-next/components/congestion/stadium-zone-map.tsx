@@ -249,7 +249,7 @@ export function StadiumZoneMap({
     }
 
     return (
-        <div className="relative min-h-115 w-full bg-surface-elevated max-lg:min-h-95">
+        <div className="relative h-full min-h-115 w-full bg-surface-elevated max-lg:min-h-95">
             <Script
                 id="kakao-maps-sdk"
                 onError={() => {
