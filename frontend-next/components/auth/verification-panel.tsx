@@ -2,34 +2,19 @@
 
 import Script from "next/script";
 import {useState} from "react";
+import {LogOut, ShieldCheck} from "lucide-react";
+
+import {
+    VerificationAgencySelector,
+    type VerificationAgency,
+} from "@/components/auth/verification-agency-selector";
+import {VerificationSteps} from "@/components/auth/verification-steps";
+import {Button} from "@/components/ui/button";
 
 const PORTONE_CODE =
     process.env.NEXT_PUBLIC_PORTONE_CODE ?? "imp31640540";
 const PORTONE_PG =
     process.env.NEXT_PUBLIC_PORTONE_PG ?? "inicis_unified";
-
-export type VerificationAgency = "PASS" | "TOSS" | "KFTC";
-
-export const VERIFICATION_AGENCIES = [
-    {
-        id: "PASS" as const,
-        name: "PASS",
-        badge: "통신사",
-        description: "SKT · KT · LGU+ 패스 앱",
-    },
-    {
-        id: "TOSS" as const,
-        name: "토스",
-        badge: "간편인증",
-        description: "토스 앱 간편 본인확인",
-    },
-    {
-        id: "KFTC" as const,
-        name: "금융인증서",
-        badge: "은행",
-        description: "은행 공동 금융결제원 인증",
-    },
-] as const;
 
 type CertificationResponse = {
     success: boolean;
@@ -72,27 +57,6 @@ type VerificationPanelProps = {
     onLogout: () => void;
     onVerify: (impUid: string) => void;
 };
-
-const verificationSteps = [
-    {
-        number: "1",
-        title: "카카오 로그인",
-        description: "계정 확인 완료",
-        active: true,
-    },
-    {
-        number: "2",
-        title: "휴대폰 본인인증",
-        description: "현재 단계",
-        active: true,
-    },
-    {
-        number: "3",
-        title: "경기 예매 시작",
-        description: "인증 후 바로 이용",
-        active: false,
-    },
-] as const;
 
 /**
  * PortOne 브라우저 SDK를 사용해 휴대폰 본인인증을 시작한다.
@@ -173,34 +137,7 @@ export function VerificationPanel({
                             부정 예매를 막고 공정한 예매 기회를 제공하기 위해 최초 한
                             번만 본인 확인을 진행합니다.
                         </p>
-                        <ol className="mt-8 grid list-none gap-4 p-0">
-                            {verificationSteps.map((step, index) => (
-                                <li
-                                    className={[
-                                        "flex items-center gap-3",
-                                        step.active ? "opacity-100" : "opacity-45",
-                                    ].join(" ")}
-                                    key={step.number}
-                                >
-                  <span
-                      className={[
-                          "grid size-[29px] shrink-0 place-items-center rounded-full border font-mono text-[9px]",
-                          index === 1
-                              ? "border-brand bg-brand"
-                              : "border-white/35",
-                      ].join(" ")}
-                  >
-                    {step.number}
-                  </span>
-                                    <div className="grid gap-0.5">
-                                        <strong className="text-[11px]">{step.title}</strong>
-                                        <small className="text-[8px] opacity-70">
-                                            {step.description}
-                                        </small>
-                                    </div>
-                                </li>
-                            ))}
-                        </ol>
+                        <VerificationSteps/>
                     </div>
 
                     <div className="grid content-center p-8 sm:p-[50px]">
@@ -214,33 +151,10 @@ export function VerificationPanel({
                             본인 명의의 휴대폰으로 인증하면 Re:Seat의 모든 예매 기능을
                             이용할 수 있습니다.
                         </p>
-                        <div className="mt-4 mb-1">
-                            <span className="mb-2 block text-[11px] font-bold text-foreground">
-                                인증 수단 선택
-                            </span>
-                            <div className="grid grid-cols-3 gap-2">
-                                {VERIFICATION_AGENCIES.map((agency) => {
-                                    const isSelected = selectedAgency === agency.id;
-                                    return (
-                                        <button
-                                            aria-pressed={isSelected}
-                                            key={agency.id}
-                                            type="button"
-                                            onClick={() => setSelectedAgency(agency.id)}
-                                            className={[
-                                                "flex flex-col items-center justify-center rounded-control border p-2.5 text-center transition duration-fast cursor-pointer",
-                                                isSelected
-                                                    ? "border-brand bg-brand/8 text-brand font-bold shadow-xs ring-1 ring-brand"
-                                                    : "border-border bg-surface text-muted-foreground hover:border-foreground/30 hover:bg-surface-soft",
-                                            ].join(" ")}
-                                        >
-                                            <span className="text-[12px] font-extrabold">{agency.name}</span>
-                                            <span className="mt-0.5 text-[9px] opacity-75">{agency.badge}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
+                        <VerificationAgencySelector
+                            onChange={setSelectedAgency}
+                            value={selectedAgency}
+                        />
                         <div className="mt-[14px] mb-[22px] flex gap-3 rounded-control bg-surface-soft p-[13px]">
                             <span className="text-brand">⌕</span>
                             <div className="grid gap-0.5">
@@ -252,21 +166,25 @@ export function VerificationPanel({
                                 </small>
                             </div>
                         </div>
-                        <button
-                            className="min-h-11 w-full cursor-pointer rounded-control border border-brand bg-brand px-[22px] text-[13px] font-extrabold text-white shadow-[0_8px_20px_rgb(224_53_53/20%)] transition duration-fast hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
-                            disabled={busy}
+                        <Button
+                            className="w-full text-[13px]"
+                            loading={busy}
                             onClick={startVerification}
                             type="button"
                         >
+                            {!busy && <ShieldCheck aria-hidden="true"/>}
                             {busy ? "인증 요청 처리 중..." : "본인인증 시작하기"}
-                        </button>
-                        <button
-                            className="mt-2 min-h-9 cursor-pointer border-0 bg-transparent px-2 text-[10px] text-muted-foreground"
+                        </Button>
+                        <Button
+                            className="mt-2 w-full text-[10px] text-muted-foreground"
                             onClick={onLogout}
+                            size="sm"
                             type="button"
+                            variant="ghost"
                         >
+                            <LogOut aria-hidden="true"/>
                             로그아웃 후 다른 계정으로 로그인
-                        </button>
+                        </Button>
                     </div>
                 </section>
             </main>

@@ -16,7 +16,13 @@ import {
     subscribeAuth,
 } from "@/api/auth";
 import {userKeys} from "@/api/query-keys/users";
-import {getMyProfile, verifyIdentity, withdrawUser} from "@/api/users";
+import {
+    getMyProfile,
+    updateMyProfile,
+    type UserProfileUpdateRequest,
+    verifyIdentity,
+    withdrawUser,
+} from "@/api/users";
 
 /**
  * 브라우저 인증 상태와 백엔드 사용자 상태를 하나의 화면용 인터페이스로 제공합니다.
@@ -76,6 +82,15 @@ export function useAuth() {
         },
     });
 
+    const profileUpdate = useMutation({
+        mutationFn: updateMyProfile,
+        onSuccess: async () => {
+            // 수정 API는 본문을 반환하지 않으므로 서버 프로필을 다시 읽어 화면을 갱신한다.
+            await profileQuery.refetch();
+            setAuthNotice("회원정보가 수정되었습니다.");
+        },
+    });
+
     const withdrawal = useMutation({
         mutationFn: withdrawUser,
         onSuccess: () => {
@@ -88,6 +103,7 @@ export function useAuth() {
     // 사용자가 먼저 확인해야 하는 요청 오류를 성공 알림보다 우선해서 표시한다.
     const currentMessage =
         withdrawal.error?.message ??
+        profileUpdate.error?.message ??
         verification.error?.message ??
         profileQuery.error?.message ??
         session.notice ??
@@ -99,10 +115,17 @@ export function useAuth() {
         isVerified: profileQuery.data?.isVerified ?? session.isVerified,
         profile: profileQuery.data ?? null,
         role: session.role,
-        busy: profileQuery.isLoading || verification.isPending || withdrawal.isPending,
+        busy:
+            profileQuery.isLoading ||
+            profileUpdate.isPending ||
+            verification.isPending ||
+            withdrawal.isPending,
         message,
         messageVariant:
-            withdrawal.error || verification.error || profileQuery.error
+            withdrawal.error ||
+            profileUpdate.error ||
+            verification.error ||
+            profileQuery.error
                 ? ("error" as const)
                 : ("success" as const),
         login() {
@@ -120,6 +143,10 @@ export function useAuth() {
         withdraw() {
             withdrawal.mutate();
         },
+        updateProfile(request: UserProfileUpdateRequest) {
+            return profileUpdate.mutateAsync(request);
+        },
+        isUpdatingProfile: profileUpdate.isPending,
         isWithdrawing: withdrawal.isPending,
         dismissMessage() {
             // Query 오류와 메모리 알림을 같은 닫기 동작으로 숨기되 서버 오류 상태 자체는 변경하지 않는다.

@@ -2,8 +2,25 @@
 
 import Link from "next/link";
 import {usePathname} from "next/navigation";
+import {
+    CalendarDays,
+    Home,
+    LayoutDashboard,
+    Menu,
+    Moon,
+    Sun,
+    UserRound,
+} from "lucide-react";
+import {useState} from "react";
 
 import {LoginPanel} from "@/components/auth/login-panel";
+import {Button} from "@/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
 import {useAuth} from "@/hooks/use-auth";
 import {useTheme} from "@/hooks/use-theme";
 
@@ -14,6 +31,39 @@ const INACTIVE_NAV_LINK =
 const DISABLED_NAV_LINK =
     "pointer-events-none grid place-items-center px-1 text-sm font-bold text-muted-foreground opacity-50";
 
+type NavLinkProps = {
+    href: string;
+    label: string;
+    active: boolean;
+    disabled?: boolean;
+};
+
+function NavLink({href, label, active, disabled = false}: NavLinkProps) {
+    return (
+        <Link
+            aria-disabled={disabled || undefined}
+            className={
+                disabled
+                    ? DISABLED_NAV_LINK
+                    : active
+                        ? ACTIVE_NAV_LINK
+                        : INACTIVE_NAV_LINK
+            }
+            href={href}
+            onClick={
+                disabled
+                    ? (event) => {
+                        event.preventDefault();
+                    }
+                    : undefined
+            }
+            tabIndex={disabled ? -1 : undefined}
+        >
+            {label}
+        </Link>
+    );
+}
+
 /**
  * 모든 공개·예매 route가 공유하는 상단 셸이다.
  *
@@ -23,8 +73,11 @@ const DISABLED_NAV_LINK =
  */
 export function Header() {
     const auth = useAuth();
-    const pathname = usePathname();
+    const pathname = usePathname() ?? "";
     const {theme, toggleTheme} = useTheme();
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const isHomeRoute = pathname === "/";
+    const isBookingRoute = pathname.startsWith("/games");
     const isMyPageRoute = pathname.startsWith("/mypage");
 
     return (
@@ -33,7 +86,7 @@ export function Header() {
             <Link
                 aria-label="Re:Seat 홈"
                 className="font-brand text-[28px] font-black tracking-[-1.5px] text-foreground max-sm:text-2xl"
-                href="/games"
+                href="/"
             >
                 Re:<span className="text-brand">Seat</span>
             </Link>
@@ -41,50 +94,123 @@ export function Header() {
                 aria-label="주요 메뉴"
                 className="flex h-[70px] justify-center gap-[30px] max-[900px]:hidden"
             >
-                <Link
-                    className={isMyPageRoute ? INACTIVE_NAV_LINK : ACTIVE_NAV_LINK}
-                    href="/games"
-                >
-                    경기 예매
-                </Link>
-                <Link
-                    aria-disabled={!auth.isAuthed}
-                    className={
-                        !auth.isAuthed
-                            ? DISABLED_NAV_LINK
-                            : isMyPageRoute
-                                ? ACTIVE_NAV_LINK
-                                : INACTIVE_NAV_LINK
-                    }
+                <NavLink active={isHomeRoute} href="/" label="홈"/>
+                <NavLink active={isBookingRoute} href="/games" label="예매"/>
+                <NavLink
+                    active={isMyPageRoute}
+                    disabled={!auth.isAuthed}
                     href="/mypage"
-                    onClick={
-                        auth.isAuthed
-                            ? undefined
-                            : (event) => {
-                                event.preventDefault();
-                            }
-                    }
-                    tabIndex={auth.isAuthed ? undefined : -1}
-                >
-                    마이페이지
-                </Link>
+                    label="마이페이지"
+                />
             </nav>
             <div className="flex items-center justify-end gap-2.5">
-                <button
+                <Button
                     aria-label="화면 테마 변경"
-                    className="grid size-[38px] place-items-center rounded-full border border-border bg-surface max-sm:hidden"
+                    className="size-[38px] rounded-full max-[900px]:hidden"
                     onClick={toggleTheme}
+                    size="icon-sm"
                     type="button"
+                    variant="outline"
                 >
-                    {theme === "dark" ? "☀" : "☾"}
-                </button>
-                <LoginPanel
-                    isAuthed={auth.isAuthed}
-                    onLogin={auth.login}
-                    onLogout={auth.logout}
-                    profile={auth.profile}
-                    role={auth.role}
-                />
+                    {theme === "dark" ? (
+                        <Sun aria-hidden="true"/>
+                    ) : (
+                        <Moon aria-hidden="true"/>
+                    )}
+                </Button>
+                <div className="max-[900px]:hidden">
+                    <LoginPanel
+                        isAuthed={auth.isAuthed}
+                        onLogin={auth.login}
+                        onLogout={auth.logout}
+                        profile={auth.profile}
+                        role={auth.role}
+                    />
+                </div>
+                <Button
+                    aria-label="모바일 화면 테마 변경"
+                    className="hidden rounded-full max-[900px]:inline-flex"
+                    onClick={toggleTheme}
+                    size="icon-sm"
+                    type="button"
+                    variant="ghost"
+                >
+                    {theme === "dark" ? (
+                        <Sun aria-hidden="true"/>
+                    ) : (
+                        <Moon aria-hidden="true"/>
+                    )}
+                </Button>
+                <Dialog open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                    <DialogTrigger
+                        render={
+                            <Button
+                                aria-label="전체 메뉴 열기"
+                                className="hidden max-[900px]:inline-flex"
+                                size="icon-sm"
+                                type="button"
+                                variant="ghost"
+                            />
+                        }
+                    >
+                        <Menu aria-hidden="true"/>
+                    </DialogTrigger>
+                    <DialogContent
+                        className="top-0 right-0 bottom-0 left-auto h-dvh w-[min(86vw,340px)] max-w-none translate-x-0 translate-y-0 content-start rounded-none border-y-0 border-r-0 p-0"
+                    >
+                        <div className="border-b border-border px-6 py-5">
+                            <DialogTitle>메뉴</DialogTitle>
+                        </div>
+                        <nav
+                            aria-label="모바일 주요 메뉴"
+                            className="grid gap-1 px-4 py-4"
+                        >
+                            <Link
+                                className="flex h-12 items-center gap-3 rounded-control px-3 font-bold hover:bg-muted"
+                                href="/"
+                                onClick={() => setMobileMenuOpen(false)}
+                            >
+                                <Home aria-hidden="true"/> 홈
+                            </Link>
+                            <Link
+                                className="flex h-12 items-center gap-3 rounded-control px-3 font-bold hover:bg-muted"
+                                href="/games"
+                                onClick={() => setMobileMenuOpen(false)}
+                            >
+                                <CalendarDays aria-hidden="true"/> 예매
+                            </Link>
+                            {auth.isAuthed && (
+                                <Link
+                                    className="flex h-12 items-center gap-3 rounded-control px-3 font-bold hover:bg-muted"
+                                    href="/mypage"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                >
+                                    <UserRound aria-hidden="true"/> 마이페이지
+                                </Link>
+                            )}
+                            {auth.role === "ADMIN" && (
+                                <Link
+                                    className="flex h-12 items-center gap-3 rounded-control px-3 font-bold hover:bg-muted"
+                                    href="/admin"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                >
+                                    <LayoutDashboard aria-hidden="true"/> 관리자 페이지
+                                </Link>
+                            )}
+                        </nav>
+                        <div className="mt-auto grid gap-2 border-t border-border p-4">
+                            {auth.isAuthed ? (
+                                <Button onClick={auth.logout} type="button" variant="destructive">
+                                    로그아웃
+                                </Button>
+                            ) : (
+                                <Button onClick={auth.login} type="button">
+                                    카카오 로그인
+                                </Button>
+                            )}
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </div>
         </header>
     );

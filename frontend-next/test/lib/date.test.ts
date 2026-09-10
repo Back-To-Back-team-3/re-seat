@@ -1,6 +1,14 @@
 import {describe, expect, it} from "vitest";
 
-import {formatGameDate, parseApiDateTime} from "@/lib/date";
+import {formatGameDate, getKstDateKey, parseApiDateTime} from "@/lib/date";
+
+describe("getKstDateKey", () => {
+    it("UTC 날짜와 달라도 KST 기준 날짜를 반환한다", () => {
+        const utcAfternoon = new Date("2026-07-11T15:30:00Z");
+
+        expect(getKstDateKey(utcAfternoon)).toBe("2026-07-12");
+    });
+});
 
 describe("parseApiDateTime", () => {
     it.each([

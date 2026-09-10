@@ -19,10 +19,15 @@ const profile: UserProfile = {
  * 캐시를 함께 준비한다. Header는 useAuth로 두 값을 읽으므로 둘 중 하나만
  * 준비하면 실제 화면과 다른 중간 상태가 보인다.
  */
-function withAuth(authed: boolean) {
+function accessToken(role: "USER" | "ADMIN") {
+    const payload = btoa(JSON.stringify({userRole: role}));
+    return `storybook.${payload}.signature`;
+}
+
+function withAuth(authed: boolean, role: "USER" | "ADMIN" = "USER") {
     return function Decorator(Story: () => React.ReactElement) {
         if (authed) {
-            localStorage.setItem("accessToken", "storybook-token");
+            localStorage.setItem("accessToken", accessToken(role));
         } else {
             localStorage.removeItem("accessToken");
         }
@@ -57,6 +62,10 @@ export const Guest: Story = {
 
 export const Authenticated: Story = {
     decorators: [withAuth(true)],
+};
+
+export const Admin: Story = {
+    decorators: [withAuth(true, "ADMIN")],
 };
 
 export const AuthenticatedDark: Story = {

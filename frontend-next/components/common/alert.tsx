@@ -1,3 +1,7 @@
+import {X} from "lucide-react";
+
+import {Button} from "@/components/ui/button";
+
 export type AlertProps = {
     message: string;
     variant: "success" | "error";
@@ -33,14 +37,16 @@ export function Alert({message, variant, onClose}: AlertProps) {
       </span>
             <p className="m-0 text-[13px] leading-[1.45]">{message}</p>
             {onClose && (
-                <button
+                <Button
                     aria-label="알림 닫기"
-                    className="cursor-pointer border-0 bg-transparent text-xl text-muted-foreground"
+                    className="text-muted-foreground"
                     onClick={onClose}
+                    size="icon-sm"
                     type="button"
+                    variant="ghost"
                 >
-                    ×
-                </button>
+                    <X aria-hidden="true"/>
+                </Button>
             )}
         </div>
     );

@@ -8,6 +8,7 @@ import {
     requestPayment,
 } from "@/api/payments";
 import {server} from "@/test/mocks/server";
+import type {PaymentResponse} from "@/types/payment";
 
 describe("결제 API", () => {
     it("결제 생성 응답에서 결제 기한을 반환한다", async () => {
@@ -99,5 +100,52 @@ describe("결제 API", () => {
         });
 
         expect(result).toEqual({paymentId: 10, status: "FAILED"});
+    });
+
+    it("결제 조회 응답에서 취소 금액과 티켓별 취소 이력을 반환한다", async () => {
+        const payment = {
+            paymentId: 10,
+            paymentNo: "PAY-10",
+            orderId: 20,
+            amount: 18000,
+            method: "간편결제",
+            status: "PARTIALLY_CANCELED",
+            pgProvider: "TOSS",
+            failReason: null,
+            approvedAt: "2026-08-30 18:30:00",
+            failedAt: null,
+            canceledAmount: 9000,
+            remainingAmount: 9000,
+            cancels: [
+                {
+                    paymentCancelId: 50,
+                    ticketId: 30,
+                    cancelAmount: 9000,
+                    cancelStatus: "DONE",
+                    cancelReason: "사용자 티켓 취소",
+                    requestedAt: "2026-08-30 18:40:00",
+                    completedAt: "2026-08-30 18:40:02",
+                },
+            ],
+        } satisfies PaymentResponse;
+
+        server.use(
+            http.get(`${API_BASE_URL}/payments/10`, () =>
+                HttpResponse.json({
+                    success: true,
+                    errorCode: null,
+                    message: "결제 조회 완료",
+                    data: payment,
+                }),
+            ),
+        );
+
+        const result = await import("@/api/payments").then(({getPayment}) =>
+            getPayment(10),
+        );
+
+        expect(result.canceledAmount).toBe(9000);
+        expect(result.remainingAmount).toBe(9000);
+        expect(result.cancels).toHaveLength(1);
     });
 });

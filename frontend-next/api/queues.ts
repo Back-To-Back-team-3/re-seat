@@ -1,7 +1,12 @@
 import {apiRequest, unwrap} from "@/api/client";
 import {streamSse} from "@/api/sse";
 import type {ApiResponse} from "@/types/api";
-import type {QueueAdmitEvent, QueueCancelResponse, QueueStatusResponse,} from "@/types/game";
+import type {
+    QueueAdmitEvent,
+    QueueCancelResponse,
+    QueueRejectEvent,
+    QueueStatusResponse,
+} from "@/types/game";
 
 export async function enterQueue(gameId: number, signal?: AbortSignal) {
     await apiRequest<ApiResponse<void>>(`/queues/${gameId}/enter`, {
@@ -30,6 +35,7 @@ export function streamQueue(
     handlers: {
         onRank: (status: QueueStatusResponse) => void;
         onAdmit: (event: QueueAdmitEvent) => void;
+        onReject: (event: QueueRejectEvent) => void;
     },
     signal: AbortSignal,
 ) {
@@ -41,6 +47,9 @@ export function streamQueue(
             }
             if (event === "admit") {
                 handlers.onAdmit(data as QueueAdmitEvent);
+            }
+            if (event === "reject") {
+                handlers.onReject(data as QueueRejectEvent);
             }
         },
         signal,

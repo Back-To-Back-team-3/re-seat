@@ -8,14 +8,14 @@ describe("Footer", () => {
         cleanup();
     });
 
-    it("브랜드, 지원, 정책 영역과 저작권 문구를 보여준다", () => {
+    it("브랜드 소개와 저작권 문구만 보여준다", () => {
         render(<Footer/>);
 
         expect(
-            screen.getByText("KBO 리그 공식 예매 파트너.", {exact: false}),
+            screen.getByText("KBO 리그 예매 서비스.", {exact: false}),
         ).toBeInTheDocument();
-        expect(screen.getByText("SUPPORT")).toBeInTheDocument();
-        expect(screen.getByText("POLICY")).toBeInTheDocument();
+        expect(screen.queryByText("SUPPORT")).not.toBeInTheDocument();
+        expect(screen.queryByText("POLICY")).not.toBeInTheDocument();
         expect(
             screen.getByText("© 2026 Re:Seat. All rights reserved.", {
                 exact: false,
