@@ -26,6 +26,7 @@ const meta = {
         completedGameIds: new Set<number>(),
         selectedGameId: currentGames[0].gameId,
         onSelect: () => undefined,
+        onStartBooking: () => undefined,
         onReload: () => undefined,
         reloading: false,
     },

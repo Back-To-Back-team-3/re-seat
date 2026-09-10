@@ -18,6 +18,10 @@ import {useTickets} from "@/hooks/use-tickets";
 import {getKstDateKey} from "@/lib/date";
 import type {GameSummary} from "@/types/game";
 
+type GamesPageProps = {
+    view: "home" | "booking";
+};
+
 function chooseInitialGame(games: GameSummary[]) {
     const today = getKstDateKey();
 
@@ -34,13 +38,13 @@ function chooseInitialGame(games: GameSummary[]) {
 }
 
 /**
- * 인증 상태와 경기 서버 상태를 결합해 기존 홈 경기 예매 화면을 구성합니다.
+ * 인증 상태와 경기 서버 상태를 결합해 홈과 예매 화면을 구성합니다.
  *
- * OAuth 콜백이 돌아오는 `/`와 계획된 `/games`가 같은 화면을 사용하므로 페이지
- * 컴포넌트를 공유합니다. 선택한 경기 ID는 이 화면에만 필요한 임시 상태이며,
- * 예매를 시작하면 gameId를 URL에 넣어 대기열 라우트로 전달합니다.
+ * `/`는 히어로·오늘 경기·혼잡도를, `/games`는 전체 경기 일정을 표시합니다.
+ * 선택한 경기 ID는 이 화면에만 필요한 임시 상태이며, 예매를 시작하면 gameId를
+ * URL에 넣어 대기열 라우트로 전달합니다.
  */
-export function GamesPage() {
+export function GamesPage({view}: GamesPageProps) {
     const router = useRouter();
     const auth = useAuth();
     const gamesQuery = useGames();
@@ -94,6 +98,81 @@ export function GamesPage() {
         void gamesQuery.refetch();
     }
 
+    let content;
+    if (auth.isAuthed && !auth.isVerified) {
+        content = (
+            <VerificationPanel
+                busy={auth.busy}
+                onError={setVerificationError}
+                onLogout={auth.logout}
+                onVerify={auth.verify}
+            />
+        );
+    } else if (view === "home") {
+        content = (
+            <>
+                <GamesHero
+                    authenticated={auth.isAuthed}
+                    bookingBusy={
+                        auth.busy ||
+                        ticketsQuery.isLoading ||
+                        Boolean(ticketsQuery.error)
+                    }
+                    onStartBooking={startBooking}
+                    selectedCompleted={selectedCompleted}
+                    selectedGame={selectedGame}
+                />
+
+                <main className="mx-auto grid w-full max-w-[1440px] gap-10 px-[5vw] py-14 max-sm:px-4">
+                    <TodayGamesPanel
+                        games={todayGames}
+                        onSelect={selectGame}
+                        selectedGameId={selectedGame?.gameId ?? null}
+                    />
+                    {/* 경기장 주변 실시간 구역별 혼잡도 안내 (좌측 리스트 + 우측 지도) */}
+                    <StadiumCongestionSection stadiumNum={1} />
+                </main>
+            </>
+        );
+    } else {
+        content = (
+            <main className="mx-auto grid w-full max-w-[1440px] px-[5vw] py-14 max-sm:px-4">
+                {gamesQuery.isLoading ? (
+                    <p className="py-16 text-center text-muted-foreground">
+                        경기 일정을 불러오고 있습니다.
+                    </p>
+                ) : gamesQuery.error ? (
+                    <div className="grid gap-4">
+                        <EmptyState
+                            description={gamesQuery.error.message}
+                            title="경기 일정을 불러오지 못했습니다."
+                        />
+                        <Button
+                            className="justify-self-center"
+                            onClick={reloadGames}
+                            size="sm"
+                            type="button"
+                            variant="outline"
+                        >
+                            <RefreshCw aria-hidden="true"/>
+                            일정 다시 불러오기
+                        </Button>
+                    </div>
+                ) : (
+                    <GameList
+                        completedGameIds={completedGameIds}
+                        games={games}
+                        onReload={reloadGames}
+                        onSelect={selectGame}
+                        onStartBooking={startBooking}
+                        reloading={gamesQuery.isFetching}
+                        selectedGameId={selectedGame?.gameId ?? null}
+                    />
+                )}
+            </main>
+        );
+    }
+
     return (
         <>
             {message && (
@@ -108,71 +187,7 @@ export function GamesPage() {
                 />
             )}
 
-            {auth.isAuthed && !auth.isVerified ? (
-                <VerificationPanel
-                    busy={auth.busy}
-                    onError={setVerificationError}
-                    onLogout={auth.logout}
-                    onVerify={auth.verify}
-                />
-            ) : (
-                <>
-                    <GamesHero
-                        authenticated={auth.isAuthed}
-                        bookingBusy={
-                            auth.busy ||
-                            ticketsQuery.isLoading ||
-                            Boolean(ticketsQuery.error)
-                        }
-                        onStartBooking={startBooking}
-                        selectedCompleted={selectedCompleted}
-                        selectedGame={selectedGame}
-                    />
-
-                    <main className="mx-auto grid w-full max-w-[1440px] gap-10 px-[5vw] py-14 max-sm:px-4">
-                        <TodayGamesPanel
-                            games={todayGames}
-                            onSelect={selectGame}
-                            selectedGameId={selectedGame?.gameId ?? null}
-                        />
-
-                        {gamesQuery.isLoading ? (
-                            <p className="py-16 text-center text-muted-foreground">
-                                경기 일정을 불러오고 있습니다.
-                            </p>
-                        ) : gamesQuery.error ? (
-                            <div className="grid gap-4">
-                                <EmptyState
-                                    description={gamesQuery.error.message}
-                                    title="경기 일정을 불러오지 못했습니다."
-                                />
-                                <Button
-                                    className="justify-self-center"
-                                    onClick={reloadGames}
-                                    size="sm"
-                                    type="button"
-                                    variant="outline"
-                                >
-                                    <RefreshCw aria-hidden="true"/>
-                                    일정 다시 불러오기
-                                </Button>
-                            </div>
-                        ) : (
-                            <GameList
-                                completedGameIds={completedGameIds}
-                                games={games}
-                                onReload={reloadGames}
-                                onSelect={selectGame}
-                                reloading={gamesQuery.isFetching}
-                                selectedGameId={selectedGame?.gameId ?? null}
-                            />
-                        )}
-
-                        {/* 경기장 주변 실시간 구역별 혼잡도 안내 (좌측 리스트 + 우측 지도) */}
-                        <StadiumCongestionSection stadiumNum={1} />
-                    </main>
-                </>
-            )}
+            {content}
         </>
     );
 }

@@ -15,19 +15,19 @@ const currentGames = storyGames.map((game, index) => ({
 }));
 
 const meta = {
-    title: "페이지/경기 목록",
+    title: "페이지/홈과 예매",
     parameters: {layout: "fullscreen"},
 } satisfies Meta;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {
-    render: () => {
-        const [selectedGame, setSelectedGame] = useState<GameSummary | null>(
-            currentGames[0],
-        );
+function GamesPagePreview({view}: {view: "home" | "booking"}) {
+    const [selectedGame, setSelectedGame] = useState<GameSummary | null>(
+        currentGames[0],
+    );
 
+    if (view === "home") {
         return (
             <main>
                 <GamesHero
@@ -43,16 +43,30 @@ export const Default: Story = {
                         onSelect={setSelectedGame}
                         selectedGameId={selectedGame?.gameId ?? null}
                     />
-                    <GameList
-                        completedGameIds={new Set<number>()}
-                        games={currentGames}
-                        onReload={() => undefined}
-                        onSelect={setSelectedGame}
-                        reloading={false}
-                        selectedGameId={selectedGame?.gameId ?? null}
-                    />
                 </section>
             </main>
         );
-    },
+    }
+
+    return (
+        <main className="mx-auto max-w-[1120px] px-6 py-12">
+            <GameList
+                completedGameIds={new Set<number>()}
+                games={currentGames}
+                onReload={() => undefined}
+                onSelect={setSelectedGame}
+                onStartBooking={() => undefined}
+                reloading={false}
+                selectedGameId={selectedGame?.gameId ?? null}
+            />
+        </main>
+    );
+}
+
+export const Home: Story = {
+    render: () => <GamesPagePreview view="home"/>,
+};
+
+export const Booking: Story = {
+    render: () => <GamesPagePreview view="booking"/>,
 };

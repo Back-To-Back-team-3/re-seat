@@ -18,6 +18,7 @@ const meta = {
         completed: false,
         selected: false,
         onSelect: () => undefined,
+        onStartBooking: () => undefined,
     },
 } satisfies Meta<typeof GameCard>;
 

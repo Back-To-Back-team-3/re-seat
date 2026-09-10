@@ -21,6 +21,7 @@ type GameListProps = {
     completedGameIds: ReadonlySet<number>;
     selectedGameId: number | null;
     onSelect: (game: GameSummary) => void;
+    onStartBooking: (game: GameSummary) => void;
     /** games-page.tsx의 gamesQuery.refetch를 그대로 전달받아 재조회 경로를 하나로 유지한다. */
     onReload: () => void;
     reloading: boolean;
@@ -29,9 +30,7 @@ type GameListProps = {
 /**
  * 캘린더 섹션 헤드, 날짜·구단·구장·상태 필터, 시간순 경기 카드를 함께 관리합니다.
  *
- * "선택한 경기" 요약은 이 화면에 두지 않는다. 히어로(games-page.tsx)가 이미
- * SELECTED GAME 패널을 보여주므로 여기서 같은 정보를 다시 렌더링하면 화면에
- * 같은 카드가 두 번 나타난다.
+ * 카드 본문은 상세히 볼 경기를 선택하고, 하단 버튼은 실제 예매 진입을 요청합니다.
  *
  * 필터 값은 이 화면을 벗어나면 버려지는 UI 상태이므로 전역 store에 올리지 않습니다.
  * 입력 목록이 정렬되지 않았더라도 항상 gameAt과 gameId 순으로 표시해 API 페이지가
@@ -40,9 +39,10 @@ type GameListProps = {
 export function GameList({
                              games,
                              completedGameIds,
-                             selectedGameId,
-                             onSelect,
-                             onReload,
+    selectedGameId,
+    onSelect,
+    onStartBooking,
+    onReload,
                              reloading,
                          }: GameListProps) {
     const [selectedDate, setSelectedDate] = useState<string | null>(() => {
@@ -159,6 +159,7 @@ export function GameList({
                             game={game}
                             key={game.gameId}
                             onSelect={onSelect}
+                            onStartBooking={onStartBooking}
                             selected={selectedGameId === game.gameId}
                         />
                     ))}
