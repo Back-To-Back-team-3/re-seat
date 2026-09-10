@@ -2,7 +2,6 @@ package com.backtoback.reseat.global.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 /**
@@ -10,7 +9,6 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
  * <p>
  */
 @Configuration
-@EnableScheduling
 public class SchedulingConfig {
 
     private static final int SSE_SCHEDULER_POOL_SIZE = 8;
