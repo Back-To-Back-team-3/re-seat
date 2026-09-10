@@ -373,9 +373,9 @@ class RefundPendingQuantityGuardConcurrencyTest {
 
         // 완료 기준 핵심: 단 1건도 통과하면 안 된다.
         assertThat(successCount.get()).as("REFUND_PENDING 포함 2매 보유 상태에서 추가 선점 성공은 0건이어야 한다").isZero();
-        assertThat(maxSeatExceededCount.get())
-            .as("전부 MAX_SEAT_COUNT_EXCEEDED로 차단되어야 한다")
-            .isEqualTo(THREAD_COUNT - lockFailedCount.get());
+        assertThat(lockFailedCount.get()).as("좌석 락 경합이 없는 시나리오이므로 LOCK_FAILED는 0건이어야 한다").isZero();
+        assertThat(maxSeatExceededCount.get()).as("전부 MAX_SEAT_COUNT_EXCEEDED로 차단되어야 한다").isEqualTo(THREAD_COUNT);
+
         assertThat(unexpectedExceptionCount.get()).as("예상 외 예외는 0건이어야 한다").isZero();
 
         // 이번 시나리오는 좌석 경합이 아니라 수량 검증만 관찰하므로 티켓 수 자체는 불변이어야 한다.
