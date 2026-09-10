@@ -172,7 +172,7 @@ describe("주문 상세 페이지", () => {
         expect(screen.getByText("결제 남은 시간")).toBeInTheDocument();
         expect(screen.getByText("O-1")).toBeInTheDocument();
         expect(
-            screen.getByRole("button", {name: "15,000원 결제 준비 →"}),
+            screen.getByRole("button", {name: "15,000원 결제 준비"}),
         ).toBeEnabled();
     });
 
@@ -208,7 +208,7 @@ describe("주문 상세 페이지", () => {
         renderOrderPage();
 
         fireEvent.click(
-            await screen.findByRole("button", {name: "← 좌석 선택으로"}),
+            await screen.findByRole("button", {name: "좌석 선택으로"}),
         );
 
         expect(mocks.routerPush).toHaveBeenCalledWith("/games/1/seats");

@@ -4,9 +4,7 @@ export type TicketStatus =
     | "REFUND_FAILED"
     | "REFUNDED"
     | "USED_ENTERED"
-    | "USED_NO_SHOW"
-    | "USED"
-    | "CANCELED";
+    | "USED_NO_SHOW";
 
 export type TicketSummary = {
     ticketId: number;

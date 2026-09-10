@@ -2,6 +2,7 @@
 
 import {useMemo} from "react";
 
+import {BookingPanelHeader} from "@/components/booking/booking-panel-header";
 import {EmptyState} from "@/components/common/empty-state";
 import {formatPrice} from "@/lib/currency";
 import type {GameSeat} from "@/types/game";
@@ -42,19 +43,15 @@ export function SeatMap({
     return (
         <div
             className="col-start-1 row-start-2 overflow-hidden rounded-panel border border-border bg-surface max-[1024px]:col-start-auto max-[1024px]:row-start-auto">
-            <div className="flex items-center gap-2.5 border-b border-border px-[18px] py-[17px]">
-        <span className="text-xs font-black tracking-[0.1em] text-brand">
-          02
-        </span>
-                <div className="grid gap-0.5">
-                    <strong className="text-[13px]">좌석 선택</strong>
-                    <small className="text-xs text-muted-foreground">
-                        {selectedZoneName
-                            ? `${selectedZoneName}의 실제 좌석을 선택하세요.`
-                            : "구역을 선택해주세요."}
-                    </small>
-                </div>
-            </div>
+            <BookingPanelHeader
+                description={
+                    selectedZoneName
+                        ? `${selectedZoneName}의 실제 좌석을 선택하세요.`
+                        : "구역을 선택해주세요."
+                }
+                step="02"
+                title="좌석 선택"
+            />
 
             {seatRows.length === 0 ? (
                 <EmptyState

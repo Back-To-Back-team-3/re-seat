@@ -54,7 +54,8 @@ export async function refreshAccessToken() {
             .then(async (response) => {
                 if (!response.ok) return false;
 
-                const tokens = (await parsePayload(response)) as TokenResponse | null;
+                const payload = (await parsePayload(response)) as ApiResponse<TokenResponse> | null;
+                const tokens = payload?.data;
                 if (!tokens?.accessToken || !tokens.refreshToken) return false;
 
                 setAuthTokens(tokens.accessToken, tokens.refreshToken);
