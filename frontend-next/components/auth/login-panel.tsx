@@ -1,3 +1,15 @@
+import Link from "next/link";
+import {ChevronDown, LayoutDashboard, LogOut, UserRound} from "lucide-react";
+
+import {Button} from "@/components/ui/button";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLinkItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type {UserProfile, UserRole} from "@/types/auth";
 
 type LoginPanelProps = {
@@ -22,13 +34,14 @@ export function LoginPanel({
                            }: LoginPanelProps) {
     if (!isAuthed) {
         return (
-            <button
-                className="cursor-pointer rounded-control border-0 bg-[#fee500] px-[17px] py-[11px] text-[13px] font-extrabold text-[#191919]"
+            <Button
+                className="h-10 border-0 bg-[#fee500] px-[17px] text-[13px] text-[#191919] shadow-none hover:bg-[#f2d900]"
                 onClick={onLogin}
+                size="sm"
                 type="button"
             >
                 카카오 로그인
-            </button>
+            </Button>
         );
     }
 
@@ -41,25 +54,41 @@ export function LoginPanel({
     ).slice(0, 1);
 
     return (
-        <div className="flex items-center gap-[9px]">
-      <span className="grid size-9 place-items-center rounded-full bg-foreground font-extrabold text-surface">
-        {initial}
-      </span>
-            <div className="grid gap-px max-sm:hidden">
-                <strong className="max-w-[100px] overflow-hidden text-xs text-ellipsis whitespace-nowrap">
-                    {displayName}
-                </strong>
-                <small className="text-[9px] tracking-[1px] text-muted-foreground">
-                    {role}
-                </small>
-            </div>
-            <button
-                className="cursor-pointer border-0 bg-transparent p-1.5 text-[11px] text-muted-foreground max-sm:hidden"
-                onClick={onLogout}
-                type="button"
+        <DropdownMenu>
+            <DropdownMenuTrigger
+                aria-label="프로필 메뉴"
+                className="flex h-11 items-center gap-2 rounded-control px-1.5 text-left outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/35"
             >
-                로그아웃
-            </button>
-        </div>
+                <span className="grid size-9 place-items-center rounded-full bg-foreground font-extrabold text-surface">
+                    {initial}
+                </span>
+                <span className="grid gap-px max-sm:hidden">
+                    <strong className="max-w-[100px] overflow-hidden text-xs text-ellipsis whitespace-nowrap">
+                        {displayName}
+                    </strong>
+                    <small className="text-[9px] tracking-[1px] text-muted-foreground">
+                        {role}
+                    </small>
+                </span>
+                <ChevronDown aria-hidden="true" className="text-muted-foreground max-sm:hidden"/>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+                <DropdownMenuLinkItem render={<Link href="/mypage"/>}>
+                    <UserRound aria-hidden="true"/>
+                    마이페이지
+                </DropdownMenuLinkItem>
+                {role === "ADMIN" && (
+                    <DropdownMenuLinkItem render={<Link href="/admin"/>}>
+                        <LayoutDashboard aria-hidden="true"/>
+                        관리자 페이지
+                    </DropdownMenuLinkItem>
+                )}
+                <DropdownMenuSeparator/>
+                <DropdownMenuItem className="text-destructive" onClick={onLogout}>
+                    <LogOut aria-hidden="true"/>
+                    로그아웃
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
     );
 }

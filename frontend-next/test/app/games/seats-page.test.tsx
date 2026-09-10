@@ -163,7 +163,7 @@ describe("좌석 선택 화면", () => {
             ),
         ).toBeInTheDocument();
         expect(
-            screen.getByRole("button", {name: "1석 선점하기 →"}),
+            screen.getByRole("button", {name: "1석 선점하기"}),
         ).toBeDisabled();
     });
 
@@ -176,7 +176,7 @@ describe("좌석 선택 화면", () => {
         expect(screen.getByText("선택 좌석")).toBeInTheDocument();
         expect(screen.getByText("선택 불가")).toBeInTheDocument();
         expect(
-            screen.getByRole("button", {name: "1석 선점하기 →"}),
+            screen.getByRole("button", {name: "1석 선점하기"}),
         ).toBeInTheDocument();
     });
 
@@ -185,7 +185,7 @@ describe("좌석 선택 화면", () => {
         renderSeatsPage();
 
         const reserveButton = await screen.findByRole("button", {
-            name: "1석 선점하기 →",
+            name: "1석 선점하기",
         });
         fireEvent.click(reserveButton);
 
@@ -205,7 +205,7 @@ describe("좌석 선택 화면", () => {
         renderSeatsPage();
 
         const continueButton = await screen.findByRole("button", {
-            name: "주문 정보 입력 →",
+            name: "주문 정보 입력",
         });
         fireEvent.click(continueButton);
         expect(mocks.routerPush).toHaveBeenCalledWith("/checkout");

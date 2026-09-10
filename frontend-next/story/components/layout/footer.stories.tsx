@@ -12,7 +12,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-/** 640px 이하에서 4단 배치가 1단으로 접히는지 확인한다. */
+/** 640px 이하에서 브랜드와 저작권 영역이 한 열로 배치되는지 확인한다. */
 export const Mobile: Story = {
     globals: {
         viewport: {value: "mobile1"},

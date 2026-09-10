@@ -42,6 +42,16 @@ export type QueueAdmitEvent = {
     tokenSeatBrowsingExpiresAt: string;
 };
 
+export type QueueRejectionReason =
+    | "WAITING_IN_OTHER_GAME"
+    | "ACTIVE_QUEUE_TOKEN_IN_ANOTHER_GAME"
+    | "BOOKING_NOT_OPEN";
+
+export type QueueRejectEvent = {
+    rejected: true;
+    reason: QueueRejectionReason;
+};
+
 export type QueueCancelResponse = {
     gameId: number;
     queueStatus: "CANCELED";

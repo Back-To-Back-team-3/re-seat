@@ -72,7 +72,7 @@ describe("티켓 목록", () => {
                     ticketNo: "TICKET-2",
                     gameId: 99,
                     seat: "내야 1열 1번",
-                    status: "USED",
+                    status: "USED_ENTERED",
                     qrToken: "QR-TOKEN-2",
                     gameAt: "2026-08-08T18:00:00",
                 },
@@ -99,7 +99,7 @@ describe("티켓 목록", () => {
         const onReload = vi.fn();
         renderTicketList({onReload});
 
-        const button = screen.getByRole("button", {name: "↻ 티켓 새로고침"});
+        const button = screen.getByRole("button", {name: "티켓 새로고침"});
         fireEvent.click(button);
 
         expect(onReload).toHaveBeenCalledTimes(1);
@@ -109,7 +109,7 @@ describe("티켓 목록", () => {
         renderTicketList({reloading: true});
 
         expect(
-            screen.getByRole("button", {name: "↻ 티켓 새로고침"}),
+            screen.getByRole("button", {name: "티켓 새로고침"}),
         ).toBeDisabled();
     });
 
@@ -140,7 +140,7 @@ describe("티켓 목록", () => {
         ).toBeInTheDocument();
         expect(
             screen.getByText(
-                "* 환불이 정상 처리되면 예약 좌석이 반환되며, 결제 수단에 따라 1~3 영업일 내 환불 처리됩니다.",
+                "환불이 정상 처리되면 예약 좌석이 반환되며, 결제 수단에 따라 1~3 영업일 내 환불 처리됩니다.",
             ),
         ).toBeInTheDocument();
 
@@ -174,7 +174,7 @@ describe("티켓 목록", () => {
 
         expect(
             screen.getByText(
-                "* 환불이 정상 처리되면 예약 좌석이 반환되며, 결제 수단에 따라 1~3 영업일 내 환불 처리됩니다.",
+                "환불이 정상 처리되면 예약 좌석이 반환되며, 결제 수단에 따라 1~3 영업일 내 환불 처리됩니다.",
             ),
         ).toBeInTheDocument();
     });
