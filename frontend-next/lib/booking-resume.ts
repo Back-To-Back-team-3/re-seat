@@ -36,10 +36,6 @@ export async function resolveBookingResume(
     gameId: number,
     dependencies: BookingResumeDependencies,
 ): Promise<BookingResumeResult> {
-    if (stored.selectedGameId !== gameId) {
-        return {destination: null, progress: freshProgress(gameId)};
-    }
-
     let progress = {...stored};
 
     if (progress.paymentId !== null) {
@@ -84,11 +80,16 @@ export async function resolveBookingResume(
     const now = dependencies.now ?? new Date();
     if (
         dependencies.queueToken &&
+        progress.selectedGameId !== null &&
         expiresAt &&
         new Date(expiresAt).getTime() > now.getTime()
     ) {
-        return {destination: `/games/${gameId}/seats`, progress};
+        return {
+            destination: `/games/${progress.selectedGameId}/seats`,
+            progress,
+        };
     }
 
+    // 이어갈 단계가 없을 때만 사용자가 새로 선택한 경기로 진행 상태를 초기화한다.
     return {destination: null, progress: freshProgress(gameId)};
 }
