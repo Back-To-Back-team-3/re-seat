@@ -37,6 +37,7 @@ function renderGameList(overrides: Partial<React.ComponentProps<typeof GameList>
             completedGameIds={new Set()}
             onReload={vi.fn()}
             onSelect={vi.fn()}
+            onStartBooking={vi.fn()}
             reloading={false}
             selectedGameId={null}
             {...overrides}
@@ -98,10 +99,11 @@ describe("경기 목록", () => {
         expect(within(articles[3]).getByText("예매 예정")).toBeInTheDocument();
     });
 
-    it("카드 하단의 경기 선택도 선택 경기만 변경한다", () => {
+    it("카드 본문은 경기를 선택하고 하단 버튼은 예매를 시작한다", () => {
         const onSelect = vi.fn();
+        const onStartBooking = vi.fn();
 
-        renderGameList({games: [games[1]], onSelect});
+        renderGameList({games: [games[1]], onSelect, onStartBooking});
         fireEvent.click(
             screen.getByRole("button", {name: "날짜 선택 해제"}),
         );
@@ -109,9 +111,9 @@ describe("경기 목록", () => {
         fireEvent.click(screen.getByRole("button", {name: /OPEN 경기 선택/}));
         expect(onSelect).toHaveBeenCalledWith(games[1]);
 
-        // Vite의 OPEN 상태 카드 버튼 문구는 "경기 선택"이다(App.tsx의 gameStatusMeta).
-        fireEvent.click(screen.getByRole("button", {name: "경기 선택"}));
-        expect(onSelect).toHaveBeenCalledTimes(2);
+        fireEvent.click(screen.getByRole("button", {name: "예매하기"}));
+        expect(onStartBooking).toHaveBeenCalledWith(games[1]);
+        expect(onSelect).toHaveBeenCalledTimes(1);
     });
 
     it("결제를 완료한 경기는 예매 완료로 표시하고 다시 선택하지 못하게 한다", () => {

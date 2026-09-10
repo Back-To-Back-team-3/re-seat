@@ -83,7 +83,7 @@ function mockGamesNetworkError() {
     );
 }
 
-function renderGamesPage() {
+function renderGamesPage(view: "home" | "booking" = "home") {
     const queryClient = new QueryClient({
         defaultOptions: {
             queries: {retry: false},
@@ -93,7 +93,7 @@ function renderGamesPage() {
 
     return render(
         <QueryClientProvider client={queryClient}>
-            <GamesPage/>
+            <GamesPage view={view}/>
         </QueryClientProvider>,
     );
 }
@@ -170,6 +170,17 @@ describe("홈 화면 히어로", () => {
         expect(hero.getByText("데모 좌석/경기")).toBeInTheDocument();
         expect(hero.getByText("2석")).toBeInTheDocument();
         expect(hero.getByText("최대 선택")).toBeInTheDocument();
+    });
+
+    it("홈에서는 전체 경기 일정을 표시하지 않는다", async () => {
+        mockGames([todayOpenGame]);
+        renderGamesPage();
+
+        await screen.findByText(todayOpenGame.title);
+
+        expect(
+            screen.queryByRole("heading", {name: "경기 일정"}),
+        ).not.toBeInTheDocument();
     });
 
     it("오늘의 경기 패널에는 KST 기준 오늘 경기만 표시한다", async () => {
@@ -282,5 +293,58 @@ describe("홈 화면 히어로", () => {
         await waitFor(() => {
             expect(screen.queryByRole("status")).not.toBeInTheDocument();
         });
+    });
+});
+
+describe("예매 화면 경기 일정", () => {
+    beforeEach(() => {
+        localStorage.clear();
+        mocks.auth.isAuthed = true;
+        mocks.auth.isVerified = true;
+        mocks.tickets = [];
+        vi.clearAllMocks();
+        vi.useFakeTimers({shouldAdvanceTime: true});
+        vi.setSystemTime(new Date("2026-08-07T03:00:00Z"));
+    });
+
+    afterEach(() => {
+        cleanup();
+        vi.useRealTimers();
+    });
+
+    it("전체 경기 일정만 표시한다", async () => {
+        mockGames([todayOpenGame]);
+        renderGamesPage("booking");
+
+        expect(
+            await screen.findByRole("heading", {name: "경기 일정"}),
+        ).toBeInTheDocument();
+        expect(screen.queryByText("2026 KBO LEAGUE")).not.toBeInTheDocument();
+        expect(screen.queryByText(/오늘의 경기/)).not.toBeInTheDocument();
+        expect(screen.queryByText("혼잡도")).not.toBeInTheDocument();
+    });
+
+    it("경기 카드에서 예매를 시작하면 해당 경기 대기열로 이동한다", async () => {
+        mockGames([todayOpenGame]);
+        renderGamesPage("booking");
+
+        fireEvent.click(
+            await screen.findByRole("button", {name: "예매하기"}),
+        );
+
+        expect(mocks.routerPush).toHaveBeenCalledWith("/games/1/queue");
+    });
+
+    it("로그아웃 상태에서 예매를 시작하면 로그인을 요청한다", async () => {
+        mocks.auth.isAuthed = false;
+        mockGames([todayOpenGame]);
+        renderGamesPage("booking");
+
+        fireEvent.click(
+            await screen.findByRole("button", {name: "예매하기"}),
+        );
+
+        expect(mocks.auth.login).toHaveBeenCalledTimes(1);
+        expect(mocks.routerPush).not.toHaveBeenCalled();
     });
 });
