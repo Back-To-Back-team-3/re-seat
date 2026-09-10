@@ -88,6 +88,7 @@ describe("StadiumCongestionSection 컴포넌트", () => {
             "inset-0",
         );
         expect(mapCanvas.firstElementChild).toHaveClass("size-full");
+        expect(mapCanvas.parentElement).toHaveClass("h-full");
     });
 
     it("카테고리 탭 클릭 시 해당 구역 목록만 필터링한다", async () => {
