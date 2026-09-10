@@ -6,6 +6,9 @@ import {getGame} from "@/api/games";
 import QueuePage from "@/app/(booking)/games/[gameId]/queue/page";
 
 const mocks = vi.hoisted(() => ({
+    auth: {
+        isAuthed: true,
+    },
     useQueue: vi.fn(),
     resume: {
         restoring: true,
@@ -21,6 +24,9 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/api/games", () => ({getGame: vi.fn()}));
 vi.mock("@/api/queues", () => ({getQueueStatus: vi.fn()}));
+vi.mock("@/hooks/use-auth", () => ({
+    useAuth: () => mocks.auth,
+}));
 vi.mock("@/hooks/use-booking-resume", () => ({
     useBookingResume: () => mocks.resume,
 }));
@@ -53,6 +59,7 @@ describe("대기열 페이지", () => {
             shouldEnterQueue: false,
             error: null,
         });
+        mocks.auth.isAuthed = true;
         mocks.useQueue.mockReturnValue({
             queue: null,
             initialRank: null,
@@ -91,5 +98,20 @@ describe("대기열 페이지", () => {
         expect(
             screen.getByText("예매 상태를 확인하지 못했습니다."),
         ).toBeInTheDocument();
+    });
+
+    it("비로그인 직접 접근은 대기열을 시작하지 않고 홈 이동을 안내한다", () => {
+        mocks.auth.isAuthed = false;
+
+        renderPage();
+
+        expect(
+            screen.getByRole("heading", {name: "비정상적인 접근입니다"}),
+        ).toBeInTheDocument();
+        expect(screen.getByRole("link", {name: "홈으로 이동"})).toHaveAttribute(
+            "href",
+            "/",
+        );
+        expect(mocks.useQueue).not.toHaveBeenCalled();
     });
 });
