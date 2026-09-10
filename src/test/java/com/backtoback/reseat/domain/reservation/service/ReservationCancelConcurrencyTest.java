@@ -125,17 +125,18 @@ class ReservationCancelConcurrencyTest {
         homeTeamId = homeTeam.getId();
         awayTeamId = awayTeam.getId();
 
-        Game game = Game
-            .builder()
-            .homeTeam(homeTeam)
-            .awayTeam(awayTeam)
-            .stadium(stadium)
-            .gameAt(LocalDateTime.now().plusDays(7))
-            .bookingOpenAt(LocalDateTime.now().minusHours(1))
-            .bookingCloseAt(LocalDateTime.now().plusDays(6))
-            .bookingStatus(BookingStatus.OPEN)
-            .title("[이슈 #382] 취소 동시성 테스트 경기")
-            .build();
+        Game game
+            = Game
+                .builder()
+                .homeTeam(homeTeam)
+                .awayTeam(awayTeam)
+                .stadium(stadium)
+                .gameAt(LocalDateTime.now().plusDays(7))
+                .bookingOpenAt(LocalDateTime.now().minusHours(1))
+                .bookingCloseAt(LocalDateTime.now().plusDays(6))
+                .bookingStatus(BookingStatus.OPEN)
+                .title("[이슈 #382] 취소 동시성 테스트 경기")
+                .build();
         gameRepository.save(game);
         gameId = game.getId();
 
@@ -149,45 +150,39 @@ class ReservationCancelConcurrencyTest {
 
         // 이미 선점 완료(HELD)된 좌석 — cancel()의 전제 조건
         LocalDateTime holdExpiresAt = LocalDateTime.now().plusMinutes(10);
-        GameSeat gameSeat = GameSeat
-            .builder()
-            .game(game)
-            .seat(seat)
-            .price(18000)
-            .status(GameSeatStatus.AVAILABLE)
-            .build();
+        GameSeat gameSeat
+            = GameSeat.builder().game(game).seat(seat).price(18000).status(GameSeatStatus.AVAILABLE).build();
         gameSeatRepository.save(gameSeat);
         gameSeat.hold(holdExpiresAt);
         gameSeatRepository.save(gameSeat);
         targetGameSeatId = gameSeat.getId();
 
-        User user = User
-            .builder()
-            .email("cancel-concurrency@reseat.com")
-            .password("pw")
-            .name("취소동시성테스트유저")
-            .phone("010-2222-0001")
-            .isVerified(true)
-            .role(UserRole.USER)
-            .status(UserStatus.ACTIVE)
-            .build();
+        User user
+            = User
+                .builder()
+                .email("cancel-concurrency@reseat.com")
+                .password("pw")
+                .name("취소동시성테스트유저")
+                .phone("010-2222-0001")
+                .isVerified(true)
+                .role(UserRole.USER)
+                .status(UserStatus.ACTIVE)
+                .build();
         userRepository.save(user);
         userId = user.getId();
 
         // HOLDING 상태 예약 1건 + 좌석 1건 연결
-        Reservation reservation = Reservation
-            .builder()
-            .user(user)
-            .game(game)
-            .reservationNo("RSV-382-CONCURRENCY-TEST")
-            .status(ReservationStatus.HOLDING)
-            .holdExpiresAt(holdExpiresAt)
-            .build();
-        ReservationSeat reservationSeat = ReservationSeat
-            .builder()
-            .gameSeat(gameSeat)
-            .price(gameSeat.getPrice())
-            .build();
+        Reservation reservation
+            = Reservation
+                .builder()
+                .user(user)
+                .game(game)
+                .reservationNo("RSV-382-CONCURRENCY-TEST")
+                .status(ReservationStatus.HOLDING)
+                .holdExpiresAt(holdExpiresAt)
+                .build();
+        ReservationSeat reservationSeat
+            = ReservationSeat.builder().gameSeat(gameSeat).price(gameSeat.getPrice()).build();
         reservation.addReservationSeat(reservationSeat);
         reservationRepository.save(reservation);
         targetReservationId = reservation.getId();
