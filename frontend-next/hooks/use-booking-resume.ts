@@ -9,6 +9,7 @@ import {getReservationHoldTime} from "@/api/reservations";
 import {resolveBookingResume} from "@/lib/booking-resume";
 import {storage} from "@/lib/storage";
 import {useBookingStore} from "@/providers/booking-store-provider";
+import type {BookingData} from "@/stores/booking-store";
 
 /** 저장된 예매 단계를 서버 상태와 대조한 뒤 이동 또는 새 대기열 진입을 결정합니다. */
 export function useBookingResume(gameId: number) {
@@ -27,22 +28,26 @@ export function useBookingResume(gameId: number) {
     const [restoring, setRestoring] = useState(true);
     const [shouldEnterQueue, setShouldEnterQueue] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    // 복원 결과가 같은 내용의 새 배열·객체를 만들더라도 effect가 다시 실행되지 않도록
+    // 서버와 대조할 진행 상태를 값 기반 스냅샷으로 고정한다.
+    const progressSnapshot = JSON.stringify({
+        selectedGameId,
+        selectedZoneId,
+        selectedSeats,
+        reservation,
+        orderId,
+        paymentId,
+        queueTokenExpiresAt,
+    } satisfies BookingData);
 
     useEffect(() => {
         if (!hydrated || !Number.isFinite(gameId)) return;
 
         let active = true;
+        const storedProgress = JSON.parse(progressSnapshot) as BookingData;
 
         void resolveBookingResume(
-            {
-                selectedGameId,
-                selectedZoneId,
-                selectedSeats,
-                reservation,
-                orderId,
-                paymentId,
-                queueTokenExpiresAt,
-            },
+            storedProgress,
             gameId,
             {
                 getPayment,
@@ -87,14 +92,8 @@ export function useBookingResume(gameId: number) {
         gameId,
         hydrate,
         hydrated,
-        orderId,
-        paymentId,
-        queueTokenExpiresAt,
-        reservation,
+        progressSnapshot,
         router,
-        selectedGameId,
-        selectedSeats,
-        selectedZoneId,
     ]);
 
     return {restoring, shouldEnterQueue, error};

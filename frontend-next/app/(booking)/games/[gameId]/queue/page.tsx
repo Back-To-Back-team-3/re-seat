@@ -7,12 +7,25 @@ import {useState} from "react";
 import {getGame} from "@/api/games";
 import {getQueueStatus} from "@/api/queues";
 import {gameKeys} from "@/api/query-keys/games";
+import {InvalidBookingAccess} from "@/components/booking/invalid-booking-access";
 import {QueueScreen} from "@/components/queue/queue-screen";
+import {useAuth} from "@/hooks/use-auth";
 import {useBookingResume} from "@/hooks/use-booking-resume";
 import {useQueue} from "@/hooks/use-queue";
 import type {QueueStatusResponse, QueueViewState} from "@/types/game";
 
 export default function QueuePage() {
+    const auth = useAuth();
+
+    // 인증되지 않은 직접 접근에서는 대기열 등록과 복원 확인을 시작하지 않는다.
+    if (!auth.isAuthed) {
+        return <InvalidBookingAccess/>;
+    }
+
+    return <AuthenticatedQueuePage/>;
+}
+
+function AuthenticatedQueuePage() {
     const params = useParams<{ gameId: string }>();
     const router = useRouter();
     const gameId = Number(params.gameId);
