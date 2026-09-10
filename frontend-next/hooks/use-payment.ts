@@ -15,12 +15,14 @@ import {
     getPendingPayment,
     resetPaymentCallback,
 } from "@/lib/payment-storage";
+import {storage} from "@/lib/storage";
 import {useBookingStore} from "@/providers/booking-store-provider";
 import type {TicketSummary} from "@/types/ticket";
 
 export function usePayment(paymentId?: number) {
     const queryClient = useQueryClient();
     const setPaymentId = useBookingStore((state) => state.setPaymentId);
+    const setQueueExpiry = useBookingStore((state) => state.setQueueExpiry);
     const callbackStarted = useRef(false);
     const detail = useQuery({
         queryKey: paymentKeys.detail(paymentId ?? 0),
@@ -65,6 +67,9 @@ export function usePayment(paymentId?: number) {
                             amount,
                         },
                     );
+                    // 서버가 최종 결제 결과를 반환한 뒤에만 다음 예매를 위해 입장 토큰을 정리한다.
+                    storage.local.remove("queueToken");
+                    setQueueExpiry(null);
                     if (action.status === "APPROVED") {
                         /*
                          * 승인 응답에는 이번 결제로 발급된 실제 티켓이 포함됩니다.
@@ -95,6 +100,8 @@ export function usePayment(paymentId?: number) {
                         message,
                         orderId: pgOrderId,
                     });
+                    storage.local.remove("queueToken");
+                    setQueueExpiry(null);
                 }
                 // 3. 성공한 콜백은 주문·결제 서버 상태를 명시적으로 다시 읽게 한다.
                 // 티켓은 승인 응답을 바로 캐시에 저장했으므로 여기서 다시 요청하지 않는다.
@@ -117,7 +124,7 @@ export function usePayment(paymentId?: number) {
         }
 
         void processCallback();
-    }, [paymentId, queryClient]);
+    }, [paymentId, queryClient, setQueueExpiry]);
 
     return {detail, prepare};
 }
