@@ -26,11 +26,9 @@ describe("GamesHero 컴포넌트", () => {
             <GamesHero
                 authenticated
                 bookingBusy={false}
-                onSelect={vi.fn()}
                 onStartBooking={vi.fn()}
                 selectedCompleted={false}
                 selectedGame={game}
-                todayGames={[]}
             />,
         );
 
@@ -38,5 +36,42 @@ describe("GamesHero 컴포넌트", () => {
             "w-full",
             "max-w-[590px]",
         );
+    });
+
+    it("잠실야구장 이미지를 히어로 전체의 장식 배경으로 표시한다", () => {
+        const {container} = render(
+            <GamesHero
+                authenticated
+                bookingBusy={false}
+                onStartBooking={vi.fn()}
+                selectedCompleted={false}
+                selectedGame={game}
+            />,
+        );
+
+        const backgroundImage = container.querySelector(
+            'section > img[src="/jamsil-stadium.jpg"]',
+        );
+
+        expect(backgroundImage).toHaveAttribute("alt", "");
+        expect(backgroundImage).toHaveClass(
+            "absolute",
+            "inset-0",
+            "object-cover",
+        );
+    });
+
+    it("히어로 강조 문구에 브랜드 색상을 사용한다", () => {
+        render(
+            <GamesHero
+                authenticated
+                bookingBusy={false}
+                onStartBooking={vi.fn()}
+                selectedCompleted={false}
+                selectedGame={game}
+            />,
+        );
+
+        expect(screen.getByText("예매하세요")).toHaveClass("text-brand");
     });
 });

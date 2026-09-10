@@ -176,8 +176,13 @@ describe("홈 화면 히어로", () => {
         mockGames([todayOpenGame, todayScheduledGame, tomorrowGame]);
         renderGamesPage();
 
+        const todayGamesSection = (await screen.findByText(/오늘의 경기/)).closest(
+            "section",
+        );
+
+        expect(heroSection()).not.toContainElement(todayGamesSection);
         expect(
-            await screen.findByRole("button", {name: /원정팀 하나/}),
+            screen.getByRole("button", {name: /원정팀 하나/}),
         ).toBeInTheDocument();
         expect(
             screen.getByRole("button", {name: /원정팀 둘/}),
