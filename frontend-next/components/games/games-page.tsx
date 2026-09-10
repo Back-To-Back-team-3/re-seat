@@ -118,6 +118,8 @@ export function GamesPage({view}: GamesPageProps) {
                         ticketsQuery.isLoading ||
                         Boolean(ticketsQuery.error)
                     }
+                    games={todayGames}
+                    onSelect={selectGame}
                     onStartBooking={startBooking}
                     selectedCompleted={selectedCompleted}
                     selectedGame={selectedGame}
@@ -125,9 +127,15 @@ export function GamesPage({view}: GamesPageProps) {
 
                 <main className="mx-auto grid w-full max-w-[1440px] gap-10 px-[5vw] py-14 max-sm:px-4">
                     <TodayGamesPanel
+                        authenticated={auth.isAuthed}
+                        bookingBusy={
+                            auth.busy ||
+                            ticketsQuery.isLoading ||
+                            Boolean(ticketsQuery.error)
+                        }
+                        completedGameIds={completedGameIds}
                         games={todayGames}
-                        onSelect={selectGame}
-                        selectedGameId={selectedGame?.gameId ?? null}
+                        onStartBooking={startBooking}
                     />
                     {/* 경기장 주변 실시간 구역별 혼잡도 안내 (좌측 리스트 + 우측 지도) */}
                     <StadiumCongestionSection stadiumNum={1} />

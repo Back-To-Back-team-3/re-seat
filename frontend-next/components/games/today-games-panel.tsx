@@ -14,13 +14,14 @@ import type {GameSummary} from "@/types/game";
 
 type TodayGamesPanelProps = {
     games: GameSummary[];
-    selectedGameId: number | null;
-    onSelect: (game: GameSummary) => void;
+    authenticated: boolean;
+    bookingBusy: boolean;
+    completedGameIds: ReadonlySet<number>;
+    onStartBooking: (game: GameSummary) => void;
 };
 
 /**
- * 홈 본문에서 오늘(KST) 경기만 추려 보여주고, 카드를 누르면 히어로의 선택
- * 경기를 바꾼다.
+ * 홈 본문에서 오늘(KST) 경기와 각 경기의 예매 진입 버튼을 표시한다.
  *
  * 목록 전체를 필터링·정렬하는 GameList와는 책임이 다른, 오늘 하루짜리 요약
  * 패널이라 별도 컴포넌트로 분리했다. "오늘"의 기준은 games-page.tsx가
@@ -29,8 +30,10 @@ type TodayGamesPanelProps = {
  */
 export function TodayGamesPanel({
     games,
-    selectedGameId,
-    onSelect,
+    authenticated,
+    bookingBusy,
+    completedGameIds,
+    onStartBooking,
 }: TodayGamesPanelProps) {
     const listRef = useRef<HTMLUListElement>(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -128,15 +131,7 @@ export function TodayGamesPanel({
                                 className="w-[calc((100%-32px)/3)] min-w-[260px] shrink-0 snap-start max-sm:w-[85%] max-sm:min-w-[85%]"
                                 key={game.gameId}
                             >
-                                <button
-                                    className={`grid size-full min-w-0 cursor-pointer gap-3 rounded-control border bg-surface px-5 py-4 text-left text-foreground shadow-sm transition-colors hover:border-brand/40 hover:bg-brand/[0.04] ${
-                                        selectedGameId === game.gameId
-                                            ? "border-brand/40 bg-brand/[0.06]"
-                                            : "border-border"
-                                    }`}
-                                    onClick={() => onSelect(game)}
-                                    type="button"
-                                >
+                                <article className="grid size-full min-w-0 gap-3 rounded-control border border-border bg-surface px-5 py-4 text-left text-foreground shadow-sm">
                                     <span
                                         className={`w-fit justify-self-start rounded-full px-[9px] py-[5px] text-[11px] font-black ${GAME_STATUS_BADGE_CLASSES[game.bookingStatus]}`}
                                     >
@@ -153,7 +148,27 @@ export function TodayGamesPanel({
                                         {formatGameDate(game.gameAt)} ·{" "}
                                         {game.stadium.name}
                                     </small>
-                                </button>
+                                    <Button
+                                        className="mt-1 w-full"
+                                        disabled={
+                                            bookingBusy ||
+                                            game.bookingStatus !== "OPEN" ||
+                                            (authenticated &&
+                                                completedGameIds.has(game.gameId))
+                                        }
+                                        onClick={() => onStartBooking(game)}
+                                        size="sm"
+                                        type="button"
+                                    >
+                                        {authenticated &&
+                                        completedGameIds.has(game.gameId)
+                                            ? "예매 완료"
+                                            : game.bookingStatus === "OPEN"
+                                              ? "예매하기"
+                                              : GAME_STATUS_META[game.bookingStatus]
+                                                    .action}
+                                    </Button>
+                                </article>
                             </li>
                         ))}
                     </ul>
