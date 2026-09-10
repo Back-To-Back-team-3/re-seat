@@ -48,15 +48,20 @@ export function GamesPage() {
     const [verificationError, setVerificationError] = useState<string | null>(
         null,
     );
+    const [dismissedMessage, setDismissedMessage] = useState<string | null>(null);
     const games = gamesQuery.data ?? [];
     const selectedGame =
         games.find((game) => game.gameId === selectedGameId) ??
         chooseInitialGame(games);
-    const message =
+    const pageMessage =
         verificationError ??
         gamesQuery.error?.message ??
         ticketsQuery.error?.message ??
-        auth.message;
+        null;
+    const message =
+        pageMessage && pageMessage !== dismissedMessage
+            ? pageMessage
+            : auth.message;
     const today = getKstDateKey();
     const todayGames = games.filter((game) => game.gameAt.startsWith(today));
     // 환불이 완료되지 않은 서버 티켓만 현재 사용자가 예매한 경기로 판단한다.
@@ -82,20 +87,23 @@ export function GamesPage() {
         setSelectedGameId(game.gameId);
     }
 
+    function reloadGames() {
+        // 재시도 결과는 같은 오류 문구여도 새로운 알림으로 다시 안내한다.
+        setDismissedMessage(null);
+        void gamesQuery.refetch();
+    }
+
     return (
         <>
             {message && (
                 <Alert
                     message={message}
                     onClose={() => {
+                        setDismissedMessage(pageMessage);
                         setVerificationError(null);
                         auth.dismissMessage();
                     }}
-                    variant={
-                        verificationError || gamesQuery.error
-                            ? "error"
-                            : auth.messageVariant
-                    }
+                    variant={pageMessage ? "error" : auth.messageVariant}
                 />
             )}
 
@@ -135,9 +143,7 @@ export function GamesPage() {
                                 />
                                 <Button
                                     className="justify-self-center"
-                                    onClick={() => {
-                                        void gamesQuery.refetch();
-                                    }}
+                                    onClick={reloadGames}
                                     size="sm"
                                     type="button"
                                     variant="outline"
@@ -150,9 +156,7 @@ export function GamesPage() {
                             <GameList
                                 completedGameIds={completedGameIds}
                                 games={games}
-                                onReload={() => {
-                                    void gamesQuery.refetch();
-                                }}
+                                onReload={reloadGames}
                                 onSelect={selectGame}
                                 reloading={gamesQuery.isFetching}
                                 selectedGameId={selectedGame?.gameId ?? null}
