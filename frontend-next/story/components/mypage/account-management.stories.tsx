@@ -1,40 +1,35 @@
 import type {Meta, StoryObj} from "@storybook/nextjs-vite";
 
-import {ProfileSection} from "@/components/mypage/profile-section";
+import {AccountManagement} from "@/components/mypage/account-management";
 import {storyProfile} from "@/story/fixtures";
 
 const meta = {
-    title: "마이페이지/ProfileSection",
-    component: ProfileSection,
+    title: "마이페이지/AccountManagement",
+    component: AccountManagement,
     parameters: {layout: "fullscreen"},
     decorators: [
         (Story) => (
-            <div className="p-6">
+            <div className="mx-auto max-w-4xl bg-surface">
                 <Story/>
             </div>
         ),
     ],
     args: {
         profile: storyProfile,
-        role: "USER",
-        isVerified: true,
-        onLogout: () => undefined,
+        onUpdate: () => undefined,
         onWithdraw: () => undefined,
+        isUpdating: false,
         isWithdrawing: false,
     },
-} satisfies Meta<typeof ProfileSection>;
+} satisfies Meta<typeof AccountManagement>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const User: Story = {};
+export const Default: Story = {};
 
-export const Admin: Story = {
-    args: {role: "ADMIN"},
-};
-
-export const Unverified: Story = {
-    args: {isVerified: false},
+export const Updating: Story = {
+    args: {isUpdating: true},
 };
 
 export const Withdrawing: Story = {
