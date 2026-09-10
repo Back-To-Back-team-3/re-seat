@@ -59,7 +59,7 @@ export function AdminUserTickets({
                         </div>
                     ) : (
                         <Button
-                            disabled={ticket.status !== "ISSUED" && ticket.status !== "REFUND_FAILED"}
+                            disabled={ticket.status !== "ISSUED"}
                             onClick={() => setSelectedTicketId(ticket.ticketId)}
                             size="sm"
                             type="button"
