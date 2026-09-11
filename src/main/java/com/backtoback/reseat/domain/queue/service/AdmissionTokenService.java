@@ -68,7 +68,7 @@ public class AdmissionTokenService {
      * 대기 이력은 비관적 락으로 조회하여 취소와의 상태 변경 충돌을 막는다.</p>
      *
      * @param gameId 경기 ID
-     * @param limit  입장 허용 처리할 최대 사용자 수
+     * @param limit 입장 허용 처리할 최대 사용자 수
      * @return 새로운 입장 토큰이 발급된 사용자 수
      */
     @Transactional
@@ -133,22 +133,22 @@ public class AdmissionTokenService {
                 String queueEntryKey = queueEntryKey(gameId, userId);
 
                 // 대기 취소와 입장 허용이 동시에 변경하지 않도록 대기 이력을 비관적 락으로 조회한다.
-                QueueEntryHistory queueEntryHistory = queueEntryHistoryRepository
-                    .findByQueueKeyWithPessimisticWriteLock(queueEntryKey)
-                    .orElse(null);
+                QueueEntryHistory queueEntryHistory
+                    = queueEntryHistoryRepository.findByQueueKeyWithPessimisticWriteLock(queueEntryKey).orElse(null);
 
                 // Redis에는 존재하지만 DB 이력이 없거나 이미 대기 상태가 끝난 사용자는 새 토큰을 발행하지 않는다.
                 if (queueEntryHistory == null || queueEntryHistory.getStatus() != QueueEntryHistoryStatus.WAITING) {
                     continue;
                 }
 
-                AdmissionToken activeToken = admissionTokenRepository
-                    .findByGame_IdAndUser_IdAndStatusWithPessimisticWriteLock(
-                        gameId,
-                        userId,
-                        AdmissionTokenStatus.ACTIVE
-                    )
-                    .orElse(null);
+                AdmissionToken activeToken
+                    = admissionTokenRepository
+                        .findByGame_IdAndUser_IdAndStatusWithPessimisticWriteLock(
+                            gameId,
+                            userId,
+                            AdmissionTokenStatus.ACTIVE
+                        )
+                        .orElse(null);
 
                 if (activeToken != null) {
                     // 전체 유효시간이 만료된 토큰은 상태와 대기 이력을 종료하여 새 토큰이 자동 발급되지 않도록 한다.
@@ -174,14 +174,8 @@ public class AdmissionTokenService {
                 String token = createQueueToken();
 
                 // 입장 토큰 저장과 대기 이력 상태 변경은 같은 DB 트랜잭션 안에서 처리한다.
-                admissionTokenRepository.save(AdmissionToken.of(
-                    game,
-                    user,
-                    token,
-                    issuedAt,
-                    expiresAt,
-                    seatBrowsingExpiresAt
-                ));
+                admissionTokenRepository
+                    .save(AdmissionToken.of(game, user, token, issuedAt, expiresAt, seatBrowsingExpiresAt));
 
                 queueEntryHistory.admit(issuedAt);
                 admittedCount++;
@@ -214,7 +208,7 @@ public class AdmissionTokenService {
      *
      * @param userId 요청한 사용자 ID
      * @param gameId 입장하려는 경기 ID
-     * @param token  검증할 Queue-Token 값
+     * @param token 검증할 Queue-Token 값
      */
     @Transactional(
         noRollbackFor = {
@@ -234,7 +228,7 @@ public class AdmissionTokenService {
      *
      * @param userId 요청한 사용자 ID
      * @param gameId 입장하려는 경기 ID
-     * @param token  소비할 Queue-Token 값
+     * @param token 소비할 Queue-Token 값
      */
     @Transactional(
         noRollbackFor = {
@@ -279,7 +273,7 @@ public class AdmissionTokenService {
      *
      * @param userId 요청한 사용자 ID
      * @param gameId 좌석을 선점한 경기 ID
-     * @param token  최초 좌석 탐색을 완료할 Queue-Token 값
+     * @param token 최초 좌석 탐색을 완료할 Queue-Token 값
      */
     @Transactional(
         noRollbackFor = {
@@ -302,7 +296,7 @@ public class AdmissionTokenService {
      *
      * @param userId 요청한 사용자 ID
      * @param gameId 조회할 경기 ID
-     * @param token  조회할 Queue-Token 값
+     * @param token 조회할 Queue-Token 값
      * @return 토큰의 만료 시각과 최초 좌석 탐색 완료 시각
      */
     @Transactional(readOnly = true)
@@ -310,9 +304,8 @@ public class AdmissionTokenService {
 
         validateRequiredToken(token);
 
-        AdmissionToken admissionToken = admissionTokenRepository
-            .findByToken(token)
-            .orElseThrow(QueueTokenInvalidException::new);
+        AdmissionToken admissionToken
+            = admissionTokenRepository.findByToken(token).orElseThrow(QueueTokenInvalidException::new);
 
         validateTokenContext(admissionToken, userId, gameId);
 
@@ -418,9 +411,10 @@ public class AdmissionTokenService {
     private AdmissionToken getTokenWithPessimisticWriteLockAndValidateContext(Long userId, Long gameId, String token) {
         validateRequiredToken(token);
 
-        AdmissionToken admissionToken = admissionTokenRepository
-            .findByTokenWithPessimisticWriteLock(token)
-            .orElseThrow(QueueTokenInvalidException::new);
+        AdmissionToken admissionToken
+            = admissionTokenRepository
+                .findByTokenWithPessimisticWriteLock(token)
+                .orElseThrow(QueueTokenInvalidException::new);
         validateTokenContext(admissionToken, userId, gameId);
         return admissionToken;
     }
