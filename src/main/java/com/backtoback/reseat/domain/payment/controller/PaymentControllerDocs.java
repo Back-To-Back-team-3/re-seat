@@ -89,10 +89,7 @@ public interface PaymentControllerDocs {
             결제 결과가 확정되면 현재 예매 흐름의 Queue-Token을 사용 완료 처리합니다.
             승인 상태를 확인할 수 없으면 결제를 실패 처리하고 자동 환불을 위한 복구 작업을 등록합니다.
             """,
-        security = {
-            @SecurityRequirement(name = "JWT Bearer Token"),
-            @SecurityRequirement(name = "Queue-Token")
-        }
+        security = @SecurityRequirement(name = "JWT Bearer Token")
     )
     @ApiResponses(
         {
@@ -150,9 +147,9 @@ public interface PaymentControllerDocs {
             required = true
         ) String idempotencyKey,
         @Parameter(
-            description = "현재 예매 흐름에서 발급된 Queue-Token",
+            description = "READY 결제를 종결할 때 필요한 Queue-Token. 이미 확정된 결제의 멱등 재호출에서는 생략할 수 있습니다.",
             example = "qt_c6f443cf-a0d7-467f-b93f-da417c135a97",
-            required = true
+            required = false
         ) String queueToken,
         PaymentCompleteRequest request
     );
@@ -164,10 +161,7 @@ public interface PaymentControllerDocs {
             Toss API는 호출하지 않으며 결제와 주문을 실패 상태로 전환합니다.
             실패 결과가 확정되면 현재 예매 흐름의 Queue-Token을 사용 완료 처리합니다.
             """,
-        security = {
-            @SecurityRequirement(name = "JWT Bearer Token"),
-            @SecurityRequirement(name = "Queue-Token")
-        }
+        security = @SecurityRequirement(name = "JWT Bearer Token")
     )
     @ApiResponses(
         {
@@ -220,9 +214,9 @@ public interface PaymentControllerDocs {
             required = true
         ) String idempotencyKey,
         @Parameter(
-            description = "현재 예매 흐름에서 발급된 Queue-Token",
+            description = "READY 결제를 종결할 때 필요한 Queue-Token. 이미 확정된 결제의 멱등 재호출에서는 생략할 수 있습니다.",
             example = "qt_c6f443cf-a0d7-467f-b93f-da417c135a97",
-            required = true
+            required = false
         ) String queueToken,
         PaymentFailRequest request
     );

@@ -21,6 +21,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.backtoback.reseat.domain.payment.service.PaymentService;
+import com.backtoback.reseat.domain.queue.exception.QueueTokenRequiredException;
 import com.backtoback.reseat.global.exception.GlobalExceptionHandler;
 import com.backtoback.reseat.global.security.CustomUserDetails;
 
@@ -128,6 +129,24 @@ class PaymentControllerTest {
         }
 
         @Test
+        @DisplayName("Queue-Token 헤더가 없으면 403 QUEUE_TOKEN_REQUIRED를 반환한다")
+        void rejectsMissingQueueToken() throws Exception {
+            when(paymentService.completePayment(eq(1L), eq(1001L), eq(IDEMPOTENCY_KEY), isNull(), any()))
+                .thenThrow(new QueueTokenRequiredException());
+
+            mockMvc
+                .perform(
+                    post("/api/v1/payments/{paymentId}/complete", 1001L)
+                        .header("Idempotency-Key", IDEMPOTENCY_KEY)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(PAYMENT_COMPLETE_REQUEST_BODY)
+                )
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.errorCode").value("QUEUE_TOKEN_REQUIRED"));
+        }
+
+        @Test
         @DisplayName("Idempotency-Key 헤더가 없으면 400 IDEMPOTENCY_KEY_REQUIRED를 반환한다")
         void rejectsMissingIdempotencyKey() throws Exception {
             mockMvc
@@ -181,6 +200,24 @@ class PaymentControllerTest {
                 .andExpect(status().isOk());
 
             verify(paymentService).failPayment(eq(1L), eq(1001L), eq(IDEMPOTENCY_KEY), eq(QUEUE_TOKEN), any());
+        }
+
+        @Test
+        @DisplayName("Queue-Token 헤더가 없으면 403 QUEUE_TOKEN_REQUIRED를 반환한다")
+        void rejectsMissingQueueToken() throws Exception {
+            when(paymentService.failPayment(eq(1L), eq(1001L), eq(IDEMPOTENCY_KEY), isNull(), any()))
+                .thenThrow(new QueueTokenRequiredException());
+
+            mockMvc
+                .perform(
+                    post("/api/v1/payments/{paymentId}/fail", 1001L)
+                        .header("Idempotency-Key", IDEMPOTENCY_KEY)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(PAYMENT_FAIL_REQUEST_BODY)
+                )
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.errorCode").value("QUEUE_TOKEN_REQUIRED"));
         }
 
         @Test
