@@ -81,6 +81,7 @@ public class PaymentApprovalService {
         paymentValidator.validateConfirmable(payment, request.getOrderId(), request.getAmount());
         paymentOrderPolicy.ensurePayable(payment, payment.getOrder());
         validateQueueToken(payment, userId, queueToken);
+        payment.assignQueueToken(queueToken);
         payment.assignPgPaymentKey(request.getPaymentKey());
 
         // Toss에 최종 승인을 요청하고, 응답을 받지 못하면 클라이언트 내부에서 단건 재조회로 상태를 확인한다.
@@ -134,7 +135,7 @@ public class PaymentApprovalService {
 
     /** 승인 후 로컬 반영에 실패한 결제를 실패 처리하고 PG 승인 취소 작업을 등록한다. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public boolean registerApprovalCompensation(Long paymentId, String paymentKey) {
+    public boolean registerApprovalCompensation(Long paymentId, String paymentKey, String queueToken) {
         Payment payment
             = paymentRepository.findByIdWithPessimisticWriteLock(paymentId).orElseThrow(PaymentNotFoundException::new);
 
@@ -144,6 +145,7 @@ public class PaymentApprovalService {
         }
 
         payment.assignPgPaymentKey(paymentKey);
+        payment.assignQueueToken(queueToken);
         payment.fail(ErrorCode.PAYMENT_LOCAL_APPLY_FAILED.getMessage(), LocalDateTime.now());
         paymentRecoveryTaskRepository.save(PaymentRecoveryTask.createApprovalCompensation(payment));
         return true;

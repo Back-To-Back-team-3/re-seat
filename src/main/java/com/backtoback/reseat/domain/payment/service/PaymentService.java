@@ -117,7 +117,7 @@ public class PaymentService {
                 );
             // 승인 트랜잭션이 롤백된 뒤 별도 트랜잭션으로 PG 승인 취소 작업을 보존한다.
             boolean compensationRegistered
-                = paymentApprovalService.registerApprovalCompensation(e.getPaymentId(), e.getPaymentKey());
+                = paymentApprovalService.registerApprovalCompensation(e.getPaymentId(), e.getPaymentKey(), queueToken);
             if (compensationRegistered) {
                 failOrderAfterLocalApplyFailure(e.getOrderId());
             }
