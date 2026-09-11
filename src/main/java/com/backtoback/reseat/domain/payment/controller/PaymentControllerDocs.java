@@ -86,9 +86,13 @@ public interface PaymentControllerDocs {
         description = """
             Toss 결제 인증 결과를 검증하고 승인 API를 호출해 결제를 확정합니다.
             승인 성공 시 결제와 주문을 완료 처리하고 주문 항목별 티켓을 발급해 반환합니다.
+            결제 결과가 확정되면 현재 예매 흐름의 Queue-Token을 사용 완료 처리합니다.
             승인 상태를 확인할 수 없으면 결제를 실패 처리하고 자동 환불을 위한 복구 작업을 등록합니다.
             """,
-        security = @SecurityRequirement(name = "JWT Bearer Token")
+        security = {
+            @SecurityRequirement(name = "JWT Bearer Token"),
+            @SecurityRequirement(name = "Queue-Token")
+        }
     )
     @ApiResponses(
         {
@@ -108,7 +112,7 @@ public interface PaymentControllerDocs {
             ),
             @ApiResponse(
                 responseCode = "403",
-                description = "PAYMENT_ACCESS_DENIED",
+                description = "PAYMENT_ACCESS_DENIED / QUEUE_TOKEN_REQUIRED / QUEUE_TOKEN_INVALID",
                 content = @Content
             ),
             @ApiResponse(
@@ -118,12 +122,12 @@ public interface PaymentControllerDocs {
             ),
             @ApiResponse(
                 responseCode = "409",
-                description = "IDEMPOTENCY_KEY_UNAVAILABLE / PAYMENT_ALREADY_FINALIZED / INVALID_ORDER_STATUS",
+                description = "IDEMPOTENCY_KEY_UNAVAILABLE / PAYMENT_ALREADY_FINALIZED / INVALID_ORDER_STATUS / QUEUE_TOKEN_ALREADY_USED",
                 content = @Content
             ),
             @ApiResponse(
                 responseCode = "410",
-                description = "ORDER_EXPIRED",
+                description = "ORDER_EXPIRED / QUEUE_TOKEN_EXPIRED / QUEUE_TOKEN_REVOKED / QUEUE_TOKEN_BROWSING_EXPIRED",
                 content = @Content
             ),
             @ApiResponse(
@@ -145,6 +149,11 @@ public interface PaymentControllerDocs {
             example = "8f14e45f-ea5e-4a2f-b3d2-09bcdb51f321",
             required = true
         ) String idempotencyKey,
+        @Parameter(
+            description = "현재 예매 흐름에서 발급된 Queue-Token",
+            example = "qt_c6f443cf-a0d7-467f-b93f-da417c135a97",
+            required = true
+        ) String queueToken,
         PaymentCompleteRequest request
     );
 
@@ -153,8 +162,12 @@ public interface PaymentControllerDocs {
         description = """
             Toss 위젯 인증 실패 또는 사용자 중단 결과를 READY 결제에 반영합니다.
             Toss API는 호출하지 않으며 결제와 주문을 실패 상태로 전환합니다.
+            실패 결과가 확정되면 현재 예매 흐름의 Queue-Token을 사용 완료 처리합니다.
             """,
-        security = @SecurityRequirement(name = "JWT Bearer Token")
+        security = {
+            @SecurityRequirement(name = "JWT Bearer Token"),
+            @SecurityRequirement(name = "Queue-Token")
+        }
     )
     @ApiResponses(
         {
@@ -174,7 +187,7 @@ public interface PaymentControllerDocs {
             ),
             @ApiResponse(
                 responseCode = "403",
-                description = "PAYMENT_ACCESS_DENIED",
+                description = "PAYMENT_ACCESS_DENIED / QUEUE_TOKEN_REQUIRED / QUEUE_TOKEN_INVALID",
                 content = @Content
             ),
             @ApiResponse(
@@ -184,7 +197,12 @@ public interface PaymentControllerDocs {
             ),
             @ApiResponse(
                 responseCode = "409",
-                description = "IDEMPOTENCY_KEY_UNAVAILABLE",
+                description = "IDEMPOTENCY_KEY_UNAVAILABLE / QUEUE_TOKEN_ALREADY_USED",
+                content = @Content
+            ),
+            @ApiResponse(
+                responseCode = "410",
+                description = "QUEUE_TOKEN_EXPIRED / QUEUE_TOKEN_REVOKED / QUEUE_TOKEN_BROWSING_EXPIRED",
                 content = @Content
             )
         }
@@ -201,6 +219,11 @@ public interface PaymentControllerDocs {
             example = "8f14e45f-ea5e-4a2f-b3d2-09bcdb51f321",
             required = true
         ) String idempotencyKey,
+        @Parameter(
+            description = "현재 예매 흐름에서 발급된 Queue-Token",
+            example = "qt_c6f443cf-a0d7-467f-b93f-da417c135a97",
+            required = true
+        ) String queueToken,
         PaymentFailRequest request
     );
 

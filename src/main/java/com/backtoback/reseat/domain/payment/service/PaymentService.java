@@ -30,6 +30,7 @@ import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
 import com.backtoback.reseat.domain.payment.repository.PaymentCancelRepository;
 import com.backtoback.reseat.domain.payment.repository.PaymentRecoveryTaskRepository;
 import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
+import com.backtoback.reseat.domain.queue.service.AdmissionTokenService;
 import com.backtoback.reseat.domain.ticket.entity.Ticket;
 
 import lombok.RequiredArgsConstructor;
@@ -50,6 +51,7 @@ public class PaymentService {
     private final PaymentServiceValidator paymentValidator;
     private final RedissonClient redissonClient;
     private final OrderService orderService;
+    private final AdmissionTokenService admissionTokenService;
 
     /**
      * 주문 기준 결제를 요청한다.
@@ -92,6 +94,7 @@ public class PaymentService {
      * @param userId 현재 사용자 ID
      * @param paymentId 결제 ID
      * @param idempotencyKey 현재 결제 시도의 활성 멱등키
+     * @param queueToken 현재 예매 흐름에서 발급된 Queue-Token
      * @param request 토스가 클라이언트에 돌려준 paymentKey/orderId/amount
      * @return 확정된 결제 결과
      */
@@ -99,10 +102,11 @@ public class PaymentService {
         Long userId,
         Long paymentId,
         String idempotencyKey,
+        String queueToken,
         PaymentCompleteRequest request
     ) {
         try {
-            return paymentApprovalService.approve(userId, paymentId, idempotencyKey, request);
+            return paymentApprovalService.approve(userId, paymentId, idempotencyKey, queueToken, request);
         } catch (PaymentLocalApplyFailedException e) {
             log
                 .error(
@@ -127,6 +131,7 @@ public class PaymentService {
      * @param userId 현재 사용자 ID
      * @param paymentId 결제 ID
      * @param idempotencyKey 현재 결제 시도의 활성 멱등키
+     * @param queueToken 현재 예매 흐름에서 발급된 Queue-Token
      * @param request 토스가 클라이언트에 돌려준 실패 code/message/orderId
      * @return 실패 처리된 결제 결과
      */
@@ -135,6 +140,7 @@ public class PaymentService {
         Long userId,
         Long paymentId,
         String idempotencyKey,
+        String queueToken,
         PaymentFailRequest request
     ) {
         Payment payment = getOwnedPaymentWithPessimisticWriteLock(userId, paymentId);
@@ -145,9 +151,12 @@ public class PaymentService {
 
         paymentValidator.validateFailable(payment);
         paymentValidator.validatePgOrderId(payment, request.getOrderId());
+        Long gameId = payment.getOrder().getReservation().getGame().getId();
+        admissionTokenService.validateToken(userId, gameId, queueToken);
 
         payment.fail("[" + request.getCode() + "] " + request.getMessage(), LocalDateTime.now());
         orderService.failOrder(payment.getOrder().getId());
+        admissionTokenService.consumeToken(userId, gameId, queueToken);
 
         return PaymentFailResponse.from(payment);
     }
