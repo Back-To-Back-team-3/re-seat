@@ -99,8 +99,8 @@ public class QueueService {
                 .build();
         }
 
-        String waitingQueueRedisKey = waitingQueueRedisKey(gameId);
-        String redisMember = redisMember(userId);
+        String waitingQueueRedisKey = QueueRedisKey.waiting(gameId);
+        String redisMember = QueueRedisKey.member(userId);
         Long redisRank = queueZSet.rank(waitingQueueRedisKey, redisMember);
 
         // Redis에 없으면 현재 대기열에 등록된 사용자가 아님
@@ -165,9 +165,9 @@ public class QueueService {
 
         ZSetOperations<String, String> queueZSet = getZSetOperations();
 
-        String waitingQueueRedisKey = waitingQueueRedisKey(gameId);
-        String redisMember = redisMember(userId);
-        String queueEntryKey = queueEntryKey(gameId, userId);
+        String waitingQueueRedisKey = QueueRedisKey.waiting(gameId);
+        String redisMember = QueueRedisKey.member(userId);
+        String queueEntryKey = QueueRedisKey.entry(gameId, userId);
 
         // 대기 취소와 다른 경기 진입이 동시에 처리되지 않도록 사용자 행을 잠근다.
         queueUserRepository.findByIdWithPessimisticWriteLock(userId).orElseThrow(UserNotFoundException::new);
@@ -275,9 +275,9 @@ public class QueueService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime requestedAt = event.requestedAt().atZone(ZoneId.systemDefault()).toLocalDateTime();
 
-        String waitingQueueRedisKey = waitingQueueRedisKey(event.gameId());
-        String redisMember = redisMember(event.userId());
-        String queueEntryKey = queueEntryKey(event.gameId(), event.userId());
+        String waitingQueueRedisKey = QueueRedisKey.waiting(event.gameId());
+        String redisMember = QueueRedisKey.member(event.userId());
+        String queueEntryKey = QueueRedisKey.entry(event.gameId(), event.userId());
         long score = event.requestedAt().toEpochMilli();
 
         ActiveTokenCheckResult activeTokenCheckResult
@@ -335,23 +335,6 @@ public class QueueService {
 
     private ZSetOperations<String, String> getZSetOperations() {
         return redisTemplate.opsForZSet();
-    }
-
-    // 경기별 대기열 Redis ZSet key: queue:waiting:game:{gameId}
-    private String waitingQueueRedisKey(Long gameId) {
-
-        return "queue:waiting:game:%d".formatted(gameId);
-    }
-
-    // 대기열 사용자: user:{userId}
-    private String redisMember(Long userId) {
-        return "user:" + userId;
-    }
-
-    // DB 대기 이력 식별 key: queue:entry:game:{gameId}:user:{userId}
-    private String queueEntryKey(Long gameId, Long userId) {
-
-        return "queue:entry:game:%d:user:%d".formatted(gameId, userId);
     }
 
     /**
@@ -505,7 +488,7 @@ public class QueueService {
         String currentQueueEntryKey
     ) {
 
-        String queueEntryKey = queueEntryKey(admissionToken.getGame().getId(), admissionToken.getUser().getId());
+        String queueEntryKey = QueueRedisKey.entry(admissionToken.getGame().getId(), admissionToken.getUser().getId());
 
         // 만료된 토큰의 입장 허용 이력을 취소해 동일 경기 대기열 재진입을 허용한다.
         Optional<QueueEntryHistory> admittedHistory
