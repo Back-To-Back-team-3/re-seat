@@ -133,14 +133,14 @@ public interface AdmissionTokenRepository extends JpaRepository<AdmissionToken, 
      */
     @Query(
         value = """
-            SELECT DATE(at.issued_at) AS admissionDate,
+            SELECT CAST(at.issued_at AS DATE) AS admissionDate,
                    COUNT(*) AS admittedCount
             FROM admission_tokens at
             WHERE at.game_id = :gameId
             AND at.issued_at >= :from
             AND at.issued_at < :toExclusive
-            GROUP BY DATE(at.issued_at)
-            ORDER BY DATE(at.issued_at)
+            GROUP BY CAST(at.issued_at AS DATE)
+            ORDER BY CAST(at.issued_at AS DATE)
             """,
         nativeQuery = true
     )
