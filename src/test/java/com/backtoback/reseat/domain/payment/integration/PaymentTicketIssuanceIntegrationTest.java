@@ -20,11 +20,17 @@ import com.backtoback.reseat.domain.order.repository.OrderRepository;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCompleteResponse;
 import com.backtoback.reseat.domain.payment.entity.Payment;
+import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
+import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
 import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
 import com.backtoback.reseat.domain.payment.entity.PgProvider;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
+import com.backtoback.reseat.domain.payment.pg.toss.exception.TossPaymentStatusUnknownException;
+import com.backtoback.reseat.domain.payment.repository.PaymentRecoveryTaskRepository;
 import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
+import com.backtoback.reseat.domain.payment.exception.PaymentConfirmStatusUnknownException;
+import com.backtoback.reseat.domain.payment.schedule.PaymentRecoveryService;
 import com.backtoback.reseat.domain.payment.service.PaymentService;
 import com.backtoback.reseat.domain.queue.entity.AdmissionToken;
 import com.backtoback.reseat.domain.queue.entity.AdmissionTokenStatus;
@@ -75,6 +81,12 @@ class PaymentTicketIssuanceIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
     private AdmissionTokenRepository admissionTokenRepository;
+
+    @Autowired
+    private PaymentRecoveryTaskRepository paymentRecoveryTaskRepository;
+
+    @Autowired
+    private PaymentRecoveryService paymentRecoveryService;
 
     @Autowired
     private EntityManager entityManager;
@@ -134,6 +146,44 @@ class PaymentTicketIssuanceIntegrationTest extends BaseIntegrationTest {
 
         // 로컬 상태만 변경한 것이 아니라 Toss confirm을 정확히 한 번 호출했는지 확인한다.
         verify(tossPaymentClient).confirm(PAYMENT_KEY, PG_ORDER_ID, AMOUNT);
+    }
+
+    @Test
+    @DisplayName("승인 상태 불명확 결제의 복구가 완료되면 저장된 Queue-Token을 사용 완료 처리한다.")
+    void finalizesQueueTokenAfterConfirmUnknownRecovery() {
+        PaymentFixture fixture = createFixture();
+        PaymentCompleteRequest request = mock(PaymentCompleteRequest.class);
+        when(request.getPaymentKey()).thenReturn(PAYMENT_KEY);
+        when(request.getOrderId()).thenReturn(PG_ORDER_ID);
+        when(request.getAmount()).thenReturn(AMOUNT);
+        when(tossPaymentClient.confirm(PAYMENT_KEY, PG_ORDER_ID, AMOUNT))
+            .thenThrow(new TossPaymentStatusUnknownException("승인", new RuntimeException("Toss 응답 없음")));
+
+        assertThatThrownBy(
+            () -> paymentService
+                .completePayment(fixture.userId(), fixture.paymentId(), IDEMPOTENCY_KEY, QUEUE_TOKEN, request)
+        ).isInstanceOf(PaymentConfirmStatusUnknownException.class);
+
+        Payment uncertainPayment = paymentRepository.findById(fixture.paymentId()).orElseThrow();
+        PaymentRecoveryTask recoveryTask
+            = paymentRecoveryTaskRepository.findByRecoveryKey("CONFIRM_UNKNOWN:" + fixture.paymentId()).orElseThrow();
+        AdmissionToken activeToken = admissionTokenRepository.findByToken(QUEUE_TOKEN).orElseThrow();
+        assertThat(uncertainPayment.getQueueToken()).isEqualTo(QUEUE_TOKEN);
+        assertThat(recoveryTask.getStatus()).isEqualTo(PaymentRecoveryStatus.PENDING);
+        assertThat(activeToken.getStatus()).isEqualTo(AdmissionTokenStatus.ACTIVE);
+
+        TossPaymentResponse recoveredResponse = mock(TossPaymentResponse.class);
+        when(tossPaymentClient.getPayment(PAYMENT_KEY)).thenReturn(recoveredResponse);
+        when(recoveredResponse.isApproved()).thenReturn(false);
+        when(recoveredResponse.isConfirmFailureStatus()).thenReturn(true);
+
+        paymentRecoveryService.recover(recoveryTask.getId(), LocalDateTime.now());
+
+        PaymentRecoveryTask completedTask = paymentRecoveryTaskRepository.findById(recoveryTask.getId()).orElseThrow();
+        AdmissionToken finalizedToken = admissionTokenRepository.findByToken(QUEUE_TOKEN).orElseThrow();
+        assertThat(completedTask.getStatus()).isEqualTo(PaymentRecoveryStatus.COMPLETED);
+        assertThat(finalizedToken.getStatus()).isEqualTo(AdmissionTokenStatus.USED);
+        assertThat(finalizedToken.getUsedAt()).isNotNull();
     }
 
     /**

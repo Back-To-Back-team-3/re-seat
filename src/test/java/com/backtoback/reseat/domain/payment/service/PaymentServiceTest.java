@@ -454,7 +454,7 @@ class PaymentServiceTest {
                 );
             when(approvalService.approve(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, QUEUE_TOKEN, request))
                 .thenThrow(failure);
-            when(approvalService.registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY)).thenReturn(true);
+            when(approvalService.registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY, QUEUE_TOKEN)).thenReturn(true);
             doThrow(new RuntimeException("주문 실패 전이 오류")).when(orderService).failOrder(ORDER_ID);
 
             assertThatThrownBy(
@@ -462,7 +462,7 @@ class PaymentServiceTest {
             ).isSameAs(failure);
 
             InOrder inOrder = inOrder(approvalService, orderService);
-            inOrder.verify(approvalService).registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY);
+            inOrder.verify(approvalService).registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY, QUEUE_TOKEN);
             inOrder.verify(orderService).failOrder(ORDER_ID);
         }
 
@@ -488,13 +488,13 @@ class PaymentServiceTest {
                 );
             when(approvalService.approve(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, QUEUE_TOKEN, request))
                 .thenThrow(failure);
-            when(approvalService.registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY)).thenReturn(false);
+            when(approvalService.registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY, QUEUE_TOKEN)).thenReturn(false);
 
             assertThatThrownBy(
                 () -> service.completePayment(USER_ID, PAYMENT_ID, IDEMPOTENCY_KEY, QUEUE_TOKEN, request)
             ).isSameAs(failure);
 
-            verify(approvalService).registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY);
+            verify(approvalService).registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY, QUEUE_TOKEN);
             verify(orderService, never()).failOrder(anyLong());
         }
 
@@ -678,6 +678,7 @@ class PaymentServiceTest {
             ).isInstanceOf(PaymentConfirmStatusUnknownException.class);
 
             assertThat(payment.getPgPaymentKey()).isEqualTo(PAYMENT_KEY);
+            assertThat(payment.getQueueToken()).isEqualTo(QUEUE_TOKEN);
             assertThat(payment.getFailReason()).isEqualTo("토스 결제 승인 상태를 확인할 수 없습니다.");
             ArgumentCaptor<PaymentRecoveryTask> taskCaptor = ArgumentCaptor.forClass(PaymentRecoveryTask.class);
             verify(paymentRecoveryTaskRepository).save(taskCaptor.capture());
@@ -761,11 +762,13 @@ class PaymentServiceTest {
             Payment payment = payment(PaymentStatus.READY);
             when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
 
-            boolean registered = paymentApprovalService.registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY);
+            boolean registered
+                = paymentApprovalService.registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY, QUEUE_TOKEN);
 
             assertThat(registered).isTrue();
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.FAILED);
             assertThat(payment.getPgPaymentKey()).isEqualTo(PAYMENT_KEY);
+            assertThat(payment.getQueueToken()).isEqualTo(QUEUE_TOKEN);
             assertThat(payment.getFailReason()).isEqualTo(ErrorCode.PAYMENT_LOCAL_APPLY_FAILED.getMessage());
             ArgumentCaptor<PaymentRecoveryTask> taskCaptor = ArgumentCaptor.forClass(PaymentRecoveryTask.class);
             verify(paymentRecoveryTaskRepository).save(taskCaptor.capture());
@@ -780,7 +783,8 @@ class PaymentServiceTest {
             Payment payment = payment(PaymentStatus.APPROVED);
             when(paymentRepository.findByIdWithPessimisticWriteLock(PAYMENT_ID)).thenReturn(Optional.of(payment));
 
-            boolean registered = paymentApprovalService.registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY);
+            boolean registered
+                = paymentApprovalService.registerApprovalCompensation(PAYMENT_ID, PAYMENT_KEY, QUEUE_TOKEN);
 
             assertThat(registered).isFalse();
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED);
@@ -794,7 +798,7 @@ class PaymentServiceTest {
         void usesNewTransaction() throws NoSuchMethodException {
             Method method
                 = PaymentApprovalService.class
-                    .getDeclaredMethod("registerApprovalCompensation", Long.class, String.class);
+                    .getDeclaredMethod("registerApprovalCompensation", Long.class, String.class, String.class);
 
             Transactional transactional = method.getAnnotation(Transactional.class);
 
