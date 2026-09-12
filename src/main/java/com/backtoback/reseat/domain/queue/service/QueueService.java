@@ -248,6 +248,7 @@ public class QueueService {
      * <p>사용자 행에 비관적 락을 적용하여 동일 사용자의 여러 경기 대기열 등록을 순서대로 처리한다.</p>
      * <p>사용자가 정책상 등록할 수 없는 요청은 예외 대신 거절 사유로 반환하여
      * Consumer가 Redis 결과를 저장하고 이벤트 처리를 완료할 수 있게 한다.</p>
+     * <p>사용 가능한 현재 경기 토큰 없이 남은 입장 허용 이력은 같은 요청에서 재진입 상태로 복구한다.</p>
      *
      * @param event 대기열 진입 요청 이벤트
      * @return 사용자에게 전달할 거절 사유, 거절하지 않으면 빈 값
@@ -303,15 +304,23 @@ public class QueueService {
         // 동일 경기와 사용자의 DB 이력이 있으면 새로운 이력을 중복 생성하지 않는다.
         // 기존 상태가 WAITING이면 Consumer 재처리 과정에서 누락됐을 수 있는 Redis 대기열 정보만 복구한다.
         if (Objects.nonNull(existingHistory)) {
+            boolean currentAdmittedHistoryRecovered = false;
+
+            // reenter()는 CANCELED 상태에서만 실행할 수 있으므로 사용할 수 있는 토큰이 없는 ADMITTED 이력을 먼저 취소한다.
+            if (existingHistory.getStatus() == QueueEntryHistoryStatus.ADMITTED) {
+                existingHistory.cancel(now);
+                currentAdmittedHistoryRecovered = true;
+            }
+
             if (existingHistory.getStatus() == QueueEntryHistoryStatus.WAITING) {
                 addRedisQueueEntryIfAbsent(queueZSet, waitingQueueRedisKey, redisMember, score);
             }
 
             // 취소된 이력은 새 요청 시간으로 갱신하고 DB 커밋 후 Redis 점수도 덮어써 대기열 맨 뒤에 등록한다.
             if (existingHistory.getStatus() == QueueEntryHistoryStatus.CANCELED) {
-                // 이번 요청에서 토큰 만료로 취소됐거나 취소 시간보다 늦게 발행된 요청만 재진입으로 처리한다.
+                // 이번 요청에서 만료 관련 이력을 복구했거나 취소 시간보다 늦게 발행된 요청만 재진입으로 처리한다.
                 if (existingHistory.getCanceledAt().isBefore(requestedAt)
-                    || activeTokenCheckResult.currentQueueHistoryCanceled()) {
+                    || activeTokenCheckResult.currentQueueHistoryCanceled() || currentAdmittedHistoryRecovered) {
                     existingHistory.reenter(requestedAt);
                     // DB 커밋이 완료된 경우에만 Redis 대기 순서를 갱신하여 두 저장소의 상태 불일치를 방지한다.
                     TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
