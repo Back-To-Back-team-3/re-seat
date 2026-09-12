@@ -15,21 +15,39 @@ import com.backtoback.reseat.domain.citydata.exception.CityDataApiException;
 import com.backtoback.reseat.domain.citydata.exception.StadiumCongestionNotFoundException;
 import com.backtoback.reseat.domain.citydata.model.StadiumCityArea;
 
-import lombok.RequiredArgsConstructor;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class StadiumCongestionService {
 
     private static final String CACHE_KEY_PREFIX = "citydata:stadium:";
-
+    private final Counter cacheHitCounter;
+    private final Counter cacheMissCounter;
+    private final Counter fallbackCounter;
+    private final Timer externalApiTimer;
     private final SeoulCityDataClient seoulCityDataClient;
     private final RedisTemplate<String, Object> redisTemplate;
 
     @Value("${citydata.cache.ttl-minutes:10}")
     private long cacheTtlMinutes;
+
+    public StadiumCongestionService(
+        SeoulCityDataClient seoulCityDataClient,
+        RedisTemplate<String, Object> redisTemplate,
+        MeterRegistry meterRegistry
+    ) {
+        this.seoulCityDataClient = seoulCityDataClient;
+        this.redisTemplate = redisTemplate;
+
+        this.cacheHitCounter = meterRegistry.counter("citydata.cache.hits");
+        this.cacheMissCounter = meterRegistry.counter("citydata.cache.misses");
+        this.fallbackCounter = meterRegistry.counter("citydata.external.api.fallback.count");
+        this.externalApiTimer = meterRegistry.timer("citydata.external.api.latency");
+    }
 
     // 구장 ID에 해당하는 실시간 혼잡도 정보 조회(Redis 캐시 우선 조회)
     public StadiumCongestionResponse getStadiumCongestion(Long stadiumNum) {
@@ -45,20 +63,29 @@ public class StadiumCongestionService {
         try {
             Object cached = redisTemplate.opsForValue().get(cacheKey);
             if (cached instanceof StadiumCongestionResponse cachedResponse) {
+                cacheHitCounter.increment();
                 log.debug("구장 혼잡도 캐시 히트(stadiumNum = {})", stadiumNum);
                 return cachedResponse;
             }
+            cacheMissCounter.increment();
         } catch (Exception e) {
+            cacheMissCounter.increment();
             log.warn("Redis 캐시 조회 중 오류 발생 (stadiumNum = {}), 외부 API를 직접 호출합니다", stadiumNum, e);
         }
 
         // 외부 API 호출(캐시 미스)
         SeoulCityDataRawResponse rawResponse;
         try {
-            rawResponse = seoulCityDataClient.fetchCityData(cityArea.getAreaName());
+            rawResponse
+                = externalApiTimer.recordCallable(() -> seoulCityDataClient.fetchCityData(cityArea.getAreaName()));
         } catch (CityDataApiException e) {
+            fallbackCounter.increment();
             log.warn("서울시 실시간 도시데이터 API 호출 실패 (stadiumNum = {}), 기본 혼잡도 데이터로 대체합니다: {}", stadiumNum, e.getMessage());
             // Fallback 응답은 장기 캐시하지 않고 즉시 반환하여 외부 API 복구 시 정상 재시도하도록 함
+            return createFallbackResponse(cityArea);
+        } catch (Exception e) {
+            fallbackCounter.increment();
+            log.error("외부 API 호출 중 예외 발생 (stadiumNum = {}): {}", stadiumNum, e.getMessage());
             return createFallbackResponse(cityArea);
         }
 

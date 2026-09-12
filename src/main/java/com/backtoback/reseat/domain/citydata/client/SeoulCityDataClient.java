@@ -43,6 +43,7 @@ public class SeoulCityDataClient {
      * @return 서울시 도시 데이터 원본 응답 DTO
      */
     public SeoulCityDataRawResponse fetchCityData(String areaName) {
+        String targetUri = baseUrl + "/" + apiKey + "/json/citydata/1/5/" + areaName;
         try {
             SeoulCityDataRawResponse response
                 = webClient
@@ -55,14 +56,24 @@ public class SeoulCityDataClient {
                         clientResponse -> clientResponse
                             .bodyToMono(String.class)
                             .defaultIfEmpty("외부 API 에러 본문 없음")
-                            .flatMap(
-                                errorBody -> Mono
+                            .flatMap(errorBody -> {
+                                log
+                                    .error(
+                                        "[SeoulCityDataClient] HTTP 오류 발생 - URL: {}, Status: {}, Body: {}",
+                                        targetUri,
+                                        clientResponse.statusCode().value(),
+                                        errorBody
+                                    );
+
+                                return Mono
                                     .error(
                                         new CityDataApiException(
-                                            "서울시 도시데이터 API 응답 오류 (상태코드: " + clientResponse.statusCode().value() + "에러: "
-                                                + errorBody + ")"
+                                            "서울시 도시데이터 API 응답 오류 (URL: " + targetUri + ", 상태코드: "
+                                                + clientResponse.statusCode().value() + ", 에러: " + errorBody + ")"
                                         )
-                                    )
+                                    );
+                            }
+
                             )
                     )
                     .bodyToMono(SeoulCityDataRawResponse.class)
@@ -71,14 +82,21 @@ public class SeoulCityDataClient {
             if (response == null || response.getCityData() == null
                 || response.getCityData().getLivePopulationStatus() == null
                 || response.getCityData().getLivePopulationStatus().isEmpty()) {
+                log.warn("[SeoulCityDataClient] API 응답 데이터 공백 - Target: {}, AreaName: {}", targetUri, areaName);
                 throw new CityDataApiException("해당 지역(" + areaName + ")의 실시간 혼잡도 데이터가 존재하지 않습니다.");
             }
             return response;
         } catch (CityDataApiException e) {
             throw e;
         } catch (Exception e) {
-            log.error("서울시 도시데이터 API호출 중 오류 발생 (areaName={})", areaName, e);
-            throw new CityDataApiException("서울시 도시데이터 API 통신 중 예외가 발생했습니다");
+            log
+                .error(
+                    "[SeoulCityDataClient] 서울시 도시데이터 API호출 중 오류 발생 - Target: {}, areaName={}",
+                    targetUri,
+                    areaName,
+                    e
+                );
+            throw new CityDataApiException("서울시 도시데이터 API 통신 중 예외가 발생했습니다 (URL: " + targetUri + ")");
         }
     }
 }
