@@ -2,7 +2,6 @@ package com.backtoback.reseat.domain.admin.ticket.controller;
 
 import java.time.LocalDate;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 
@@ -65,8 +64,15 @@ public interface AdminTicketControllerDocs {
         }
     )
     ResponseEntity<com.backtoback.reseat.global.common.ApiResponse<PageResponse<AdminUserTicketResponse>>> getUserTickets(
-        @Parameter(description = "회원 ID", example = "1001", required = true) Long userId,
-        @Parameter(description = "티켓 상태 필터", example = "ISSUED") TicketStatus status,
+        @Parameter(
+            description = "회원 ID",
+            example = "1001",
+            required = true
+        ) Long userId,
+        @Parameter(
+            description = "티켓 상태 필터",
+            example = "ISSUED"
+        ) TicketStatus status,
         Pageable pageable
     );
 
@@ -110,7 +116,11 @@ public interface AdminTicketControllerDocs {
         }
     )
     ResponseEntity<com.backtoback.reseat.global.common.ApiResponse<AdminTicketCancelResponse>> cancelTicketByAdmin(
-        @Parameter(description = "취소할 티켓 ID", example = "9051", required = true) Long ticketId,
+        @Parameter(
+            description = "취소할 티켓 ID",
+            example = "9051",
+            required = true
+        ) Long ticketId,
         AdminTicketCancelRequest request
     );
 
@@ -210,7 +220,11 @@ public interface AdminTicketControllerDocs {
         }
     )
     ResponseEntity<com.backtoback.reseat.global.common.ApiResponse<AdminTicketQrReissueResponse>> reissueQrToken(
-        @Parameter(description = "티켓 ID", example = "9051", required = true) Long ticketId
+        @Parameter(
+            description = "티켓 ID",
+            example = "9051",
+            required = true
+        ) Long ticketId
     );
 
     @Operation(
@@ -243,10 +257,22 @@ public interface AdminTicketControllerDocs {
         }
     )
     ResponseEntity<com.backtoback.reseat.global.common.ApiResponse<PageResponse<AdminUserTicketResponse>>> searchTickets(
-        @Parameter(description = "회원 ID(선택)", example = "1001") Long userId,
-        @Parameter(description = "티켓 상태 필터(선택)", example = "REFUND_FAILED") TicketStatus status,
-        @Parameter(description = "경기일 시작(선택)", example = "2026-09-01") LocalDate gameDateFrom,
-        @Parameter(description = "경기일 끝(선택)", example = "2026-09-30") LocalDate gameDateTo,
+        @Parameter(
+            description = "회원 ID(선택)",
+            example = "1001"
+        ) Long userId,
+        @Parameter(
+            description = "티켓 상태 필터(선택)",
+            example = "REFUND_FAILED"
+        ) TicketStatus status,
+        @Parameter(
+            description = "경기일 시작(선택)",
+            example = "2026-09-01"
+        ) LocalDate gameDateFrom,
+        @Parameter(
+            description = "경기일 끝(선택)",
+            example = "2026-09-30"
+        ) LocalDate gameDateTo,
         Pageable pageable
     );
 
@@ -304,7 +330,11 @@ public interface AdminTicketControllerDocs {
         }
     )
     ResponseEntity<com.backtoback.reseat.global.common.ApiResponse<AdminTicketBulkCancelResponse>> cancelTicketsByGame(
-        @Parameter(description = "경기 ID", example = "1042", required = true) Long gameId,
+        @Parameter(
+            description = "경기 ID",
+            example = "1042",
+            required = true
+        ) Long gameId,
         AdminTicketBulkCancelRequest request
     );
 }

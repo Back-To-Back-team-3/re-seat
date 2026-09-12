@@ -1,6 +1,5 @@
 package com.backtoback.reseat.domain.ticket.controller;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 
@@ -48,7 +47,10 @@ public interface TicketControllerDocs {
     )
     ResponseEntity<com.backtoback.reseat.global.common.ApiResponse<PageResponse<TicketListResponse>>> getMyTickets(
         @Parameter(hidden = true) CustomUserDetails userDetails,
-        @Parameter(description = "티켓 상태 필터", example = "ISSUED") TicketStatus status,
+        @Parameter(
+            description = "티켓 상태 필터",
+            example = "ISSUED"
+        ) TicketStatus status,
         Pageable pageable
     );
 
@@ -82,7 +84,11 @@ public interface TicketControllerDocs {
     )
     ResponseEntity<com.backtoback.reseat.global.common.ApiResponse<TicketDetailResponse>> getTicket(
         @Parameter(hidden = true) CustomUserDetails userDetails,
-        @Parameter(description = "티켓 ID", example = "9051", required = true) Long ticketId
+        @Parameter(
+            description = "티켓 ID",
+            example = "9051",
+            required = true
+        ) Long ticketId
     );
 
     @Operation(
@@ -142,7 +148,11 @@ public interface TicketControllerDocs {
     )
     ResponseEntity<com.backtoback.reseat.global.common.ApiResponse<TicketCancelResponse>> cancelTicket(
         @Parameter(hidden = true) CustomUserDetails userDetails,
-        @Parameter(description = "취소할 티켓 ID", example = "9051", required = true) Long ticketId
+        @Parameter(
+            description = "취소할 티켓 ID",
+            example = "9051",
+            required = true
+        ) Long ticketId
     );
 
     @Operation(
@@ -180,6 +190,10 @@ public interface TicketControllerDocs {
     )
     ResponseEntity<com.backtoback.reseat.global.common.ApiResponse<TicketCancelResponse>> retryCancelTicket(
         @Parameter(hidden = true) CustomUserDetails userDetails,
-        @Parameter(description = "재시도할 티켓 ID", example = "9051", required = true) Long ticketId
+        @Parameter(
+            description = "재시도할 티켓 ID",
+            example = "9051",
+            required = true
+        ) Long ticketId
     );
 }
