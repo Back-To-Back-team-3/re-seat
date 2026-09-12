@@ -62,7 +62,7 @@ public class GameController implements GameControllerDocs {
             direction = Sort.Direction.ASC
         ) Pageable pageable
     ) {
-        GameSearchCondition condition = new GameSearchCondition(homeTeamId, awayTeamId, from, to, bookingStatus);
+        GameSearchCondition condition = new GameSearchCondition(homeTeamId, awayTeamId, null, from, to, bookingStatus);
         Page<GameListResponse> response = gameQueryService.getGames(condition, pageable);
         return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success("경기 목록 조회 성공", PageResponse.of(response)));
     }
