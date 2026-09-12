@@ -75,4 +75,78 @@ public interface AdmissionTokenRepository extends JpaRepository<AdmissionToken, 
         @Param("userId") Long userId,
         @Param("status") AdmissionTokenStatus status
     );
+
+    /**
+     * 기준 시간에 실제 사용할 수 있는 경기별 활성 Queue-Token 수를 조회한다.
+     * <p>전체 만료시간과 최초 좌석 탐색 만료 조건을 함께 확인한다.</p>
+     *
+     * @param gameId 조회할 경기 ID
+     * @param status 조회할 입장 토큰 상태
+     * @param now 유효 여부를 판단할 시간
+     * @return 사용할 수 있는 Queue-Token 수
+     */
+    @Query("""
+        SELECT COUNT(at)
+        FROM AdmissionToken at
+        WHERE at.game.id = :gameId
+        AND at.status = :status
+        AND at.expiresAt > :now
+        AND (
+            at.seatBrowsingCompletedAt IS NOT NULL
+            OR at.seatBrowsingExpiresAt > :now
+        )
+        """)
+    long countUsableByGameId(
+        @Param("gameId") Long gameId,
+        @Param("status") AdmissionTokenStatus status,
+        @Param("now") LocalDateTime now
+    );
+
+    /**
+     * 경기와 발급 시간 범위에 해당하는 Queue-Token 수를 조회한다.
+     *
+     * @param gameId 조회할 경기 ID
+     * @param from 포함할 조회 시작 시간
+     * @param toExclusive 포함하지 않을 조회 종료 시간
+     * @return 조회 기간에 발급된 Queue-Token 수
+     */
+    @Query("""
+        SELECT COUNT(at)
+        FROM AdmissionToken at
+        WHERE at.game.id = :gameId
+        AND at.issuedAt >= :from
+        AND at.issuedAt < :toExclusive
+        """)
+    long countIssuedByGameIdAndPeriod(
+        @Param("gameId") Long gameId,
+        @Param("from") LocalDateTime from,
+        @Param("toExclusive") LocalDateTime toExclusive
+    );
+
+    /**
+     * 경기와 발급 시간 범위에 해당하는 Queue-Token 수를 일별로 집계한다.
+     *
+     * @param gameId 조회할 경기 ID
+     * @param from 포함할 조회 시작 시간
+     * @param toExclusive 포함하지 않을 조회 종료 시간
+     * @return 날짜별 Queue-Token 발급 수
+     */
+    @Query(
+        value = """
+            SELECT CAST(at.issued_at AS DATE) AS admissionDate,
+                   COUNT(*) AS admittedCount
+            FROM admission_tokens at
+            WHERE at.game_id = :gameId
+            AND at.issued_at >= :from
+            AND at.issued_at < :toExclusive
+            GROUP BY CAST(at.issued_at AS DATE)
+            ORDER BY CAST(at.issued_at AS DATE)
+            """,
+        nativeQuery = true
+    )
+    List<AdmissionMetricDailyProjection> findDailyAdmissionMetrics(
+        @Param("gameId") Long gameId,
+        @Param("from") LocalDateTime from,
+        @Param("toExclusive") LocalDateTime toExclusive
+    );
 }

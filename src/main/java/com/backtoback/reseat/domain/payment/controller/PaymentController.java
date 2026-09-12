@@ -51,11 +51,15 @@ public class PaymentController implements PaymentControllerDocs {
         @AuthenticationPrincipal CustomUserDetails userDetails,
         @PathVariable Long paymentId,
         @RequestHeader("Idempotency-Key") String idempotencyKey,
+        @RequestHeader(
+            value = "Queue-Token",
+            required = false
+        ) String queueToken,
         @Valid @RequestBody PaymentCompleteRequest request
     ) {
         validateIdempotencyKeyHeader(idempotencyKey);
         PaymentCompleteResponse response
-            = paymentService.completePayment(userDetails.getId(), paymentId, idempotencyKey, request);
+            = paymentService.completePayment(userDetails.getId(), paymentId, idempotencyKey, queueToken, request);
 
         return ResponseEntity.ok(ApiResponse.success("결제 승인 처리 완료", response));
     }
@@ -66,11 +70,15 @@ public class PaymentController implements PaymentControllerDocs {
         @AuthenticationPrincipal CustomUserDetails userDetails,
         @PathVariable Long paymentId,
         @RequestHeader("Idempotency-Key") String idempotencyKey,
+        @RequestHeader(
+            value = "Queue-Token",
+            required = false
+        ) String queueToken,
         @Valid @RequestBody PaymentFailRequest request
     ) {
         validateIdempotencyKeyHeader(idempotencyKey);
         PaymentFailResponse response
-            = paymentService.failPayment(userDetails.getId(), paymentId, idempotencyKey, request);
+            = paymentService.failPayment(userDetails.getId(), paymentId, idempotencyKey, queueToken, request);
 
         return ResponseEntity.ok(ApiResponse.success("결제 실패 처리 완료", response));
     }
