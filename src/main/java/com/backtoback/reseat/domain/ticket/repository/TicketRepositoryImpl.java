@@ -3,6 +3,7 @@ package com.backtoback.reseat.domain.ticket.repository;
 import static com.backtoback.reseat.domain.ticket.entity.QTicket.ticket;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -76,7 +77,7 @@ public class TicketRepositoryImpl implements TicketRepositoryCustom {
     }
 
     private BooleanExpression gameDateLt(LocalDate to) {
-        return to == null ? null : ticket.game.gameAt.lt(to.plusDays(1).atStartOfDay());
+        return to == null ? null : ticket.game.gameAt.loe(to.atTime(LocalTime.MAX));
     }
 
     private OrderSpecifier<?>[] getOrderSpecifiers(Pageable pageable) {
