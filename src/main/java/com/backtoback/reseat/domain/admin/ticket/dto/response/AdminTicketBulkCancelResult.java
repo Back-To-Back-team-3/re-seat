@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.ticket.admin.dto.response;
+package com.backtoback.reseat.domain.admin.ticket.dto.response;
 
 public record AdminTicketBulkCancelResult(Long ticketId, boolean success, String message) {
 

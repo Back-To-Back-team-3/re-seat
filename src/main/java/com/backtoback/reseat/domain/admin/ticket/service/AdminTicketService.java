@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.ticket.admin.service;
+package com.backtoback.reseat.domain.admin.ticket.service;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,13 +8,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.backtoback.reseat.domain.ticket.admin.dto.request.AdminTicketCancelRequest;
-import com.backtoback.reseat.domain.ticket.admin.dto.request.TicketSearchCondition;
-import com.backtoback.reseat.domain.ticket.admin.dto.response.AdminTicketBulkCancelResponse;
-import com.backtoback.reseat.domain.ticket.admin.dto.response.AdminTicketBulkCancelResult;
-import com.backtoback.reseat.domain.ticket.admin.dto.response.AdminTicketCancelResponse;
-import com.backtoback.reseat.domain.ticket.admin.dto.response.AdminTicketQrReissueResponse;
-import com.backtoback.reseat.domain.ticket.admin.dto.response.AdminUserTicketResponse;
+import com.backtoback.reseat.domain.admin.ticket.dto.request.AdminTicketCancelRequest;
+import com.backtoback.reseat.domain.admin.ticket.dto.request.TicketSearchCondition;
+import com.backtoback.reseat.domain.admin.ticket.dto.response.AdminTicketBulkCancelResponse;
+import com.backtoback.reseat.domain.admin.ticket.dto.response.AdminTicketBulkCancelResult;
+import com.backtoback.reseat.domain.admin.ticket.dto.response.AdminTicketCancelResponse;
+import com.backtoback.reseat.domain.admin.ticket.dto.response.AdminTicketQrReissueResponse;
+import com.backtoback.reseat.domain.admin.ticket.dto.response.AdminUserTicketResponse;
 import com.backtoback.reseat.domain.ticket.entity.Ticket;
 import com.backtoback.reseat.domain.ticket.entity.TicketStatus;
 import com.backtoback.reseat.domain.ticket.repository.TicketRepository;

@@ -11,7 +11,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
-import com.backtoback.reseat.domain.ticket.admin.dto.request.TicketSearchCondition;
+import com.backtoback.reseat.domain.admin.ticket.dto.request.TicketSearchCondition;
 import com.backtoback.reseat.domain.ticket.entity.Ticket;
 import com.backtoback.reseat.domain.ticket.entity.TicketStatus;
 import com.querydsl.core.types.Order;

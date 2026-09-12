@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.ticket.admin.dto.response;
+package com.backtoback.reseat.domain.admin.ticket.dto.response;
 
 import com.backtoback.reseat.domain.ticket.entity.Ticket;
 
