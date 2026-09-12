@@ -1,20 +1,16 @@
 "use client";
 
 import {useState} from "react";
+import {ArrowLeft, ArrowRight, RefreshCw, TicketCheck} from "lucide-react";
 
+import {DeadlinePanel} from "@/components/booking/deadline-panel";
 import {Alert} from "@/components/common/alert";
-import {Countdown} from "@/components/common/countdown";
+import {Button} from "@/components/ui/button";
 import {formatPrice} from "@/lib/currency";
 import {isDeadlineExpired} from "@/lib/date";
 import type {GameSummary} from "@/types/game";
 import type {OrderResponse} from "@/types/order";
 import type {PaymentResponse} from "@/types/payment";
-
-const PRIMARY_BUTTON =
-    "inline-flex min-h-11 items-center justify-center gap-3.5 rounded-control border border-brand bg-brand px-[22px] text-[13px] font-extrabold text-white shadow-[0_8px_20px_rgba(224,53,53,0.2)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-[0.48]";
-
-const OUTLINE_BUTTON =
-    "inline-flex min-h-11 items-center justify-center gap-3.5 rounded-control border border-border bg-surface px-[18px] text-[13px] font-extrabold text-foreground transition-colors hover:border-foreground disabled:cursor-not-allowed disabled:opacity-[0.48]";
 
 type PaymentScreenProps = {
     game: GameSummary | null;
@@ -58,7 +54,11 @@ export function PaymentScreen({
     if (error) return <Alert message={error} variant="error"/>;
     if (!payment) return <p>결제 정보를 불러오고 있습니다.</p>;
 
-    const approved = payment.status === "APPROVED" || order?.status === "PAID";
+    const approved =
+        payment.status === "APPROVED" ||
+        payment.status === "PARTIALLY_CANCELED" ||
+        order?.status === "PAID" ||
+        order?.status === "PARTIALLY_CANCELED";
     const deadlineExpired =
         (deadline !== null && expiredDeadline === deadline) ||
         isDeadlineExpired(deadline);
@@ -68,14 +68,16 @@ export function PaymentScreen({
             <div
                 className="w-[min(660px,100%)] rounded-modal border border-border bg-surface p-12 text-center shadow-card">
                 {!approved && (
-                    <button
-                        className="mb-6 flex min-h-9 w-fit items-center border-0 bg-transparent p-0 text-[10px] font-extrabold text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-[0.45]"
+                    <Button
+                        className="mb-6 px-0 text-[10px] text-muted-foreground"
                         disabled={busy}
                         onClick={onBack}
-                        type="button"
+                        size="sm"
+                        variant="ghost"
                     >
-                        ← 주문으로 돌아가기
-                    </button>
+                        <ArrowLeft aria-hidden="true"/>
+                        주문으로 돌아가기
+                    </Button>
                 )}
 
                 <div
@@ -102,25 +104,15 @@ export function PaymentScreen({
                 </p>
 
                 {!approved && deadline && (
-                    <div
-                        className={`m-3.5 flex items-center justify-between gap-4 rounded-[10px] border px-4 py-3.5 text-sm font-bold ${
-                            deadlineExpired
-                                ? "border-brand/40 bg-brand/12"
-                                : "border-[color-mix(in_srgb,var(--brand)_28%,var(--border))] bg-brand/[0.07]"
-                        }`}
-                    >
-                        <span>결제 남은 시간</span>
-                        <Countdown
-                            onExpire={() => setExpiredDeadline(deadline)}
-                            target={deadline}
-                        />
-                    </div>
-                )}
-
-                {!approved && deadlineExpired && (
-                    <p className="mt-[10px] mr-3.5 mb-3.5 ml-3.5 text-center text-xs font-bold text-brand">
-                        결제시간이 만료되었습니다. 주문 상태를 확인해주세요.
-                    </p>
+                    <DeadlinePanel
+                        className="m-3.5"
+                        expired={deadlineExpired}
+                        expiredMessage="결제시간이 만료되었습니다. 주문 상태를 확인해주세요."
+                        label="결제 남은 시간"
+                        messageClassName="mt-[10px] mr-3.5 mb-3.5 ml-3.5 text-center"
+                        onExpire={() => setExpiredDeadline(deadline)}
+                        target={deadline}
+                    />
                 )}
 
                 <div className="mb-6 grid rounded-[9px] border border-border bg-surface-soft px-5 py-[17px] text-left">
@@ -152,35 +144,31 @@ export function PaymentScreen({
 
                 {approved ? (
                     <div className="flex flex-wrap justify-center gap-2.5">
-                        <button
-                            className={PRIMARY_BUTTON}
-                            onClick={onTickets}
-                            type="button"
-                        >
-                            내 티켓 확인 →
-                        </button>
-                        <button className={OUTLINE_BUTTON} onClick={onGames} type="button">
+                        <Button onClick={onTickets}>
+                            <TicketCheck aria-hidden="true"/>
+                            내 티켓 확인
+                        </Button>
+                        <Button onClick={onGames} variant="outline">
                             경기 목록으로 돌아가기
-                        </button>
+                        </Button>
                     </div>
                 ) : (
                     <div className="flex justify-center gap-2.5">
-                        <button
-                            className={PRIMARY_BUTTON}
+                        <Button
                             disabled={payment.status !== "READY" || busy || deadlineExpired}
                             onClick={onOpenPayment}
-                            type="button"
                         >
-                            {deadlineExpired ? "결제 시간 만료" : "Toss 결제창 열기 →"}
-                        </button>
-                        <button
-                            className={OUTLINE_BUTTON}
+                            {deadlineExpired ? "결제 시간 만료" : "Toss 결제창 열기"}
+                            {!deadlineExpired && <ArrowRight aria-hidden="true"/>}
+                        </Button>
+                        <Button
                             disabled={!order || busy}
                             onClick={onRefreshOrder}
-                            type="button"
+                            variant="outline"
                         >
+                            <RefreshCw aria-hidden="true"/>
                             주문 상태 확인
-                        </button>
+                        </Button>
                     </div>
                 )}
             </div>

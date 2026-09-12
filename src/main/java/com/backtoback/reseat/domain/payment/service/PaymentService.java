@@ -1,22 +1,16 @@
 package com.backtoback.reseat.domain.payment.service;
 
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.backtoback.reseat.domain.order.entity.OrderItem;
-import com.backtoback.reseat.domain.order.exception.OrderExpiredException;
-import com.backtoback.reseat.domain.order.repository.OrderItemRepository;
 import com.backtoback.reseat.domain.order.service.OrderService;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentFailRequest;
@@ -29,21 +23,15 @@ import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentCancel;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
-import com.backtoback.reseat.domain.payment.exception.PaymentAlreadyFinalizedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentCancelStatusUnknownException;
-import com.backtoback.reseat.domain.payment.exception.PaymentConfirmStatusUnknownException;
+import com.backtoback.reseat.domain.payment.exception.PaymentLocalApplyFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentLockFailedException;
 import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
-import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
-import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
-import com.backtoback.reseat.domain.payment.pg.toss.exception.TossPaymentStatusUnknownException;
 import com.backtoback.reseat.domain.payment.repository.PaymentCancelRepository;
 import com.backtoback.reseat.domain.payment.repository.PaymentRecoveryTaskRepository;
 import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
-import com.backtoback.reseat.domain.ticket.dto.response.TicketListResponse;
+import com.backtoback.reseat.domain.queue.service.AdmissionTokenService;
 import com.backtoback.reseat.domain.ticket.entity.Ticket;
-import com.backtoback.reseat.domain.ticket.repository.TicketRepository;
-import com.backtoback.reseat.domain.ticket.service.TicketService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -59,15 +47,11 @@ public class PaymentService {
     private final PaymentCancelRepository paymentCancelRepository;
     private final PaymentRecoveryTaskRepository paymentRecoveryTaskRepository;
     private final PaymentCreationService paymentCreationService;
-    private final PaymentOrderPolicy paymentOrderPolicy;
-    private final TossPaymentClient tossPaymentClient;
+    private final PaymentApprovalService paymentApprovalService;
     private final PaymentServiceValidator paymentValidator;
     private final RedissonClient redissonClient;
     private final OrderService orderService;
-    // TicketService가 PaymentService를 참조하므로 도메인 의존성을 정리하기 전까지 지연 조회한다.
-    private final ObjectProvider<TicketService> ticketServiceProvider;
-    private final OrderItemRepository orderItemRepository;
-    private final TicketRepository ticketRepository;
+    private final AdmissionTokenService admissionTokenService;
 
     /**
      * 주문 기준 결제를 요청한다.
@@ -110,103 +94,35 @@ public class PaymentService {
      * @param userId 현재 사용자 ID
      * @param paymentId 결제 ID
      * @param idempotencyKey 현재 결제 시도의 활성 멱등키
+     * @param queueToken 현재 예매 흐름에서 발급된 Queue-Token
      * @param request 토스가 클라이언트에 돌려준 paymentKey/orderId/amount
      * @return 확정된 결제 결과
      */
-    @Transactional(
-        noRollbackFor = {
-            OrderExpiredException.class,
-            PaymentConfirmStatusUnknownException.class
-        }
-    )
     public PaymentCompleteResponse completePayment(
         Long userId,
         Long paymentId,
         String idempotencyKey,
+        String queueToken,
         PaymentCompleteRequest request
     ) {
-        // 로컬 결제를 잠그고 현재 결제 시도의 콜백인지 확인한다.
-        Payment payment = getOwnedPaymentWithPessimisticWriteLock(userId, paymentId);
-        paymentValidator.validateActiveIdempotencyKey(payment, idempotencyKey);
-        if (payment.isApproved()) {
-            return approvedResponse(payment);
-        }
-        if (!payment.isReady()) {
-            throw new PaymentAlreadyFinalizedException();
-        }
-
-        // READY 결제만 Toss 승인 요청 전에 콜백 주문·금액을 검증한다.
-        paymentValidator.validateConfirmable(payment, request.getOrderId(), request.getAmount());
-        paymentOrderPolicy.ensurePayable(payment, payment.getOrder());
-        payment.assignPgPaymentKey(request.getPaymentKey());
-
-        // Toss에 최종 승인을 요청하고, 응답을 받지 못하면 클라이언트 내부에서 단건 재조회로 상태를 확인한다.
-        TossPaymentResponse response;
         try {
-            response = tossPaymentClient.confirm(request.getPaymentKey(), request.getOrderId(), request.getAmount());
-        } catch (TossPaymentStatusUnknownException e) {
+            return paymentApprovalService.approve(userId, paymentId, idempotencyKey, queueToken, request);
+        } catch (PaymentLocalApplyFailedException e) {
             log
-                .warn(
-                    "토스 결제 승인 상태 확인 불가 - 복구 작업 등록 (paymentId={}, paymentKey={})",
-                    paymentId,
-                    request.getPaymentKey(),
+                .error(
+                    "토스 승인 후 로컬 반영 실패 - 승인 취소 보상 처리 시작 (paymentId={}, orderId={})",
+                    e.getPaymentId(),
+                    e.getOrderId(),
                     e
                 );
-            payment.fail("토스 결제 승인 상태를 확인할 수 없습니다.", LocalDateTime.now());
-            paymentRecoveryTaskRepository.save(PaymentRecoveryTask.createConfirmUnknown(payment));
-            orderService.failOrder(payment.getOrder().getId());
-            throw new PaymentConfirmStatusUnknownException();
+            // 승인 트랜잭션이 롤백된 뒤 별도 트랜잭션으로 PG 승인 취소 작업을 보존한다.
+            boolean compensationRegistered
+                = paymentApprovalService.registerApprovalCompensation(e.getPaymentId(), e.getPaymentKey(), queueToken);
+            if (compensationRegistered) {
+                failOrderAfterLocalApplyFailure(e.getOrderId());
+            }
+            throw e;
         }
-
-        // 승인 API 응답은 받았지만 승인 완료 상태가 아니라면 로컬 결제를 실패로 닫는다.
-        if (!response.isApproved()) {
-            String status = response.getStatus();
-            log.warn("토스 결제 승인 상태 불일치 (paymentId={}, tossStatus={})", paymentId, status);
-            String failReason
-                = status == null || status.isBlank() ? "토스 결제 승인 상태가 비어 있습니다."
-                    : "토스 결제 승인 상태가 완료가 아닙니다. status=" + status;
-            payment.fail(failReason, LocalDateTime.now());
-            orderService.failOrder(payment.getOrder().getId());
-            return PaymentCompleteResponse.from(payment, List.of());
-        }
-
-        // Toss 승인이 확인됐으므로 로컬 결제에 PG 키·수단·승인 시각을 반영한다.
-        payment.assignPgPaymentKey(response.getPaymentKey());
-        payment.approve(response.getMethod(), resolveApprovedAt(response.getApprovedAt()));
-        orderService.completeOrder(payment.getOrder().getId());
-
-        return approvedResponse(payment);
-    }
-
-    /**
-     * 승인된 결제의 주문 항목별 티켓을 확인하고 응답한다.
-     */
-    private PaymentCompleteResponse approvedResponse(Payment payment) {
-        List<OrderItem> orderItems = orderItemRepository.findByOrder_Id(payment.getOrder().getId());
-        List<TicketListResponse> tickets = findIssuedTickets(orderItems);
-        if (tickets.size() < orderItems.size()) {
-            tickets
-                = ticketServiceProvider
-                    .getObject()
-                    .issue(payment.getOrder())
-                    .stream()
-                    .map(TicketListResponse::from)
-                    .toList();
-        }
-
-        return PaymentCompleteResponse.from(payment, tickets);
-    }
-
-    /**
-     * 기존 주문 항목 조회 메서드와 티켓 단건 조회 메서드로 발급 티켓 응답을 구성한다.
-     */
-    private List<TicketListResponse> findIssuedTickets(List<OrderItem> orderItems) {
-        return orderItems
-            .stream()
-            .map(orderItem -> ticketRepository.findByOrderItemId(orderItem.getId()))
-            .flatMap(Optional::stream)
-            .map(TicketListResponse::from)
-            .toList();
     }
 
     /**
@@ -215,6 +131,7 @@ public class PaymentService {
      * @param userId 현재 사용자 ID
      * @param paymentId 결제 ID
      * @param idempotencyKey 현재 결제 시도의 활성 멱등키
+     * @param queueToken 현재 예매 흐름에서 발급된 Queue-Token
      * @param request 토스가 클라이언트에 돌려준 실패 code/message/orderId
      * @return 실패 처리된 결제 결과
      */
@@ -223,6 +140,7 @@ public class PaymentService {
         Long userId,
         Long paymentId,
         String idempotencyKey,
+        String queueToken,
         PaymentFailRequest request
     ) {
         Payment payment = getOwnedPaymentWithPessimisticWriteLock(userId, paymentId);
@@ -233,9 +151,12 @@ public class PaymentService {
 
         paymentValidator.validateFailable(payment);
         paymentValidator.validatePgOrderId(payment, request.getOrderId());
+        Long gameId = payment.getOrder().getReservation().getGame().getId();
+        admissionTokenService.validateToken(userId, gameId, queueToken);
 
         payment.fail("[" + request.getCode() + "] " + request.getMessage(), LocalDateTime.now());
         orderService.failOrder(payment.getOrder().getId());
+        admissionTokenService.consumeToken(userId, gameId, queueToken);
 
         return PaymentFailResponse.from(payment);
     }
@@ -327,20 +248,20 @@ public class PaymentService {
         return payment;
     }
 
-    // ===== conversion helpers =====
-
-    /**
-     * 토스 승인 시각 문자열을 로컬 날짜시간으로 변환하고, 값이 없으면 현재 시각을 사용한다.
-     */
-    private LocalDateTime resolveApprovedAt(String approvedAt) {
-        return approvedAt != null ? OffsetDateTime.parse(approvedAt).toLocalDateTime() : LocalDateTime.now();
-    }
-
     /**
      * 주문별 결제 생성 락 키를 반환한다.
      */
     private String paymentCreationLockKey(Long orderId) {
         return "payment:create:order:" + orderId;
+    }
+
+    /** 승인 보상 작업 등록 후 주문 실패 전이를 시도하고, 실패는 복구 작업에서 다시 처리할 수 있도록 기록한다. */
+    private void failOrderAfterLocalApplyFailure(Long orderId) {
+        try {
+            orderService.failOrder(orderId);
+        } catch (RuntimeException e) {
+            log.error("승인 보상 작업 등록 후 주문 실패 전이 실패 - 복구 작업에서 재시도 (orderId={})", orderId, e);
+        }
     }
 
 }

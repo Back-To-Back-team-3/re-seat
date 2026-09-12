@@ -66,7 +66,9 @@ public enum ErrorCode {
     QUEUE_ENTRY_EVENT_USER_ID_INVALID(HttpStatus.BAD_REQUEST, "대기열 진입 이벤트의 사용자 ID가 올바르지 않습니다."),
     QUEUE_ENTRY_EVENT_REQUESTED_AT_REQUIRED(HttpStatus.BAD_REQUEST, "대기열 진입 요청 시간이 누락되었습니다."),
     QUEUE_ADMISSION_INTERRUPTED(HttpStatus.SERVICE_UNAVAILABLE, "입장 허용 처리 중 스레드가 중단되었습니다."),
+    QUEUE_REDIS_KEY_INVALID(HttpStatus.SERVICE_UNAVAILABLE, "Redis 대기열 Key가 올바르지 않습니다."),
     QUEUE_REDIS_MEMBER_INVALID(HttpStatus.SERVICE_UNAVAILABLE, "Redis 대기열 사용자 정보가 올바르지 않습니다."),
+    QUEUE_ADMISSION_METRIC_SEARCH_CONDITION_INVALID(HttpStatus.BAD_REQUEST, "입장 지표 조회 조건이 올바르지 않습니다."),
 
     // 좌석 (seats, game_seats)
     SEAT_NOT_FOUND(HttpStatus.NOT_FOUND, "좌석을 찾을 수 없습니다."),
@@ -105,6 +107,7 @@ public enum ErrorCode {
     PAYMENT_ALREADY_FINALIZED(HttpStatus.CONFLICT, "이미 처리 완료된 결제입니다."),
     PAYMENT_CALLBACK_MISMATCH(HttpStatus.BAD_REQUEST, "결제 콜백 정보가 결제 내역과 일치하지 않습니다."),
     PAYMENT_CONFIRM_STATUS_UNKNOWN(HttpStatus.BAD_GATEWAY, "PG 결제 승인 상태를 확인할 수 없습니다."),
+    PAYMENT_LOCAL_APPLY_FAILED(HttpStatus.BAD_GATEWAY, "PG 승인 후 결제 상태 반영에 실패하여 환불을 진행합니다."),
     PAYMENT_CANCEL_NOT_ALLOWED(HttpStatus.CONFLICT, "취소할 수 없는 결제 상태입니다."),
     PAYMENT_PG_KEY_MISSING(HttpStatus.CONFLICT, "PG 결제 키가 없어 결제를 취소할 수 없습니다."),
     PAYMENT_CANCEL_STATUS_UNKNOWN(HttpStatus.BAD_GATEWAY, "PG 결제 취소 상태를 확인할 수 없습니다."),

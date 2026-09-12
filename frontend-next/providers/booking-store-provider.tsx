@@ -1,8 +1,14 @@
 "use client";
 
-import {createContext, type ReactNode, useContext, useState,} from "react";
+import {createContext, type ReactNode, useContext, useEffect, useState,} from "react";
 import {useStore} from "zustand";
 
+import {
+    clearBookingProgress,
+    loadBookingProgress,
+    saveBookingProgress,
+    selectBookingProgress,
+} from "@/lib/booking-progress";
 import {type BookingState, type BookingStore, createBookingStore,} from "@/stores/booking-store";
 
 const BookingStoreContext = createContext<BookingStore | null>(null);
@@ -15,6 +21,22 @@ const BookingStoreContext = createContext<BookingStore | null>(null);
  */
 export function BookingStoreProvider({children}: { children: ReactNode }) {
     const [store] = useState(() => createBookingStore());
+
+    useEffect(() => {
+        // 브라우저가 마운트된 뒤에만 sessionStorage를 읽어 서버 렌더링과 충돌하지 않게 한다.
+        store.getState().hydrate(loadBookingProgress());
+
+        return store.subscribe((state) => {
+            if (!state.hydrated) return;
+
+            const progress = selectBookingProgress(state);
+            if (progress.selectedGameId === null) {
+                clearBookingProgress();
+                return;
+            }
+            saveBookingProgress(progress);
+        });
+    }, [store]);
 
     return (
         <BookingStoreContext.Provider value={store}>

@@ -5,6 +5,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.seatinventory.exception.GameSeatNotFoundException;
+import com.backtoback.reseat.domain.seatinventory.exception.InvalidStateTransitionException;
 import com.backtoback.reseat.domain.seatinventory.repository.GameSeatRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -19,7 +20,9 @@ public class GameSeatStatusService {
     private final GameSeatRepository gameSeatRepository;
 
     /**
-     * 경기 좌석을 예매 가능 상태로 되돌린다.
+     * 선점(HELD) 좌석을 예매 가능 상태로 되돌린다.
+     * <p>HELD 상태가 아닌 좌석에 호출하면 {@link InvalidStateTransitionException}이 발생한다.
+     * 결제 완료(SOLD) 좌석의 환불 반환은 {@link #refundSeat(Long)}을 사용한다.</p>
      *
      * @param gameSeatId 예매 가능 상태로 변경할 경기 좌석 ID
      */
@@ -27,7 +30,7 @@ public class GameSeatStatusService {
     public void releaseSeat(Long gameSeatId) {
 
         GameSeat gameSeat = gameSeatRepository.findById(gameSeatId).orElseThrow(GameSeatNotFoundException::new);
-        gameSeat.available();
+        gameSeat.release();
     }
 
     /**

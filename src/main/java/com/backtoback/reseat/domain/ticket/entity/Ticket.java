@@ -47,10 +47,6 @@ import lombok.NoArgsConstructor;
             columnNames = "order_item_id"
         ),
         @UniqueConstraint(
-            name = "uk_tickets_game_seat",
-            columnNames = "game_seat_id"
-        ),
-        @UniqueConstraint(
             name = "uk_tickets_qr_token",
             columnNames = "qr_token"
         )
@@ -302,6 +298,22 @@ public class Ticket extends BaseEntity {
             throw new InvalidTicketStateException();
         }
         this.status = TicketStatus.REFUND_PENDING;
+    }
+
+    /**
+     * QR 토큰을 재발급 / ISSUED 상태의 티켓만 가능
+     * <p>QR 유출·스캔 오류 등으로 기존 토큰을 무효화해야 할 때 관리자가 사용한다.</p>
+     *
+     * @param newQrToken 새로 발급할 QR 토큰
+     */
+    public void reissueQrToken(String newQrToken) {
+        if (newQrToken == null || newQrToken.isBlank()) {
+            throw new IllegalArgumentException("newQrToken은 필수입니다.");
+        }
+        if (this.status != TicketStatus.ISSUED) {
+            throw new InvalidTicketStateException();
+        }
+        this.qrToken = newQrToken;
     }
 
     /**

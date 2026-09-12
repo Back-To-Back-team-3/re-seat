@@ -99,8 +99,8 @@ public class QueueService {
                 .build();
         }
 
-        String waitingQueueRedisKey = waitingQueueRedisKey(gameId);
-        String redisMember = redisMember(userId);
+        String waitingQueueRedisKey = QueueRedisKey.waiting(gameId);
+        String redisMember = QueueRedisKey.member(userId);
         Long redisRank = queueZSet.rank(waitingQueueRedisKey, redisMember);
 
         // Redis에 없으면 현재 대기열에 등록된 사용자가 아님
@@ -165,9 +165,9 @@ public class QueueService {
 
         ZSetOperations<String, String> queueZSet = getZSetOperations();
 
-        String waitingQueueRedisKey = waitingQueueRedisKey(gameId);
-        String redisMember = redisMember(userId);
-        String queueEntryKey = queueEntryKey(gameId, userId);
+        String waitingQueueRedisKey = QueueRedisKey.waiting(gameId);
+        String redisMember = QueueRedisKey.member(userId);
+        String queueEntryKey = QueueRedisKey.entry(gameId, userId);
 
         // 대기 취소와 다른 경기 진입이 동시에 처리되지 않도록 사용자 행을 잠근다.
         queueUserRepository.findByIdWithPessimisticWriteLock(userId).orElseThrow(UserNotFoundException::new);
@@ -248,6 +248,7 @@ public class QueueService {
      * <p>사용자 행에 비관적 락을 적용하여 동일 사용자의 여러 경기 대기열 등록을 순서대로 처리한다.</p>
      * <p>사용자가 정책상 등록할 수 없는 요청은 예외 대신 거절 사유로 반환하여
      * Consumer가 Redis 결과를 저장하고 이벤트 처리를 완료할 수 있게 한다.</p>
+     * <p>사용 가능한 현재 경기 토큰 없이 남은 입장 허용 이력은 같은 요청에서 재진입 상태로 복구한다.</p>
      *
      * @param event 대기열 진입 요청 이벤트
      * @return 사용자에게 전달할 거절 사유, 거절하지 않으면 빈 값
@@ -275,9 +276,9 @@ public class QueueService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime requestedAt = event.requestedAt().atZone(ZoneId.systemDefault()).toLocalDateTime();
 
-        String waitingQueueRedisKey = waitingQueueRedisKey(event.gameId());
-        String redisMember = redisMember(event.userId());
-        String queueEntryKey = queueEntryKey(event.gameId(), event.userId());
+        String waitingQueueRedisKey = QueueRedisKey.waiting(event.gameId());
+        String redisMember = QueueRedisKey.member(event.userId());
+        String queueEntryKey = QueueRedisKey.entry(event.gameId(), event.userId());
         long score = event.requestedAt().toEpochMilli();
 
         ActiveTokenCheckResult activeTokenCheckResult
@@ -303,15 +304,23 @@ public class QueueService {
         // 동일 경기와 사용자의 DB 이력이 있으면 새로운 이력을 중복 생성하지 않는다.
         // 기존 상태가 WAITING이면 Consumer 재처리 과정에서 누락됐을 수 있는 Redis 대기열 정보만 복구한다.
         if (Objects.nonNull(existingHistory)) {
+            boolean currentAdmittedHistoryRecovered = false;
+
+            // reenter()는 CANCELED 상태에서만 실행할 수 있으므로 사용할 수 있는 토큰이 없는 ADMITTED 이력을 먼저 취소한다.
+            if (existingHistory.getStatus() == QueueEntryHistoryStatus.ADMITTED) {
+                existingHistory.cancel(now);
+                currentAdmittedHistoryRecovered = true;
+            }
+
             if (existingHistory.getStatus() == QueueEntryHistoryStatus.WAITING) {
                 addRedisQueueEntryIfAbsent(queueZSet, waitingQueueRedisKey, redisMember, score);
             }
 
             // 취소된 이력은 새 요청 시간으로 갱신하고 DB 커밋 후 Redis 점수도 덮어써 대기열 맨 뒤에 등록한다.
             if (existingHistory.getStatus() == QueueEntryHistoryStatus.CANCELED) {
-                // 이번 요청에서 토큰 만료로 취소됐거나 취소 시간보다 늦게 발행된 요청만 재진입으로 처리한다.
+                // 이번 요청에서 만료 관련 이력을 복구했거나 취소 시간보다 늦게 발행된 요청만 재진입으로 처리한다.
                 if (existingHistory.getCanceledAt().isBefore(requestedAt)
-                    || activeTokenCheckResult.currentQueueHistoryCanceled()) {
+                    || activeTokenCheckResult.currentQueueHistoryCanceled() || currentAdmittedHistoryRecovered) {
                     existingHistory.reenter(requestedAt);
                     // DB 커밋이 완료된 경우에만 Redis 대기 순서를 갱신하여 두 저장소의 상태 불일치를 방지한다.
                     TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -335,23 +344,6 @@ public class QueueService {
 
     private ZSetOperations<String, String> getZSetOperations() {
         return redisTemplate.opsForZSet();
-    }
-
-    // 경기별 대기열 Redis ZSet key: queue:waiting:game:{gameId}
-    private String waitingQueueRedisKey(Long gameId) {
-
-        return "queue:waiting:game:%d".formatted(gameId);
-    }
-
-    // 대기열 사용자: user:{userId}
-    private String redisMember(Long userId) {
-        return "user:" + userId;
-    }
-
-    // DB 대기 이력 식별 key: queue:entry:game:{gameId}:user:{userId}
-    private String queueEntryKey(Long gameId, Long userId) {
-
-        return "queue:entry:game:%d:user:%d".formatted(gameId, userId);
     }
 
     /**
@@ -505,7 +497,7 @@ public class QueueService {
         String currentQueueEntryKey
     ) {
 
-        String queueEntryKey = queueEntryKey(admissionToken.getGame().getId(), admissionToken.getUser().getId());
+        String queueEntryKey = QueueRedisKey.entry(admissionToken.getGame().getId(), admissionToken.getUser().getId());
 
         // 만료된 토큰의 입장 허용 이력을 취소해 동일 경기 대기열 재진입을 허용한다.
         Optional<QueueEntryHistory> admittedHistory

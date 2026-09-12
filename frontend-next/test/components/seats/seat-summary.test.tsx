@@ -45,7 +45,7 @@ describe("좌석 선택 요약", () => {
         );
 
         expect(
-            screen.getByRole("button", {name: "2석 선점하기 →"}),
+            screen.getByRole("button", {name: "2석 선점하기"}),
         ).toBeInTheDocument();
         expect(screen.getByText("25,000원")).toBeInTheDocument();
     });
@@ -66,7 +66,7 @@ describe("좌석 선택 요약", () => {
         );
 
         expect(
-            screen.getByRole("button", {name: "0석 선점하기 →"}),
+            screen.getByRole("button", {name: "0석 선점하기"}),
         ).toBeDisabled();
         expect(
             screen.getByText("좌석을 선택하면 이곳에 표시됩니다."),
@@ -89,7 +89,7 @@ describe("좌석 선택 요약", () => {
         );
 
         expect(
-            screen.getByRole("button", {name: "주문 정보 입력 →"}),
+            screen.getByRole("button", {name: "주문 정보 입력"}),
         ).toBeInTheDocument();
         expect(
             screen.getByRole("button", {name: "선점 해제"}),
@@ -134,7 +134,7 @@ describe("좌석 선택 요약", () => {
             />,
         );
 
-        expect(screen.getByRole("button", {name: "주문 정보 입력 →"})).toBeDisabled();
+        expect(screen.getByRole("button", {name: "주문 정보 입력"})).toBeDisabled();
         expect(screen.getByRole("button", {name: "선점 해제"})).toBeDisabled();
     });
 

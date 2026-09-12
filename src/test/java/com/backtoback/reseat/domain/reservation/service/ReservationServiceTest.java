@@ -19,6 +19,7 @@ import com.backtoback.reseat.domain.reservation.entity.ReservationSeat;
 import com.backtoback.reseat.domain.reservation.exception.ReservationAccessDeniedException;
 import com.backtoback.reseat.domain.reservation.exception.ReservationNotFoundException;
 import com.backtoback.reseat.domain.reservation.repository.ReservationRepository;
+import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.seatinventory.service.GameSeatStatusService;
 import com.backtoback.reseat.domain.user.entity.User;
@@ -34,6 +35,9 @@ class ReservationServiceTest {
 
     @Mock
     private ReservationRepository reservationRepository;
+
+    @Mock
+    private ReservationSeatRepository reservationSeatRepository;
 
     @Mock
     private GameSeatStatusService gameSeatStatusService;
@@ -104,7 +108,8 @@ class ReservationServiceTest {
         Reservation reservation = mock(Reservation.class);
         given(reservation.getUser()).willReturn(owner);
 
-        given(reservationRepository.findWithSeatsById(reservationId)).willReturn(Optional.of(reservation));
+        given(reservationRepository.findByIdWithPessimisticWriteLock(reservationId))
+            .willReturn(Optional.of(reservation));
 
         // when & then
         assertThatThrownBy(() -> reservationService.releaseHold(reservationId, intruderId))
@@ -133,9 +138,10 @@ class ReservationServiceTest {
 
         Reservation reservation = mock(Reservation.class);
         given(reservation.isCanceled()).willReturn(false);
-        given(reservation.getReservationSeats()).willReturn(List.of(rsA, rsB));
 
-        given(reservationRepository.findWithSeatsById(reservationId)).willReturn(Optional.of(reservation));
+        given(reservationRepository.findByIdWithPessimisticWriteLock(reservationId))
+            .willReturn(Optional.of(reservation));
+        given(reservationSeatRepository.findByReservation_Id(reservationId)).willReturn(List.of(rsA, rsB));
 
         // when
         reservationService.cancel(reservationId);
@@ -155,7 +161,8 @@ class ReservationServiceTest {
         Reservation reservation = mock(Reservation.class);
         given(reservation.isCanceled()).willReturn(true);
 
-        given(reservationRepository.findWithSeatsById(reservationId)).willReturn(Optional.of(reservation));
+        given(reservationRepository.findByIdWithPessimisticWriteLock(reservationId))
+            .willReturn(Optional.of(reservation));
 
         // when
         reservationService.cancel(reservationId);
@@ -163,6 +170,7 @@ class ReservationServiceTest {
         // then
         then(reservation).should(never()).cancel();
         then(gameSeatStatusService).shouldHaveNoInteractions();
+        then(reservationSeatRepository).shouldHaveNoInteractions();
     }
 
     /**
