@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.ticket.admin.dto.request;
+package com.backtoback.reseat.domain.admin.ticket.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 
