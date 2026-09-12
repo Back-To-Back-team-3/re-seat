@@ -37,7 +37,7 @@ public interface GameControllerDocs {
             - 홈팀, 원정팀, 날짜 범위, 예매 상태로 필터링 가능
             - 기본 페이지 크기: 20
             - 기본 정렬: gameAt ASC
-            - 허용 sort 필드: gameAt, bookingOpenAt, bookingCloseAt, id
+            - 허용 sort 필드: gameAt, bookingOpenAt, bookingCloseAt, id(gameId 별칭 허용)
             - 그 외 sort 필드는 무시되고 id ASC 보조정렬이 뒤에 붙음
             """,
         security = {}

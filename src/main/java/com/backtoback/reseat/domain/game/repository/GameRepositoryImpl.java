@@ -51,6 +51,7 @@ public class GameRepositoryImpl implements GameRepositoryCustom {
                 .where(
                     homeTeamIdEq(condition.homeTeamId()),
                     awayTeamIdEq(condition.awayTeamId()),
+                    stadiumIdEq(condition.stadiumId()),
                     gameAtGoe(condition.from()),
                     gameAtLt(condition.to()),
                     bookingStatusEq(condition.bookingStatus())
@@ -67,6 +68,7 @@ public class GameRepositoryImpl implements GameRepositoryCustom {
                 .where(
                     homeTeamIdEq(condition.homeTeamId()),
                     awayTeamIdEq(condition.awayTeamId()),
+                    stadiumIdEq(condition.stadiumId()),
                     gameAtGoe(condition.from()),
                     gameAtLt(condition.to()),
                     bookingStatusEq(condition.bookingStatus())
@@ -108,6 +110,17 @@ public class GameRepositoryImpl implements GameRepositoryCustom {
         }
 
         return game.awayTeam.id.eq(awayTeamId);
+    }
+
+    /**
+     * 구장 ID가 일치하는 경기를 조회한다.
+     */
+    private BooleanExpression stadiumIdEq(Long stadiumId) {
+        if (stadiumId == null) {
+            return null;
+        }
+
+        return game.stadium.id.eq(stadiumId);
     }
 
     /**
