@@ -196,6 +196,31 @@ public class GameSeat extends BaseEntity {
     }
 
     /**
+     * AVAILABLE → BLOCKED (관리자 판매 차단).
+     * <p>HELD·SOLD 좌석은 차단할 수 없다. 먼저 선점 해제·환불이 선행돼야 한다.
+     *
+     * @throws InvalidStateTransitionException AVAILABLE이 아닌 상태에서 호출 시
+     */
+    public void block() {
+        if (this.status != GameSeatStatus.AVAILABLE) {
+            throw new InvalidStateTransitionException();
+        }
+        this.status = GameSeatStatus.BLOCKED;
+    }
+
+    /**
+     * BLOCKED → AVAILABLE (관리자 차단 해제).
+     *
+     * @throws InvalidStateTransitionException BLOCKED가 아닌 상태에서 호출 시
+     */
+    public void unblock() {
+        if (this.status != GameSeatStatus.BLOCKED) {
+            throw new InvalidStateTransitionException();
+        }
+        this.status = GameSeatStatus.AVAILABLE;
+    }
+
+    /**
      * 선점 만료 시각 세팅. 해제 시 null로 초기화.
      */
     public void updateHoldExpiresAt(LocalDateTime holdExpiresAt) {

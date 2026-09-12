@@ -11,6 +11,8 @@ import com.backtoback.reseat.global.exception.ErrorCode;
  * - release(): HELD가 아닌 좌석 해제 시도
  * - sell() : HELD가 아닌 좌석 판매 시도
  * - refund(): SOLD가 아닌 좌석 환불 시도
+ * - block() : AVAILABLE이 아닌 좌석 차단 시도 (관리자)
+ * - unblock(): BLOCKED가 아닌 좌석 차단 해제 시도 (관리자)
  * <p>
  * 정상 흐름에서는 서비스 계층의 사전 검증(SEAT_ALREADY_HELD 등)이 선행하므로,
  * 이 예외가 실제로 발생하면 동시성 레이스 또는 로직 버그 신호다.
