@@ -1,11 +1,11 @@
-package com.backtoback.reseat.domain.queue.admin.dto.request;
+package com.backtoback.reseat.domain.admin.queue.dto.request;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
-import com.backtoback.reseat.domain.queue.admin.exception.QueueAdmissionMetricSearchConditionInvalidException;
-import com.backtoback.reseat.domain.queue.admin.service.AdmissionMetricPeriod;
+import com.backtoback.reseat.domain.admin.queue.exception.QueueAdmissionMetricSearchConditionInvalidException;
+import com.backtoback.reseat.domain.admin.queue.service.AdmissionMetricPeriod;
 
 /**
  * 관리자 입장 지표 조회 조건.

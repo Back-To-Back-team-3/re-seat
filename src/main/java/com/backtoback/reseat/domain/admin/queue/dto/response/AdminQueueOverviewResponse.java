@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.queue.admin.dto.response;
+package com.backtoback.reseat.domain.admin.queue.dto.response;
 
 import java.time.LocalDateTime;
 

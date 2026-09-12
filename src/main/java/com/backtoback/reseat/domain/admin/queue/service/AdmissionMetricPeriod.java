@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.queue.admin.service;
+package com.backtoback.reseat.domain.admin.queue.service;
 
 /**
  * 관리자 입장 지표를 묶어 조회할 기간 단위.

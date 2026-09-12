@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.queue.admin.dto.response;
+package com.backtoback.reseat.domain.admin.queue.dto.response;
 
 /**
  * 관리자 입장 지표의 기간별 집계 응답.

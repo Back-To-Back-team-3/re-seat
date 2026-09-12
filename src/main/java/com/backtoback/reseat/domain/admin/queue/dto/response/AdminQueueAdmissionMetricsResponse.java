@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.queue.admin.dto.response;
+package com.backtoback.reseat.domain.admin.queue.dto.response;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -8,8 +8,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.backtoback.reseat.domain.queue.admin.dto.request.AdmissionMetricSearchCondition;
-import com.backtoback.reseat.domain.queue.admin.service.AdmissionMetricPeriod;
+import com.backtoback.reseat.domain.admin.queue.dto.request.AdmissionMetricSearchCondition;
+import com.backtoback.reseat.domain.admin.queue.service.AdmissionMetricPeriod;
 import com.backtoback.reseat.domain.queue.repository.AdmissionMetricDailyProjection;
 
 /**

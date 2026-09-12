@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.queue.admin.service;
+package com.backtoback.reseat.domain.admin.queue.service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -8,12 +8,12 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.backtoback.reseat.domain.admin.queue.dto.request.AdmissionMetricSearchCondition;
+import com.backtoback.reseat.domain.admin.queue.dto.response.AdminQueueAdmissionMetricsResponse;
+import com.backtoback.reseat.domain.admin.queue.dto.response.AdminQueueOverviewResponse;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
-import com.backtoback.reseat.domain.queue.admin.dto.request.AdmissionMetricSearchCondition;
-import com.backtoback.reseat.domain.queue.admin.dto.response.AdminQueueAdmissionMetricsResponse;
-import com.backtoback.reseat.domain.queue.admin.dto.response.AdminQueueOverviewResponse;
 import com.backtoback.reseat.domain.queue.entity.AdmissionTokenStatus;
 import com.backtoback.reseat.domain.queue.repository.AdmissionMetricDailyProjection;
 import com.backtoback.reseat.domain.queue.repository.AdmissionTokenRepository;

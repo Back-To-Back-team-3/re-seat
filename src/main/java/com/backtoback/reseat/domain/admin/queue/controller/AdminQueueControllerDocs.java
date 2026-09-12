@@ -1,10 +1,10 @@
-package com.backtoback.reseat.domain.queue.admin.controller;
+package com.backtoback.reseat.domain.admin.queue.controller;
 
 import org.springframework.http.ResponseEntity;
 
-import com.backtoback.reseat.domain.queue.admin.dto.request.AdmissionMetricSearchCondition;
-import com.backtoback.reseat.domain.queue.admin.dto.response.AdminQueueAdmissionMetricsResponse;
-import com.backtoback.reseat.domain.queue.admin.dto.response.AdminQueueOverviewResponse;
+import com.backtoback.reseat.domain.admin.queue.dto.request.AdmissionMetricSearchCondition;
+import com.backtoback.reseat.domain.admin.queue.dto.response.AdminQueueAdmissionMetricsResponse;
+import com.backtoback.reseat.domain.admin.queue.dto.response.AdminQueueOverviewResponse;
 import com.backtoback.reseat.global.common.ApiResponse;
 
 import io.swagger.v3.oas.annotations.Operation;

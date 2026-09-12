@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.queue.admin.exception;
+package com.backtoback.reseat.domain.admin.queue.exception;
 
 import com.backtoback.reseat.global.exception.BusinessException;
 import com.backtoback.reseat.global.exception.ErrorCode;

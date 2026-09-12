@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.queue.admin.controller;
+package com.backtoback.reseat.domain.admin.queue.controller;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
@@ -25,15 +25,15 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
+import com.backtoback.reseat.domain.admin.queue.dto.request.AdmissionMetricSearchCondition;
+import com.backtoback.reseat.domain.admin.queue.dto.response.AdminQueueAdmissionMetricResponse;
+import com.backtoback.reseat.domain.admin.queue.dto.response.AdminQueueAdmissionMetricsResponse;
+import com.backtoback.reseat.domain.admin.queue.dto.response.AdminQueueOverviewResponse;
+import com.backtoback.reseat.domain.admin.queue.exception.QueueAdmissionMetricSearchConditionInvalidException;
+import com.backtoback.reseat.domain.admin.queue.service.AdminQueueQueryService;
+import com.backtoback.reseat.domain.admin.queue.service.AdmissionMetricPeriod;
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
-import com.backtoback.reseat.domain.queue.admin.dto.request.AdmissionMetricSearchCondition;
-import com.backtoback.reseat.domain.queue.admin.dto.response.AdminQueueAdmissionMetricResponse;
-import com.backtoback.reseat.domain.queue.admin.dto.response.AdminQueueAdmissionMetricsResponse;
-import com.backtoback.reseat.domain.queue.admin.dto.response.AdminQueueOverviewResponse;
-import com.backtoback.reseat.domain.queue.admin.exception.QueueAdmissionMetricSearchConditionInvalidException;
-import com.backtoback.reseat.domain.queue.admin.service.AdminQueueQueryService;
-import com.backtoback.reseat.domain.queue.admin.service.AdmissionMetricPeriod;
 import com.backtoback.reseat.global.exception.ErrorCode;
 
 /**
