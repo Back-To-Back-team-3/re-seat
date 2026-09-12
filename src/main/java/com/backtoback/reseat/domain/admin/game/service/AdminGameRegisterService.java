@@ -1,11 +1,13 @@
 package com.backtoback.reseat.domain.admin.game.service;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.backtoback.reseat.domain.admin.game.dto.request.GameRegisterRequest;
 import com.backtoback.reseat.domain.admin.game.dto.response.GameRegisterResponse;
 import com.backtoback.reseat.domain.game.entity.Game;
+import com.backtoback.reseat.domain.game.exception.DuplicateGameException;
 import com.backtoback.reseat.domain.game.exception.InvalidBookingWindowException;
 import com.backtoback.reseat.domain.game.exception.SameTeamMatchException;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
@@ -35,6 +37,7 @@ public class AdminGameRegisterService {
         if (request.homeTeamId().equals(request.awayTeamId())) {
             throw new SameTeamMatchException(request.homeTeamId());
         }
+        validateBookingWindow(request);
 
         // 2. 팀·구장 존재 검증 + 엔티티 조회 (Game.builder()가 ID가 아닌 엔티티를 요구함)
         Team homeTeam
@@ -63,7 +66,12 @@ public class AdminGameRegisterService {
                 .title(request.title())
                 .build();
 
-        return GameRegisterResponse.from(gameRepository.save(game));
+        // 완전 동시 요청 경합 시 최종 방어선 — UNIQUE 제약(uk_games_stadium_game_at) 위반을 DuplicateGameException으로 변환
+        try {
+            return GameRegisterResponse.from(gameRepository.save(game));
+        } catch (DataIntegrityViolationException e) {
+            throw new DuplicateGameException(request.stadiumId(), request.gameAt());
+        }
     }
 
     /**
