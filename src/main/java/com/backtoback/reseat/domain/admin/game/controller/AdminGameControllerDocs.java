@@ -39,7 +39,7 @@ public interface AdminGameControllerDocs {
             - 상태 전이(PATCH)는 포함하지 않으며, 전이는 별도 API(PATCH /{gameId}/booking-status)를 사용한다.
             - 기본 페이지 크기: 20
             - 기본 정렬: gameAt ASC
-            - 허용 sort 필드: gameAt, bookingOpenAt, bookingCloseAt, id
+            - 허용 sort 필드: gameAt, bookingOpenAt, bookingCloseAt, id(gameId 별칭 허용)
             """,
         security = @SecurityRequirement(name = "JWT Bearer Token")
     )
