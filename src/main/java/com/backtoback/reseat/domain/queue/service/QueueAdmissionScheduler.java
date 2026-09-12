@@ -37,7 +37,7 @@ public class QueueAdmissionScheduler {
         // queue:waiting:game:* 패턴에 해당하는 경기별 대기열 키만 점진적으로 조회한다.
         // count는 전체 조회 개수의 제한이 아니라 Redis에 전달하는 예상 조회량에 대한 힌트다.
         // 실제 한 번의 SCAN에서 반환되는 Key 개수는 count와 다를 수 있다.
-        ScanOptions scanOptions = ScanOptions.scanOptions().match(waitingQueueRedisKeyPattern()).count(100).build();
+        ScanOptions scanOptions = ScanOptions.scanOptions().match(QueueRedisKey.waitingPattern()).count(100).build();
 
         // SCAN Cursor가 사용한 Redis 연결이 작업 종료 후 반드시 반환되도록 try-with-resources로 관리한다.
         try (Cursor<String> cursor = redisTemplate.scan(scanOptions)) {
@@ -48,25 +48,12 @@ public class QueueAdmissionScheduler {
         }
     }
 
-    // 경기별 Redis 대기열을 조회하기 위한 검색 패턴을 반환한다.
-    private String waitingQueueRedisKeyPattern() {
-
-        return "queue:waiting:game:*";
-    }
-
-    // 경기별 Redis 대기열 Key에서 경기 ID를 추출한다.
-    private Long parseGameId(String waitingQueueRedisKey) {
-        // queue:waiting:game: 접두사 이후의 값을 경기 ID로 사용한다.
-        String prefix = "queue:waiting:game:";
-        return Long.parseLong(waitingQueueRedisKey.substring(prefix.length()));
-    }
-
     // 특정 경기 대기열의 입장 허용 처리를 요청한다.
     private void admitWaitingQueue(String waitingQueueRedisKey) {
 
         // 특정 경기의 처리 실패가 다른 경기 대기열의 자동 입장 처리까지 중단시키지 않도록 개별적으로 예외를 처리한다.
         try {
-            Long gameId = parseGameId(waitingQueueRedisKey);
+            Long gameId = QueueRedisKey.parseGameId(waitingQueueRedisKey);
             // Redis 대기 순서가 앞선 사용자부터 설정된 최대 대상 수만큼 입장 처리를 위임한다.
             admissionTokenService.admit(gameId, QueueAdmissionPolicy.ADMIT_LIMIT);
         }
