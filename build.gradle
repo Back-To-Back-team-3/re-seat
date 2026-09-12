@@ -103,6 +103,7 @@ tasks.named('test') {
     useJUnitPlatform()
     systemProperty 'spring.profiles.active', 'test'
     systemProperty 'file.encoding', 'UTF-8'
+    systemProperty 'user.timezone', 'Asia/Seoul'
 }
 
 tasks.withType(JavaCompile).configureEach {
