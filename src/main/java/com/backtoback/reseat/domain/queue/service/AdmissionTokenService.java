@@ -22,7 +22,6 @@ import com.backtoback.reseat.domain.queue.entity.AdmissionTokenStatus;
 import com.backtoback.reseat.domain.queue.entity.QueueEntryHistory;
 import com.backtoback.reseat.domain.queue.entity.QueueEntryHistoryStatus;
 import com.backtoback.reseat.domain.queue.exception.QueueAdmissionInterruptedException;
-import com.backtoback.reseat.domain.queue.exception.QueueRedisMemberInvalidException;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenBrowsingExpiredException;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenExpiredException;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenInvalidException;
@@ -82,7 +81,7 @@ public class AdmissionTokenService {
         boolean lockReleaseRegistered = false;
 
         // 같은 경기의 입장 처리가 동시에 실행되면 동일 사용자가 중복 선발될 수 있으므로 경기별 분산락을 사용한다.
-        RLock lock = redissonClient.getLock(admitLockKey(gameId));
+        RLock lock = redissonClient.getLock(QueueRedisKey.admissionLock(gameId));
         boolean locked = false;
 
         try {
@@ -109,7 +108,7 @@ public class AdmissionTokenService {
 
             ZSetOperations<String, String> queueZSet = getZSetOperations();
 
-            String waitingQueueRedisKey = waitingQueueRedisKey(gameId);
+            String waitingQueueRedisKey = QueueRedisKey.waiting(gameId);
 
             // 과도한 일괄 처리를 막기 위해 요청된 limit을 최대 허용 범위로 제한한다.
             // Redis ZSet의 점수가 낮은 사용자부터 safeLimit명까지 이번 처리 대상으로 조회한다.
@@ -129,8 +128,8 @@ public class AdmissionTokenService {
             int admittedCount = 0;
 
             for (String member : members) {
-                Long userId = parseUserId(member);
-                String queueEntryKey = queueEntryKey(gameId, userId);
+                Long userId = QueueRedisKey.parseUserId(member);
+                String queueEntryKey = QueueRedisKey.entry(gameId, userId);
 
                 // 대기 취소와 입장 허용이 동시에 변경하지 않도록 대기 이력을 비관적 락으로 조회한다.
                 QueueEntryHistory queueEntryHistory
@@ -316,47 +315,9 @@ public class AdmissionTokenService {
         return redisTemplate.opsForZSet();
     }
 
-    // 경기별 대기열 Redis ZSet key: queue:waiting:game:{gameId}
-    private String waitingQueueRedisKey(Long gameId) {
-
-        return "queue:waiting:game:%d".formatted(gameId);
-    }
-
-    // 대기열 사용자: user:{userId}
-    private String redisMember(Long userId) {
-        return "user:" + userId;
-    }
-
-    // DB 대기 이력 식별 key: queue:entry:game:{gameId}:user:{userId}
-    private String queueEntryKey(Long gameId, Long userId) {
-
-        return "queue:entry:game:%d:user:%d".formatted(gameId, userId);
-    }
-
-    // Redis 대기열 구성원 형식을 검증하고 사용자 ID를 추출한다.
-    private Long parseUserId(String member) {
-
-        final String prefix = "user:";
-
-        if (member == null || !member.startsWith(prefix)) {
-            throw new QueueRedisMemberInvalidException();
-        }
-
-        try {
-            return Long.parseLong(member.substring(prefix.length()));
-        } catch (NumberFormatException e) {
-            throw new QueueRedisMemberInvalidException(e);
-        }
-    }
-
     // 입장 허용 사용자에게 발급할 Queue-Token을 생성한다.
     private String createQueueToken() {
         return "qt_" + UUID.randomUUID();
-    }
-
-    // 경기별 입장 처리 분산 락 Key를 생성한다.
-    private String admitLockKey(Long gameId) {
-        return "lock:queue:admit:" + gameId;
     }
 
     // Queue-Token 값이 누락되거나 공백인지 검증한다.
