@@ -45,8 +45,8 @@ public class DatabaseCleaner {
     public void execute() {
         entityManager.flush();
 
-        // 외래키 제약 조건 잠시 해제
-        entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS = 0").executeUpdate();
+        // 외래키 제약 조건 잠시 해제 (H2 호환, MySQL MODE에서도 동작)
+        entityManager.createNativeQuery("SET REFERENTIAL_INTEGRITY FALSE").executeUpdate();
         try {
             // 모든 테이블 TRUNCATE
             for (String tableName : tableNames) {
@@ -54,7 +54,7 @@ public class DatabaseCleaner {
             }
         } finally {
             // 외래키 제약 조건 원복
-            entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS = 1").executeUpdate();
+            entityManager.createNativeQuery("SET REFERENTIAL_INTEGRITY TRUE").executeUpdate();
         }
     }
 

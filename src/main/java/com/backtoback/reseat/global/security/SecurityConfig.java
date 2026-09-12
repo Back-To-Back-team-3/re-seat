@@ -107,8 +107,7 @@ public class SecurityConfig {
             // 4. H2 콘솔의 iframe 사용 허용을 위한 X-Frame-Options 설정
             .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
 
-            .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
-
+            .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
