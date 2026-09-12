@@ -245,6 +245,29 @@ public class AdmissionTokenService {
     }
 
     /**
+     * 결제 복구 완료 후 원래 Queue-Token을 사용 완료 상태로 최종화한다.
+     */
+    @Transactional
+    public void finalizeTokenAfterPayment(Long userId, Long gameId, String token) {
+        AdmissionToken admissionToken = getTokenWithPessimisticWriteLockAndValidateContext(userId, gameId, token);
+
+        if (admissionToken.getStatus() != AdmissionTokenStatus.ACTIVE) {
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        if (admissionToken.isExpiredAt(now)) {
+            admissionToken.expire(now);
+            return;
+        }
+        if (admissionToken.isSeatBrowsingExpiredAt(now)) {
+            admissionToken.expireBrowsing(now);
+            return;
+        }
+        admissionToken.use(now);
+    }
+
+    /**
      * 최초 좌석 선점이 성공 시 Queue-Token을 비관적 락으로 조회하고 탐색 완료 시간을 기록한다.
      *
      * @param userId 요청한 사용자 ID
@@ -334,14 +357,7 @@ public class AdmissionTokenService {
         String token,
         LocalDateTime now
     ) {
-        validateRequiredToken(token);
-
-        AdmissionToken admissionToken
-            = admissionTokenRepository
-                .findByTokenWithPessimisticWriteLock(token)
-                .orElseThrow(QueueTokenInvalidException::new);
-
-        validateTokenContext(admissionToken, userId, gameId);
+        AdmissionToken admissionToken = getTokenWithPessimisticWriteLockAndValidateContext(userId, gameId, token);
 
         expireIfNeeded(admissionToken, now);
 
@@ -349,6 +365,18 @@ public class AdmissionTokenService {
 
         admissionToken.validateUsableAt(now);
 
+        return admissionToken;
+    }
+
+    // Queue-Token을 잠금 조회하고 요청 사용자·경기와 일치하는지 검증한다.
+    private AdmissionToken getTokenWithPessimisticWriteLockAndValidateContext(Long userId, Long gameId, String token) {
+        validateRequiredToken(token);
+
+        AdmissionToken admissionToken
+            = admissionTokenRepository
+                .findByTokenWithPessimisticWriteLock(token)
+                .orElseThrow(QueueTokenInvalidException::new);
+        validateTokenContext(admissionToken, userId, gameId);
         return admissionToken;
     }
 }
