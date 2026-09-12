@@ -179,6 +179,15 @@ public class Payment extends BaseEntity {
     private String pgPaymentKey;
 
     /**
+     * 결제 처리와 복구에서 최종화할 Queue-Token.
+     */
+    @Column(
+        name = "queue_token",
+        length = 255
+    )
+    private String queueToken;
+
+    /**
      * 결제 실패 사유.
      */
     @Column(
@@ -214,6 +223,7 @@ public class Payment extends BaseEntity {
         PgProvider pgProvider,
         String pgOrderId,
         String pgPaymentKey,
+        String queueToken,
         String failReason,
         LocalDateTime approvedAt,
         LocalDateTime failedAt
@@ -228,6 +238,7 @@ public class Payment extends BaseEntity {
         this.pgProvider = pgProvider != null ? pgProvider : PgProvider.MOCK;
         this.pgOrderId = pgOrderId;
         this.pgPaymentKey = pgPaymentKey;
+        this.queueToken = queueToken;
         this.failReason = failReason;
         this.approvedAt = approvedAt;
         this.failedAt = failedAt;
@@ -241,6 +252,11 @@ public class Payment extends BaseEntity {
             throw new PaymentCallbackMismatchException();
         }
         this.pgPaymentKey = pgPaymentKey;
+    }
+
+    /** 결제 처리에 사용한 Queue-Token을 복구 작업에서도 사용할 수 있도록 연결한다. */
+    public void assignQueueToken(String queueToken) {
+        this.queueToken = queueToken;
     }
 
     /**
