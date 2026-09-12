@@ -68,7 +68,7 @@ export default function () {
     const stadiumId = Math.floor(Math.random() * (STADIUM_ID_MAX - STADIUM_ID_MIN + 1)) + STADIUM_ID_MIN;
 
     const res = http.get(
-        `${BASE_URL}/api/v1/stadiums/${stadiumId}/congestion`,
+        `${BASE_URL}/api/v1/congestion/stadiums/${stadiumId}`,
         {
             headers: {
                 'Content-Type': 'application/json',

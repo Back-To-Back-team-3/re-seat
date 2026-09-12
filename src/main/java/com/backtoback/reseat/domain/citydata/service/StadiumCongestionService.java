@@ -47,7 +47,7 @@ public class StadiumCongestionService {
         this.cacheMissCounter = meterRegistry.counter("citydata.cache.misses");
         this.redisErrorCounter = meterRegistry.counter("citydata.redis.error.count");
         this.fallbackCounter = meterRegistry.counter("citydata.external.api.fallback.count");
-        this.externalApiTimer = meterRegistry.timer("citydata.external.api.latency");;
+        this.externalApiTimer = meterRegistry.timer("citydata.external.api.latency");
     }
 
     // 구장 ID에 해당하는 실시간 혼잡도 정보 조회(Redis 캐시 우선 조회)
