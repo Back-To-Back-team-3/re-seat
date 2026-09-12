@@ -6,6 +6,8 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import io.jsonwebtoken.Claims;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final MeterRegistry meterRegistry;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
@@ -29,15 +32,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         throws jakarta.servlet.ServletException,
         java.io.IOException {
 
-        String token = resolveToken(request);
+        Timer.Sample sample = Timer.start(meterRegistry);
 
-        if (StringUtils.hasText(token)) {
-            Claims claims = jwtTokenProvider.getClaimsIfValid(token);
-            if (claims != null) {
-                Authentication authentication = jwtTokenProvider.getAuthentication(claims, token);
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+        try {
+            String token = resolveToken(request);
+
+            if (StringUtils.hasText(token)) {
+                Claims claims = jwtTokenProvider.getClaimsIfValid(token);
+                if (claims != null) {
+                    Authentication authentication = jwtTokenProvider.getAuthentication(claims, token);
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
             }
+        } finally {
+            sample.stop(meterRegistry.timer("jwt_filter_latency_seconds"));
         }
+
         filterChain.doFilter(request, response);
     }
 
