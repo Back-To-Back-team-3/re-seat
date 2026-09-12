@@ -48,7 +48,7 @@ public record AdminQueueAdmissionMetricsResponse(
 
         // 일별 원본 집계를 요청한 일 · 주 · 월 bucket에 누적한다.
         dailyMetrics.forEach(dailyMetric -> {
-            LocalDate date = dailyMetric.getAdmissionDate().toLocalDate();
+            LocalDate date = dailyMetric.getAdmissionDate();
             String bucket = bucketOf(condition.period(), date);
 
             counts.merge(bucket, dailyMetric.getAdmittedCount(), Long::sum);

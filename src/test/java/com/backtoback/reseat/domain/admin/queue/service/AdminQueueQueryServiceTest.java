@@ -3,7 +3,6 @@ package com.backtoback.reseat.domain.admin.queue.service;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
 
-import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -80,23 +79,26 @@ public class AdminQueueQueryServiceTest {
 
         AdmissionMetricDailyProjection metric = mock(AdmissionMetricDailyProjection.class);
 
-        when(metric.getAdmissionDate()).thenReturn(Date.valueOf(date));
+        when(metric.getAdmissionDate()).thenReturn(date);
         when(metric.getAdmittedCount()).thenReturn(admittedCount);
 
         return metric;
     }
 
     /**
-     * 역전된 기간과 최대 범위를 초과한 입장 지표 조회 조건을 제공한다.
+     * 역전된 기간, 최대 범위를 초과한 기간과 종료일 최댓값을 사용하는 입장 지표 조회 조건을 제공한다.
      *
      * @return 잘못된 입장 지표 조회 조건 Stream
      */
     private static Stream<AdmissionMetricSearchCondition> invalidAdmissionMetricConditions() {
 
+        LocalDate maxDate = LocalDate.parse(LocalDate.MAX.toString());
+
         return Stream
             .of(
                 new AdmissionMetricSearchCondition(AdmissionMetricPeriod.DAILY, TO, FROM),
-                new AdmissionMetricSearchCondition(AdmissionMetricPeriod.DAILY, FROM, FROM.plusDays(366))
+                new AdmissionMetricSearchCondition(AdmissionMetricPeriod.DAILY, FROM, FROM.plusDays(366)),
+                new AdmissionMetricSearchCondition(AdmissionMetricPeriod.DAILY, maxDate, maxDate)
             );
     }
 
@@ -255,7 +257,7 @@ public class AdminQueueQueryServiceTest {
 
     @ParameterizedTest
     @MethodSource("invalidAdmissionMetricConditions")
-    @DisplayName("조회 기간이 역전되거나 366일을 초과하면 조회 조건 예외가 발생한다.")
+    @DisplayName("조회 기간이 역전되거나 366일을 초과하거나 종료일이 최대 날짜이면 조회 조건 예외가 발생한다.")
     void getAdmissionMetrics_withInvalidCondition_throwsSearchConditionException(
         AdmissionMetricSearchCondition condition
     ) {
@@ -266,7 +268,7 @@ public class AdminQueueQueryServiceTest {
         given(gameRepository.findById(GAME_ID)).willReturn(Optional.of(game));
 
         // when & then
-        // condition은 from이 to보다 늦거나 종료일을 포함해 366일을 초과한다.
+        // condition은 기간이 역전됐거나 366일을 초과했거나 종료일의 다음 날을 계산할 수 없는 조건이다.
         assertThatThrownBy(() -> adminQueueQueryService.getAdmissionMetrics(GAME_ID, condition))
             .isInstanceOf(QueueAdmissionMetricSearchConditionInvalidException.class);
 
@@ -274,5 +276,81 @@ public class AdminQueueQueryServiceTest {
         then(admissionTokenRepository)
             .should(never())
             .findDailyAdmissionMetrics(any(Long.class), any(LocalDateTime.class), any(LocalDateTime.class));
+    }
+
+    @Test
+    @DisplayName("같은 주의 일별 발급 수를 합산해 주간 입장 지표로 반환한다.")
+    void getAdmissionMetrics_withWeeklyPeriod_mergesDailyMetricsInSameWeek() {
+
+        // given
+        Game game = Game.builder().build();
+        AdmissionMetricSearchCondition condition
+            = new AdmissionMetricSearchCondition(AdmissionMetricPeriod.WEEKLY, FROM, TO);
+
+        // 같은 주의 두 데이터는 하나의 주간 bucket으로 합산되어야 한다.
+        AdmissionMetricDailyProjection firstDayMetric = dailyMetric(FROM, 2L);
+        AdmissionMetricDailyProjection secondDayMetric = dailyMetric(FROM.plusDays(1), 3L);
+        AdmissionMetricDailyProjection nextWeekMetric = dailyMetric(FROM.plusWeeks(1), 4L);
+
+        given(gameRepository.findById(GAME_ID)).willReturn(Optional.of(game));
+
+        given(
+            admissionTokenRepository
+                .findDailyAdmissionMetrics(GAME_ID, FROM.atStartOfDay(), TO.plusDays(1).atStartOfDay())
+        ).willReturn(List.of(firstDayMetric, secondDayMetric, nextWeekMetric));
+
+        // when
+        AdminQueueAdmissionMetricsResponse response = adminQueueQueryService.getAdmissionMetrics(GAME_ID, condition);
+
+        // then
+        assertThat(response.period()).isEqualTo(AdmissionMetricPeriod.WEEKLY);
+        assertThat(response.from()).isEqualTo(FROM);
+        assertThat(response.to()).isEqualTo(TO);
+
+        // 주간 bucket은 해당 주의 월요일 날짜를 기준으로 생성된다.
+        assertThat(response.series())
+            .extracting(AdminQueueAdmissionMetricResponse::bucket, AdminQueueAdmissionMetricResponse::admittedCount)
+            .contains(tuple("2026-08-31", 5L));
+        assertThat(response.series())
+            .extracting(AdminQueueAdmissionMetricResponse::bucket, AdminQueueAdmissionMetricResponse::admittedCount)
+            .contains(tuple("2026-09-07", 4L));
+    }
+
+    @Test
+    @DisplayName("같은 달의 일별 발급 수를 합산해 월간 입장 지표로 반환한다.")
+    void getAdmissionMetrics_withMonthlyPeriod_mergesDailyMetricsInSameMonth() {
+
+        // given
+        Game game = Game.builder().build();
+        AdmissionMetricSearchCondition condition
+            = new AdmissionMetricSearchCondition(AdmissionMetricPeriod.MONTHLY, FROM, TO);
+
+        // 같은 달의 두 데이터는 하나의 월간 bucket으로 합산되어야 한다.
+        AdmissionMetricDailyProjection earlyMonthMetric = dailyMetric(FROM, 2L);
+        AdmissionMetricDailyProjection midMonthMetric = dailyMetric(FROM.plusWeeks(2), 3L);
+        AdmissionMetricDailyProjection nextMonthMetric = dailyMetric(FROM.plusMonths(1), 4L);
+
+        given(gameRepository.findById(GAME_ID)).willReturn(Optional.of(game));
+
+        given(
+            admissionTokenRepository
+                .findDailyAdmissionMetrics(GAME_ID, FROM.atStartOfDay(), TO.plusDays(1).atStartOfDay())
+        ).willReturn(List.of(earlyMonthMetric, midMonthMetric, nextMonthMetric));
+
+        // when
+        AdminQueueAdmissionMetricsResponse response = adminQueueQueryService.getAdmissionMetrics(GAME_ID, condition);
+
+        // then
+        assertThat(response.period()).isEqualTo(AdmissionMetricPeriod.MONTHLY);
+        assertThat(response.from()).isEqualTo(FROM);
+        assertThat(response.to()).isEqualTo(TO);
+
+        // 월간 bucket은 연월(yyyy-MM)을 기준으로 생성된다.
+        assertThat(response.series())
+            .extracting(AdminQueueAdmissionMetricResponse::bucket, AdminQueueAdmissionMetricResponse::admittedCount)
+            .contains(tuple("2026-09", 5L));
+        assertThat(response.series())
+            .extracting(AdminQueueAdmissionMetricResponse::bucket, AdminQueueAdmissionMetricResponse::admittedCount)
+            .contains(tuple("2026-10", 4L));
     }
 }

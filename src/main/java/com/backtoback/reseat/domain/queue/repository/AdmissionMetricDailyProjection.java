@@ -1,6 +1,6 @@
 package com.backtoback.reseat.domain.queue.repository;
 
-import java.sql.Date;
+import java.time.LocalDate;
 
 /**
  * AdmissionToken 발급 수를 날짜별로 조회한 결과.
@@ -12,7 +12,7 @@ public interface AdmissionMetricDailyProjection {
      *
      * @return 입장 토큰 발급일
      */
-    Date getAdmissionDate();
+    LocalDate getAdmissionDate();
 
     /**
      * 해당 날짜의 입장 토큰 발급 수를 반환한다.

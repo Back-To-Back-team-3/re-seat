@@ -27,6 +27,10 @@ public record AdmissionMetricSearchCondition(AdmissionMetricPeriod period, Local
             throw new QueueAdmissionMetricSearchConditionInvalidException();
         }
 
+        if (LocalDate.MAX.equals(to)) {
+            throw new QueueAdmissionMetricSearchConditionInvalidException();
+        }
+
         if (from.isAfter(to)) {
             throw new QueueAdmissionMetricSearchConditionInvalidException();
         }

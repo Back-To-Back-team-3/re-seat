@@ -278,11 +278,11 @@ public class AdmissionTokenRepositoryJpaTest {
         assertThat(dailyMetrics).hasSize(2);
 
         // 첫 번째 날짜(FROM) 발급 수 검증
-        assertThat(dailyMetrics.get(0).getAdmissionDate().toLocalDate()).isEqualTo(FROM.toLocalDate());
+        assertThat(dailyMetrics.get(0).getAdmissionDate()).isEqualTo(FROM.toLocalDate());
         assertThat(dailyMetrics.get(0).getAdmittedCount()).isEqualTo(2L);
 
         // 두 번째 날짜(FROM.plusDays(1)) 발급 수 검증
-        assertThat(dailyMetrics.get(1).getAdmissionDate().toLocalDate()).isEqualTo(FROM.plusDays(1).toLocalDate());
+        assertThat(dailyMetrics.get(1).getAdmissionDate()).isEqualTo(FROM.plusDays(1).toLocalDate());
         assertThat(dailyMetrics.get(1).getAdmittedCount()).isEqualTo(1L);
     }
 }
