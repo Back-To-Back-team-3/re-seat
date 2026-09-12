@@ -27,7 +27,8 @@ import com.backtoback.reseat.domain.team.repository.TeamRepository;
 /**
  * 관리자 경기 등록 API 통합 및 인가 테스트.
  * <p>등록 API는 좌석 재고 오픈와 책임이 분리되어 있으므로, 좌석 재고(SeatZone/Seat) 준비 없이 검증한다.
- * <p>compareAndSetBookingStatus 같은 경합 로직이 없어 동시성 테스트는 별도로 두지 않는다.
+ * <p>UNIQUE 제약(uk_games_stadium_game_at) 위반을 통한 완전 동시 요청 경합 검증은
+ * {@link AdminGameRegisterServiceConcurrencyTest}에서 별도로 수행한다(MockMvc는 순차 요청만 다룸).
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -202,5 +203,26 @@ class AdminGameRegisterControllerTest {
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.errorCode").value("STADIUM_NOT_FOUND"));
+    }
+
+    @DisplayName("동일 구장·동일 일시로 이미 등록된 경기를 다시 등록하면 409 DUPLICATE_GAME을 반환한다")
+    @WithMockUser(roles = "ADMIN")
+    @Test
+    void should_return409_when_stadiumAndGameAtAlreadyRegistered() throws Exception {
+        LocalDateTime now = LocalDateTime.now();
+        String requestBody = body(stadiumId, homeTeamId, awayTeamId, now.plusDays(7), now, now.plusDays(6));
+
+        // given — 동일 요청으로 먼저 한 번 등록해 둔다
+        mockMvc
+            .perform(post(REGISTER_URI).contentType(MediaType.APPLICATION_JSON).content(requestBody))
+            .andExpect(status().isCreated());
+
+        // when & then — 같은 stadiumId·gameAt으로 재요청하면 existsBy 사전 검증에 걸려 중복 거부된다
+        mockMvc
+            .perform(post(REGISTER_URI).contentType(MediaType.APPLICATION_JSON).content(requestBody))
+            .andDo(print())
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.errorCode").value("DUPLICATE_GAME"));
     }
 }

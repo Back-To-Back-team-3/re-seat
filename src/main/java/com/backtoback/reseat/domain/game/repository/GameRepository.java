@@ -77,5 +77,11 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
      * @param gameAt 경기 일시
      * @return 존재 여부
      */
-    boolean existsByStadiumIdAndGameAt(Long stadiumId, LocalDateTime gameAt);
+    @Query("""
+        select case when count(g) > 0 then true else false end
+        from Game g
+        where g.stadium.id = :stadiumId
+        and g.gameAt = :gameAt
+        """)
+    boolean existsByStadiumIdAndGameAt(@Param("stadiumId") Long stadiumId, @Param("gameAt") LocalDateTime gameAt);
 }

@@ -39,7 +39,12 @@ public class AdminGameRegisterService {
         }
         validateBookingWindow(request);
 
-        // 2. 팀·구장 존재 검증 + 엔티티 조회 (Game.builder()가 ID가 아닌 엔티티를 요구함)
+        // 2. 동일 구장·동일 일시 중복 등록 사전 차단 — 완전 동시 요청은 save() 단계에서 한 번 더 방어
+        if (gameRepository.existsByStadiumIdAndGameAt(request.stadiumId(), request.gameAt())) {
+            throw new DuplicateGameException(request.stadiumId(), request.gameAt());
+        }
+
+        // 3. 팀·구장 존재 검증 + 엔티티 조회 (Game.builder()가 ID가 아닌 엔티티를 요구함)
         Team homeTeam
             = teamRepository
                 .findById(request.homeTeamId())
@@ -53,7 +58,7 @@ public class AdminGameRegisterService {
                 .findById(request.stadiumId())
                 .orElseThrow(() -> new StadiumNotFoundException(request.stadiumId()));
 
-        // 3. 경기 저장 (bookingStatus는 Game 생성자 내부 기본값 SCHEDULED로 자동 설정됨)
+        // 4. 경기 저장 (bookingStatus는 Game 생성자 내부 기본값 SCHEDULED로 자동 설정됨)
         Game game
             = Game
                 .builder()
@@ -90,5 +95,4 @@ public class AdminGameRegisterService {
             throw new InvalidBookingWindowException("예매 마감 시각은 경기 일시 이후일 수 없습니다.");
         }
     }
-
 }
