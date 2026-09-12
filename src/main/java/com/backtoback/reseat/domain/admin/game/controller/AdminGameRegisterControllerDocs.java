@@ -14,6 +14,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
  * 관리자용 경기 등록 API Swagger 문서화 인터페이스.
+ * <p>ROLE_ADMIN 전용 API이므로 JWT Bearer Token @SecurityRequirement만 선언한다.
+ * ADMIN 권한 검증은 Spring Security(SecurityConfig)가 처리한다.
+ * <p>좌석 재고 생성은 이 API의 책임이 아니다
  */
 @Tag(
     name = "Admin - Game Register",
@@ -80,6 +83,22 @@ public interface AdminGameRegisterControllerDocs {
                                 "success": false,
                                 "errorCode": "STADIUM_NOT_FOUND",
                                 "message": "구장을 찾을 수 없습니다. stadiumId=999"
+                            }
+                            """
+                    )
+                )
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "409",
+                description = "DUPLICATE_GAME — 동일 구장·동일 일시에 이미 등록된 경기가 있음 " + "(existsBy 사전 검증 또는 UNIQUE 제약 위반 시 반환)",
+                content = @Content(
+                    examples = @ExampleObject(
+                        name = "중복 등록 예시",
+                        value = """
+                            {
+                                "success": false,
+                                "errorCode": "DUPLICATE_GAME",
+                                "message": "동일 구장·동일 일시에 이미 등록된 경기가 있습니다. stadiumId=5, gameAt=2026-07-11T18:30"
                             }
                             """
                     )
