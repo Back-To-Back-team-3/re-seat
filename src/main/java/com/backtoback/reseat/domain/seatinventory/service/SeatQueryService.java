@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
+import com.backtoback.reseat.domain.seatinventory.dto.SeatInventorySummaryResponse;
 import com.backtoback.reseat.domain.seatinventory.dto.SeatStatusResponse;
 import com.backtoback.reseat.domain.seatinventory.dto.ZoneSummaryResponse;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
@@ -80,6 +81,30 @@ public class SeatQueryService {
 
         Long stadiumId = game.getStadium().getId();
         return gameSeatRepository.findZoneSummariesByGameId(gameId, stadiumId);
+    }
+
+    /**
+     * 경기의 상태별(AVAILABLE/HELD/SOLD/BLOCKED) 좌석 수 합계를 조회한다.
+     * <p>관리자 화면 상단 요약 카드 렌더링용. 구역별 세분화는 하지 않는다.
+     *
+     * @param gameId 경기 ID
+     * @throws GameNotFoundException 경기가 없을 때 (404)
+     * @throws SeatInventoryNotOpenedException 재고가 아직 오픈되지 않았을 때 (409)
+     */
+    public SeatInventorySummaryResponse summarize(Long gameId) {
+
+        validateGame(gameId);
+
+        if (!gameSeatRepository.existsByGameId(gameId)) {
+            throw new SeatInventoryNotOpenedException(gameId);
+        }
+
+        return new SeatInventorySummaryResponse(
+            gameSeatRepository.countByGameIdAndStatus(gameId, GameSeatStatus.AVAILABLE),
+            gameSeatRepository.countByGameIdAndStatus(gameId, GameSeatStatus.HELD),
+            gameSeatRepository.countByGameIdAndStatus(gameId, GameSeatStatus.SOLD),
+            gameSeatRepository.countByGameIdAndStatus(gameId, GameSeatStatus.BLOCKED)
+        );
     }
 
     private void validateGame(Long gameId) {
