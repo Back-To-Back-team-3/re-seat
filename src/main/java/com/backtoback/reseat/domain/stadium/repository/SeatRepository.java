@@ -30,4 +30,13 @@ public interface SeatRepository extends JpaRepository<Seat, Long> {
         @Param("stadiumId") Long stadiumId,
         @Param("status") SeatStatus status
     );
+
+    /**
+     * 구장에 시드된 물리 좌석 총 건수를 센다.
+     * 시드 무결성 검증(SeatMasterSeedDataIntegrityTest) 전용 조회.
+     *
+     * @param stadiumId 구장 ID
+     * @return 좌석 건수
+     */
+    long countByStadiumId(Long stadiumId);
 }
