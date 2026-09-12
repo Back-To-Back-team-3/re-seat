@@ -24,6 +24,7 @@ import com.backtoback.reseat.domain.user.auth.service.CustomOAuth2UserService;
 import com.backtoback.reseat.domain.user.auth.service.OAuth2AuthenticationFailureHandler;
 import com.backtoback.reseat.domain.user.auth.service.OAuth2AuthenticationSuccessHandler;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 
@@ -38,6 +39,7 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
     private final OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler;
+    private final MeterRegistry meterRegistry;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -132,5 +134,11 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
+    }
+
+
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter(jwtTokenProvider, meterRegistry);
     }
 }
