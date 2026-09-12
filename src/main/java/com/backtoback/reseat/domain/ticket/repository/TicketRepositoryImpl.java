@@ -30,35 +30,35 @@ public class TicketRepositoryImpl implements TicketRepositoryCustom {
     public Page<Ticket> searchTickets(TicketSearchCondition condition, Pageable pageable) {
         List<Ticket> content
             = queryFactory
-            .selectFrom(ticket)
-            .join(ticket.user)
-            .fetchJoin()
-            .join(ticket.game)
-            .fetchJoin()
-            .join(ticket.gameSeat)
-            .fetchJoin()
-            .where(
-                userIdEq(condition.userId()),
-                statusEq(condition.status()),
-                gameDateGoe(condition.gameDateFrom()),
-                gameDateLt(condition.gameDateTo())
-            )
-            .orderBy(getOrderSpecifiers(pageable))
-            .offset(pageable.getOffset())
-            .limit(pageable.getPageSize())
-            .fetch();
+                .selectFrom(ticket)
+                .join(ticket.user)
+                .fetchJoin()
+                .join(ticket.game)
+                .fetchJoin()
+                .join(ticket.gameSeat)
+                .fetchJoin()
+                .where(
+                    userIdEq(condition.userId()),
+                    statusEq(condition.status()),
+                    gameDateGoe(condition.gameDateFrom()),
+                    gameDateLt(condition.gameDateTo())
+                )
+                .orderBy(getOrderSpecifiers(pageable))
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
 
         Long total
             = queryFactory
-            .select(ticket.count())
-            .from(ticket)
-            .where(
-                userIdEq(condition.userId()),
-                statusEq(condition.status()),
-                gameDateGoe(condition.gameDateFrom()),
-                gameDateLt(condition.gameDateTo())
-            )
-            .fetchOne();
+                .select(ticket.count())
+                .from(ticket)
+                .where(
+                    userIdEq(condition.userId()),
+                    statusEq(condition.status()),
+                    gameDateGoe(condition.gameDateFrom()),
+                    gameDateLt(condition.gameDateTo())
+                )
+                .fetchOne();
 
         return new PageImpl<>(content, pageable, total == null ? 0 : total);
     }

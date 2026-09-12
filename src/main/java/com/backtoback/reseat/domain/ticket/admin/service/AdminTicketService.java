@@ -8,7 +8,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.backtoback.reseat.domain.ticket.admin.dto.request.AdminTicketBulkCancelRequest;
 import com.backtoback.reseat.domain.ticket.admin.dto.request.AdminTicketCancelRequest;
 import com.backtoback.reseat.domain.ticket.admin.dto.request.TicketSearchCondition;
 import com.backtoback.reseat.domain.ticket.admin.dto.response.AdminTicketBulkCancelResponse;
@@ -73,6 +72,7 @@ public class AdminTicketService {
      * 관리자 전용: 경기 단위로 ISSUED 티켓을 일괄 취소한다.
      * <p>이 메서드 자체는 트랜잭션을 걸지 않는다.
      * 티켓 하나씩 ticketService.cancelTicketByAdmin()을 호출해 각 호출이 독립된 트랜잭션으로 커밋·롤백되게 하기 위함이다.
+     *
      * @Transactional을 붙이면 모든 호출이 하나의 트랜잭션으로 묶여서 티켓 한 장 실패로 나머지까지 롤백될 수 있다.</p>
      */
     public AdminTicketBulkCancelResponse cancelTicketsByGame(Long gameId, String reason) {

@@ -106,4 +106,3 @@ public interface TicketRepository extends JpaRepository<Ticket, Long>, TicketRep
 
     List<Ticket> findByGameIdAndStatus(Long gameId, TicketStatus status);
 }
-

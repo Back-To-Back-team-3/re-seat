@@ -111,7 +111,9 @@ public class AdminTicketController {
         TicketSearchCondition condition = new TicketSearchCondition(userId, status, gameDateFrom, gameDateTo);
         Page<AdminUserTicketResponse> pageResult = adminTicketService.searchTickets(condition, pageable);
 
-        return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success("티켓 통합 검색 완료", PageResponse.of(pageResult)));
+        return ResponseEntity
+            .status(HttpStatus.OK)
+            .body(ApiResponse.success("티켓 통합 검색 완료", PageResponse.of(pageResult)));
     }
 
     // 관리자 전용: 경기 단위 ISSUED 티켓 일괄 취소
