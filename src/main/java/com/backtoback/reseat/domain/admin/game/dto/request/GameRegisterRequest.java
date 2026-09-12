@@ -13,7 +13,7 @@ import jakarta.validation.constraints.Size;
 /**
  * 관리자 경기 등록 요청 DTO.
  */
-public record AdminGameRegisterRequest(
+public record GameRegisterRequest(
     @NotNull Long stadiumId,
     @NotNull Long homeTeamId,
     @NotNull Long awayTeamId,
@@ -27,7 +27,7 @@ public record AdminGameRegisterRequest(
     @Size(max = 255) String title
 ) {
     // 선택 적용: bookingOpenAt < bookingCloseAt <= gameAt 순서 검증.
-    public AdminGameRegisterRequest {
+    public GameRegisterRequest {
         if (bookingOpenAt != null && bookingCloseAt != null && !bookingOpenAt.isBefore(bookingCloseAt)) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "예매 오픈 시각은 예매 마감 시각보다 이전이어야 합니다.");
         }
