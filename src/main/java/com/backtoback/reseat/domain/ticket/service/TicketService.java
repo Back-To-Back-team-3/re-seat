@@ -15,6 +15,7 @@ import com.backtoback.reseat.domain.order.entity.OrderItem;
 import com.backtoback.reseat.domain.order.repository.OrderItemRepository;
 import com.backtoback.reseat.domain.payment.service.PaymentService;
 import com.backtoback.reseat.domain.ticket.admin.dto.response.AdminTicketCancelResponse;
+import com.backtoback.reseat.domain.ticket.admin.dto.response.AdminTicketQrReissueResponse;
 import com.backtoback.reseat.domain.ticket.dto.response.TicketCancelResponse;
 import com.backtoback.reseat.domain.ticket.dto.response.TicketDetailResponse;
 import com.backtoback.reseat.domain.ticket.dto.response.TicketListResponse;
@@ -239,6 +240,16 @@ public class TicketService {
         ticket.markEntered();
 
         return TicketVerifyResponse.from(ticket);
+    }
+
+    // 관리자 전용: 분실·유출된 QR 토큰을 새로 발급한다. ISSUED 상태의 티켓만 가능하다.
+    @Transactional
+    public AdminTicketQrReissueResponse reissueQrToken(Long ticketId) {
+        Ticket ticket = ticketRepository.findById(ticketId).orElseThrow(TicketNotFoundException::new);
+
+        ticket.reissueQrToken(generateQrToken());
+
+        return AdminTicketQrReissueResponse.from(ticket);
     }
 
     private String generateTicketNo(LocalDateTime baseTime) {
