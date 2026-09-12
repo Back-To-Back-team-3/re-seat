@@ -32,16 +32,9 @@ public class AdminQueueController implements AdminQueueControllerDocs {
      */
     @Override
     @GetMapping("/games/{gameId}/overview")
-    public ResponseEntity<ApiResponse<AdminQueueOverviewResponse>> getOverview(
-        @PathVariable Long gameId
-    ) {
+    public ResponseEntity<ApiResponse<AdminQueueOverviewResponse>> getOverview(@PathVariable Long gameId) {
 
-        return ResponseEntity.ok(
-            ApiResponse.success(
-                "관리자 대기열 현황 조회 완료",
-                adminQueueQueryService.getOverview(gameId)
-            )
-        );
+        return ResponseEntity.ok(ApiResponse.success("관리자 대기열 현황 조회 완료", adminQueueQueryService.getOverview(gameId)));
     }
 
     /**
@@ -58,11 +51,10 @@ public class AdminQueueController implements AdminQueueControllerDocs {
         AdmissionMetricSearchCondition condition
     ) {
 
-        return ResponseEntity.ok(
-            ApiResponse.success(
-                "관리자 대기열 입장 지표 조회 완료",
-                adminQueueQueryService.getAdmissionMetrics(gameId, condition)
-            )
-        );
+        return ResponseEntity
+            .ok(
+                ApiResponse
+                    .success("관리자 대기열 입장 지표 조회 완료", adminQueueQueryService.getAdmissionMetrics(gameId, condition))
+            );
     }
 }

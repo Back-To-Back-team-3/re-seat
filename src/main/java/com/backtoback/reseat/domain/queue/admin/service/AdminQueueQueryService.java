@@ -51,14 +51,13 @@ public class AdminQueueQueryService {
 
         // Redis ZSet이 없으면 zCard()가 null일 수 있으므로 대기 인원 0명으로 처리한다.
         long waitingCount = redisCount == null ? 0L : redisCount;
-        long usableAdmissionCount = admissionTokenRepository.countUsableByGameId(gameId, AdmissionTokenStatus.ACTIVE, now);
+        long usableAdmissionCount
+            = admissionTokenRepository.countUsableByGameId(gameId, AdmissionTokenStatus.ACTIVE, now);
 
         LocalDate today = now.toLocalDate();
-        long admittedToday = admissionTokenRepository.countIssuedByGameIdAndPeriod(
-            gameId,
-            today.atStartOfDay(),
-            today.plusDays(1).atStartOfDay()
-        );
+        long admittedToday
+            = admissionTokenRepository
+                .countIssuedByGameIdAndPeriod(gameId, today.atStartOfDay(), today.plusDays(1).atStartOfDay());
 
         return new AdminQueueOverviewResponse(
             gameId,
@@ -85,12 +84,9 @@ public class AdminQueueQueryService {
         findGame(gameId);
         condition.validate();
 
-        List<AdmissionMetricDailyProjection> metrics = admissionTokenRepository
-            .findDailyAdmissionMetrics(
-                gameId,
-                condition.fromDateTime(),
-                condition.toExclusiveDateTime()
-            );
+        List<AdmissionMetricDailyProjection> metrics
+            = admissionTokenRepository
+                .findDailyAdmissionMetrics(gameId, condition.fromDateTime(), condition.toExclusiveDateTime());
 
         return AdminQueueAdmissionMetricsResponse.from(gameId, condition, metrics);
     }
@@ -104,6 +100,6 @@ public class AdminQueueQueryService {
      */
     private Game findGame(Long gameId) {
 
-       return gameRepository.findById(gameId).orElseThrow(() -> new GameNotFoundException(gameId));
+        return gameRepository.findById(gameId).orElseThrow(() -> new GameNotFoundException(gameId));
     }
 }

@@ -14,11 +14,7 @@ import com.backtoback.reseat.domain.queue.admin.service.AdmissionMetricPeriod;
  * @param from 조회 시작일
  * @param to 조회 종료일
  */
-public record AdmissionMetricSearchCondition(
-    AdmissionMetricPeriod period,
-    LocalDate from,
-    LocalDate to
-) {
+public record AdmissionMetricSearchCondition(AdmissionMetricPeriod period, LocalDate from, LocalDate to) {
 
     private static final long MAX_RANGE_DAYS = 365L;
 

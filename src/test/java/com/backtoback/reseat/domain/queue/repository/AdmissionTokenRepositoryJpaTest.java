@@ -30,10 +30,12 @@ import jakarta.persistence.EntityManager;
  * 관리자 대기열 현황과 입장 지표에 사용하는 AdmissionToken 집계 쿼리를 검증한다.
  */
 @DataJpaTest
-@Import({
-    QuerydslConfig.class,
-    JpaConfig.class
-})
+@Import(
+    {
+        QuerydslConfig.class,
+        JpaConfig.class
+    }
+)
 @DisplayName("AdmissionTokenRepository 관리자 집계")
 public class AdmissionTokenRepositoryJpaTest {
 
@@ -67,15 +69,17 @@ public class AdmissionTokenRepositoryJpaTest {
         game = createGame("Queue 집계 대상 경기", stadium, homeTeam, awayTeam);
         otherGame = createGame("Queue 집계 제외 경기", stadium, homeTeam, awayTeam);
 
-        user = User.builder()
-            .email("queue-metric@test.com")
-            .password("test")
-            .name("Queue 지표 사용자")
-            .phone("010-0000-0001")
-            .isVerified(true)
-            .role(UserRole.USER)
-            .status(UserStatus.ACTIVE)
-            .build();
+        user
+            = User
+                .builder()
+                .email("queue-metric@test.com")
+                .password("test")
+                .name("Queue 지표 사용자")
+                .phone("010-0000-0001")
+                .isVerified(true)
+                .role(UserRole.USER)
+                .status(UserStatus.ACTIVE)
+                .build();
         entityManager.persist(user);
     }
 
@@ -97,23 +101,20 @@ public class AdmissionTokenRepositoryJpaTest {
      * @param awayTeam 원정팀
      * @return 저장된 경기
      */
-    private Game createGame(
-        String title,
-        Stadium stadium,
-        Team homeTeam,
-        Team awayTeam
-    ) {
+    private Game createGame(String title, Stadium stadium, Team homeTeam, Team awayTeam) {
 
-        Game savedGame = Game.builder()
-            .homeTeam(homeTeam)
-            .awayTeam(awayTeam)
-            .stadium(stadium)
-            .gameAt(NOW.plusDays(7))
-            .bookingOpenAt(NOW.minusDays(1))
-            .bookingCloseAt(NOW.plusDays(6))
-            .bookingStatus(BookingStatus.OPEN)
-            .title(title)
-            .build();
+        Game savedGame
+            = Game
+                .builder()
+                .homeTeam(homeTeam)
+                .awayTeam(awayTeam)
+                .stadium(stadium)
+                .gameAt(NOW.plusDays(7))
+                .bookingOpenAt(NOW.minusDays(1))
+                .bookingCloseAt(NOW.plusDays(6))
+                .bookingStatus(BookingStatus.OPEN)
+                .title(title)
+                .build();
         entityManager.persist(savedGame);
 
         return savedGame;
@@ -139,16 +140,8 @@ public class AdmissionTokenRepositoryJpaTest {
         LocalDateTime seatBrowsingExpiresAt
     ) {
 
-        return admissionTokenRepository.save(
-            AdmissionToken.of(
-                game,
-                user,
-                token,
-                issuedAt,
-                expiresAt,
-                seatBrowsingExpiresAt
-            )
-        );
+        return admissionTokenRepository
+            .save(AdmissionToken.of(game, user, token, issuedAt, expiresAt, seatBrowsingExpiresAt));
     }
 
     // ---------- 사용 가능한 Queue-Token 집계 ----------
@@ -159,19 +152,11 @@ public class AdmissionTokenRepositoryJpaTest {
 
         // given
         // 전체 만료시간과 최초 탐색 만료시간이 모두 남은 ACTIVE 토큰 — 포함
-        saveToken(
-            game,
-            user,
-            "usable-token",
-            NOW.minusMinutes(1),
-            NOW.plusMinutes(20),
-            NOW.plusMinutes(2)
-        );
+        saveToken(game, user, "usable-token", NOW.minusMinutes(1), NOW.plusMinutes(20), NOW.plusMinutes(2));
         flushAndClear();
 
         // when
-        long usableCount = admissionTokenRepository
-            .countUsableByGameId(game.getId(), AdmissionTokenStatus.ACTIVE, NOW);
+        long usableCount = admissionTokenRepository.countUsableByGameId(game.getId(), AdmissionTokenStatus.ACTIVE, NOW);
 
         // then
         // 관리자 현황도 실제 Queue-Token 검증과 같은 전체 · 최초 탐색 만료 조건을 사용해야 한다.
@@ -184,19 +169,11 @@ public class AdmissionTokenRepositoryJpaTest {
 
         // given
         // 전체 만료시간이 조회 기준 시간과 같은 ACTIVE 토큰 — 제외
-        saveToken(
-            game,
-            user,
-            "expired-at-boundary-token",
-            NOW.minusMinutes(1),
-            NOW,
-            NOW.plusMinutes(2)
-        );
+        saveToken(game, user, "expired-at-boundary-token", NOW.minusMinutes(1), NOW, NOW.plusMinutes(2));
         flushAndClear();
 
         // when
-        long usableCount = admissionTokenRepository
-            .countUsableByGameId(game.getId(), AdmissionTokenStatus.ACTIVE, NOW);
+        long usableCount = admissionTokenRepository.countUsableByGameId(game.getId(), AdmissionTokenStatus.ACTIVE, NOW);
 
         // then
         assertThat(usableCount).isEqualTo(0);
@@ -208,19 +185,11 @@ public class AdmissionTokenRepositoryJpaTest {
 
         // given
         // 탐색 미완료이고 최초 탐색 만료시간이 조회 기준 시간과 같은 ACTIVE 토큰 — 제외
-        saveToken(
-            game,
-            user,
-            "browsing-expired-at-boundary-token",
-            NOW.minusMinutes(1),
-            NOW.plusMinutes(20),
-            NOW
-        );
+        saveToken(game, user, "browsing-expired-at-boundary-token", NOW.minusMinutes(1), NOW.plusMinutes(20), NOW);
         flushAndClear();
 
         // when
-        long usableCount = admissionTokenRepository
-            .countUsableByGameId(game.getId(), AdmissionTokenStatus.ACTIVE, NOW);
+        long usableCount = admissionTokenRepository.countUsableByGameId(game.getId(), AdmissionTokenStatus.ACTIVE, NOW);
 
         // then
         assertThat(usableCount).isEqualTo(0);
@@ -232,20 +201,20 @@ public class AdmissionTokenRepositoryJpaTest {
 
         // given
         // 탐색을 완료했고 전체 만료시간이 남은 ACTIVE 토큰 — 포함
-        AdmissionToken completedBrowsingToken = saveToken(
-            game,
-            user,
-            "completed-browsing-token",
-            NOW.minusMinutes(5),
-            NOW.plusMinutes(20),
-            NOW.minusMinutes(1)
-        );
+        AdmissionToken completedBrowsingToken
+            = saveToken(
+                game,
+                user,
+                "completed-browsing-token",
+                NOW.minusMinutes(5),
+                NOW.plusMinutes(20),
+                NOW.minusMinutes(1)
+            );
         completedBrowsingToken.completeSeatBrowsing(NOW.minusMinutes(2));
         flushAndClear();
 
         // when
-        long usableCount = admissionTokenRepository
-            .countUsableByGameId(game.getId(), AdmissionTokenStatus.ACTIVE, NOW);
+        long usableCount = admissionTokenRepository.countUsableByGameId(game.getId(), AdmissionTokenStatus.ACTIVE, NOW);
 
         // then
         assertThat(usableCount).isEqualTo(1);
@@ -259,14 +228,7 @@ public class AdmissionTokenRepositoryJpaTest {
 
         // given
         // 시작 경계에 있는 대상 경기 토큰 — 포함
-        saveToken(
-            game,
-            user,
-            "from-token",
-            FROM,
-            NOW.plusMinutes(20),
-            NOW.plusMinutes(3)
-        );
+        saveToken(game, user, "from-token", FROM, NOW.plusMinutes(20), NOW.plusMinutes(3));
 
         // 종료 직전에 있는 대상 경기 토큰 — 포함
         saveToken(
@@ -279,29 +241,14 @@ public class AdmissionTokenRepositoryJpaTest {
         );
 
         // 종료 경계와 같은 대상 경기 토큰 — 제외
-        saveToken(
-            game,
-            user,
-            "at-end-token",
-            TO_EXCLUSIVE,
-            TO_EXCLUSIVE.plusMinutes(20),
-            TO_EXCLUSIVE.plusMinutes(3)
-        );
+        saveToken(game, user, "at-end-token", TO_EXCLUSIVE, TO_EXCLUSIVE.plusMinutes(20), TO_EXCLUSIVE.plusMinutes(3));
 
         // 조회 범위 안에 있지만 다른 경기의 토큰 — 제외
-        saveToken(
-            otherGame,
-            user,
-            "other-game-token",
-            FROM.plusDays(1),
-            NOW.plusMinutes(20),
-            NOW.plusMinutes(3)
-        );
+        saveToken(otherGame, user, "other-game-token", FROM.plusDays(1), NOW.plusMinutes(20), NOW.plusMinutes(3));
         flushAndClear();
 
         // when
-        long issuedCount = admissionTokenRepository
-            .countIssuedByGameIdAndPeriod(game.getId(), FROM, TO_EXCLUSIVE);
+        long issuedCount = admissionTokenRepository.countIssuedByGameIdAndPeriod(game.getId(), FROM, TO_EXCLUSIVE);
 
         // then
         // 종료 날짜의 다음 날 00:00 미만으로 조회해 to 날짜 전체를 포함한다.
@@ -314,39 +261,18 @@ public class AdmissionTokenRepositoryJpaTest {
 
         // given
         // 조회 시작일에 발급된 첫 번째 대상 경기 토큰 — 첫 번째 날짜에 포함
-        saveToken(
-            game,
-            user,
-            "first-day-token-1",
-            FROM,
-            NOW.plusMinutes(20),
-            NOW.plusMinutes(3)
-        );
+        saveToken(game, user, "first-day-token-1", FROM, NOW.plusMinutes(20), NOW.plusMinutes(3));
 
         // 조회 시작일에 발급된 두 번째 대상 경기 토큰 — 첫 번째 날짜에 포함
-        saveToken(
-            game,
-            user,
-            "first-day-token-2",
-            FROM,
-            NOW.plusMinutes(20),
-            NOW.plusMinutes(3)
-        );
+        saveToken(game, user, "first-day-token-2", FROM, NOW.plusMinutes(20), NOW.plusMinutes(3));
 
         // 조회 시작일 다음 날에 발급된 대상 경기 토큰 — 두 번째 날짜에 포함
-        saveToken(
-            game,
-            user,
-            "second-day-token",
-            FROM.plusDays(1),
-            NOW.plusMinutes(20),
-            NOW.plusMinutes(3)
-        );
+        saveToken(game, user, "second-day-token", FROM.plusDays(1), NOW.plusMinutes(20), NOW.plusMinutes(3));
         flushAndClear();
 
         // when
-        List<AdmissionMetricDailyProjection> dailyMetrics = admissionTokenRepository
-            .findDailyAdmissionMetrics(game.getId(), FROM, TO_EXCLUSIVE);
+        List<AdmissionMetricDailyProjection> dailyMetrics
+            = admissionTokenRepository.findDailyAdmissionMetrics(game.getId(), FROM, TO_EXCLUSIVE);
 
         // then
         assertThat(dailyMetrics).hasSize(2);

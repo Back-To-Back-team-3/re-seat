@@ -66,8 +66,7 @@ public class AdminQueueQueryServiceTest {
     @BeforeEach
     void setUp() {
 
-        lenient().when(redisTemplate.opsForZSet())
-            .thenReturn(zSetOperations);
+        lenient().when(redisTemplate.opsForZSet()).thenReturn(zSetOperations);
     }
 
     /**
@@ -81,10 +80,8 @@ public class AdminQueueQueryServiceTest {
 
         AdmissionMetricDailyProjection metric = mock(AdmissionMetricDailyProjection.class);
 
-        when(metric.getAdmissionDate())
-            .thenReturn(Date.valueOf(date));
-        when(metric.getAdmittedCount())
-            .thenReturn(admittedCount);
+        when(metric.getAdmissionDate()).thenReturn(Date.valueOf(date));
+        when(metric.getAdmittedCount()).thenReturn(admittedCount);
 
         return metric;
     }
@@ -96,18 +93,11 @@ public class AdminQueueQueryServiceTest {
      */
     private static Stream<AdmissionMetricSearchCondition> invalidAdmissionMetricConditions() {
 
-        return Stream.of(
-            new AdmissionMetricSearchCondition(
-                AdmissionMetricPeriod.DAILY,
-                TO,
-                FROM
-            ),
-            new AdmissionMetricSearchCondition(
-                AdmissionMetricPeriod.DAILY,
-                FROM,
-                FROM.plusDays(366)
-            )
-        );
+        return Stream
+            .of(
+                new AdmissionMetricSearchCondition(AdmissionMetricPeriod.DAILY, TO, FROM),
+                new AdmissionMetricSearchCondition(AdmissionMetricPeriod.DAILY, FROM, FROM.plusDays(366))
+            );
     }
 
     // ---------- 관리자 대기열 현황 조회 ----------
@@ -117,42 +107,33 @@ public class AdminQueueQueryServiceTest {
     void getOverview_withExistingGame_returnsQueueOverview() {
 
         // given
-        Game game = Game.builder()
-            .bookingStatus(BookingStatus.OPEN)
-            .build();
+        Game game = Game.builder().bookingStatus(BookingStatus.OPEN).build();
 
-        given(gameRepository.findById(GAME_ID))
-            .willReturn(Optional.of(game));
+        given(gameRepository.findById(GAME_ID)).willReturn(Optional.of(game));
 
         // 현재 대기 인원은 Redis에서, Queue-Token 현황은 DB에서 각각 조회한다.
         long redisCount = 12L;
         long usableAdmissionCount = 3L;
         long admittedToday = 7L;
 
-        ArgumentCaptor<LocalDateTime> usableNowCaptor = ArgumentCaptor
-            .forClass(LocalDateTime.class);
-        ArgumentCaptor<LocalDateTime> issuedFromCaptor = ArgumentCaptor
-            .forClass(LocalDateTime.class);
-        ArgumentCaptor<LocalDateTime> issuedToExclusiveCaptor = ArgumentCaptor
-            .forClass(LocalDateTime.class);
+        ArgumentCaptor<LocalDateTime> usableNowCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
+        ArgumentCaptor<LocalDateTime> issuedFromCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
+        ArgumentCaptor<LocalDateTime> issuedToExclusiveCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
 
         // 현재 대기 인원은 waiting Redis ZSet에 저장된 member 수를 사용한다.
-        given(zSetOperations.zCard(QueueRedisKey.waiting(GAME_ID)))
-            .willReturn(redisCount);
+        given(zSetOperations.zCard(QueueRedisKey.waiting(GAME_ID))).willReturn(redisCount);
 
         // 사용할 수 있는 토큰은 전체 만료 전이며 탐색을 완료했거나 최초 탐색 만료 전이어야 한다.
-        given(admissionTokenRepository.countUsableByGameId(
-            eq(GAME_ID),
-            eq(AdmissionTokenStatus.ACTIVE),
-            any(LocalDateTime.class)
-        )).willReturn(usableAdmissionCount);
+        given(
+            admissionTokenRepository
+                .countUsableByGameId(eq(GAME_ID), eq(AdmissionTokenStatus.ACTIVE), any(LocalDateTime.class))
+        ).willReturn(usableAdmissionCount);
 
         // 오늘 발급 수는 [오늘 00:00, 다음 날 00:00) 반개방 구간으로 집계한다.
-        given(admissionTokenRepository.countIssuedByGameIdAndPeriod(
-            eq(GAME_ID),
-            any(LocalDateTime.class),
-            any(LocalDateTime.class)
-        )).willReturn(admittedToday);
+        given(
+            admissionTokenRepository
+                .countIssuedByGameIdAndPeriod(eq(GAME_ID), any(LocalDateTime.class), any(LocalDateTime.class))
+        ).willReturn(admittedToday);
 
         LocalDateTime beforeCall = LocalDateTime.now();
 
@@ -173,22 +154,16 @@ public class AdminQueueQueryServiceTest {
         // collectedAt은 Service 실행 중 생성된 시간이어야 한다.
         assertThat(response.collectedAt()).isBetween(beforeCall, afterCall);
 
-        then(admissionTokenRepository).should().countUsableByGameId(
-            eq(GAME_ID),
-            eq(AdmissionTokenStatus.ACTIVE),
-            usableNowCaptor.capture()
-        );
-        then(admissionTokenRepository).should().countIssuedByGameIdAndPeriod(
-            eq(GAME_ID),
-            issuedFromCaptor.capture(),
-            issuedToExclusiveCaptor.capture()
-        );
+        then(admissionTokenRepository)
+            .should()
+            .countUsableByGameId(eq(GAME_ID), eq(AdmissionTokenStatus.ACTIVE), usableNowCaptor.capture());
+        then(admissionTokenRepository)
+            .should()
+            .countIssuedByGameIdAndPeriod(eq(GAME_ID), issuedFromCaptor.capture(), issuedToExclusiveCaptor.capture());
 
         // 토큰 유효성 판단과 오늘의 발급 범위는 응답의 collectedAt과 같은 시간을 기준으로 계산한다.
-        assertThat(usableNowCaptor.getValue())
-            .isEqualTo(response.collectedAt());
-        assertThat(issuedFromCaptor.getValue())
-            .isEqualTo(response.collectedAt().toLocalDate().atStartOfDay());
+        assertThat(usableNowCaptor.getValue()).isEqualTo(response.collectedAt());
+        assertThat(issuedFromCaptor.getValue()).isEqualTo(response.collectedAt().toLocalDate().atStartOfDay());
         assertThat(issuedToExclusiveCaptor.getValue())
             .isEqualTo(response.collectedAt().toLocalDate().plusDays(1).atStartOfDay());
     }
@@ -198,18 +173,14 @@ public class AdminQueueQueryServiceTest {
     void getOverview_withoutRedisQueue_returnsZeroWaitingCount() {
 
         // given
-        Game game = Game.builder()
-            .bookingStatus(BookingStatus.OPEN)
-            .build();
+        Game game = Game.builder().bookingStatus(BookingStatus.OPEN).build();
 
-        given(gameRepository.findById(GAME_ID))
-            .willReturn(Optional.of(game));
+        given(gameRepository.findById(GAME_ID)).willReturn(Optional.of(game));
 
         // Redis에 대기열 ZSet이 없으면 zCard()가 null을 반환할 수 있다.
         Long redisCount = null;
 
-        given(zSetOperations.zCard(QueueRedisKey.waiting(GAME_ID)))
-            .willReturn(redisCount);
+        given(zSetOperations.zCard(QueueRedisKey.waiting(GAME_ID))).willReturn(redisCount);
 
         // when
         AdminQueueOverviewResponse response = adminQueueQueryService.getOverview(GAME_ID);
@@ -225,12 +196,10 @@ public class AdminQueueQueryServiceTest {
 
         // given
         // 경기 존재 여부는 Redis와 Queue-Token 집계보다 먼저 확인한다.
-        given(gameRepository.findById(GAME_ID))
-            .willReturn(Optional.empty());
+        given(gameRepository.findById(GAME_ID)).willReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> adminQueueQueryService.getOverview(GAME_ID))
-            .isInstanceOf(GameNotFoundException.class);
+        assertThatThrownBy(() -> adminQueueQueryService.getOverview(GAME_ID)).isInstanceOf(GameNotFoundException.class);
 
         // 존재하지 않는 경기의 Redis 대기 인원과 DB 토큰 수를 불필요하게 조회하지 않는다.
         then(redisTemplate).shouldHaveNoInteractions();
@@ -242,32 +211,23 @@ public class AdminQueueQueryServiceTest {
     @ParameterizedTest
     @EnumSource(AdmissionMetricPeriod.class)
     @DisplayName("일별 발급 결과를 요청한 기간 단위로 묶고 데이터가 없는 구간을 0으로 반환한다.")
-    void getAdmissionMetrics_withPeriod_returnsBucketsIncludingEmptyPeriod(
-        AdmissionMetricPeriod period
-    ) {
+    void getAdmissionMetrics_withPeriod_returnsBucketsIncludingEmptyPeriod(AdmissionMetricPeriod period) {
 
         // given
         Game game = Game.builder().build();
-        AdmissionMetricSearchCondition condition = new AdmissionMetricSearchCondition(
-            period,
-            FROM,
-            TO
-        );
+        AdmissionMetricSearchCondition condition = new AdmissionMetricSearchCondition(period, FROM, TO);
 
         // Repository의 일별 집계 결과를 Service가 DAILY · WEEKLY · MONTHLY 단위로 다시 묶는다.
         AdmissionMetricDailyProjection metric = dailyMetric(FROM, 2L);
 
-        given(gameRepository.findById(GAME_ID))
-            .willReturn(Optional.of(game));
-        given(admissionTokenRepository.findDailyAdmissionMetrics(
-            GAME_ID,
-            FROM.atStartOfDay(),
-            TO.plusDays(1).atStartOfDay()
-        )).willReturn(List.of(metric));
+        given(gameRepository.findById(GAME_ID)).willReturn(Optional.of(game));
+        given(
+            admissionTokenRepository
+                .findDailyAdmissionMetrics(GAME_ID, FROM.atStartOfDay(), TO.plusDays(1).atStartOfDay())
+        ).willReturn(List.of(metric));
 
         // when
-        AdminQueueAdmissionMetricsResponse response = adminQueueQueryService
-            .getAdmissionMetrics(GAME_ID, condition);
+        AdminQueueAdmissionMetricsResponse response = adminQueueQueryService.getAdmissionMetrics(GAME_ID, condition);
 
         // then
         assertThat(response.gameId()).isEqualTo(GAME_ID);
@@ -277,34 +237,20 @@ public class AdminQueueQueryServiceTest {
 
         // DAILY는 날짜, WEEKLY는 해당 주의 월요일, MONTHLY는 연월을 bucket으로 사용한다.
         List<String> expectedBuckets = switch (period) {
-            case DAILY -> FROM.datesUntil(TO.plusDays(1))
-                .map(LocalDate::toString)
-                .toList();
-            case WEEKLY -> List.of(
-                "2026-08-31",
-                "2026-09-07",
-                "2026-09-14",
-                "2026-09-21",
-                "2026-09-28"
-            );
-            case MONTHLY -> List.of(
-                "2026-09",
-                "2026-10"
-            );
+            case DAILY -> FROM.datesUntil(TO.plusDays(1)).map(LocalDate::toString).toList();
+            case WEEKLY -> List.of("2026-08-31", "2026-09-07", "2026-09-14", "2026-09-21", "2026-09-28");
+            case MONTHLY -> List.of("2026-09", "2026-10");
         };
 
         assertThat(response.series())
             .extracting(AdminQueueAdmissionMetricResponse::bucket)
             .containsExactlyElementsOf(expectedBuckets);
 
-        assertThat(response.series().get(0).admittedCount())
-            .isEqualTo(2L);
+        assertThat(response.series().get(0).admittedCount()).isEqualTo(2L);
 
         // 관리자 차트가 중간 구간을 건너뛰지 않도록 조회 범위의 빈 bucket도 응답에 남긴다.
         assertThat(response.series().subList(1, response.series().size()))
-            .allSatisfy(metricResponse ->
-                assertThat(metricResponse.admittedCount()).isZero()
-            );
+            .allSatisfy(metricResponse -> assertThat(metricResponse.admittedCount()).isZero());
     }
 
     @ParameterizedTest
@@ -315,12 +261,9 @@ public class AdminQueueQueryServiceTest {
     ) {
 
         // given
-        Game game = Game.builder()
-            .bookingStatus(BookingStatus.OPEN)
-            .build();
+        Game game = Game.builder().bookingStatus(BookingStatus.OPEN).build();
 
-        given(gameRepository.findById(GAME_ID))
-            .willReturn(Optional.of(game));
+        given(gameRepository.findById(GAME_ID)).willReturn(Optional.of(game));
 
         // when & then
         // condition은 from이 to보다 늦거나 종료일을 포함해 366일을 초과한다.
@@ -328,10 +271,8 @@ public class AdminQueueQueryServiceTest {
             .isInstanceOf(QueueAdmissionMetricSearchConditionInvalidException.class);
 
         // 잘못된 기간은 DB 집계 쿼리를 실행하기 전에 차단한다.
-        then(admissionTokenRepository).should(never()).findDailyAdmissionMetrics(
-            any(Long.class),
-            any(LocalDateTime.class),
-            any(LocalDateTime.class)
-        );
+        then(admissionTokenRepository)
+            .should(never())
+            .findDailyAdmissionMetrics(any(Long.class), any(LocalDateTime.class), any(LocalDateTime.class));
     }
 }

@@ -54,11 +54,12 @@ public record AdminQueueAdmissionMetricsResponse(
             counts.merge(bucket, dailyMetric.getAdmittedCount(), Long::sum);
         });
 
-        List<AdminQueueAdmissionMetricResponse> series = counts
-            .entrySet()
-            .stream()
-            .map(entry -> new AdminQueueAdmissionMetricResponse(entry.getKey(), entry.getValue()))
-            .toList();
+        List<AdminQueueAdmissionMetricResponse> series
+            = counts
+                .entrySet()
+                .stream()
+                .map(entry -> new AdminQueueAdmissionMetricResponse(entry.getKey(), entry.getValue()))
+                .toList();
 
         return new AdminQueueAdmissionMetricsResponse(
             gameId,
@@ -79,7 +80,7 @@ public record AdminQueueAdmissionMetricsResponse(
 
         Map<String, Long> result = new LinkedHashMap<>();
 
-        for(LocalDate date = condition.from(); !date.isAfter(condition.to()); date = date.plusDays(1)) {
+        for (LocalDate date = condition.from(); !date.isAfter(condition.to()); date = date.plusDays(1)) {
             result.putIfAbsent(bucketOf(condition.period(), date), 0L);
         }
 

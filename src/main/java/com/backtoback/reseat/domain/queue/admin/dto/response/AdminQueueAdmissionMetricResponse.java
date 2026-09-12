@@ -6,8 +6,5 @@ package com.backtoback.reseat.domain.queue.admin.dto.response;
  * @param bucket 집계 구간
  * @param admittedCount 해당 구간의 Queue-Token 발급 수
  */
-public record AdminQueueAdmissionMetricResponse(
-    String bucket,
-    long admittedCount
-) {
+public record AdminQueueAdmissionMetricResponse(String bucket, long admittedCount) {
 }

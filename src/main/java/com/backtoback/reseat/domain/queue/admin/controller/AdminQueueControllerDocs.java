@@ -25,27 +25,29 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public interface AdminQueueControllerDocs {
 
     @Operation(summary = "경기별 대기열 현황 조회")
-    @ApiResponses({
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "200",
-            description = "조회 성공"
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "401",
-            description = "미인증",
-            content = @Content
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "403",
-            description = "관리자 권한 없음",
-            content = @Content
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "404",
-            description = "GAME_NOT_FOUND",
-            content = @Content
-        ),
-    })
+    @ApiResponses(
+        {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "200",
+                description = "조회 성공"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "401",
+                description = "미인증",
+                content = @Content
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "403",
+                description = "관리자 권한 없음",
+                content = @Content
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "404",
+                description = "GAME_NOT_FOUND",
+                content = @Content
+            ),
+        }
+    )
     ResponseEntity<ApiResponse<AdminQueueOverviewResponse>> getOverview(
         @Parameter(
             description = "경기 ID",
@@ -58,32 +60,34 @@ public interface AdminQueueControllerDocs {
         summary = "경기별 대기열 입장 지표 조회",
         description = "종료일을 포함해 최대 366일을 조회합니다."
     )
-    @ApiResponses({
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "200",
-            description = "조회 성공"
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "400",
-            description = "잘못된 조회 기간",
-            content = @Content
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "401",
-            description = "미인증",
-            content = @Content
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "403",
-            description = "관리자 권한 없음",
-            content = @Content
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "404",
-            description = "GAME_NOT_FOUND",
-            content = @Content
-        ),
-    })
+    @ApiResponses(
+        {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "200",
+                description = "조회 성공"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "400",
+                description = "잘못된 조회 기간",
+                content = @Content
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "401",
+                description = "미인증",
+                content = @Content
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "403",
+                description = "관리자 권한 없음",
+                content = @Content
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "404",
+                description = "GAME_NOT_FOUND",
+                content = @Content
+            ),
+        }
+    )
     ResponseEntity<ApiResponse<AdminQueueAdmissionMetricsResponse>> getAdmissionMetrics(
         @Parameter(
             description = "경기 ID",
