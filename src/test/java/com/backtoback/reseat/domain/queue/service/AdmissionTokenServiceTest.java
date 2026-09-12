@@ -11,6 +11,8 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -166,6 +168,90 @@ public class AdmissionTokenServiceTest {
 
         verify(admissionTokenRepository).findByTokenWithPessimisticWriteLock(TOKEN);
         verify(admissionTokenRepository, never()).findByToken(TOKEN);
+    }
+
+    @Test
+    @DisplayName("결제 복구가 활성 Queue-Token을 최종화하면 USED 상태가 된다.")
+    void finalizeTokenAfterPayment_withActiveToken_marksUsed() {
+        AdmissionToken admissionToken = activeToken();
+        when(admissionTokenRepository.findByTokenWithPessimisticWriteLock(TOKEN))
+            .thenReturn(Optional.of(admissionToken));
+
+        admissionTokenService.finalizeTokenAfterPayment(USER_ID, GAME_ID, TOKEN);
+
+        assertThat(admissionToken.getStatus()).isEqualTo(AdmissionTokenStatus.USED);
+        assertThat(admissionToken.getUsedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("결제 복구가 이미 사용된 Queue-Token을 다시 최종화해도 최초 사용 시각을 유지한다.")
+    void finalizeTokenAfterPayment_withUsedToken_isIdempotent() {
+        AdmissionToken admissionToken = activeToken();
+        LocalDateTime firstUsedAt = LocalDateTime.now().minusMinutes(1);
+        admissionToken.use(firstUsedAt);
+        when(admissionTokenRepository.findByTokenWithPessimisticWriteLock(TOKEN))
+            .thenReturn(Optional.of(admissionToken));
+
+        assertThatCode(() -> admissionTokenService.finalizeTokenAfterPayment(USER_ID, GAME_ID, TOKEN))
+            .doesNotThrowAnyException();
+
+        assertThat(admissionToken.getStatus()).isEqualTo(AdmissionTokenStatus.USED);
+        assertThat(admissionToken.getUsedAt()).isEqualTo(firstUsedAt);
+    }
+
+    @ParameterizedTest(name = "{0} 토큰을 그대로 인정한다")
+    @EnumSource(
+        value = AdmissionTokenStatus.class,
+        names = {
+            "EXPIRED",
+            "BROWSING_EXPIRED",
+            "REVOKED"
+        }
+    )
+    @DisplayName("결제 복구는 이미 비활성화된 Queue-Token을 다시 변경하지 않는다.")
+    void finalizeTokenAfterPayment_withInactiveToken_isIdempotent(AdmissionTokenStatus status) {
+        AdmissionToken admissionToken = inactiveToken(status);
+        when(admissionTokenRepository.findByTokenWithPessimisticWriteLock(TOKEN))
+            .thenReturn(Optional.of(admissionToken));
+
+        assertThatCode(() -> admissionTokenService.finalizeTokenAfterPayment(USER_ID, GAME_ID, TOKEN))
+            .doesNotThrowAnyException();
+
+        assertThat(admissionToken.getStatus()).isEqualTo(status);
+        assertThat(admissionToken.getUsedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("결제 복구 중 TTL이 지난 ACTIVE Queue-Token은 EXPIRED로 정리한다.")
+    void finalizeTokenAfterPayment_withExpiredActiveToken_marksExpired() {
+        LocalDateTime now = LocalDateTime.now();
+        AdmissionToken admissionToken = activeToken(now.minusMinutes(5), now.minusMinutes(1));
+        when(admissionTokenRepository.findByTokenWithPessimisticWriteLock(TOKEN))
+            .thenReturn(Optional.of(admissionToken));
+
+        assertThatCode(() -> admissionTokenService.finalizeTokenAfterPayment(USER_ID, GAME_ID, TOKEN))
+            .doesNotThrowAnyException();
+
+        assertThat(admissionToken.getStatus()).isEqualTo(AdmissionTokenStatus.EXPIRED);
+        assertThat(admissionToken.getUsedAt()).isNull();
+    }
+
+    private AdmissionToken inactiveToken(AdmissionTokenStatus status) {
+        LocalDateTime now = LocalDateTime.now();
+        AdmissionToken admissionToken
+            = activeToken(
+                now.minusMinutes(5),
+                status == AdmissionTokenStatus.EXPIRED ? now.minusMinutes(1) : now.plusMinutes(10)
+            );
+
+        if (status == AdmissionTokenStatus.EXPIRED) {
+            admissionToken.expire(now);
+        } else if (status == AdmissionTokenStatus.BROWSING_EXPIRED) {
+            admissionToken.expireBrowsing(now);
+        } else {
+            admissionToken.revoke();
+        }
+        return admissionToken;
     }
 
     @Test
