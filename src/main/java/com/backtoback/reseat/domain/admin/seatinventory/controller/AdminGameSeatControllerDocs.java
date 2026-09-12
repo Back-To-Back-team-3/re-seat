@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.seatinventory.controller;
+package com.backtoback.reseat.domain.admin.seatinventory.controller;
 
 import org.springframework.http.ResponseEntity;
 
