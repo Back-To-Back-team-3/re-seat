@@ -31,7 +31,7 @@ public class StadiumCongestionService {
     private final Timer externalApiTimer;
     private final SeoulCityDataClient seoulCityDataClient;
     private final RedisTemplate<String, Object> redisTemplate;
-
+    private final Counter redisErrorCounter; // 필드 선언 추가
     @Value("${citydata.cache.ttl-minutes:10}")
     private long cacheTtlMinutes;
 
@@ -45,8 +45,9 @@ public class StadiumCongestionService {
 
         this.cacheHitCounter = meterRegistry.counter("citydata.cache.hits");
         this.cacheMissCounter = meterRegistry.counter("citydata.cache.misses");
+        this.redisErrorCounter = meterRegistry.counter("citydata.redis.error.count");
         this.fallbackCounter = meterRegistry.counter("citydata.external.api.fallback.count");
-        this.externalApiTimer = meterRegistry.timer("citydata.external.api.latency");
+        this.externalApiTimer = meterRegistry.timer("citydata.external.api.latency");;
     }
 
     // 구장 ID에 해당하는 실시간 혼잡도 정보 조회(Redis 캐시 우선 조회)
@@ -67,9 +68,11 @@ public class StadiumCongestionService {
                 log.debug("구장 혼잡도 캐시 히트(stadiumNum = {})", stadiumNum);
                 return cachedResponse;
             }
+            // 정상 조회 결과 캐시가 존재하지 않는 경우만 Cache Miss 집계
             cacheMissCounter.increment();
         } catch (Exception e) {
-            cacheMissCounter.increment();
+            // Redis 장애/연결 오류 발생 시 Miss 대신 Redis Error 지표로 분리 집계
+            redisErrorCounter.increment();
             log.warn("Redis 캐시 조회 중 오류 발생 (stadiumNum = {}), 외부 API를 직접 호출합니다", stadiumNum, e);
         }
 

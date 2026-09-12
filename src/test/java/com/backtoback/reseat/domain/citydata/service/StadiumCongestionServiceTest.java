@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -28,9 +29,14 @@ import com.backtoback.reseat.domain.citydata.client.dto.SeoulCityDataRawResponse
 import com.backtoback.reseat.domain.citydata.dto.response.StadiumCongestionResponse;
 import com.backtoback.reseat.domain.citydata.exception.StadiumCongestionNotFoundException;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+
 @ExtendWith(MockitoExtension.class)
 @DisplayName("StadiumCongestionService 단위 테스트")
 class StadiumCongestionServiceTest {
+    @Spy
+    private MeterRegistry meterRegistry = new SimpleMeterRegistry();
 
     @InjectMocks
     private StadiumCongestionService stadiumCongestionService;

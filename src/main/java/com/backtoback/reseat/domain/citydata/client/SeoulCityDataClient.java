@@ -43,7 +43,7 @@ public class SeoulCityDataClient {
      * @return 서울시 도시 데이터 원본 응답 DTO
      */
     public SeoulCityDataRawResponse fetchCityData(String areaName) {
-        String targetUri = baseUrl + "/" + apiKey + "/json/citydata/1/5/" + areaName;
+        String targetUri = baseUrl + "/{apiKey}/json/citydata/1/5/" + areaName;
         try {
             SeoulCityDataRawResponse response
                 = webClient
