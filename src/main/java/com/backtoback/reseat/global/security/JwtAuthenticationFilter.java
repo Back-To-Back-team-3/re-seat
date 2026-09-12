@@ -44,10 +44,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             }
-            filterChain.doFilter(request, response);
         } finally {
-            sample.stop(meterRegistry.timer("jwt_filter_latency_seconds", "uri", request.getRequestURI()));
+            sample.stop(meterRegistry.timer("jwt_filter_latency_seconds"));
         }
+
+        filterChain.doFilter(request, response);
     }
 
     private String resolveToken(HttpServletRequest request) {
