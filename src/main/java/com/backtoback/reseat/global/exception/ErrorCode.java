@@ -67,7 +67,9 @@ public enum ErrorCode {
     QUEUE_ENTRY_EVENT_USER_ID_INVALID(HttpStatus.BAD_REQUEST, "대기열 진입 이벤트의 사용자 ID가 올바르지 않습니다."),
     QUEUE_ENTRY_EVENT_REQUESTED_AT_REQUIRED(HttpStatus.BAD_REQUEST, "대기열 진입 요청 시간이 누락되었습니다."),
     QUEUE_ADMISSION_INTERRUPTED(HttpStatus.SERVICE_UNAVAILABLE, "입장 허용 처리 중 스레드가 중단되었습니다."),
+    QUEUE_REDIS_KEY_INVALID(HttpStatus.SERVICE_UNAVAILABLE, "Redis 대기열 Key가 올바르지 않습니다."),
     QUEUE_REDIS_MEMBER_INVALID(HttpStatus.SERVICE_UNAVAILABLE, "Redis 대기열 사용자 정보가 올바르지 않습니다."),
+    QUEUE_ADMISSION_METRIC_SEARCH_CONDITION_INVALID(HttpStatus.BAD_REQUEST, "입장 지표 조회 조건이 올바르지 않습니다."),
 
     // 좌석 (seats, game_seats)
     SEAT_NOT_FOUND(HttpStatus.NOT_FOUND, "좌석을 찾을 수 없습니다."),

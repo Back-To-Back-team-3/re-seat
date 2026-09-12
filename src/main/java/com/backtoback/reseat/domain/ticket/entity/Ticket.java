@@ -301,6 +301,22 @@ public class Ticket extends BaseEntity {
     }
 
     /**
+     * QR 토큰을 재발급 / ISSUED 상태의 티켓만 가능
+     * <p>QR 유출·스캔 오류 등으로 기존 토큰을 무효화해야 할 때 관리자가 사용한다.</p>
+     *
+     * @param newQrToken 새로 발급할 QR 토큰
+     */
+    public void reissueQrToken(String newQrToken) {
+        if (newQrToken == null || newQrToken.isBlank()) {
+            throw new IllegalArgumentException("newQrToken은 필수입니다.");
+        }
+        if (this.status != TicketStatus.ISSUED) {
+            throw new InvalidTicketStateException();
+        }
+        this.qrToken = newQrToken;
+    }
+
+    /**
      * ISSUED 상태에서만 가능한 동작(입장, 환불 요청)을 검증한다.
      * <p>이미 진행 중이거나 종결된 상태면 구체적인 원인을 구분해 예외를 던진다.</p>
      */
