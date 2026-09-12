@@ -10,6 +10,11 @@ import org.junit.jupiter.api.Test;
 
 import com.backtoback.reseat.domain.seatinventory.exception.InvalidStateTransitionException;
 
+/**
+ * GameSeat 상태 전이 단위 테스트.
+ * <p>Spring 컨텍스트 없이 순수 도메인 로직만 검증한다.
+ * hold/release/sell 상태 전이에 이어 block/unblock(관리자 판매 차단·해제)도 이 파일에서 다룬다.
+ */
 @DisplayName("GameSeat 상태 전이")
 class GameSeatTest {
 
@@ -138,6 +143,84 @@ class GameSeatTest {
             GameSeat seat = seatWith(GameSeatStatus.BLOCKED);
 
             assertThatThrownBy(seat::refund).isInstanceOf(InvalidStateTransitionException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("block(): AVAILABLE → BLOCKED")
+    class Block {
+
+        @Test
+        @DisplayName("AVAILABLE 좌석은 BLOCKED로 전이된다")
+        void success() {
+            GameSeat seat = seatWith(GameSeatStatus.AVAILABLE);
+
+            seat.block();
+
+            assertThat(seat.getStatus()).isEqualTo(GameSeatStatus.BLOCKED);
+        }
+
+        @Test
+        @DisplayName("HELD 좌석을 block()하면 예외 (선점 해제가 선행돼야 함)")
+        void held_throws() {
+            GameSeat seat = seatWith(GameSeatStatus.HELD);
+
+            assertThatThrownBy(seat::block).isInstanceOf(InvalidStateTransitionException.class);
+        }
+
+        @Test
+        @DisplayName("SOLD 좌석을 block()하면 예외 (환불이 선행돼야 함)")
+        void sold_throws() {
+            GameSeat seat = seatWith(GameSeatStatus.SOLD);
+
+            assertThatThrownBy(seat::block).isInstanceOf(InvalidStateTransitionException.class);
+        }
+
+        @Test
+        @DisplayName("이미 BLOCKED인 좌석을 다시 block()하면 예외 (멱등 아님)")
+        void alreadyBlocked_throws() {
+            GameSeat seat = seatWith(GameSeatStatus.BLOCKED);
+
+            assertThatThrownBy(seat::block).isInstanceOf(InvalidStateTransitionException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("unblock(): BLOCKED → AVAILABLE")
+    class Unblock {
+
+        @Test
+        @DisplayName("BLOCKED 좌석은 AVAILABLE로 돌아간다")
+        void success() {
+            GameSeat seat = seatWith(GameSeatStatus.BLOCKED);
+
+            seat.unblock();
+
+            assertThat(seat.getStatus()).isEqualTo(GameSeatStatus.AVAILABLE);
+        }
+
+        @Test
+        @DisplayName("AVAILABLE 좌석을 unblock()하면 예외")
+        void available_throws() {
+            GameSeat seat = seatWith(GameSeatStatus.AVAILABLE);
+
+            assertThatThrownBy(seat::unblock).isInstanceOf(InvalidStateTransitionException.class);
+        }
+
+        @Test
+        @DisplayName("HELD 좌석을 unblock()하면 예외")
+        void held_throws() {
+            GameSeat seat = seatWith(GameSeatStatus.HELD);
+
+            assertThatThrownBy(seat::unblock).isInstanceOf(InvalidStateTransitionException.class);
+        }
+
+        @Test
+        @DisplayName("SOLD 좌석을 unblock()하면 예외")
+        void sold_throws() {
+            GameSeat seat = seatWith(GameSeatStatus.SOLD);
+
+            assertThatThrownBy(seat::unblock).isInstanceOf(InvalidStateTransitionException.class);
         }
     }
 }
