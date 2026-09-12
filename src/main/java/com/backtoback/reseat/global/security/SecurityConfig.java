@@ -54,7 +54,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(
                 auth -> auth
 
-                    .requestMatchers("/api/v1/stadiums/**/congestion").permitAll()
+                    .requestMatchers("/api/v1/stadiums/**/congestion")
+                    .permitAll()
                     // 헬스체크 및 모니터링 경로 허용
                     .requestMatchers("/actuator", "/actuator/**")
                     .permitAll()
