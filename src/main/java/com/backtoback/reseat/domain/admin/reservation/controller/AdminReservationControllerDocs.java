@@ -46,6 +46,11 @@ public interface AdminReservationControllerDocs {
                 description = "조회 성공"
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "400",
+                description = "INVALID_REQUEST — status 파라미터 형식 오류(허용되지 않은 값)",
+                content = @Content
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
                 responseCode = "401",
                 description = "미인증",
                 content = @Content
