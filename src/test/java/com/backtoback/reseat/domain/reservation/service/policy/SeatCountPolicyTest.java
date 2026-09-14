@@ -2,14 +2,17 @@ package com.backtoback.reseat.domain.reservation.service.policy;
 
 import static org.assertj.core.api.Assertions.*;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.backtoback.reseat.domain.reservation.exception.MaxSeatCountExceededException;
 import com.backtoback.reseat.domain.reservation.service.SeatCountPolicy;
 
-@Disabled("테스트 제외")
+/**
+ * 1인당 경기별 좌석 보유 수 상한(2매) 검증 정책 단위 테스트.
+ * <p>보유 좌석 수와 신규 요청 좌석 수의 합이 상한을 넘으면
+ * {@link com.backtoback.reseat.domain.reservation.exception.MaxSeatCountExceededException}을 던진다.
+ */
 class SeatCountPolicyTest {
 
     @Test

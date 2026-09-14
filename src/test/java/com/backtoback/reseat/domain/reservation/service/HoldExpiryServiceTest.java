@@ -6,7 +6,6 @@ import static org.mockito.BDDMockito.*;
 
 import java.time.LocalDateTime;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,13 +20,10 @@ import com.backtoback.reseat.domain.seatinventory.repository.GameSeatRepository;
 
 /**
  * HoldExpiryService 단위 테스트.
- * <p>
- * 스케줄 타이밍 비결정성을 배제하기 위해 HoldExpiryScheduler를 거치지 않고
- * releaseExpired()를 직접 호출해 검증한다.
- * <p>
- * 쿼리 실제 실행(SQL 레벨) 검증은 별도 Repository 테스트(Testcontainers)에서 수행한다.
+ * <p>스케줄 타이밍의 비결정성을 배제하기 위해 {@code HoldExpiryScheduler}를 거치지 않고 {@code releaseExpired()}를 직접 호출해 검증한다.
+ * <p>쿼리의 실제 SQL 레벨 동작 검증은 별도 Repository 테스트(Testcontainers)에서 수행하며,
+ * 이 클래스는 Mock 기반으로 반환값 집계·호출 순서·호출 여부만 검증한다.
  */
-@Disabled("테스트 제외")
 @ExtendWith(MockitoExtension.class)
 class HoldExpiryServiceTest {
 

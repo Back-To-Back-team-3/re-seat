@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.function.Supplier;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,7 +27,13 @@ import com.backtoback.reseat.domain.reservation.service.lock.UserGameLockStrateg
 import com.backtoback.reseat.domain.reservation.service.port.TicketCountPort;
 import com.backtoback.reseat.domain.reservation.service.port.UserVerificationPort;
 
-@Disabled("테스트 제외")
+/**
+ * SeatHoldFacade의 좌석 탐색 완료 기록 연동 단위 테스트.
+ * <p>좌석 선점이 성공하면 {@code AdmissionTokenService.completeSeatBrowsing()}이
+ * 정확히 호출되는지, 이 기록 호출이 실패해도 선점 응답 자체는 영향받지 않는지를 검증한다.
+ * <p>{@code completeSeatBrowsing()}의 멱등성(최초 1회만 기록)은 이 클래스가 아니라
+ * {@code AdmissionToken} 엔티티가 책임지므로, 여기서는 호출 횟수와 예외 격리 여부만 확인한다.
+ */
 @ExtendWith(MockitoExtension.class)
 class SeatHoldFacadeBrowsingTest {
 

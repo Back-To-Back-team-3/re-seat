@@ -7,7 +7,6 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,7 +29,13 @@ import com.backtoback.reseat.domain.seatinventory.service.GameSeatStatusService;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.repository.UserRepository;
 
-@Disabled("테스트 제외")
+/**
+ * ReservationService.releaseHold() 가드 우선순위 단위 테스트.
+ * <p>존재하지 않는 예약(404), 소유자가 아닌 요청(403), 이미 취소된 예약에 대한
+ * 재요청(멱등 200), 만료 시각이 지난 HOLDING 예약(410)까지 네 가지 분기를 검증한다.
+ * <p>핵심은 판단 순서다. 소유권 검증(403)은 만료 여부(410)보다 먼저 확인되어야 한다.
+ * 그렇지 않으면 타인의 만료된 예약 정보(만료 시각 등)가 소유권 확인 없이 노출될 수 있다.
+ */
 @ExtendWith(MockitoExtension.class)
 class ReservationReleaseGuardTest {
 

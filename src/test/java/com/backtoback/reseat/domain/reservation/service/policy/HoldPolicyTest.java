@@ -11,6 +11,12 @@ import org.junit.jupiter.api.Test;
 
 import com.backtoback.reseat.domain.reservation.service.HoldPolicy;
 
+/**
+ * HoldPolicy 시간 상수 정의 단위 테스트.
+ * <p>좌석 선점(HOLD_TTL)·결제 기한(PAYMENT_DEADLINE)·연장 상한(HOLD_EXTEND_CAP)
+ * 세 상수의 값과, 그 사이에 성립해야 하는 불변식(HOLD_TTL &gt;= PAYMENT_DEADLINE)을 고정한다.
+ * <p>이 불변식이 깨지면, 사용자가 아직 결제 중인데 좌석 선점 시간이 먼저 끝나버려 좌석이 다른 사람에게 넘어갈 수 있다.
+ */
 @DisplayName("HoldPolicy 시간 정책")
 class HoldPolicyTest {
 
