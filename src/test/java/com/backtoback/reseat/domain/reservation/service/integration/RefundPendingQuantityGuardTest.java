@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.reservation.service.policy;
+package com.backtoback.reseat.domain.reservation.service.integration;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
