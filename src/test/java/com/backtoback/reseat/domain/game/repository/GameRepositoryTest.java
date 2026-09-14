@@ -55,7 +55,7 @@ class GameRepositoryTest {
     @Test
     @DisplayName("경기 목록 조회 시 팀과 구장 정보를 함께 조회한다")
     void should_fetchTeamsAndStadium_when_searchGames() {
-        GameSearchCondition condition = new GameSearchCondition(null, null, null, null, null);
+        GameSearchCondition condition = new GameSearchCondition(null, null, null, null, null, null);
 
         Page<Game> result = gameRepository.searchGames(condition, PageRequest.of(0, 20));
 
@@ -83,7 +83,8 @@ class GameRepositoryTest {
         statistics.clear();
 
         Page<Game> result
-            = gameRepository.searchGames(new GameSearchCondition(null, null, null, null, null), PageRequest.of(0, 20));
+            = gameRepository
+                .searchGames(new GameSearchCondition(null, null, null, null, null, null), PageRequest.of(0, 20));
 
         List<Game> content = result.getContent();
 
