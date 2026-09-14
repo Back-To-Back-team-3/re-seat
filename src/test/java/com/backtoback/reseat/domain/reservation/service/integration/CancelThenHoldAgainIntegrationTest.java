@@ -41,9 +41,9 @@ import com.backtoback.reseat.domain.user.repository.UserRepository;
 import com.backtoback.reseat.global.common.BaseIntegrationTest;
 
 /**
- * [이슈 #380]
- * HOLDING 상태 예약 2매 중 1매를 취소하면 잔여 수량 기준으로 다른 좌석을 재선점할 수 있음을 검증한다.
- * <p>ReservationService.cancel() 한 번으로 예약 취소와 좌석 반환(AVAILABLE)이 함께 이뤄지는지 재선점 성공 여부로 확인한다.
+ * [이슈 #380] 취소 후 재선점 통합 테스트.
+ * <p>HOLDING 상태 예약 2매 중 1매를 취소하면 잔여 수량 기준으로 다른 좌석을 재선점할 수 있음을 검증한다.
+ * ReservationService.cancel() 한 번으로 예약 취소와 좌석 반환(AVAILABLE)이 함께 이뤄지는지 재선점 성공 여부로 확인한다.
  */
 class CancelThenHoldAgainIntegrationTest extends BaseIntegrationTest {
 

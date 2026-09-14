@@ -53,9 +53,9 @@ import com.backtoback.reseat.domain.user.repository.UserRepository;
 import com.backtoback.reseat.global.common.BaseIntegrationTest;
 
 /**
- * [이슈 #380]
- * REFUND_PENDING·REFUND_FAILED 구간에서는 수량이 회복되지 않아
- * 재선점 시도가 MaxSeatCountExceededException으로 차단됨을 고정하는 회귀 테스트.
+ * [이슈 #380] 환불 미완료 구간 재선점 차단 회귀 통합 테스트.
+ * <p>REFUND_PENDING·REFUND_FAILED 구간에서는 수량이 회복되지 않아,
+ * 재선점 시도가 MaxSeatCountExceededException으로 차단됨을 고정한다.
  */
 class RefundPendingQuantityGuardTest extends BaseIntegrationTest {
 
