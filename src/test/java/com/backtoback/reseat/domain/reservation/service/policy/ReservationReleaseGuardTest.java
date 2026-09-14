@@ -90,7 +90,9 @@ class ReservationReleaseGuardTest {
                 .status(ReservationStatus.HOLDING)
                 .holdExpiresAt(LocalDateTime.now().minusMinutes(1))
                 .build();
-        when(reservationRepository.findWithSeatsById(RESERVATION_ID)).thenReturn(Optional.of(reservation));
+        // releaseHold()는 동시 취소·해제 요청의 좌석 반환 중복 실행을 막기 위해 findByIdWithPessimisticWriteLock을 호출한다.
+        when(reservationRepository.findByIdWithPessimisticWriteLock(RESERVATION_ID))
+            .thenReturn(Optional.of(reservation));
 
         assertThatThrownBy(() -> reservationService.releaseHold(RESERVATION_ID, OWNER_ID))
             .isInstanceOf(PreReservationExpiredException.class);
@@ -106,7 +108,9 @@ class ReservationReleaseGuardTest {
                 .status(ReservationStatus.CANCELED)
                 .holdExpiresAt(LocalDateTime.now().plusMinutes(5))
                 .build();
-        when(reservationRepository.findWithSeatsById(RESERVATION_ID)).thenReturn(Optional.of(reservation));
+        // releaseHold()는 동시 취소·해제 요청의 좌석 반환 중복 실행을 막기 위해 findByIdWithPessimisticWriteLock을 호출한다.
+        when(reservationRepository.findByIdWithPessimisticWriteLock(RESERVATION_ID))
+            .thenReturn(Optional.of(reservation));
 
         ReservationCancelResponse response = reservationService.releaseHold(RESERVATION_ID, OWNER_ID);
 
@@ -123,7 +127,9 @@ class ReservationReleaseGuardTest {
                 .status(ReservationStatus.HOLDING)
                 .holdExpiresAt(LocalDateTime.now().minusMinutes(1)) // 만료 상태이지만 소유권 가드가 먼저 걸려야 함
                 .build();
-        when(reservationRepository.findWithSeatsById(RESERVATION_ID)).thenReturn(Optional.of(reservation));
+        // releaseHold()는 동시 취소·해제 요청의 좌석 반환 중복 실행을 막기 위해 findByIdWithPessimisticWriteLock을 호출한다.
+        when(reservationRepository.findByIdWithPessimisticWriteLock(RESERVATION_ID))
+            .thenReturn(Optional.of(reservation));
 
         assertThatThrownBy(() -> reservationService.releaseHold(RESERVATION_ID, OTHER_USER_ID))
             .isInstanceOf(ReservationAccessDeniedException.class);
@@ -132,7 +138,8 @@ class ReservationReleaseGuardTest {
     @Test
     @DisplayName("존재하지 않는 예약 해제 요청은 404를 반환한다")
     void should_throwReservationNotFound_when_reservationDoesNotExist() {
-        when(reservationRepository.findWithSeatsById(RESERVATION_ID)).thenReturn(Optional.empty());
+        // releaseHold()는 동시 취소·해제 요청의 좌석 반환 중복 실행을 막기 위해 findByIdWithPessimisticWriteLock을 호출한다.
+        when(reservationRepository.findByIdWithPessimisticWriteLock(RESERVATION_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> reservationService.releaseHold(RESERVATION_ID, OWNER_ID))
             .isInstanceOf(ReservationNotFoundException.class);

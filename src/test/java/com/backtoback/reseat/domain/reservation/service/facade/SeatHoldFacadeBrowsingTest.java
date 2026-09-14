@@ -16,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.backtoback.reseat.domain.queue.service.AdmissionTokenService;
+import com.backtoback.reseat.domain.queue.service.AdmissionTokenTiming;
 import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
 import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse;
 import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
@@ -76,6 +77,12 @@ class SeatHoldFacadeBrowsingTest {
 
         when(userVerificationPort.isVerified(USER_ID)).thenReturn(true);
         stubUserGameLockPassthrough();
+
+        // HOLD 상한 게이트(HoldExtensionPolicy.validateExtensionLimit)가 getTokenTiming() 반환값의 expiresAt()을 바로 참조한다.
+        // 스텁이 없으면 Mockito 기본값(null)이 반환되어 NullPointerException으로 이어진다.
+        // 최초 선점 상황(seatBrowsingCompletedAt=null)을 가정한다.
+        when(admissionTokenService.getTokenTiming(eq(USER_ID), eq(GAME_ID), eq(TOKEN)))
+            .thenReturn(new AdmissionTokenTiming(LocalDateTime.now().plusMinutes(20), null));
 
         when(reservationSeatRepository.countActiveHoldingSeats(eq(USER_ID), eq(GAME_ID), any(LocalDateTime.class)))
             .thenReturn(0);
