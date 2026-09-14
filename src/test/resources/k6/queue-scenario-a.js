@@ -189,6 +189,7 @@ export default function () {
     // Consumer 등록 전의 QUEUE_ENTRY_NOT_FOUND는 제한 시간 안에서 다시 확인한다.
     while (Date.now() < registrationDeadline) {
         const remainingSeconds = Math.max(0, registrationDeadline - Date.now()) / 1_000;
+        const isDeadlineBound = remainingSeconds <= requestTimeoutSeconds;
         const pollRequestTimeoutSeconds = Math.min(requestTimeoutSeconds, remainingSeconds);
 
         const statusResponse = http.get(
@@ -206,6 +207,14 @@ export default function () {
         );
 
         if (statusResponse.status !== 200 && statusResponse.status !== 404) {
+            if (isDeadlineBound
+                && statusResponse.status === 0
+                && statusResponse.error_code === 1050
+            ) {
+                registrationOutcome = 'timeout';
+                break;
+            }
+
             registrationOutcome = 'error';
 
             if (statusResponse.status === 0) {

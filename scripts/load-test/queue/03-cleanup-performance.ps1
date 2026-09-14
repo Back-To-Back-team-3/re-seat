@@ -137,6 +137,9 @@ UNION ALL SELECT 'orders', COUNT(*) FROM orders o JOIN reservations r ON r.id = 
 UNION ALL SELECT 'payments', COUNT(*) FROM payments p JOIN orders o ON o.id = p.order_id JOIN reservations r ON r.id = o.reservation_id WHERE r.game_id = $gameId AND p.user_id IN ($userIdList)
 UNION ALL SELECT 'tickets', COUNT(*) FROM tickets WHERE game_id = $gameId AND user_id IN ($userIdList)
 UNION ALL SELECT 'payment_cancels', COUNT(*) FROM payment_cancels pc JOIN payments p ON p.id = pc.payment_id JOIN orders o ON o.id = p.order_id JOIN reservations r ON r.id = o.reservation_id WHERE r.game_id = $gameId AND r.user_id IN ($userIdList)
+UNION ALL SELECT 'payment_recovery_tasks', COUNT(*) FROM payment_recovery_tasks prt JOIN payments p ON p.id = prt.payment_id JOIN orders o ON o.id = p.order_id JOIN reservations r ON r.id = o.reservation_id WHERE r.game_id = $gameId AND r.user_id IN ($userIdList)
+UNION ALL SELECT 'order_items', COUNT(*) FROM order_items oi JOIN orders o ON o.id = oi.order_id JOIN reservations r ON r.id = o.reservation_id WHERE r.game_id = $gameId AND r.user_id IN ($userIdList)
+UNION ALL SELECT 'reservation_seats', COUNT(*) FROM reservation_seats rs JOIN reservations r ON r.id = rs.reservation_id WHERE r.game_id = $gameId AND r.user_id IN ($userIdList)
 UNION ALL SELECT 'game_seats', COUNT(*) FROM game_seats WHERE game_id = $gameId
 UNION ALL SELECT 'users', COUNT(*) FROM users WHERE id IN ($cleanupUserIdList) AND email IN ($emailList);
 "@
@@ -162,8 +165,8 @@ Write-Host "삭제한 Queue Redis Key: ${deletedRedisKeyCount}건"
 Write-Host '[2/2] manifest에 기록된 DB 데이터만 삭제합니다.'
 Invoke-PerformanceMySql -Sql @"
 START TRANSACTION;
-DELETE pc FROM payment_cancels pc JOIN payments p ON p.id = pc.payment_id JOIN orders o ON o.id = p.order_id JOIN reservations r ON r.id = o.reservation_id WHERE r.game_id = $gameId AND r.user_id IN ($userIdList);
 DELETE prt FROM payment_recovery_tasks prt JOIN payments p ON p.id = prt.payment_id JOIN orders o ON o.id = p.order_id JOIN reservations r ON r.id = o.reservation_id WHERE r.game_id = $gameId AND r.user_id IN ($userIdList);
+DELETE pc FROM payment_cancels pc JOIN payments p ON p.id = pc.payment_id JOIN orders o ON o.id = p.order_id JOIN reservations r ON r.id = o.reservation_id WHERE r.game_id = $gameId AND r.user_id IN ($userIdList);
 DELETE t FROM tickets t WHERE t.game_id = $gameId AND t.user_id IN ($userIdList);
 DELETE p FROM payments p JOIN orders o ON o.id = p.order_id JOIN reservations r ON r.id = o.reservation_id WHERE r.game_id = $gameId AND r.user_id IN ($userIdList);
 DELETE oi FROM order_items oi JOIN orders o ON o.id = oi.order_id JOIN reservations r ON r.id = o.reservation_id WHERE r.game_id = $gameId AND r.user_id IN ($userIdList);

@@ -61,7 +61,11 @@ function Invoke-PerformanceMySql {
         $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
         $output = Invoke-Compose -Arguments @("exec", "-T", $MySqlService, "sh", "-lc", $mysql) -InputText $Sql
     } finally { $OutputEncoding = $previousOutputEncoding }
-    if ($Scalar) { return ($output | Select-Object -First 1).ToString().Trim() }
+    if ($Scalar) {
+        $firstLine = $output | Select-Object -First 1
+        if ($null -eq $firstLine) { return "" }
+        return $firstLine.ToString().Trim()
+    }
     $output
 }
 
