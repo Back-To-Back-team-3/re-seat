@@ -4,8 +4,10 @@ import type {
     AdminGamePage,
     AdminGameRegisterRequest,
     AdminGameRegisterResponse,
+    AdminGameSeatStatusResponse,
     AdminGameSearchCondition,
     AdminLoginResponse,
+    AdminSeatInventorySummary,
     AdminTicketCancelResponse,
     AdminUser,
     AdminUserPage,
@@ -16,7 +18,7 @@ import type {
     UserStatus,
 } from "@/types/admin";
 import type {UserRole} from "@/types/auth";
-import type {GameSummary} from "@/types/game";
+import type {GameSeat, GameSeatStatus, GameSummary} from "@/types/game";
 import type {TicketStatus} from "@/types/ticket";
 
 type AdminUserPayload = Omit<AdminUser, "isVerified"> & {
@@ -132,6 +134,36 @@ export async function openGameSeatInventory(gameId: number) {
     const response = await apiRequest<ApiResponse<GameSeatOpenResponse>>(
         `/admin/games/${gameId}/seats`,
         {method: "POST"},
+    );
+    return unwrap(response);
+}
+
+export async function getAdminGameSeats(
+    gameId: number,
+    status?: GameSeatStatus,
+) {
+    const query = status ? `?status=${status}` : "";
+    const response = await apiRequest<ApiResponse<GameSeat[]>>(
+        `/admin/games/${gameId}/seats${query}`,
+    );
+    return unwrap(response);
+}
+
+export async function getAdminGameSeatSummary(gameId: number) {
+    const response = await apiRequest<ApiResponse<AdminSeatInventorySummary>>(
+        `/admin/games/${gameId}/seats/summary`,
+    );
+    return unwrap(response);
+}
+
+export async function updateAdminGameSeatStatus(
+    gameSeatId: number,
+    action: "block" | "unblock",
+    reason: string,
+) {
+    const response = await apiRequest<ApiResponse<AdminGameSeatStatusResponse>>(
+        `/admin/game-seats/${gameSeatId}/${action}`,
+        {method: "POST", body: JSON.stringify({reason})},
     );
     return unwrap(response);
 }

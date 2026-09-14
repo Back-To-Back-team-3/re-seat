@@ -7,6 +7,7 @@ import {AdminGameFilters} from "@/components/admin/games/admin-game-filters";
 import {AdminGameList} from "@/components/admin/games/admin-game-list";
 import {AdminGameOperations} from "@/components/admin/games/admin-game-operations";
 import {AdminGameRegisterForm} from "@/components/admin/games/admin-game-register-form";
+import {AdminSeatInventory} from "@/components/admin/games/admin-seat-inventory";
 import {Alert} from "@/components/common/alert";
 import {Button} from "@/components/ui/button";
 import {useAdminGames} from "@/hooks/use-admin-games";
@@ -48,14 +49,16 @@ export function AdminGameManagement() {
             }}/>
             {adminGames.error && <Alert message={adminGames.error.message} variant="error"/>}
             {selectedGame && (
-                <AdminGameOperations
-                    game={selectedGame}
-                    isOpeningInventory={adminGames.isOpeningInventory}
-                    isUpdatingStatus={adminGames.isUpdatingStatus}
-                    key={selectedGame.gameId}
-                    onOpenInventory={() => adminGames.openInventory(selectedGame.gameId)}
-                    onUpdateStatus={(status, reason) => adminGames.updateStatus(selectedGame.gameId, status, reason)}
-                />
+                <div className="grid gap-4" key={selectedGame.gameId}>
+                    <AdminGameOperations
+                        game={selectedGame}
+                        isOpeningInventory={adminGames.isOpeningInventory}
+                        isUpdatingStatus={adminGames.isUpdatingStatus}
+                        onOpenInventory={() => adminGames.openInventory(selectedGame.gameId)}
+                        onUpdateStatus={(status, reason) => adminGames.updateStatus(selectedGame.gameId, status, reason)}
+                    />
+                    <AdminSeatInventory gameId={selectedGame.gameId}/>
+                </div>
             )}
             {adminGames.isLoading ? (
                 <p className="py-16 text-center text-muted-foreground">경기 목록을 불러오고 있습니다...</p>

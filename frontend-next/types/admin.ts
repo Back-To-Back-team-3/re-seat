@@ -74,6 +74,18 @@ export type GameSeatOpenResponse = {
     priceRange: {min: number; max: number};
 };
 
+export type AdminSeatInventorySummary = {
+    available: number;
+    held: number;
+    sold: number;
+    blocked: number;
+};
+
+export type AdminGameSeatStatusResponse = {
+    gameSeatId: number;
+    status: GameSeatStatus;
+};
+
 export type AdminUserTicket = {
     ticketId: number;
     ticketNo: string;
