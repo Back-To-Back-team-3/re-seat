@@ -299,9 +299,9 @@ public interface AdminTicketControllerDocs {
                                 "errorCode": null,
                                 "message": "경기 일괄 취소 처리 완료",
                                 "data": {
-                                    "totalCount": 12,
-                                    "successCount": 10,
-                                    "failureCount": 2,
+                                    "totalCount": 2,
+                                    "successCount": 1,
+                                    "failureCount": 1,
                                     "results": [
                                         { "ticketId": 9051, "success": true, "message": "취소 접수 완료" },
                                         { "ticketId": 9052, "success": false, "message": "이미 환불 완료된 티켓입니다." }
