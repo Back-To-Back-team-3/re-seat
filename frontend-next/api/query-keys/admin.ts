@@ -1,4 +1,8 @@
-import type {AdminGameSearchCondition, AdminUserSearchCondition} from "@/types/admin";
+import type {
+    AdminGameSearchCondition,
+    AdminTicketSearchCondition,
+    AdminUserSearchCondition,
+} from "@/types/admin";
 
 export const adminKeys = {
     all: ["admin"] as const,
@@ -19,4 +23,7 @@ export const adminKeys = {
     user: (userId: number) => [...adminKeys.users(), "detail", userId] as const,
     userTickets: (userId: number) =>
         [...adminKeys.user(userId), "tickets"] as const,
+    tickets: () => [...adminKeys.all, "tickets"] as const,
+    ticketList: (condition: AdminTicketSearchCondition, page: number, size: number) =>
+        [...adminKeys.tickets(), "list", condition, page, size] as const,
 };

@@ -161,3 +161,34 @@ export type AdminTicketCancelResponse = {
 
 export type AdminUserPage = PageResponse<AdminUser>;
 export type AdminUserTicketPage = PageResponse<AdminUserTicket>;
+
+export type AdminTicketSearchCondition = {
+    userId?: number;
+    status?: TicketStatus;
+    gameDateFrom?: string;
+    gameDateTo?: string;
+};
+
+export type AdminTicketQrReissueResponse = {
+    ticketId: number;
+    qrToken: string;
+};
+
+export type AdminTicketVerifyResponse = {
+    ticketId: number;
+    status: TicketStatus;
+    usedAt: string;
+    seat: string;
+    holderName: string | null;
+};
+
+export type AdminTicketBulkCancelResponse = {
+    totalCount: number;
+    successCount: number;
+    failureCount: number;
+    results: Array<{
+        ticketId: number;
+        success: boolean;
+        message: string;
+    }>;
+};

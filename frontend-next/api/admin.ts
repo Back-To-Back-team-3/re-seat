@@ -13,6 +13,10 @@ import type {
     AdminQueueOverview,
     AdmissionMetricPeriod,
     AdminTicketCancelResponse,
+    AdminTicketBulkCancelResponse,
+    AdminTicketQrReissueResponse,
+    AdminTicketSearchCondition,
+    AdminTicketVerifyResponse,
     AdminUser,
     AdminUserPage,
     AdminUserSearchCondition,
@@ -229,6 +233,50 @@ export async function getAdminUserTickets(
 export async function cancelAdminTicket(ticketId: number, reason: string) {
     const response = await apiRequest<ApiResponse<AdminTicketCancelResponse>>(
         `/admin/tickets/${ticketId}/cancel`,
+        {method: "POST", body: JSON.stringify({reason})},
+    );
+    return unwrap(response);
+}
+
+export async function searchAdminTickets(
+    condition: AdminTicketSearchCondition,
+    page: number,
+    size: number,
+) {
+    const params = new URLSearchParams({
+        page: String(page),
+        size: String(size),
+        sort: "issuedAt,desc",
+    });
+    Object.entries(condition).forEach(([key, value]) => {
+        if (value !== undefined && value !== "") params.set(key, String(value));
+    });
+
+    const response = await apiRequest<ApiResponse<AdminUserTicketPage>>(
+        `/admin/tickets?${params.toString()}`,
+    );
+    return unwrap(response);
+}
+
+export async function reissueAdminTicketQr(ticketId: number) {
+    const response = await apiRequest<ApiResponse<AdminTicketQrReissueResponse>>(
+        `/admin/tickets/${ticketId}/qr/reissue`,
+        {method: "POST"},
+    );
+    return unwrap(response);
+}
+
+export async function verifyAdminTicket(gameId: number, qrToken: string) {
+    const response = await apiRequest<ApiResponse<AdminTicketVerifyResponse>>(
+        "/admin/tickets/verify",
+        {method: "POST", body: JSON.stringify({gameId, qrToken})},
+    );
+    return unwrap(response);
+}
+
+export async function cancelAdminGameTickets(gameId: number, reason: string) {
+    const response = await apiRequest<ApiResponse<AdminTicketBulkCancelResponse>>(
+        `/admin/tickets/games/${gameId}/cancel-bulk`,
         {method: "POST", body: JSON.stringify({reason})},
     );
     return unwrap(response);

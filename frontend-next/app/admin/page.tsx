@@ -7,6 +7,7 @@ import {useState} from "react";
 import {AdminGameManagement} from "@/components/admin/games/admin-game-management";
 import {AdminShell} from "@/components/admin/admin-shell";
 import type {AdminTab} from "@/components/admin/admin-navigation";
+import {AdminTicketManagement} from "@/components/admin/tickets/admin-ticket-management";
 import {AdminUserManagement} from "@/components/admin/users/admin-user-management";
 import {buttonVariants} from "@/components/ui/button";
 import {useAuth} from "@/hooks/use-auth";
@@ -55,11 +56,9 @@ export default function AdminPage() {
                 </div>
             </div>
             <AdminShell activeTab={activeTab} onSelect={setActiveTab}>
-                {activeTab === "users" ? (
-                    <AdminUserManagement/>
-                ) : (
-                    <AdminGameManagement/>
-                )}
+                {activeTab === "users" && <AdminUserManagement/>}
+                {activeTab === "games" && <AdminGameManagement/>}
+                {activeTab === "tickets" && <AdminTicketManagement/>}
             </AdminShell>
         </main>
     );
