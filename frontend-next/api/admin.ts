@@ -8,6 +8,7 @@ import type {
     AdminGameSearchCondition,
     AdminLoginResponse,
     AdminSeatInventorySummary,
+    AdminReservationPage,
     AdminTicketCancelResponse,
     AdminUser,
     AdminUserPage,
@@ -19,6 +20,7 @@ import type {
 } from "@/types/admin";
 import type {UserRole} from "@/types/auth";
 import type {GameSeat, GameSeatStatus, GameSummary} from "@/types/game";
+import type {ReservationStatus} from "@/types/reservation";
 import type {TicketStatus} from "@/types/ticket";
 
 type AdminUserPayload = Omit<AdminUser, "isVerified"> & {
@@ -164,6 +166,25 @@ export async function updateAdminGameSeatStatus(
     const response = await apiRequest<ApiResponse<AdminGameSeatStatusResponse>>(
         `/admin/game-seats/${gameSeatId}/${action}`,
         {method: "POST", body: JSON.stringify({reason})},
+    );
+    return unwrap(response);
+}
+
+export async function getAdminGameReservations(
+    gameId: number,
+    status: ReservationStatus | undefined,
+    page: number,
+    size: number,
+) {
+    const params = new URLSearchParams({
+        page: String(page),
+        size: String(size),
+        sort: "createdAt,desc",
+    });
+    if (status) params.set("status", status);
+
+    const response = await apiRequest<ApiResponse<AdminReservationPage>>(
+        `/admin/games/${gameId}/reservations?${params.toString()}`,
     );
     return unwrap(response);
 }

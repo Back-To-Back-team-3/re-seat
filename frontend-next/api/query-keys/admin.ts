@@ -9,6 +9,8 @@ export const adminKeys = {
         [...adminKeys.games(), gameId, "seats"] as const,
     gameSeatSummary: (gameId: number) =>
         [...adminKeys.gameSeats(gameId), "summary"] as const,
+    gameReservations: (gameId: number) =>
+        [...adminKeys.games(), gameId, "reservations"] as const,
     users: () => [...adminKeys.all, "users"] as const,
     userList: (condition: AdminUserSearchCondition, page: number, size: number) =>
         [...adminKeys.users(), "list", condition, page, size] as const,

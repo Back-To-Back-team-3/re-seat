@@ -7,6 +7,7 @@ import {AdminGameFilters} from "@/components/admin/games/admin-game-filters";
 import {AdminGameList} from "@/components/admin/games/admin-game-list";
 import {AdminGameOperations} from "@/components/admin/games/admin-game-operations";
 import {AdminGameRegisterForm} from "@/components/admin/games/admin-game-register-form";
+import {AdminReservationList} from "@/components/admin/games/admin-reservation-list";
 import {AdminSeatInventory} from "@/components/admin/games/admin-seat-inventory";
 import {Alert} from "@/components/common/alert";
 import {Button} from "@/components/ui/button";
@@ -58,6 +59,7 @@ export function AdminGameManagement() {
                         onUpdateStatus={(status, reason) => adminGames.updateStatus(selectedGame.gameId, status, reason)}
                     />
                     <AdminSeatInventory gameId={selectedGame.gameId}/>
+                    <AdminReservationList gameId={selectedGame.gameId}/>
                 </div>
             )}
             {adminGames.isLoading ? (

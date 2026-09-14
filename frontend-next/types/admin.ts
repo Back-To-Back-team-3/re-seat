@@ -1,6 +1,7 @@
 import type {PageResponse} from "@/types/api";
 import type {UserRole} from "@/types/auth";
 import type {GameSeatStatus, GameSummary} from "@/types/game";
+import type {ReservationStatus} from "@/types/reservation";
 import type {TicketStatus} from "@/types/ticket";
 
 export type UserStatus = "ACTIVE" | "SUSPENDED" | "DELETED";
@@ -85,6 +86,23 @@ export type AdminGameSeatStatusResponse = {
     gameSeatId: number;
     status: GameSeatStatus;
 };
+
+export type AdminReservationSeat = {
+    gameSeatId: number;
+    seat: string;
+    price: number;
+};
+
+export type AdminReservation = {
+    reservationId: number;
+    reservationNo: string;
+    userId: number;
+    status: ReservationStatus;
+    remainingSeconds: number | null;
+    seats: AdminReservationSeat[];
+};
+
+export type AdminReservationPage = PageResponse<AdminReservation>;
 
 export type AdminUserTicket = {
     ticketId: number;
