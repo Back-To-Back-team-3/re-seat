@@ -61,14 +61,13 @@ import com.backtoback.reseat.domain.user.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * [이슈 #382] REFUND_PENDING 구간 포함 수량 초과 동시 재선점 차단 검증.
+ * [이슈 #382] REFUND_PENDING 구간 포함 수량 초과 동시 재선점 차단 동시성 회귀 테스트.
  * <p>PR #451의 RefundPendingQuantityGuardTest(순차 요청 기준)를 동시 요청으로 확장한다.
  * 사용자가 이미 ISSUED 1매 + REFUND_PENDING 1매(= 정책상 2매 보유)인 상태에서
  * 서로 다른 좌석에 대한 추가 선점 요청 N건을 동시에 보내면 전부 MAX_SEAT_COUNT_EXCEEDED로 차단되어야 한다.
- * 좌석은 서로 달라 좌석 락 경합은 없고, userGameLockStrategy가 수량 검증 구간을 원자적으로 직렬화하는지가 검증 대상이다.</p>
- * <p>HOLDING 예약 기반 집계와 분리하기 위해, 기존 보유분은 CONFIRMED 예약 + 발급된 티켓으로만 구성한다(HOLDING 예약 없음).</p>
+ * 좌석은 서로 달라 좌석 락 경합은 없고, userGameLockStrategy가 수량 검증 구간을 원자적으로 직렬화하는지가 검증 대상이다.
+ * <p>HOLDING 예약 기반 집계와 분리하기 위해, 기존 보유분은 CONFIRMED 예약 + 발급된 티켓으로만 구성한다(HOLDING 예약 없음).
  */
-// @Disabled("테스트 제외")
 @Slf4j
 @EnabledIfEnvironmentVariable(
     named = "RUN_CONCURRENCY_TESTS",

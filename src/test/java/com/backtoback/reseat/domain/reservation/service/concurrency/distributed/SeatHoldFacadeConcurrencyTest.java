@@ -13,7 +13,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -54,15 +53,12 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * [이슈 #173] Redisson 분산락 Facade 경로 동시성 회귀 테스트.
- * <p> 이 테스트는 SeatHoldFacade를 통해 실제 락 경로를 검증한다.</p>
- * <p> 핵심 검증:
- * - 동일 좌석 N 요청 → 성공 1건, 나머지 409
- * - reservation_seats 행 1건
- * - DB 유니크 위반 0건
- * - 예상 외 예외 0건
- * </p>
+ * <p>SeatHoldFacade를 통해 실제 분산락 경로(사용자 인증 → 토큰 검증 → 락 획득 → 선점)를
+ * 그대로 거쳐 동일 좌석에 대한 동시 요청이 직렬화되는지 검증한다.
+ * <p>핵심 검증은 네 가지다.
+ * 동일 좌석에 N건을 동시 요청하면 성공은 1건이고 나머지는 409로 차단되는지,
+ * reservation_seats 행이 1건만 생기는지, DB 유니크 제약 위반이 0건인지, 그리고 예상 외 예외가 0건인지다.
  */
-@Disabled("테스트 제외")
 @Slf4j
 @EnabledIfEnvironmentVariable(
     named = "RUN_CONCURRENCY_TESTS",

@@ -13,7 +13,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -49,14 +48,12 @@ import com.backtoback.reseat.domain.user.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * [이슈 #172] 락 미적용 over-booking 재현 동시성 테스트.
- * <p>
- * 락 없는 holdSeats()에 N개 스레드가 동일 gameSeatId로 동시 요청 시
- * 성공 건수 > 1 이 발생함을 증명한다. (B2 버그 재현)
- * <p>
- * [이슈 #173] Redisson 분산락 도입 후 이 테스트는 성공 1건으로 전환된다. (회귀 테스트 승격)
+ * [이슈 #173] Redisson 분산락 적용 over-booking 방지 회귀 테스트.
+ * <p>N개 스레드가 동일 gameSeatId로 동시에 holdSeats()를 요청해도
+ * 분산락에 의해 성공 건수가 정확히 1건으로 직렬화되는지 검증한다.
+ * <p>[이슈 #172] 원래는 락이 없던 시절 "성공 건수 &gt; 1"이 발생함을 증명하는
+ * 버그 재현 테스트였다. (B2 버그 재현)
  */
-@Disabled("테스트 제외")
 @Slf4j
 @EnabledIfEnvironmentVariable(
     named = "RUN_CONCURRENCY_TESTS",

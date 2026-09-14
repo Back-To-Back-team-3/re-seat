@@ -52,18 +52,15 @@ import jakarta.persistence.PessimisticLockException;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * [이슈 #382] 취소(cancel) 동시 요청 좌석 반환 단일성 검증.
- * <p> ReservationService.cancel()은 findByIdWithPessimisticWriteLock으로 예약 행을 잠그고,
+ * [이슈 #382] 취소(cancel) 동시 요청 좌석 반환 단일성 동시성 회귀 테스트.
+ * <p>ReservationService.cancel()은 findByIdWithPessimisticWriteLock으로 예약 행을 잠그고,
  * 이미 취소된 예약(isCanceled()==true)에 대해서는 예외 없이 조용히 리턴한다.
  * 반환값·예외만으로는 "실제 반환 스레드"와 "멱등 스킵 스레드"를 구분할 수 없으므로,
  * GameSeatStatusService.releaseSeat() 호출 횟수를 이용해 직접 카운트한다.
- * <p> 핵심 검증:
- * - releaseSeat() 호출 정확히 1회 (좌석 이중 반환 0건)
- * - GameSeat.release() 가드 위반(InvalidStateTransitionException) 0건
- * - 최종 game_seats.status == AVAILABLE, reservations.status == CANCELED
- * </p>
+ * <p>핵심 검증은 세 가지다. releaseSeat() 호출이 정확히 1회인지(좌석 이중 반환 0건),
+ * GameSeat.release() 가드 위반(InvalidStateTransitionException)이 0건인지,
+ * 그리고 최종 game_seats.status가 AVAILABLE, reservations.status가 CANCELED로 일치하는지다.
  */
-// @Disabled("테스트 제외")
 @Slf4j
 @EnabledIfEnvironmentVariable(
     named = "RUN_CONCURRENCY_TESTS",

@@ -57,15 +57,12 @@ import com.backtoback.reseat.domain.user.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * [이슈 #382] 취소로 반환된 좌석에 대한 재선점 경합 검증.
+ * [이슈 #382] 취소로 반환된 좌석에 대한 재선점 경합 동시성 회귀 테스트.
  * <p>(userGameLockStrategy → 수량 검증 → seatLockStrategy → ReservationService.holdSeats)를
- * "처음부터 AVAILABLE인 좌석"이 아니라 "cancel()로 방금 AVAILABLE 전환된 좌석"에 대해 재현한다.</p>
- * <p>핵심 검증:
- * - 재선점 성공 정확히 1건, over-booking 0건
- * - 취소된 원 예약의 상태(CANCELED)가 경합 중 훼손되지 않음
- * </p>
+ * "처음부터 AVAILABLE인 좌석"이 아니라 "cancel()로 방금 AVAILABLE 전환된 좌석"에 대해 재현한다.
+ * <p>핵심 검증은 두 가지다. 재선점 성공이 정확히 1건이고 over-booking이 0건인지,
+ * 그리고 취소된 원 예약의 상태(CANCELED)가 경합 중에도 훼손되지 않는지다.
  */
-// @Disabled("테스트 제외")
 @Slf4j
 @EnabledIfEnvironmentVariable(
     named = "RUN_CONCURRENCY_TESTS",

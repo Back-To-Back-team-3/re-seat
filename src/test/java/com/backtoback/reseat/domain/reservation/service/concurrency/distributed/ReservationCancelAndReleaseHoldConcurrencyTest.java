@@ -51,16 +51,15 @@ import jakarta.persistence.PessimisticLockException;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * [이슈 #382] cancel()·releaseHold() 동시 호출 좌석 이중 반환 방지 검증.
+ * [이슈 #382] cancel()·releaseHold() 동시 호출 좌석 이중 반환 방지 동시성 회귀 테스트.
  * <p>두 메서드 모두 findByIdWithPessimisticWriteLock으로 같은 예약 행을 잠그므로,
  * 정상 동작한다면 먼저 락을 잡은 쪽만 도메인 Reservation.cancel()까지 도달하고
- * 나머지 쪽은 커밋된 최신 상태(isCanceled()==true)를 보고 조용히 리턴해야 한다.</p>
+ * 나머지 쪽은 커밋된 최신 상태(isCanceled()==true)를 보고 조용히 리턴해야 한다.
  * <p>Reservation.cancel()은 requireHolding() 가드를 갖고 있어, 만약 서비스 레벨의
  * isCanceled() 체크를 두 스레드가 동시에 통과하는 회귀가 발생하면
  * 두 번째 도메인 cancel() 호출에서 InvalidReservationStatusException이 던져진다.
- * 이 예외가 0건인지가 이번 테스트의 핵심 판별 기준이다.</p>
+ * 이 예외가 0건인지가 이번 테스트의 핵심 판별 기준이다.
  */
-// @Disabled("테스트 제외")
 @Slf4j
 @EnabledIfEnvironmentVariable(
     named = "RUN_CONCURRENCY_TESTS",

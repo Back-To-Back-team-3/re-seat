@@ -12,7 +12,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -51,16 +50,17 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * [이슈 #174] 교차 순서 다좌석 요청 데드락 방지 회귀 테스트.
- * <p>이 테스트는 교차 순서 요청에서 상호 대기 없이 처리 완료됨을 검증한다.</p>
- * <p>핵심 검증:
- * <ul>
- * <li>15초 내 모든 스레드 종료 — 데드락 없음 증명</li>
- * <li>예상 외 예외 0건</li>
- * <li>LOCK_FAILED는 경합으로 발생 가능하며 정상 동작</li>
- * </ul>
- * </p>
+ * <p>동일한 두 좌석을 서로 다른 사용자가 반대 순서로 (스레드1: seat1→seat2, 스레드2: seat2→seat1) 동시 요청해도,
+ * gameSeatId 오름차순 정렬로 락을 획득하는 설계에 의해 순환 대기 없이 15초 내 처리가 완료되는지 검증한다.
+ * <p>이 테스트가 검증하지 않는 것:
+ * over-booking 방지(성공 건수가 정확히 1건인지)는 검증 대상이 아니다.
+ * assertion은 {@code successCount + lockFailedCount == 2}만 확인하므로,
+ * 두 요청이 모두 성공해도(가상의 락 결함 상황) 이 값만으로는 통과한다.
+ * over-booking 방지는 {@code SeatHoldFacadeConcurrencyTest}가 별도로 검증한다.
+ * <p>핵심 검증은 세 가지다.
+ * 15초 내 모든 스레드가 종료되는지(데드락 없음의 증거), 예상 외 예외가 0건인지, 그리고 LOCK_FAILED는
+ * 경합 상황에서 나올 수 있는 정상 실패이며 데드락과는 다르다는 점이다.
  */
-@Disabled("테스트 제외")
 @Slf4j
 @EnabledIfEnvironmentVariable(
     named = "RUN_CONCURRENCY_TESTS",
