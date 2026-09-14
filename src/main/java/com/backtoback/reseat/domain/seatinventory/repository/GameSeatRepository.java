@@ -113,7 +113,17 @@ public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
 
     // 이후에 추가 예정:
     // findByIdWithPessimisticLock(Long id) — @Lock(PESSIMISTIC_WRITE)
-    // countByGameIdAndStatus(Long gameId, GameSeatStatus status)
+
+    /**
+     * 경기의 특정 상태 좌석 수를 집계한다.
+     * <p>관리자 재고 요약 조회(AVAILABLE/HELD/SOLD/BLOCKED 합계)에 상태별로 4회 호출된다.
+     * idx_game_seats_game_status_expires(game_id, status, hold_expires_at) 인덱스를 활용한다.
+     *
+     * @param gameId 경기 ID
+     * @param status 집계할 좌석 상태
+     * @return 해당 상태의 좌석 수
+     */
+    long countByGameIdAndStatus(Long gameId, GameSeatStatus status);
 
     /**
      * HELD 상태이면서 선점 만료 시각이 지난 좌석을 AVAILABLE로 벌크 회수한다.
