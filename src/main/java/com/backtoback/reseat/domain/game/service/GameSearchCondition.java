@@ -7,11 +7,12 @@ import com.backtoback.reseat.domain.game.exception.InvalidGameSearchConditionExc
 
 /**
  * 경기 목록 검색 조건.
- * <p>컨트롤러의 여러 RequestParam을 하나의 객체로 묶어
- * 서비스와 Repository 계층의 파라미터 개수를 줄인다.</p>
+ * <p>컨트롤러의 여러 RequestParam을 하나의 객체로 묶어 서비스와 Repository 계층의 파라미터 개수를 줄인다.
+ * <p>stadiumId는 관리자 목록 조회(AdminGameController) 전용 조건이다.
  *
  * @param homeTeamId 홈팀 ID
  * @param awayTeamId 원정팀 ID
+ * @param stadiumId 구장 ID (관리자 조회 전용)
  * @param from 경기 시작일 검색 시작 날짜
  * @param to 경기 시작일 검색 종료 날짜
  * @param bookingStatus 예매 상태
@@ -19,6 +20,7 @@ import com.backtoback.reseat.domain.game.exception.InvalidGameSearchConditionExc
 public record GameSearchCondition(
     Long homeTeamId,
     Long awayTeamId,
+    Long stadiumId,
     LocalDate from,
     LocalDate to,
     BookingStatus bookingStatus
