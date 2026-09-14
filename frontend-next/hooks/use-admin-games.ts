@@ -2,10 +2,10 @@
 
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 
-import {openGameSeatInventory, searchAdminGames, updateGameBookingStatus} from "@/api/admin";
+import {openGameSeatInventory, registerAdminGame, searchAdminGames, updateGameBookingStatus} from "@/api/admin";
 import {adminKeys} from "@/api/query-keys/admin";
 import {gameKeys} from "@/api/query-keys/games";
-import type {AdminGameSearchCondition} from "@/types/admin";
+import type {AdminGameRegisterRequest, AdminGameSearchCondition} from "@/types/admin";
 import type {GameSummary} from "@/types/game";
 
 type MutableBookingStatus = Exclude<GameSummary["bookingStatus"], "SCHEDULED">;
@@ -28,6 +28,15 @@ export function useAdminGames(condition: AdminGameSearchCondition, page: number,
             ]);
         },
     });
+    const registerMutation = useMutation({
+        mutationFn: registerAdminGame,
+        onSuccess: async () => {
+            await Promise.all([
+                queryClient.invalidateQueries({queryKey: adminKeys.games()}),
+                queryClient.invalidateQueries({queryKey: gameKeys.lists()}),
+            ]);
+        },
+    });
     const inventoryMutation = useMutation({
         mutationFn: openGameSeatInventory,
         onSuccess: async () => {
@@ -39,11 +48,13 @@ export function useAdminGames(condition: AdminGameSearchCondition, page: number,
         games: games.data?.content ?? [],
         page: games.data ?? null,
         isLoading: games.isLoading,
-        error: games.error ?? statusMutation.error ?? inventoryMutation.error,
+        error: games.error ?? registerMutation.error ?? statusMutation.error ?? inventoryMutation.error,
+        registerGame: (request: AdminGameRegisterRequest) => registerMutation.mutateAsync(request),
         updateStatus: (gameId: number, status: MutableBookingStatus, reason: string) =>
             statusMutation.mutateAsync({gameId, status, reason}),
         openInventory: (gameId: number) => inventoryMutation.mutateAsync(gameId),
         isUpdatingStatus: statusMutation.isPending,
+        isRegistering: registerMutation.isPending,
         isOpeningInventory: inventoryMutation.isPending,
     };
 }

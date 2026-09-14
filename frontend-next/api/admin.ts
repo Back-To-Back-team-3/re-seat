@@ -2,6 +2,8 @@ import {apiRequest, unwrap} from "@/api/client";
 import type {ApiResponse} from "@/types/api";
 import type {
     AdminGamePage,
+    AdminGameRegisterRequest,
+    AdminGameRegisterResponse,
     AdminGameSearchCondition,
     AdminLoginResponse,
     AdminTicketCancelResponse,
@@ -114,6 +116,14 @@ export async function searchAdminGames(
     params.set("sort", "gameAt,desc");
     const response = await apiRequest<ApiResponse<AdminGamePage>>(
         `/admin/games?${params}`,
+    );
+    return unwrap(response);
+}
+
+export async function registerAdminGame(request: AdminGameRegisterRequest) {
+    const response = await apiRequest<ApiResponse<AdminGameRegisterResponse>>(
+        "/admin/games",
+        {method: "POST", body: JSON.stringify(request)},
     );
     return unwrap(response);
 }

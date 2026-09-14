@@ -53,6 +53,21 @@ export type AdminGameSearchCondition = {
 
 export type AdminGamePage = PageResponse<GameSummary>;
 
+export type AdminGameRegisterRequest = {
+    stadiumId: number;
+    homeTeamId: number;
+    awayTeamId: number;
+    gameAt: string;
+    bookingOpenAt: string;
+    bookingCloseAt: string;
+    title?: string;
+};
+
+export type AdminGameRegisterResponse = {
+    gameId: number;
+    bookingStatus: "SCHEDULED";
+};
+
 export type GameSeatOpenResponse = {
     gameId: number;
     createdCount: number;
