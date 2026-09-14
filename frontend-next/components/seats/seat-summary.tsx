@@ -7,6 +7,7 @@ import type {ReservationResponse} from "@/types/reservation";
 export function SeatSummary({
                                 seats,
                                 busy,
+                                hasHeldSeats,
                                 locked,
                                 onReserve,
                                 reservation,
@@ -18,6 +19,7 @@ export function SeatSummary({
                             }: {
     seats: GameSeat[];
     busy: boolean;
+    hasHeldSeats?: boolean;
     locked: boolean;
     onReserve: () => void;
     reservation?: ReservationResponse | null;
@@ -44,6 +46,7 @@ export function SeatSummary({
     return (
         <BookingSeatSummary
             busy={busy}
+            hasHeldSeats={hasHeldSeats}
             locked={locked}
             onCancelReservation={onCancelReservation}
             onContinue={onContinue}

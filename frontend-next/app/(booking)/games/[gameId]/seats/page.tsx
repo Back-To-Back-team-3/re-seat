@@ -30,6 +30,7 @@ export default function SeatsPage() {
     const queueTokenExpiresAt = useBookingStore(
         (state) => state.queueTokenExpiresAt,
     );
+    const firstHoldExpiresAt = useBookingStore((state) => state.firstHoldExpiresAt);
 
     const game = useQuery({
         queryKey: gameKeys.detail(gameId),
@@ -43,8 +44,7 @@ export default function SeatsPage() {
         zones.data?.find((zone) => zone.zoneId === activeZoneId) ?? null;
     const busy = reservation.create.isPending || reservation.cancel.isPending;
 
-    // Vite SeatScreen과 같은 타깃 우선순위: 예약이 있으면 선점 만료 시각, 없으면
-    // 입장 토큰 만료 시각을 쓴다(주문 화면이 아니므로 결제 마감 시각은 없다).
+    // 예약 중에는 해당 선점 만료 시각을, 해제 후에는 최초 선점 기준 재선점 기한을 쓴다.
     const timerTarget =
         reservation.reservation?.holdExpiresAt ?? queueTokenExpiresAt ?? null;
 
@@ -71,10 +71,10 @@ export default function SeatsPage() {
     // 것처럼 보인다. 기존 화면과 같은 위치에 원인을 표시한다.
     const requestError =
         reservation.create.error?.message ?? reservation.cancel.error?.message;
-    // 선점을 해제해도 이미 사용한 입장 토큰은 돌아오지 않는다. 기존 화면과 같은
-    // 문구로 다시 예매해야 한다는 사실을 알린다.
-    const cancelNotice = reservation.cancel.isSuccess
-        ? "좌석 선점을 해제했습니다. 현재 입장 토큰은 사용되어 새 선점은 다시 예매해야 합니다."
+    const cancelNotice = !reservation.reservation && reservation.cancel.isSuccess
+        ? timerExpired
+            ? "좌석 선점을 해제했습니다. 입장 토큰이 만료되어 다시 예매해야 합니다."
+            : "좌석 선점을 해제했습니다. 재선점 가능 시간 안에 다시 좌석을 선점할 수 있습니다."
         : null;
 
     return (
@@ -166,6 +166,7 @@ export default function SeatsPage() {
 
                 <SeatSummary
                     busy={busy}
+                    hasHeldSeats={Boolean(firstHoldExpiresAt)}
                     locked={selectionLocked}
                     onCancelReservation={() => reservation.cancel.mutate()}
                     onContinue={() => router.push("/checkout")}
