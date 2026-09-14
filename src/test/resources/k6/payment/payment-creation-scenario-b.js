@@ -15,7 +15,7 @@ import {SharedArray} from 'k6/data';
 // 3. 각 VU는 자신의 결제만 반복 요청하므로 서로 다른 주문 사이의 락 경합은 발생하지 않는다.
 //
 // 실행 예시
-// k6 run -e STAGE_USERS=100 -e ITERATIONS_PER_VU=10 \
+// k6 run -e STAGE_USERS=100 -e ITERATIONS_PER_VU=10 -e MAX_DURATION=60s \
 //   src/test/resources/k6/payment/payment-creation-scenario-b.js
 
 const paymentReplaySuccessRate = new Rate('payment_creation_replay_success_rate');
@@ -45,6 +45,7 @@ const users = new SharedArray('payment creation replay users', () =>
 
 const stageUserCount = Number(__ENV.STAGE_USERS || '100');
 const iterationsPerVu = Number(__ENV.ITERATIONS_PER_VU || '10');
+const maxDuration = __ENV.MAX_DURATION || '60s';
 
 if (!Number.isInteger(stageUserCount) || stageUserCount <= 0) {
     throw new Error('STAGE_USERS는 0보다 큰 정수여야 합니다.');
@@ -78,7 +79,7 @@ export const options = {
             executor: 'per-vu-iterations',
             vus: stageUserCount,
             iterations: iterationsPerVu,
-            maxDuration: '60s',
+            maxDuration,
             tags: {
                 load_stage: loadStage,
             },
