@@ -33,4 +33,15 @@ public interface ReservationSeatRepository extends JpaRepository<ReservationSeat
         @Param("gameId") Long gameId,
         @Param("now") LocalDateTime now
     );
+
+    // 관리자 목록 조회용 배치 조회.
+    // N+1을 피하기 위해 gameSeat·seat·zone까지 한 번에 fetch join한다.
+    @Query("""
+        SELECT rs FROM ReservationSeat rs
+        JOIN FETCH rs.gameSeat gs
+        JOIN FETCH gs.seat s
+        LEFT JOIN FETCH s.zone
+        WHERE rs.reservation.id IN :reservationIds
+        """)
+    List<ReservationSeat> findWithGameSeatByReservationIdIn(@Param("reservationIds") List<Long> reservationIds);
 }
