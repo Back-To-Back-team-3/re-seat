@@ -141,6 +141,7 @@ UNION ALL SELECT 'payment_recovery_tasks', COUNT(*) FROM payment_recovery_tasks 
 UNION ALL SELECT 'order_items', COUNT(*) FROM order_items oi JOIN orders o ON o.id = oi.order_id JOIN reservations r ON r.id = o.reservation_id WHERE r.game_id = $gameId AND r.user_id IN ($userIdList)
 UNION ALL SELECT 'reservation_seats', COUNT(*) FROM reservation_seats rs JOIN reservations r ON r.id = rs.reservation_id WHERE r.game_id = $gameId AND r.user_id IN ($userIdList)
 UNION ALL SELECT 'game_seats', COUNT(*) FROM game_seats WHERE game_id = $gameId
+UNION ALL SELECT 'games', COUNT(*) FROM games WHERE id = $gameId AND title LIKE '[Queue 성능테스트 $runId]%'
 UNION ALL SELECT 'users', COUNT(*) FROM users WHERE id IN ($cleanupUserIdList) AND email IN ($emailList);
 "@
 $redisPassword = Get-ComposeSecret -Name 'REDIS_PASSWORD'
