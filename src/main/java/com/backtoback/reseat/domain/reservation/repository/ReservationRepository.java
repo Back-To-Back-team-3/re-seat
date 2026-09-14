@@ -16,7 +16,7 @@ import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.QueryHint;
 
-public interface ReservationRepository extends JpaRepository<Reservation, Long> {
+public interface ReservationRepository extends JpaRepository<Reservation, Long>, ReservationRepositoryCustom {
 
     /**
      * 선점 상세 조회 (ReservationSeat + GameSeat 페치 조인).
