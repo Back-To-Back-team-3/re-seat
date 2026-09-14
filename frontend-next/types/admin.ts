@@ -42,6 +42,17 @@ export type GameBookingStatusResponse = {
     bookingStatus: GameSummary["bookingStatus"];
 };
 
+export type AdminGameSearchCondition = {
+    homeTeamId?: number;
+    awayTeamId?: number;
+    stadiumId?: number;
+    from?: string;
+    to?: string;
+    bookingStatus?: GameSummary["bookingStatus"];
+};
+
+export type AdminGamePage = PageResponse<GameSummary>;
+
 export type GameSeatOpenResponse = {
     gameId: number;
     createdCount: number;

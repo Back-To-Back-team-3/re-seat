@@ -6,6 +6,7 @@ import {
     getAdminUser,
     getAdminUserTickets,
     openGameSeatInventory,
+    searchAdminGames,
     searchAdminUsers,
     updateGameBookingStatus,
     updateUserRole,
@@ -14,6 +15,38 @@ import {API_BASE_URL} from "@/api/client";
 import {server} from "@/test/mocks/server";
 
 describe("관리자 API", () => {
+    it("관리자 경기 검색 조건과 페이지를 쿼리로 전달한다", async () => {
+        server.use(
+            http.get(`${API_BASE_URL}/admin/games`, ({request}) => {
+                const params = new URL(request.url).searchParams;
+                expect(params.get("homeTeamId")).toBe("1");
+                expect(params.get("stadiumId")).toBe("3");
+                expect(params.get("bookingStatus")).toBe("OPEN");
+                expect(params.get("from")).toBe("2026-09-01");
+                expect(params.get("page")).toBe("1");
+                expect(params.get("size")).toBe("10");
+                expect(params.get("sort")).toBe("gameAt,desc");
+                return HttpResponse.json({
+                    success: true,
+                    errorCode: null,
+                    message: "관리자 경기 목록 조회 성공",
+                    data: {
+                        content: [], pageNumber: 1, pageSize: 10,
+                        totalElements: 0, totalPages: 0, isFirst: false, isLast: true,
+                    },
+                });
+            }),
+        );
+
+        const result = await searchAdminGames(
+            {homeTeamId: 1, stadiumId: 3, bookingStatus: "OPEN", from: "2026-09-01"},
+            1,
+            10,
+        );
+
+        expect(result.content).toEqual([]);
+    });
+
     it("회원 상세의 본인인증 필드를 프론트 표준 이름으로 정규화한다", async () => {
         server.use(
             http.get(`${API_BASE_URL}/admin/users/7`, () =>

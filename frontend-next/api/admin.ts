@@ -1,6 +1,8 @@
 import {apiRequest, unwrap} from "@/api/client";
 import type {ApiResponse} from "@/types/api";
 import type {
+    AdminGamePage,
+    AdminGameSearchCondition,
     AdminLoginResponse,
     AdminTicketCancelResponse,
     AdminUser,
@@ -98,6 +100,20 @@ export async function updateGameBookingStatus(
             method: "PATCH",
             body: JSON.stringify({bookingStatus, reason}),
         },
+    );
+    return unwrap(response);
+}
+
+export async function searchAdminGames(
+    condition: AdminGameSearchCondition = {},
+    page = 0,
+    size = 10,
+) {
+    const params = new URLSearchParams();
+    appendDefinedParams(params, {...condition, page, size});
+    params.set("sort", "gameAt,desc");
+    const response = await apiRequest<ApiResponse<AdminGamePage>>(
+        `/admin/games?${params}`,
     );
     return unwrap(response);
 }
