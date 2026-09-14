@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.reservation.service;
+package com.backtoback.reseat.domain.reservation.service.facade;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -24,6 +24,8 @@ import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse
 import com.backtoback.reseat.domain.reservation.exception.HoldExtensionLimitExceededException;
 import com.backtoback.reseat.domain.reservation.exception.MaxSeatCountExceededException;
 import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
+import com.backtoback.reseat.domain.reservation.service.ReservationService;
+import com.backtoback.reseat.domain.reservation.service.SeatHoldFacade;
 import com.backtoback.reseat.domain.reservation.service.lock.SeatLockStrategy;
 import com.backtoback.reseat.domain.reservation.service.lock.UserGameLockStrategy;
 import com.backtoback.reseat.domain.reservation.service.port.TicketCountPort;

@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.reservation.service;
+package com.backtoback.reseat.domain.reservation.service.policy;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import com.backtoback.reseat.domain.queue.exception.QueueTokenExpiredException;
 import com.backtoback.reseat.domain.queue.service.AdmissionTokenTiming;
 import com.backtoback.reseat.domain.reservation.exception.HoldExtensionLimitExceededException;
+import com.backtoback.reseat.domain.reservation.service.HoldExtensionPolicy;
 
 @DisplayName("HoldExtensionPolicy 재선점 상한 보정")
 class HoldExtensionPolicyTest {

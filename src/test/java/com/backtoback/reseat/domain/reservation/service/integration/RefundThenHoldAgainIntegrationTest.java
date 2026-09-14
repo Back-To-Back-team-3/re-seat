@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.reservation.service;
+package com.backtoback.reseat.domain.reservation.service.integration;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -16,10 +16,15 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
+import com.backtoback.reseat.domain.order.dto.response.OrderResponse;
+import com.backtoback.reseat.domain.order.entity.Order;
+import com.backtoback.reseat.domain.order.repository.OrderRepository;
+import com.backtoback.reseat.domain.order.service.OrderService;
 import com.backtoback.reseat.domain.queue.service.AdmissionTokenService;
 import com.backtoback.reseat.domain.queue.service.AdmissionTokenTiming;
 import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
 import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse;
+import com.backtoback.reseat.domain.reservation.service.SeatHoldFacade;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
 import com.backtoback.reseat.domain.seatinventory.repository.GameSeatRepository;
@@ -32,6 +37,10 @@ import com.backtoback.reseat.domain.stadium.repository.SeatZoneRepository;
 import com.backtoback.reseat.domain.stadium.repository.StadiumRepository;
 import com.backtoback.reseat.domain.team.entity.Team;
 import com.backtoback.reseat.domain.team.repository.TeamRepository;
+import com.backtoback.reseat.domain.ticket.entity.Ticket;
+import com.backtoback.reseat.domain.ticket.entity.TicketCancelReason;
+import com.backtoback.reseat.domain.ticket.repository.TicketRepository;
+import com.backtoback.reseat.domain.ticket.service.TicketService;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserRole;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
@@ -40,13 +49,14 @@ import com.backtoback.reseat.global.common.BaseIntegrationTest;
 
 /**
  * [이슈 #380]
- * HOLDING 상태 예약 2매 중 1매를 취소하면 잔여 수량 기준으로 다른 좌석을 재선점할 수 있음을 검증한다.
- * <p>ReservationService.cancel() 한 번으로 예약 취소와 좌석 반환(AVAILABLE)이 함께 이뤄지는지 재선점 성공 여부로 확인한다.
+ * 결제 완료 후 티켓 1매 환불 → 잔여 수량 기준 다른 좌석 재선점 성공까지 실제 예매 경로를 잇는 엔드투엔드 테스트.
+ * 실제 예매 경로: Reservation → Order → Ticket → 재선점
+ * <p>환불된 좌석과 다른 좌석으로 재선점한다.
  */
-class CancelThenHoldAgainIntegrationTest extends BaseIntegrationTest {
+class RefundThenHoldAgainIntegrationTest extends BaseIntegrationTest {
 
     private static final int PRICE = 18_000;
-    private static final String TOKEN = "qt_cancel-hold-again-test";
+    private static final String TOKEN = "qt_refund-hold-again-test";
 
     @MockitoBean
     private AdmissionTokenService admissionTokenService;
@@ -54,7 +64,9 @@ class CancelThenHoldAgainIntegrationTest extends BaseIntegrationTest {
     @Autowired
     private SeatHoldFacade seatHoldFacade;
     @Autowired
-    private ReservationService reservationService;
+    private OrderService orderService;
+    @Autowired
+    private TicketService ticketService;
     @Autowired
     private GameSeatRepository gameSeatRepository;
     @Autowired
@@ -69,6 +81,10 @@ class CancelThenHoldAgainIntegrationTest extends BaseIntegrationTest {
     private TeamRepository teamRepository;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private OrderRepository orderRepository;
+    @Autowired
+    private TicketRepository ticketRepository;
 
     private Long userId;
     private Long gameId;
@@ -102,7 +118,7 @@ class CancelThenHoldAgainIntegrationTest extends BaseIntegrationTest {
                 .bookingOpenAt(LocalDateTime.now().minusHours(1))
                 .bookingCloseAt(LocalDateTime.now().plusDays(6))
                 .bookingStatus(BookingStatus.OPEN)
-                .title("[이슈 #380] 취소 후 재선점 검증 경기")
+                .title("[이슈 #380] 환불 후 재선점 검증 경기")
                 .build();
         gameRepository.save(game);
         gameId = game.getId();
@@ -117,10 +133,10 @@ class CancelThenHoldAgainIntegrationTest extends BaseIntegrationTest {
         User user
             = User
                 .builder()
-                .email("cancel-hold-again@test.com")
+                .email("refund-hold-again@test.com")
                 .password("pw")
-                .name("취소재선점테스트")
-                .phone("010-7777-8888")
+                .name("환불재선점테스트")
+                .phone("010-3333-4444")
                 .isVerified(true)
                 .role(UserRole.USER)
                 .status(UserStatus.ACTIVE)
@@ -130,29 +146,46 @@ class CancelThenHoldAgainIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("should_holdAnotherSeat_when_oneOfTwoHoldingSeatsIsCanceled")
-    void should_holdAnotherSeat_when_oneOfTwoHoldingSeatsIsCanceled() {
+    @DisplayName("should_holdAnotherSeat_when_oneOfTwoTicketsIsRefunded")
+    void should_holdAnotherSeat_when_oneOfTwoTicketsIsRefunded() {
 
-        // given: 2매(첫 번째·두 번째 좌석) HOLDING 상태로 선점한다.
+        // given: 2매(첫 번째·두 번째 좌석) 선점 → 주문 → 결제 완료 → 티켓 발급까지 진행한다.
         ReservationResponse firstHold
             = seatHoldFacade
                 .holdSeats(userId, TOKEN, new SeatHoldRequest(gameId, List.of(firstGameSeatId, secondGameSeatId)));
 
-        // cancel() 한 번으로 예약 취소 + 좌석 반환(AVAILABLE)까지 이어져야 한다(PR #444 반영).
-        reservationService.cancel(firstHold.reservationId());
+        OrderResponse orderResponse = orderService.createOrder(userId, firstHold.reservationId());
+        orderService.completeOrder(orderResponse.getOrderId());
 
-        // when: 잔여 수량(0매 보유) 범위 안에서 세 번째(다른) 좌석을 재선점한다.
+        Order paidOrder = orderRepository.findById(orderResponse.getOrderId()).orElseThrow();
+        List<Ticket> tickets = ticketService.issue(paidOrder);
+
+        Ticket ticketToRefund = tickets.get(0);
+        Long refundedTicketId = tickets.get(0).getId();
+        Long refundedOrderItemId = tickets.get(0).getOrderItem().getId();
+
+        // 사용자의 환불 요청 접수 단계
+        // 실제 흐름에서는 TicketService.cancelTicket()이 수행하는 ISSUED → REFUND_PENDING 전이다.
+        // PG 호출은 이 테스트 범위가 아니므로 도메인 메서드만 직접 호출해 선행 상태를 만든다.
+        ticketToRefund.requestRefund(TicketCancelReason.USER_REFUND, null);
+        ticketRepository.save(ticketToRefund);
+
+        // 첫 번째 좌석(티켓)만 환불 완료 처리한다.
+        orderService.refundOrder(refundedOrderItemId);
+        ticketService.completeTicketRefund(refundedTicketId);
+
+        // when: 잔여 수량(1매) 범위 안에서 세 번째(다른) 좌석을 재선점한다.
         ReservationResponse newHoldResponse
             = seatHoldFacade.holdSeats(userId, TOKEN, new SeatHoldRequest(gameId, List.of(thirdGameSeatId)));
 
-        // then: 재선점이 예외 없이 성공하고, 취소한 두 좌석 모두 AVAILABLE로 되돌아가 있어야 한다.
+        // then: 재선점이 예외 없이 성공하고, 좌석 상태가 기대대로 정합한다.
         assertThat(newHoldResponse.reservationId()).isNotNull();
         assertThat(gameSeatRepository.findById(thirdGameSeatId).orElseThrow().getStatus())
             .isEqualTo(GameSeatStatus.HELD);
         assertThat(gameSeatRepository.findById(firstGameSeatId).orElseThrow().getStatus())
             .isEqualTo(GameSeatStatus.AVAILABLE);
         assertThat(gameSeatRepository.findById(secondGameSeatId).orElseThrow().getStatus())
-            .isEqualTo(GameSeatStatus.AVAILABLE);
+            .isEqualTo(GameSeatStatus.SOLD);
     }
 
     private Long createAvailableSeat(Game game, SeatZone zone, String number) {

@@ -1,12 +1,15 @@
-package com.backtoback.reseat.domain.reservation.service;
+package com.backtoback.reseat.domain.reservation.service.policy;
 
 import static org.assertj.core.api.Assertions.*;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
 
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import com.backtoback.reseat.domain.reservation.service.HoldPolicy;
 
 @DisplayName("HoldPolicy 시간 정책")
 class HoldPolicyTest {
@@ -14,7 +17,7 @@ class HoldPolicyTest {
     @Test
     @DisplayName("HOLD_TTL은 10분이다 (명세서 §5.1 정합)")
     void holdTtl_is10Minutes() {
-        assertThat(HoldPolicy.HOLD_TTL).isEqualTo(Duration.ofMinutes(10));
+        Assertions.assertThat(HoldPolicy.HOLD_TTL).isEqualTo(Duration.ofMinutes(10));
     }
 
     @Test

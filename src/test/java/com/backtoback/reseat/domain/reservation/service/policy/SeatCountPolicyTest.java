@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.reservation.service;
+package com.backtoback.reseat.domain.reservation.service.policy;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -7,6 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.backtoback.reseat.domain.reservation.exception.MaxSeatCountExceededException;
+import com.backtoback.reseat.domain.reservation.service.SeatCountPolicy;
 
 @Disabled("테스트 제외")
 class SeatCountPolicyTest {
