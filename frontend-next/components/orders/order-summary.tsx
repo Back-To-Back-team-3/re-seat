@@ -20,7 +20,8 @@ export function OrderSummary({
             <article
                 className="grid grid-cols-[150px_1fr] items-center gap-[22px] overflow-hidden rounded-panel border border-border bg-surface max-[640px]:grid-cols-[100px_1fr]">
                 <img
-                    alt="잠실야구장 경기 전경"
+                    alt=""
+                    aria-hidden="true"
                     className="h-[145px] w-[150px] object-cover max-[640px]:h-[125px] max-[640px]:w-[100px]"
                     src={STADIUM_IMAGE_URL}
                 />

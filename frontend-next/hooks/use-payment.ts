@@ -1,7 +1,7 @@
 "use client";
 
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
-import {useEffect, useRef} from "react";
+import {useEffect, useRef, useState} from "react";
 
 import {completePayment, failPayment, getPayment, requestPayment,} from "@/api/payments";
 import {orderKeys} from "@/api/query-keys/orders";
@@ -24,6 +24,8 @@ export function usePayment(paymentId?: number) {
     const setPaymentId = useBookingStore((state) => state.setPaymentId);
     const setQueueExpiry = useBookingStore((state) => state.setQueueExpiry);
     const callbackStarted = useRef(false);
+    const [callbackAttempt, setCallbackAttempt] = useState(0);
+    const [callbackError, setCallbackError] = useState<string | null>(null);
     const detail = useQuery({
         queryKey: paymentKeys.detail(paymentId ?? 0),
         queryFn: () => getPayment(paymentId!),
@@ -57,6 +59,7 @@ export function usePayment(paymentId?: number) {
 
         async function processCallback() {
             try {
+                setCallbackError(null);
                 if (paymentKey && pgOrderId) {
                     const action = await completePayment(
                         paymentId!,
@@ -114,17 +117,27 @@ export function usePayment(paymentId?: number) {
                     }),
                 ]);
                 completePaymentCallback(paymentId!);
+                clearPendingPayment();
                 window.history.replaceState({}, "", window.location.pathname);
-            } catch {
+            } catch (error: unknown) {
                 // 4. 실패한 처리만 표식을 제거해 사용자가 같은 콜백을 다시 시도할 수 있게 한다.
                 resetPaymentCallback(paymentId!);
-            } finally {
-                clearPendingPayment();
+                callbackStarted.current = false;
+                setCallbackError(
+                    error instanceof Error
+                        ? error.message
+                        : "결제 결과를 처리하지 못했습니다.",
+                );
             }
         }
 
         void processCallback();
-    }, [paymentId, queryClient, setQueueExpiry]);
+    }, [callbackAttempt, paymentId, queryClient, setQueueExpiry]);
 
-    return {detail, prepare};
+    function retryCallback() {
+        callbackStarted.current = false;
+        setCallbackAttempt((attempt) => attempt + 1);
+    }
+
+    return {detail, prepare, callbackError, retryCallback};
 }

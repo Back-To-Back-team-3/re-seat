@@ -110,13 +110,14 @@ export default function SeatsPage() {
                     <div
                         className="relative m-[14px] min-h-[220px] overflow-hidden rounded-[9px] bg-surface-soft max-[640px]:h-[155px] max-[640px]:min-h-[155px]">
                         <img
-                            alt="잠실야구장 경기 전경"
+                            alt=""
+                            aria-hidden="true"
                             className="size-full object-cover opacity-[0.82]"
                             src={STADIUM_IMAGE_URL}
                         />
                         <span
                             className="absolute bottom-2 left-1/2 -translate-x-1/2 font-mono text-[7px] tracking-[2px] text-muted-foreground">
-              JAMSIL STADIUM
+              {game.data?.stadium.name ?? "STADIUM"}
             </span>
                     </div>
 
