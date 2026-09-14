@@ -54,6 +54,7 @@ export function AdminTicketManagement() {
         });
         setPage(0);
         setSelectedTicketId(null);
+        setCancelReason("");
     };
 
     const cancelTicket = async (ticketId: number) => {
@@ -169,14 +170,20 @@ export function AdminTicketManagement() {
                                 </div>
                                 <div className="flex flex-wrap gap-2">
                                     <Button disabled={ticket.status !== "ISSUED"} loading={adminTickets.isReissuing} onClick={() => void reissueQr(ticket.ticketId)} size="sm" type="button" variant="outline">QR 재발급</Button>
-                                    <Button disabled={ticket.status !== "ISSUED"} onClick={() => setSelectedTicketId(ticket.ticketId)} size="sm" type="button" variant="destructive">직권 취소</Button>
+                                    <Button disabled={ticket.status !== "ISSUED"} onClick={() => {
+                                        setSelectedTicketId(ticket.ticketId);
+                                        setCancelReason("");
+                                    }} size="sm" type="button" variant="destructive">직권 취소</Button>
                                 </div>
                             </div>
                             {selectedTicketId === ticket.ticketId && (
                                 <div className="flex flex-col gap-2 border-t border-border pt-3 sm:flex-row">
                                     <input className={`${controlClassName} flex-1`} maxLength={255} onChange={(event) => setCancelReason(event.target.value)} placeholder="취소 사유" value={cancelReason}/>
                                     <Button disabled={!cancelReason.trim()} loading={adminTickets.isCanceling} onClick={() => void cancelTicket(ticket.ticketId)} size="sm" type="button" variant="destructive">취소 확정</Button>
-                                    <Button onClick={() => setSelectedTicketId(null)} size="sm" type="button" variant="ghost">닫기</Button>
+                                    <Button onClick={() => {
+                                        setSelectedTicketId(null);
+                                        setCancelReason("");
+                                    }} size="sm" type="button" variant="ghost">닫기</Button>
                                 </div>
                             )}
                         </article>

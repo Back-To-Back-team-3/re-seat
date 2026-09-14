@@ -42,7 +42,7 @@ export function useAdminSeatInventory(
                 queryClient.invalidateQueries({
                     queryKey: adminKeys.gameSeatSummary(gameId),
                 }),
-                queryClient.invalidateQueries({queryKey: gameKeys.seats(gameId)}),
+                queryClient.invalidateQueries({queryKey: gameKeys.detail(gameId)}),
             ]);
         },
     });
