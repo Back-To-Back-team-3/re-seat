@@ -104,6 +104,28 @@ export type AdminReservation = {
 
 export type AdminReservationPage = PageResponse<AdminReservation>;
 
+export type AdmissionMetricPeriod = "DAILY" | "WEEKLY" | "MONTHLY";
+
+export type AdminQueueOverview = {
+    gameId: number;
+    bookingStatus: GameSummary["bookingStatus"];
+    waitingCount: number;
+    usableAdmissionCount: number;
+    admittedToday: number;
+    collectedAt: string;
+};
+
+export type AdminQueueAdmissionMetrics = {
+    gameId: number;
+    period: AdmissionMetricPeriod;
+    from: string;
+    to: string;
+    series: Array<{
+        bucket: string;
+        admittedCount: number;
+    }>;
+};
+
 export type AdminUserTicket = {
     ticketId: number;
     ticketNo: string;

@@ -9,6 +9,9 @@ import type {
     AdminLoginResponse,
     AdminSeatInventorySummary,
     AdminReservationPage,
+    AdminQueueAdmissionMetrics,
+    AdminQueueOverview,
+    AdmissionMetricPeriod,
     AdminTicketCancelResponse,
     AdminUser,
     AdminUserPage,
@@ -185,6 +188,26 @@ export async function getAdminGameReservations(
 
     const response = await apiRequest<ApiResponse<AdminReservationPage>>(
         `/admin/games/${gameId}/reservations?${params.toString()}`,
+    );
+    return unwrap(response);
+}
+
+export async function getAdminQueueOverview(gameId: number) {
+    const response = await apiRequest<ApiResponse<AdminQueueOverview>>(
+        `/admin/queues/games/${gameId}/overview`,
+    );
+    return unwrap(response);
+}
+
+export async function getAdminQueueAdmissionMetrics(
+    gameId: number,
+    period: AdmissionMetricPeriod,
+    from: string,
+    to: string,
+) {
+    const params = new URLSearchParams({period, from, to});
+    const response = await apiRequest<ApiResponse<AdminQueueAdmissionMetrics>>(
+        `/admin/queues/games/${gameId}/admission-metrics?${params.toString()}`,
     );
     return unwrap(response);
 }

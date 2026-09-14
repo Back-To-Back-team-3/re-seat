@@ -6,6 +6,7 @@ import {useState} from "react";
 import {AdminGameFilters} from "@/components/admin/games/admin-game-filters";
 import {AdminGameList} from "@/components/admin/games/admin-game-list";
 import {AdminGameOperations} from "@/components/admin/games/admin-game-operations";
+import {AdminQueueOverview} from "@/components/admin/games/admin-queue-overview";
 import {AdminGameRegisterForm} from "@/components/admin/games/admin-game-register-form";
 import {AdminReservationList} from "@/components/admin/games/admin-reservation-list";
 import {AdminSeatInventory} from "@/components/admin/games/admin-seat-inventory";
@@ -60,6 +61,7 @@ export function AdminGameManagement() {
                     />
                     <AdminSeatInventory gameId={selectedGame.gameId}/>
                     <AdminReservationList gameId={selectedGame.gameId}/>
+                    <AdminQueueOverview gameId={selectedGame.gameId}/>
                 </div>
             )}
             {adminGames.isLoading ? (
