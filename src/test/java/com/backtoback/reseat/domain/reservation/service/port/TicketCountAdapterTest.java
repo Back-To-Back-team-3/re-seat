@@ -13,7 +13,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.backtoback.reseat.domain.ticket.service.TicketService;
 
 /**
- * TicketCountAdapter가 TicketService에 올바르게 위임하는지 검증한다.
+ * TicketCountAdapter 위임 단위 테스트.
+ * <p>TicketCountAdapter가 TicketService에 올바르게 위임하는지 검증한다.
  */
 @ExtendWith(MockitoExtension.class)
 class TicketCountAdapterTest {

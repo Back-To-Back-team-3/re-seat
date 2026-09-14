@@ -33,7 +33,9 @@ import com.backtoback.reseat.domain.reservation.service.port.UserVerificationPor
 import com.backtoback.reseat.domain.user.exception.UserNotVerifiedException;
 
 /**
- * SeatHoldFacade 수량·토큰 게이트 통합 테스트.
+ * SeatHoldFacade 수량·토큰 게이트 단위 테스트.
+ * <p>Mock 기반으로 본인 인증·Queue-Token 검증·수량 게이트의 검증 순서 (인증 → 토큰 → 수량 → 락)를 확인한다.
+ * 앞 단계에서 차단되면 뒤 단계는 호출조차 되지 않는지(verifyNoInteractions)가 핵심 검증 대상이다.
  */
 @ExtendWith(MockitoExtension.class)
 class SeatHoldFacadeGateTest {
