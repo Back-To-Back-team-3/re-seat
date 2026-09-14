@@ -67,7 +67,7 @@ public class AdmissionTokenRepositoryJpaTest {
         entityManager.persist(awayTeam);
 
         game = createGame("Queue 집계 대상 경기", stadium, homeTeam, awayTeam);
-        otherGame = createGame("Queue 집계 제외 경기", stadium, homeTeam, awayTeam);
+        otherGame = createGame("Queue 집계 제외 경기", stadium, homeTeam, awayTeam, NOW.plusDays(8));
 
         user
             = User
@@ -103,15 +103,32 @@ public class AdmissionTokenRepositoryJpaTest {
      */
     private Game createGame(String title, Stadium stadium, Team homeTeam, Team awayTeam) {
 
+        return createGame(title, stadium, homeTeam, awayTeam, NOW.plusDays(7));
+    }
+
+    /**
+     * 집계 테스트에 사용할 경기를 저장한다.
+     * <p>gameAt을 직접 지정해, 동일 구장·동일 일시 중복 등록 제약(uk_games_stadium_game_at)에
+     * 걸리지 않도록 경기별로 다른 시각을 부여할 수 있다.</p>
+     *
+     * @param title 경기 제목
+     * @param stadium 경기장
+     * @param homeTeam 홈팀
+     * @param awayTeam 원정팀
+     * @param gameAt 경기 일시
+     * @return 저장된 경기
+     */
+    private Game createGame(String title, Stadium stadium, Team homeTeam, Team awayTeam, LocalDateTime gameAt) {
+
         Game savedGame
             = Game
                 .builder()
                 .homeTeam(homeTeam)
                 .awayTeam(awayTeam)
                 .stadium(stadium)
-                .gameAt(NOW.plusDays(7))
-                .bookingOpenAt(NOW.minusDays(1))
-                .bookingCloseAt(NOW.plusDays(6))
+                .gameAt(gameAt)
+                .bookingOpenAt(gameAt.minusDays(8))
+                .bookingCloseAt(gameAt.minusDays(1))
                 .bookingStatus(BookingStatus.OPEN)
                 .title(title)
                 .build();

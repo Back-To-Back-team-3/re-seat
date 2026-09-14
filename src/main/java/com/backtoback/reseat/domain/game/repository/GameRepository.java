@@ -67,4 +67,21 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
      * @return 기간 내 경기 목록
      */
     List<Game> findByGameAtBetween(LocalDateTime start, LocalDateTime end);
+
+    /**
+     * 동일 구장·동일 일시에 이미 등록된 경기가 있는지 확인한다.
+     * <p>관리자 경기 등록 시 중복 등록을 사전 차단하는 데 사용한다(AdminGameRegisterService).
+     * 완전 동시 요청(TOCTOU)까지는 막지 못하므로, DB UNIQUE 제약(uk_games_stadium_game_at)이 최종 방어선 역할을 한다.
+     *
+     * @param stadiumId 구장 ID
+     * @param gameAt 경기 일시
+     * @return 존재 여부
+     */
+    @Query("""
+        select case when count(g) > 0 then true else false end
+        from Game g
+        where g.stadium.id = :stadiumId
+        and g.gameAt = :gameAt
+        """)
+    boolean existsByStadiumIdAndGameAt(@Param("stadiumId") Long stadiumId, @Param("gameAt") LocalDateTime gameAt);
 }
