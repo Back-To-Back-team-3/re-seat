@@ -36,39 +36,16 @@ $ErrorActionPreference = "Stop"
 $script:RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 $script:ComposeFile = Join-Path $script:RepoRoot "docker-compose.yml"
 
+. (Join-Path $PSScriptRoot 'common-performance.ps1')
+
+# 현재 UTC 시각을 한국 표준시로 변환합니다.
 function Get-KoreaNow {
     try { $timeZone = [TimeZoneInfo]::FindSystemTimeZoneById("Asia/Seoul") }
     catch { $timeZone = [TimeZoneInfo]::FindSystemTimeZoneById("Korea Standard Time") }
     [TimeZoneInfo]::ConvertTimeFromUtc([DateTime]::UtcNow, $timeZone)
 }
 
-function Invoke-Compose {
-    param([string[]]$Arguments, [string]$InputText)
-    $composeArguments = @("compose", "--project-directory", $script:RepoRoot, "-f", $script:ComposeFile) + $Arguments
-    if ($PSBoundParameters.ContainsKey("InputText")) { $output = $InputText | & docker @composeArguments 2>&1 }
-    else { $output = & docker @composeArguments 2>&1 }
-    if ($LASTEXITCODE -ne 0) { throw "Docker Compose 명령 실행에 실패했습니다. $($output -join [Environment]::NewLine)" }
-    $output
-}
-
-function Invoke-PerformanceMySql {
-    param([string]$Sql, [switch]$Scalar, [switch]$NoHeaders)
-    $mysql = if ($Scalar -or $NoHeaders) {
-        'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql --default-character-set=utf8mb4 -uroot -Dreseat --batch --raw --skip-column-names'
-    } else { 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql --default-character-set=utf8mb4 -uroot -Dreseat --batch --raw' }
-    $previousOutputEncoding = $OutputEncoding
-    try {
-        $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
-        $output = Invoke-Compose -Arguments @("exec", "-T", $MySqlService, "sh", "-lc", $mysql) -InputText $Sql
-    } finally { $OutputEncoding = $previousOutputEncoding }
-    if ($Scalar) {
-        $firstLine = $output | Select-Object -First 1
-        if ($null -eq $firstLine) { return "" }
-        return $firstLine.ToString().Trim()
-    }
-    $output
-}
-
+# 대상 디렉터리를 만든 뒤 JSON을 UTF-8 BOM 없이 저장합니다.
 function Write-JsonFile {
     param([string]$Path, $Value)
     [System.IO.Directory]::CreateDirectory((Split-Path -Parent $Path)) | Out-Null
