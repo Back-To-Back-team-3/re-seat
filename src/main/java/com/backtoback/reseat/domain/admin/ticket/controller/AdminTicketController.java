@@ -38,12 +38,13 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/v1/admin/tickets")
 @RequiredArgsConstructor
-public class AdminTicketController {
+public class AdminTicketController implements AdminTicketControllerDocs {
 
     private final AdminTicketService adminTicketService;
     private final TicketService ticketService; // QR 검표 전용
 
     // 관리자 전용: 특정 사용자별 티켓 소유 목록 조회
+    @Override
     @GetMapping("/users/{userId}")
     public ResponseEntity<ApiResponse<PageResponse<AdminUserTicketResponse>>> getUserTickets(
         @PathVariable Long userId,
@@ -63,6 +64,7 @@ public class AdminTicketController {
     }
 
     // 관리자 전용: 특정 티켓 강제 취소
+    @Override
     @PostMapping("/{ticketId}/cancel")
     public ResponseEntity<ApiResponse<AdminTicketCancelResponse>> cancelTicketByAdmin(
         @PathVariable Long ticketId,
@@ -75,6 +77,7 @@ public class AdminTicketController {
     }
 
     // 관리자 전용: QR 검표(입장 처리)
+    @Override
     @PostMapping("/verify")
     public ResponseEntity<ApiResponse<TicketVerifyResponse>> verifyTicket(
         @Valid @RequestBody TicketVerifyRequest request
@@ -86,6 +89,7 @@ public class AdminTicketController {
     }
 
     // 관리자 전용: QR 토큰 재발급
+    @Override
     @PostMapping("/{ticketId}/qr/reissue")
     public ResponseEntity<ApiResponse<AdminTicketQrReissueResponse>> reissueQrToken(@PathVariable Long ticketId) {
 
@@ -95,6 +99,7 @@ public class AdminTicketController {
     }
 
     // 관리자 전용: 회원·날짜·상태 통합 검색
+    @Override
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<AdminUserTicketResponse>>> searchTickets(
         @RequestParam(required = false) Long userId,
@@ -117,6 +122,7 @@ public class AdminTicketController {
     }
 
     // 관리자 전용: 경기 단위 ISSUED 티켓 일괄 취소
+    @Override
     @PostMapping("/games/{gameId}/cancel-bulk")
     public ResponseEntity<ApiResponse<AdminTicketBulkCancelResponse>> cancelTicketsByGame(
         @PathVariable Long gameId,
