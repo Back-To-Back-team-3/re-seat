@@ -102,3 +102,4 @@ jobs:
           DB_USERNAME: root
           DB_PASSWORD: ${{ secrets.CI_MYSQL_PASSWORD }}
           REDIS_PASSWORD: ""
+          JWT_SECRET: ${{ secrets.TEST_JWT_SECRET }}
