@@ -1,7 +1,11 @@
 package com.backtoback.reseat.global.config;
 
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.sql.DataSource;
 
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,11 +22,25 @@ import jakarta.persistence.metamodel.EntityType;
 public class DatabaseCleaner {
 
     private final List<String> tableNames = new ArrayList<>();
+    private final DataSource dataSource;
+    private boolean isH2 = true;
+
     @PersistenceContext
     private EntityManager entityManager;
 
+    public DatabaseCleaner(DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
+
     @PostConstruct
     public void findTableNames() {
+        try (Connection connection = dataSource.getConnection()) {
+            String dbProductName = connection.getMetaData().getDatabaseProductName();
+            this.isH2 = dbProductName != null && dbProductName.toLowerCase().contains("h2");
+        } catch (SQLException ignored) {
+            this.isH2 = true;
+        }
+
         for (EntityType<?> entity : entityManager.getMetamodel().getEntities()) {
             Class<?> javaType = entity.getJavaType();
             if (javaType != null && javaType.getAnnotation(Entity.class) != null) {
@@ -45,8 +63,13 @@ public class DatabaseCleaner {
     public void execute() {
         entityManager.flush();
 
-        // 외래키 제약 조건 잠시 해제
-        entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS = 0").executeUpdate();
+        // 외래키 제약 조건 잠시 해제 (H2 vs MySQL 분기)
+        if (isH2) {
+            entityManager.createNativeQuery("SET REFERENTIAL_INTEGRITY FALSE").executeUpdate();
+        } else {
+            entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS = 0").executeUpdate();
+        }
+
         try {
             // 모든 테이블 TRUNCATE
             for (String tableName : tableNames) {
@@ -54,7 +77,11 @@ public class DatabaseCleaner {
             }
         } finally {
             // 외래키 제약 조건 원복
-            entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS = 1").executeUpdate();
+            if (isH2) {
+                entityManager.createNativeQuery("SET REFERENTIAL_INTEGRITY TRUE").executeUpdate();
+            } else {
+                entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS = 1").executeUpdate();
+            }
         }
     }
 
