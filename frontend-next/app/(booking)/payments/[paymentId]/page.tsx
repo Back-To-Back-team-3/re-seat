@@ -49,7 +49,7 @@ function PaymentDetail({paymentId}: { paymentId: number }) {
     return (
         <PaymentScreen
             busy={payment.detail.isFetching}
-            error={payment.detail.error?.message ?? null}
+            error={payment.callbackError ?? payment.detail.error?.message ?? null}
             game={game.data ?? null}
             onBack={() => {
                 if (orderId) {
@@ -76,6 +76,10 @@ function PaymentDetail({paymentId}: { paymentId: number }) {
             }}
             onRefreshOrder={() => {
                 void order.detail.refetch();
+            }}
+            onRetry={() => {
+                void payment.detail.refetch();
+                payment.retryCallback();
             }}
             onTickets={() => router.push("/mypage")}
             order={order.detail.data ?? null}

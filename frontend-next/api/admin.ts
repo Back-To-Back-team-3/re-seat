@@ -1,8 +1,22 @@
 import {apiRequest, unwrap} from "@/api/client";
 import type {ApiResponse} from "@/types/api";
 import type {
+    AdminGamePage,
+    AdminGameRegisterRequest,
+    AdminGameRegisterResponse,
+    AdminGameSeatStatusResponse,
+    AdminGameSearchCondition,
     AdminLoginResponse,
+    AdminSeatInventorySummary,
+    AdminReservationPage,
+    AdminQueueAdmissionMetrics,
+    AdminQueueOverview,
+    AdmissionMetricPeriod,
     AdminTicketCancelResponse,
+    AdminTicketBulkCancelResponse,
+    AdminTicketQrReissueResponse,
+    AdminTicketSearchCondition,
+    AdminTicketVerifyResponse,
     AdminUser,
     AdminUserPage,
     AdminUserSearchCondition,
@@ -12,7 +26,8 @@ import type {
     UserStatus,
 } from "@/types/admin";
 import type {UserRole} from "@/types/auth";
-import type {GameSummary} from "@/types/game";
+import type {GameSeat, GameSeatStatus, GameSummary} from "@/types/game";
+import type {ReservationStatus} from "@/types/reservation";
 import type {TicketStatus} from "@/types/ticket";
 
 type AdminUserPayload = Omit<AdminUser, "isVerified"> & {
@@ -102,10 +117,101 @@ export async function updateGameBookingStatus(
     return unwrap(response);
 }
 
+export async function searchAdminGames(
+    condition: AdminGameSearchCondition = {},
+    page = 0,
+    size = 10,
+) {
+    const params = new URLSearchParams();
+    appendDefinedParams(params, {...condition, page, size});
+    params.set("sort", "gameAt,desc");
+    const response = await apiRequest<ApiResponse<AdminGamePage>>(
+        `/admin/games?${params}`,
+    );
+    return unwrap(response);
+}
+
+export async function registerAdminGame(request: AdminGameRegisterRequest) {
+    const response = await apiRequest<ApiResponse<AdminGameRegisterResponse>>(
+        "/admin/games",
+        {method: "POST", body: JSON.stringify(request)},
+    );
+    return unwrap(response);
+}
+
 export async function openGameSeatInventory(gameId: number) {
     const response = await apiRequest<ApiResponse<GameSeatOpenResponse>>(
         `/admin/games/${gameId}/seats`,
         {method: "POST"},
+    );
+    return unwrap(response);
+}
+
+export async function getAdminGameSeats(
+    gameId: number,
+    status?: GameSeatStatus,
+) {
+    const query = status ? `?status=${status}` : "";
+    const response = await apiRequest<ApiResponse<GameSeat[]>>(
+        `/admin/games/${gameId}/seats${query}`,
+    );
+    return unwrap(response);
+}
+
+export async function getAdminGameSeatSummary(gameId: number) {
+    const response = await apiRequest<ApiResponse<AdminSeatInventorySummary>>(
+        `/admin/games/${gameId}/seats/summary`,
+    );
+    return unwrap(response);
+}
+
+export async function updateAdminGameSeatStatus(
+    gameSeatId: number,
+    action: "block" | "unblock",
+    reason: string,
+) {
+    const response = await apiRequest<ApiResponse<AdminGameSeatStatusResponse>>(
+        `/admin/game-seats/${gameSeatId}/${action}`,
+        {method: "POST", body: JSON.stringify({reason})},
+    );
+    return unwrap(response);
+}
+
+export async function getAdminGameReservations(
+    gameId: number,
+    status: ReservationStatus | undefined,
+    page: number,
+    size: number,
+) {
+    const params = new URLSearchParams({
+        page: String(page),
+        size: String(size),
+        sort: "createdAt,desc",
+    });
+    if (status) params.set("status", status);
+
+    const response = await apiRequest<ApiResponse<AdminReservationPage>>(
+        `/admin/games/${gameId}/reservations?${params.toString()}`,
+    );
+    return unwrap(response);
+}
+
+export async function getAdminQueueOverview(gameId: number) {
+    const response = await apiRequest<ApiResponse<AdminQueueOverview>>(
+        `/admin/queues/games/${gameId}/overview`,
+    );
+    return unwrap(response);
+}
+
+export async function getAdminQueueAdmissionMetrics(
+    gameId: number,
+    period: AdmissionMetricPeriod,
+    from: string,
+    to: string,
+) {
+    const params = new URLSearchParams({period, from, to});
+    const response = await apiRequest<ApiResponse<AdminQueueAdmissionMetrics>>(
+        `/admin/queues/games/${gameId}/admission-metrics?${params.toString()}`,
     );
     return unwrap(response);
 }
@@ -127,6 +233,50 @@ export async function getAdminUserTickets(
 export async function cancelAdminTicket(ticketId: number, reason: string) {
     const response = await apiRequest<ApiResponse<AdminTicketCancelResponse>>(
         `/admin/tickets/${ticketId}/cancel`,
+        {method: "POST", body: JSON.stringify({reason})},
+    );
+    return unwrap(response);
+}
+
+export async function searchAdminTickets(
+    condition: AdminTicketSearchCondition,
+    page: number,
+    size: number,
+) {
+    const params = new URLSearchParams({
+        page: String(page),
+        size: String(size),
+        sort: "issuedAt,desc",
+    });
+    Object.entries(condition).forEach(([key, value]) => {
+        if (value !== undefined && value !== "") params.set(key, String(value));
+    });
+
+    const response = await apiRequest<ApiResponse<AdminUserTicketPage>>(
+        `/admin/tickets?${params.toString()}`,
+    );
+    return unwrap(response);
+}
+
+export async function reissueAdminTicketQr(ticketId: number) {
+    const response = await apiRequest<ApiResponse<AdminTicketQrReissueResponse>>(
+        `/admin/tickets/${ticketId}/qr/reissue`,
+        {method: "POST"},
+    );
+    return unwrap(response);
+}
+
+export async function verifyAdminTicket(gameId: number, qrToken: string) {
+    const response = await apiRequest<ApiResponse<AdminTicketVerifyResponse>>(
+        "/admin/tickets/verify",
+        {method: "POST", body: JSON.stringify({gameId, qrToken})},
+    );
+    return unwrap(response);
+}
+
+export async function cancelAdminGameTickets(gameId: number, reason: string) {
+    const response = await apiRequest<ApiResponse<AdminTicketBulkCancelResponse>>(
+        `/admin/tickets/games/${gameId}/cancel-bulk`,
         {method: "POST", body: JSON.stringify({reason})},
     );
     return unwrap(response);

@@ -24,6 +24,9 @@ export function useBookingResume(gameId: number) {
     const queueTokenExpiresAt = useBookingStore(
         (state) => state.queueTokenExpiresAt,
     );
+    const firstHoldExpiresAt = useBookingStore(
+        (state) => state.firstHoldExpiresAt,
+    );
     const hydrate = useBookingStore((state) => state.hydrate);
     const [restoring, setRestoring] = useState(true);
     const [shouldEnterQueue, setShouldEnterQueue] = useState(false);
@@ -38,6 +41,7 @@ export function useBookingResume(gameId: number) {
         orderId,
         paymentId,
         queueTokenExpiresAt,
+        firstHoldExpiresAt,
     } satisfies BookingData);
 
     useEffect(() => {

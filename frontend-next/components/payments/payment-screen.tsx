@@ -20,6 +20,7 @@ type PaymentScreenProps = {
     error: string | null;
     onOpenPayment: () => void;
     onRefreshOrder: () => void;
+    onRetry: () => void;
     onTickets: () => void;
     onGames: () => void;
     onBack: () => void;
@@ -41,6 +42,7 @@ export function PaymentScreen({
                                   error,
                                   onOpenPayment,
                                   onRefreshOrder,
+                                  onRetry,
                                   onTickets,
                                   onGames,
                                   onBack,
@@ -51,8 +53,19 @@ export function PaymentScreen({
     // 비교가 자연히 어긋나므로 이전 주문의 만료 상태가 남지 않는다.
     const [expiredDeadline, setExpiredDeadline] = useState<string | null>(null);
 
-    if (error) return <Alert message={error} variant="error"/>;
-    if (!payment) return <p>결제 정보를 불러오고 있습니다.</p>;
+    if (!payment) {
+        return error ? (
+            <div className="grid min-h-[300px] place-items-center gap-4">
+                <Alert message={error} variant="error"/>
+                <Button onClick={onRetry} variant="outline">
+                    <RefreshCw aria-hidden="true"/>
+                    다시 시도
+                </Button>
+            </div>
+        ) : (
+            <p>결제 정보를 불러오고 있습니다.</p>
+        );
+    }
 
     const approved =
         payment.status === "APPROVED" ||
@@ -64,7 +77,16 @@ export function PaymentScreen({
         isDeadlineExpired(deadline);
 
     return (
-        <section className="grid min-h-[570px] place-items-center">
+        <section className="grid min-h-[570px] place-items-center gap-4">
+            {error && (
+                <div className="grid w-[min(660px,100%)] gap-3">
+                    <Alert message={error} variant="error"/>
+                    <Button className="justify-self-end" onClick={onRetry} size="sm" variant="outline">
+                        <RefreshCw aria-hidden="true"/>
+                        다시 시도
+                    </Button>
+                </div>
+            )}
             <div
                 className="w-[min(660px,100%)] rounded-modal border border-border bg-surface p-12 text-center shadow-card">
                 {!approved && (

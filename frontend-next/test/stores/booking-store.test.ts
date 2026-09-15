@@ -107,6 +107,17 @@ describe("bookingStore", () => {
         });
     });
 
+    it("다시 선점해도 최초 선점의 재선점 기한을 유지한다", () => {
+        const store = createBookingStore();
+
+        store.getState().setQueueExpiry("2026-09-15T00:03:00");
+        store.getState().setFirstHoldExpiry("2026-09-15T00:11:00");
+        store.getState().setFirstHoldExpiry("2026-09-15T00:15:00");
+
+        expect(store.getState().firstHoldExpiresAt).toBe("2026-09-15T00:11:00");
+        expect(store.getState().queueTokenExpiresAt).toBe("2026-09-15T00:11:00");
+    });
+
     it("세션에서 읽은 예매 진행 상태를 한 번에 복원한다", () => {
         const store = createBookingStore();
 

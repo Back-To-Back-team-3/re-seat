@@ -41,6 +41,7 @@ vi.mock("@/providers/booking-store-provider", () => ({
             setOrderId: vi.fn(),
             setPaymentId: vi.fn(),
             setQueueExpiry: vi.fn(),
+            setFirstHoldExpiry: vi.fn(),
             reset: vi.fn(),
         } as BookingState),
 }));
