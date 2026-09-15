@@ -20,9 +20,9 @@ import com.backtoback.reseat.global.common.ApiResponse;
 import com.backtoback.reseat.global.security.CustomUserDetails;
 
 /**
- * GameSeatController의 Queue-Token 검증 위임 여부만 검증하는 단위 테스트.
- * <p>
- * REVOKED 전파만 좁게 검증하는 순수 Mockito 테스트로 분리한다.
+ * GameSeatController의 Queue-Token 검증 위임 여부를 검증하는 단위 테스트.
+ * <p>유효한 토큰이면 SeatQueryService 조회 결과가 그대로 반환되는지,
+ * 폐기된(REVOKED) 토큰이면 예외가 전파되고 좌석 조회 자체를 시도하지 않는지를 검증한다.
  * DB·Redis 의존이 없어 Testcontainers 없이 바로 실행된다.
  */
 @ExtendWith(MockitoExtension.class)
