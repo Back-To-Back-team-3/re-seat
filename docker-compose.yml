@@ -125,6 +125,9 @@ services:
     container_name: reseat-prometheus
     ports:
       - "9090:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--web.enable-remote-write-receiver"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     networks:
