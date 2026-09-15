@@ -67,6 +67,7 @@ services:
       - MYSQL_DATABASE=reseat
     volumes:
       - mysql-data:/var/lib/mysql
+      - ./scripts/mysql-init:/docker-entrypoint-initdb.d:ro
     command:
       - --default-time-zone=+09:00
       - --log-timestamps=SYSTEM

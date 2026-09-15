@@ -26,9 +26,8 @@ import com.backtoback.reseat.domain.user.entity.User;
 
 /**
  * ReservationService 단위 테스트.
- * <p>
- * 소유자 검증(verifyOwner) 로직에 집중한다.
- * 서비스 레이어의 행 단위 소유권 가드가 올바르게 동작하는지 검증한다.
+ * <p>getHoldTime()·releaseHold()의 소유자 검증(403), cancel()의 좌석 반환과 취소 멱등 처리를 검증한다.
+ * 소유권 검증(403)이 존재 검증(404)보다 먼저인지, cancel()이 이미 취소된 예약에 대해 좌석 반환을 재시도하지 않는지가 핵심이다.
  */
 @ExtendWith(MockitoExtension.class)
 class ReservationServiceTest {
