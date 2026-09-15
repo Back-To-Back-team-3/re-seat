@@ -7,7 +7,6 @@ import java.util.List;
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,9 +18,10 @@ import com.backtoback.reseat.domain.seatinventory.dto.SeatStatusResponse;
 import jakarta.persistence.EntityManager;
 
 /**
- * SeatQueryService의 N+1 회귀 테스트.
+ * SeatQueryService.getSeats()의 N+1 회귀 테스트.
+ * <p>3단계 fetch join(game_seats → seats → seat_zones)이 정상 동작하면
+ * 실행 쿼리는 existsById() 1건 + fetch join 조회 1건, 총 2건이어야 한다.
  */
-@Disabled("테스트 제외")
 @SpringBootTest
 @Transactional
 class SeatQueryServiceTest {

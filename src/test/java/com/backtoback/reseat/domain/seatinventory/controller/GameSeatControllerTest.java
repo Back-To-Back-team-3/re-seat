@@ -6,7 +6,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,8 +24,9 @@ import jakarta.persistence.Query;
 
 /**
  * 경기 좌석 현황·구역 요약 조회 API 통합 테스트.
+ * <p>좌석 목록 조회(필터 없음/zoneId/grade/status), 구역별 재고 요약 조회,
+ * 존재하지 않는 경기(404)·재고 미오픈 경기(409)·미인증 요청(401) 처리를 검증한다.
  */
-@Disabled("테스트제외")
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
