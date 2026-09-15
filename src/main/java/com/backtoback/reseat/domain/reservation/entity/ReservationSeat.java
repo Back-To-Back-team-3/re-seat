@@ -19,6 +19,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -32,6 +33,17 @@ import lombok.NoArgsConstructor;
         @Index(
             name = "idx_reservation_seats_reservation",
             columnList = "reservation_id"
+        )
+    },
+    uniqueConstraints = {
+        // 취소·만료 이력이 쌓여도 재선점은 막지 않되(reservation_id가 매번 달라짐),
+        // 동일 예약 내 같은 좌석 중복 삽입은 DB 레벨에서 계속 방지한다.
+        @UniqueConstraint(
+            name = "uk_reservation_seats_game_seat_reservation",
+            columnNames = {
+                "game_seat_id",
+                "reservation_id"
+            }
         )
     }
 )
