@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.reservation.service;
+package com.backtoback.reseat.domain.reservation.service.integration;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -20,6 +20,8 @@ import com.backtoback.reseat.domain.queue.service.AdmissionTokenService;
 import com.backtoback.reseat.domain.queue.service.AdmissionTokenTiming;
 import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
 import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse;
+import com.backtoback.reseat.domain.reservation.service.ReservationService;
+import com.backtoback.reseat.domain.reservation.service.SeatHoldFacade;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
 import com.backtoback.reseat.domain.seatinventory.repository.GameSeatRepository;
@@ -39,9 +41,9 @@ import com.backtoback.reseat.domain.user.repository.UserRepository;
 import com.backtoback.reseat.global.common.BaseIntegrationTest;
 
 /**
- * [이슈 #380]
- * HOLDING 상태 예약 2매 중 1매를 취소하면 잔여 수량 기준으로 다른 좌석을 재선점할 수 있음을 검증한다.
- * <p>ReservationService.cancel() 한 번으로 예약 취소와 좌석 반환(AVAILABLE)이 함께 이뤄지는지 재선점 성공 여부로 확인한다.
+ * [이슈 #380] 취소 후 재선점 통합 테스트.
+ * <p>HOLDING 상태 예약 2매 중 1매를 취소하면 잔여 수량 기준으로 다른 좌석을 재선점할 수 있음을 검증한다.
+ * ReservationService.cancel() 한 번으로 예약 취소와 좌석 반환(AVAILABLE)이 함께 이뤄지는지 재선점 성공 여부로 확인한다.
  */
 class CancelThenHoldAgainIntegrationTest extends BaseIntegrationTest {
 

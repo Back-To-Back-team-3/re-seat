@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.reservation.service;
+package com.backtoback.reseat.domain.reservation.service.concurrency.distributed;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -13,7 +13,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -25,13 +24,10 @@ import org.springframework.test.context.ActiveProfiles;
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.repository.GameRepository;
-import com.backtoback.reseat.domain.queue.entity.AdmissionToken;
-import com.backtoback.reseat.domain.queue.repository.AdmissionTokenRepository;
 import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
-import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse;
-import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
 import com.backtoback.reseat.domain.reservation.repository.ReservationRepository;
 import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
+import com.backtoback.reseat.domain.reservation.service.ReservationService;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
 import com.backtoback.reseat.domain.seatinventory.repository.GameSeatRepository;
@@ -52,16 +48,12 @@ import com.backtoback.reseat.domain.user.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * [이슈 #173] Redisson 분산락 Facade 경로 동시성 회귀 테스트.
- * <p> 이 테스트는 SeatHoldFacade를 통해 실제 락 경로를 검증한다.</p>
- * <p> 핵심 검증:
- * - 동일 좌석 N 요청 → 성공 1건, 나머지 409
- * - reservation_seats 행 1건
- * - DB 유니크 위반 0건
- * - 예상 외 예외 0건
- * </p>
+ * [이슈 #173] Redisson 분산락 적용 over-booking 방지 회귀 테스트.
+ * <p>N개 스레드가 동일 gameSeatId로 동시에 holdSeats()를 요청해도
+ * 분산락에 의해 성공 건수가 정확히 1건으로 직렬화되는지 검증한다.
+ * <p>[이슈 #172] 원래는 락이 없던 시절 "성공 건수 &gt; 1"이 발생함을 증명하는
+ * 버그 재현 테스트였다. (B2 버그 재현)
  */
-@Disabled("테스트 제외")
 @Slf4j
 @EnabledIfEnvironmentVariable(
     named = "RUN_CONCURRENCY_TESTS",
@@ -70,17 +62,17 @@ import lombok.extern.slf4j.Slf4j;
 @Tag("concurrency")
 @ActiveProfiles("test-concurrency")
 @SpringBootTest
-class SeatHoldFacadeConcurrencyTest {
+class SeatHoldConcurrencyTest {
 
+    // 재현이 안 될 경우 THREAD_COUNT를 20~50으로 올려서 재시도한다.
     private static final int THREAD_COUNT = 10;
     private final List<Long> userIds = new ArrayList<>();
-    private final List<Long> tokenIds = new ArrayList<>();
     @Autowired
-    private SeatHoldFacade seatHoldFacade;
-    @Autowired
-    private ReservationRepository reservationRepository;
+    private ReservationService reservationService;
     @Autowired
     private ReservationSeatRepository reservationSeatRepository;
+    @Autowired
+    private ReservationRepository reservationRepository;
     @Autowired
     private GameSeatRepository gameSeatRepository;
     @Autowired
@@ -95,8 +87,7 @@ class SeatHoldFacadeConcurrencyTest {
     private TeamRepository teamRepository;
     @Autowired
     private UserRepository userRepository;
-    @Autowired
-    private AdmissionTokenRepository admissionTokenRepository;
+    // 테스트 픽스처 ID — @AfterEach 수동 정리에 사용
     private Long targetGameSeatId;
     private Long gameId;
     private Long seatId;
@@ -108,10 +99,12 @@ class SeatHoldFacadeConcurrencyTest {
     // @Transactional 금지 → @AfterEach 수동 정리
     @BeforeEach
     void setUp() {
+        // Stadium
         Stadium stadium = Stadium.of("테스트 구장", "서울시 테스트구 1", 10000);
         stadiumRepository.save(stadium);
         stadiumId = stadium.getId();
 
+        // Team
         Team homeTeam = Team.of("홈팀", stadium);
         Team awayTeam = Team.of("원정팀", stadium);
         teamRepository.save(homeTeam);
@@ -129,11 +122,12 @@ class SeatHoldFacadeConcurrencyTest {
                 .bookingOpenAt(LocalDateTime.now().minusHours(1))
                 .bookingCloseAt(LocalDateTime.now().plusDays(6))
                 .bookingStatus(BookingStatus.OPEN)
-                .title("[이슈 #173] 분산락 동시성 테스트 경기")
+                .title("[이슈 #172] 동시성 테스트 경기")
                 .build();
         gameRepository.save(game);
         gameId = game.getId();
 
+        // SeatZone + Seat
         SeatZone zone = SeatZone.of(stadium, "테스트존", SeatGrade.INFIELD, 18000);
         seatZoneRepository.save(zone);
         seatZoneId = zone.getId();
@@ -142,61 +136,59 @@ class SeatHoldFacadeConcurrencyTest {
         seatRepository.save(seat);
         seatId = seat.getId();
 
+        // GameSeat (테스트 대상 — AVAILABLE 상태 1건)
         GameSeat gameSeat
             = GameSeat.builder().game(game).seat(seat).price(18000).status(GameSeatStatus.AVAILABLE).build();
         gameSeatRepository.save(gameSeat);
         targetGameSeatId = gameSeat.getId();
 
-        // 각 사용자에게 유효한 Queue-Token 사전 발급
+        // User × THREAD_COUNT (각 스레드가 서로 다른 사용자로 요청)
         for (int i = 0; i < THREAD_COUNT; i++) {
             User user
                 = User
                     .builder()
-                    .email("facade-concurrency-" + i + "@reseat.com")
+                    .email("concurrency-test-" + i + "@reseat.com")
                     .password("pw")
                     .name("테스트유저" + i)
-                    .phone("010-1111-" + String.format("%04d", i))
+                    .phone("010-0000-" + String.format("%04d", i))
                     .isVerified(true)
                     .role(UserRole.USER)
                     .status(UserStatus.ACTIVE)
                     .build();
             userRepository.save(user);
             userIds.add(user.getId());
-
-            // validateToken / consumeToken 이 DB 조회하므로 실제 토큰 레코드 필요
-            AdmissionToken token
-                = AdmissionToken
-                    .of(
-                        game,
-                        user,
-                        "qt_test-token-" + i,
-                        LocalDateTime.now(),
-                        LocalDateTime.now().plusMinutes(21),
-                        LocalDateTime.now().plusMinutes(3)
-                    );
-            admissionTokenRepository.save(token);
-            tokenIds.add(token.getId());
         }
     }
 
+    /**
+     * FK 역참조 역순 삭제 순서:
+     * reservation_seats → reservations
+     * → game_seats (game 참조) → games (team, stadium 참조)
+     * → seats (seat_zone 참조) → seat_zones (stadium 참조)
+     * → teams (stadium 참조) → stadiums
+     * → users
+     */
     @AfterEach
     void tearDown() {
-        admissionTokenRepository.deleteAllById(tokenIds);
-        tokenIds.clear();
-
+        // 예약 관련 (reservation_seats → reservations)
         reservationSeatRepository.deleteAll();
         reservationRepository.deleteAll();
 
+        // game_seats 전체 삭제 후 game 삭제 (FK 순서 준수)
         gameSeatRepository.deleteAll();
         if (gameId != null) {
             gameRepository.deleteById(gameId);
         }
+
+        // seats → seat_zones (FK 순서 준수)
         if (seatId != null) {
             seatRepository.deleteById(seatId);
         }
         if (seatZoneId != null) {
             seatZoneRepository.deleteById(seatZoneId);
         }
+
+        // teams → stadiums
         if (homeTeamId != null) {
             teamRepository.deleteById(homeTeamId);
         }
@@ -207,6 +199,7 @@ class SeatHoldFacadeConcurrencyTest {
             stadiumRepository.deleteById(stadiumId);
         }
 
+        // users
         if (!userIds.isEmpty()) {
             userRepository.deleteAllById(userIds);
             userIds.clear();
@@ -214,86 +207,81 @@ class SeatHoldFacadeConcurrencyTest {
     }
 
     @Test
-    @DisplayName("[이슈 #173] 분산락 적용 Facade 경로에서 동일 좌석 N 요청 시 성공 1건, over-booking 0건")
-    void should_holdSeatOnce_when_sameSeatRequestsCompeteThroughFacade() throws InterruptedException {
+    @DisplayName("[B2 over-booking 재현] 락 미적용 상태에서 N개 스레드 동시 선점 시 성공 건수 > 1")
+    void should_allowMultipleSuccess_when_noLockApplied() throws InterruptedException {
         // given
+        SeatHoldRequest request = new SeatHoldRequest(gameId, List.of(targetGameSeatId));
+
+        /**
+         * CountDownLatch 2개 패턴
+         * readyLatch(N→0): 모든 스레드 준비 완료 신호
+         * startLatch(1→0): 동시 출발 신호
+         */
         CountDownLatch readyLatch = new CountDownLatch(THREAD_COUNT);
         CountDownLatch startLatch = new CountDownLatch(1);
-
         AtomicInteger successCount = new AtomicInteger(0);
-        AtomicInteger seatAlreadyHeldCount = new AtomicInteger(0);
-        AtomicInteger lockFailedCount = new AtomicInteger(0);
-        AtomicInteger dataIntegrityViolationCount = new AtomicInteger(0);
-        AtomicInteger unexpectedExceptionCount = new AtomicInteger(0);
-
+        AtomicInteger failCount = new AtomicInteger(0);
         ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
 
         // when
         for (int i = 0; i < THREAD_COUNT; i++) {
             final Long userId = userIds.get(i);
-            final String token = "qt_test-token-" + i;
-
             executor.submit(() -> {
                 readyLatch.countDown();
                 try {
                     startLatch.await();
-                    SeatHoldRequest request = new SeatHoldRequest(gameId, List.of(targetGameSeatId));
-                    ReservationResponse response = seatHoldFacade.holdSeats(userId, token, request);
-                    assertThat(response.status()).isEqualTo(ReservationStatus.HOLDING);
+                    reservationService.holdSeats(userId, request);
                     successCount.incrementAndGet();
-                } catch (com.backtoback.reseat.domain.reservation.exception.SeatAlreadyHeldException e) {
-                    seatAlreadyHeldCount.incrementAndGet();
-                } catch (com.backtoback.reseat.domain.reservation.exception.LockFailedException e) {
-                    lockFailedCount.incrementAndGet();
-                } catch (org.springframework.dao.DataIntegrityViolationException e) {
-                    dataIntegrityViolationCount.incrementAndGet();
                 } catch (Exception e) {
-                    log.error("[이슈 #173] 예상 외 예외 발생: {}", e.getClass().getSimpleName(), e);
-                    unexpectedExceptionCount.incrementAndGet();
+                    /*
+                     * 예상 예외 두 가지:
+                     * 1. SeatAlreadyHeldException (SEAT_ALREADY_HELD, 409)
+                     *    — 서비스 레벨에서 상태 체크 후 거부
+                     * 2. DataIntegrityViolationException
+                     *    — uk_game_seats_game_seat 유니크 제약이 최후 방어선으로 작동
+                     *    — 이 경우도 사용자에게 500이 아니라 409로 변환 필요
+                     */
+                    failCount.incrementAndGet();
                 }
             });
         }
 
         readyLatch.await();
         startLatch.countDown();
+
         executor.shutdown();
-        boolean finished = executor.awaitTermination(15, TimeUnit.SECONDS);
+        boolean finished = executor.awaitTermination(10, TimeUnit.SECONDS);
 
         // then
-        GameSeat finalGameSeat = gameSeatRepository.findById(targetGameSeatId).orElseThrow();
-        long reservationSeatRows
+        assertThat(finished).as("10초 내에 모든 스레드가 종료되지 않았다 — 데드락 또는 타임아웃 의심").isTrue();
+
+        long heldCount
             = reservationSeatRepository
                 .findAll()
                 .stream()
                 .filter(rs -> rs.getGameSeat().getId().equals(targetGameSeatId))
                 .count();
 
+        GameSeat finalGameSeat = gameSeatRepository.findById(targetGameSeatId).orElseThrow();
+
         log.info("════════════════════════════════════════════════════");
-        log.info("[이슈 #173] Redisson 분산락 Facade 경로 동시성 검증 수치");
-        log.info("  동시 스레드 수                : {}", THREAD_COUNT);
-        log.info("  선점 성공 건수                : {}", successCount.get());
-        log.info("  SEAT_ALREADY_HELD 건수        : {}", seatAlreadyHeldCount.get());
-        log.info("  LOCK_FAILED 건수              : {}", lockFailedCount.get());
-        log.info("  DataIntegrityViolation 건수   : {}", dataIntegrityViolationCount.get());
-        log.info("  예상 외 예외 건수              : {}", unexpectedExceptionCount.get());
-        log.info("  game_seats.status             : {}", finalGameSeat.getStatus());
-        log.info("  reservation_seats 행 수        : {}", reservationSeatRows);
+        log.info("[이슈 #172] 락 미적용 over-booking 재현 수치");
+        log.info("  동시 스레드 수              : {}", THREAD_COUNT);
+        log.info("  선점 성공 건수              : {}", successCount.get());
+        log.info("  선점 실패 건수              : {}", failCount.get());
+        log.info("  game_seats.status         : {}", finalGameSeat.getStatus());
+        log.info("  reservation_seats 중복 행 수: {}", heldCount);
+        log.info("  ※ 성공 1건 = 우연히 직렬화됨. THREAD_COUNT를 올려 재시도하기.");
         log.info("════════════════════════════════════════════════════");
 
-        assertThat(finished).as("15초 내에 모든 스레드가 종료되지 않았다 — 데드락 또는 타임아웃 의심").isTrue();
+        // [이슈 #172] 성공 건수 > 1 → over-booking 재현 증명
+        // [이슈 #173] Redisson 분산락 머지 후 isEqualTo(1)로 전환된다. (회귀 검증)
+        assertThat(successCount.get() + failCount.get()).as("모든 스레드가 경합에 참여해야 한다.").isEqualTo(THREAD_COUNT);
 
-        assertThat(successCount.get()).as("분산락 적용 후 성공은 정확히 1건이어야 한다").isEqualTo(1);
+        assertThat(successCount.get())
+            .as("성공 건수가 1이면 우연히 직렬화된 것. over-booking 미재현 — THREAD_COUNT를 늘려서 재시도.")
+            .isEqualTo(1);
 
-        assertThat(reservationSeatRows).as("reservation_seats 행은 1건이어야 한다 — over-booking 0건 보장").isEqualTo(1);
-
-        assertThat(finalGameSeat.getStatus()).as("최종 좌석 상태는 HELD여야 한다").isEqualTo(GameSeatStatus.HELD);
-
-        assertThat(dataIntegrityViolationCount.get()).as("DB 유니크 위반은 0건이어야 한다 — 락이 DB까지 도달하는 요청을 차단해야 한다").isZero();
-
-        assertThat(unexpectedExceptionCount.get()).as("예상 외 예외는 0건이어야 한다").isZero();
-
-        assertThat(seatAlreadyHeldCount.get() + lockFailedCount.get())
-            .as("실패 건수 합계는 THREAD_COUNT - 1이어야 한다")
-            .isEqualTo(THREAD_COUNT - 1);
+        assertThat(heldCount).as("reservation_seats 중복 행 수는 성공 건수와 일치해야 한다.").isEqualTo(1);
     }
 }

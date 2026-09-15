@@ -34,10 +34,10 @@ import com.backtoback.reseat.domain.user.entity.UserStatus;
 import jakarta.persistence.EntityManager;
 
 /**
- * TicketCountAdapter의 실제 빈 조립(Adapter → TicketService → TicketRepository)을 검증한다.
- * <p>Mock 없이 실제 객체를 그대로 사용하므로 SeatHoldFacadeGateTest(Mock 기반)가 놓치는 빈 등록 누락까지 잡아낸다.
- * Queue-Token·분산락 경로는 검증 범위에서 제외한다.
- * (SeatHoldFacadeGateTest·SeatHoldFacadeConcurrencyTest가 이미 커버)
+ * TicketCountAdapter 빈 조립 통합 테스트.
+ * <p>Adapter → TicketService → TicketRepository로 이어지는 실제 빈 조립을 검증한다.
+ * Mock 없이 실제 객체를 그대로 사용하므로, SeatHoldFacadeGateTest(Mock 기반)가 놓치는 빈 등록 누락까지 잡아낸다.
+ * Queue-Token·분산락 경로는 검증 범위에서 제외한다 (SeatHoldFacadeGateTest·SeatHoldFacadeConcurrencyTest가 이미 커버).
  */
 @SpringBootTest
 @Transactional

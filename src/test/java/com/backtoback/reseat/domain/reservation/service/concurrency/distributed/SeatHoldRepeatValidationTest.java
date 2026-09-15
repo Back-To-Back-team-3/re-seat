@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.reservation.service;
+package com.backtoback.reseat.domain.reservation.service.concurrency.distributed;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -13,7 +13,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -33,6 +32,7 @@ import com.backtoback.reseat.domain.reservation.exception.LockFailedException;
 import com.backtoback.reseat.domain.reservation.exception.SeatAlreadyHeldException;
 import com.backtoback.reseat.domain.reservation.repository.ReservationRepository;
 import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
+import com.backtoback.reseat.domain.reservation.service.SeatHoldFacade;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
 import com.backtoback.reseat.domain.seatinventory.repository.GameSeatRepository;
@@ -54,11 +54,12 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * [이슈 #176] TC-001 over-booking 0건 대량 반복 검증.
- * <p>동일 좌석 동시 100요청 × REPEAT_COUNT회 반복 시 매 회차 성공 1건, over-booking 0건을 정량으로 증명한다.
- * SeatHoldFacadeConcurrencyTest(이슈 #173, 10스레드 1회) 패턴을 계승하여 스레드 수와 반복 횟수를 확장한다.
- * <p>실행 조건: 환경변수 RUN_CONCURRENCY_TESTS=true + test-concurrency 프로파일(MySQL)
+ * <p>동일 좌석에 100개 스레드가 동시 요청하는 것을 10회 반복해,
+ * 매 회차 성공 1건·over-booking 0건이 우연이 아니라 안정적으로 재현됨을 정량으로 증명한다.
+ * SeatHoldFacadeConcurrencyTest(이슈 #173, 10스레드 1회)의 검증 패턴을 스레드 수·반복 횟수만 확장한 것이다.
+ * <p>실행 조건: 환경변수 {@code RUN_CONCURRENCY_TESTS=true} + {@code test-concurrency} 프로파일(MySQL 필요).
  */
-@Disabled("MySQL 환경 전용 — RUN_CONCURRENCY_TESTS=true 환경변수 설정 후 실행")
+// @Disabled("MySQL 환경 전용 — RUN_CONCURRENCY_TESTS=true 환경변수 설정 후 실행")
 @Slf4j
 @EnabledIfEnvironmentVariable(
     named = "RUN_CONCURRENCY_TESTS",

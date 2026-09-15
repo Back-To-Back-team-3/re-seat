@@ -1,20 +1,29 @@
-package com.backtoback.reseat.domain.reservation.service;
+package com.backtoback.reseat.domain.reservation.service.policy;
 
 import static org.assertj.core.api.Assertions.*;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
 
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import com.backtoback.reseat.domain.reservation.service.HoldPolicy;
+
+/**
+ * HoldPolicy 시간 상수 정의 단위 테스트.
+ * <p>좌석 선점(HOLD_TTL)·결제 기한(PAYMENT_DEADLINE)·연장 상한(HOLD_EXTEND_CAP)
+ * 세 상수의 값과, 그 사이에 성립해야 하는 불변식(HOLD_TTL &gt;= PAYMENT_DEADLINE)을 고정한다.
+ * <p>이 불변식이 깨지면, 사용자가 아직 결제 중인데 좌석 선점 시간이 먼저 끝나버려 좌석이 다른 사람에게 넘어갈 수 있다.
+ */
 @DisplayName("HoldPolicy 시간 정책")
 class HoldPolicyTest {
 
     @Test
     @DisplayName("HOLD_TTL은 10분이다 (명세서 §5.1 정합)")
     void holdTtl_is10Minutes() {
-        assertThat(HoldPolicy.HOLD_TTL).isEqualTo(Duration.ofMinutes(10));
+        Assertions.assertThat(HoldPolicy.HOLD_TTL).isEqualTo(Duration.ofMinutes(10));
     }
 
     @Test
