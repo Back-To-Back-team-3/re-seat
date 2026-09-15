@@ -39,6 +39,7 @@ const mocks = vi.hoisted(() => ({
     queueTokenExpiresAt: new Date(
         Date.now() + 5 * 60_000,
     ).toISOString() as string | null,
+    firstHoldExpiresAt: null as string | null,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -79,6 +80,7 @@ vi.mock("@/providers/booking-store-provider", () => ({
             toggleSeat: () => void;
             selectedSeats: GameSeat[];
             queueTokenExpiresAt: string | null;
+            firstHoldExpiresAt: string | null;
         }) => unknown,
     ) =>
         selector({
@@ -87,6 +89,7 @@ vi.mock("@/providers/booking-store-provider", () => ({
             toggleSeat: vi.fn(),
             selectedSeats: [mocks.seat],
             queueTokenExpiresAt: mocks.queueTokenExpiresAt,
+            firstHoldExpiresAt: mocks.firstHoldExpiresAt,
         }),
 }));
 
@@ -135,6 +138,7 @@ describe("좌석 선택 화면", () => {
         mocks.createError = null;
         mocks.cancelSucceeded = false;
         mocks.queueTokenExpiresAt = new Date(Date.now() + 5 * 60_000).toISOString();
+        mocks.firstHoldExpiresAt = null;
         mocks.createMutate.mockClear();
         mocks.cancelMutate.mockClear();
         mocks.routerPush.mockClear();
@@ -150,21 +154,21 @@ describe("좌석 선택 화면", () => {
         ).toBeInTheDocument();
     });
 
-    it("선점을 해제하면 입장 토큰이 소비되었음을 안내하고 좌석 선택을 잠근다", async () => {
-        // 예약을 만들면 입장 토큰이 소비되므로 취소 후에도 만료 시각이 비어 있다.
+    it("선점을 해제하면 입장 토큰 유효 시간 안에 다시 선점할 수 있음을 안내한다", async () => {
         mocks.cancelSucceeded = true;
-        mocks.queueTokenExpiresAt = null;
+        mocks.firstHoldExpiresAt = mocks.queueTokenExpiresAt;
         mockGameDetail();
         renderSeatsPage();
 
         expect(
             await screen.findByText(
-                "좌석 선점을 해제했습니다. 현재 입장 토큰은 사용되어 새 선점은 다시 예매해야 합니다.",
+                "좌석 선점을 해제했습니다. 재선점 가능 시간 안에 다시 좌석을 선점할 수 있습니다.",
             ),
         ).toBeInTheDocument();
         expect(
             screen.getByRole("button", {name: "1석 선점하기"}),
-        ).toBeDisabled();
+        ).toBeEnabled();
+        expect(screen.getByText("재선점 남은 시간")).toBeInTheDocument();
     });
 
     it("경기 헤더와 좌석 범례, 선점 버튼을 보여준다", async () => {

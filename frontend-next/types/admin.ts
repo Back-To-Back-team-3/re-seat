@@ -1,6 +1,7 @@
 import type {PageResponse} from "@/types/api";
 import type {UserRole} from "@/types/auth";
 import type {GameSeatStatus, GameSummary} from "@/types/game";
+import type {ReservationStatus} from "@/types/reservation";
 import type {TicketStatus} from "@/types/ticket";
 
 export type UserStatus = "ACTIVE" | "SUSPENDED" | "DELETED";
@@ -42,10 +43,87 @@ export type GameBookingStatusResponse = {
     bookingStatus: GameSummary["bookingStatus"];
 };
 
+export type AdminGameSearchCondition = {
+    homeTeamId?: number;
+    awayTeamId?: number;
+    stadiumId?: number;
+    from?: string;
+    to?: string;
+    bookingStatus?: GameSummary["bookingStatus"];
+};
+
+export type AdminGamePage = PageResponse<GameSummary>;
+
+export type AdminGameRegisterRequest = {
+    stadiumId: number;
+    homeTeamId: number;
+    awayTeamId: number;
+    gameAt: string;
+    bookingOpenAt: string;
+    bookingCloseAt: string;
+    title?: string;
+};
+
+export type AdminGameRegisterResponse = {
+    gameId: number;
+    bookingStatus: "SCHEDULED";
+};
+
 export type GameSeatOpenResponse = {
     gameId: number;
     createdCount: number;
     priceRange: {min: number; max: number};
+};
+
+export type AdminSeatInventorySummary = {
+    available: number;
+    held: number;
+    sold: number;
+    blocked: number;
+};
+
+export type AdminGameSeatStatusResponse = {
+    gameSeatId: number;
+    status: GameSeatStatus;
+};
+
+export type AdminReservationSeat = {
+    gameSeatId: number;
+    seat: string;
+    price: number;
+};
+
+export type AdminReservation = {
+    reservationId: number;
+    reservationNo: string;
+    userId: number;
+    status: ReservationStatus;
+    remainingSeconds: number | null;
+    seats: AdminReservationSeat[];
+};
+
+export type AdminReservationPage = PageResponse<AdminReservation>;
+
+export type AdmissionMetricPeriod = "DAILY" | "WEEKLY" | "MONTHLY";
+
+export type AdminQueueOverview = {
+    gameId: number;
+    bookingStatus: GameSummary["bookingStatus"];
+    waitingCount: number;
+    usableAdmissionCount: number;
+    admittedToday: number;
+    collectedAt: string;
+};
+
+export type AdminQueueAdmissionMetrics = {
+    gameId: number;
+    period: AdmissionMetricPeriod;
+    from: string;
+    to: string;
+    series: Array<{
+        bucket: string;
+        admittedCount: number;
+    }>;
 };
 
 export type AdminUserTicket = {
@@ -83,3 +161,34 @@ export type AdminTicketCancelResponse = {
 
 export type AdminUserPage = PageResponse<AdminUser>;
 export type AdminUserTicketPage = PageResponse<AdminUserTicket>;
+
+export type AdminTicketSearchCondition = {
+    userId?: number;
+    status?: TicketStatus;
+    gameDateFrom?: string;
+    gameDateTo?: string;
+};
+
+export type AdminTicketQrReissueResponse = {
+    ticketId: number;
+    qrToken: string;
+};
+
+export type AdminTicketVerifyResponse = {
+    ticketId: number;
+    status: TicketStatus;
+    usedAt: string;
+    seat: string;
+    holderName: string | null;
+};
+
+export type AdminTicketBulkCancelResponse = {
+    totalCount: number;
+    successCount: number;
+    failureCount: number;
+    results: Array<{
+        ticketId: number;
+        success: boolean;
+        message: string;
+    }>;
+};

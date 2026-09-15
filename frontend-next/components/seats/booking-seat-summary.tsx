@@ -13,6 +13,7 @@ type BookingSeatSummaryProps = {
     seats: GameSeat[];
     total: number;
     busy: boolean;
+    hasHeldSeats?: boolean;
     locked: boolean;
     reservation?: ReservationResponse | null;
     timerTarget?: string | null;
@@ -28,6 +29,7 @@ export function BookingSeatSummary({
     seats,
     total,
     busy,
+    hasHeldSeats,
     locked,
     reservation,
     timerTarget,
@@ -49,12 +51,14 @@ export function BookingSeatSummary({
                 className="m-[14px]"
                 expired={timerExpired}
                 expiredMessage="제한시간이 끝났습니다. 다음 단계로 진행할 수 없습니다."
-                fallbackValue="사용 완료"
+                fallbackValue="입장 토큰 없음"
                 label={
                     timerTarget
                         ? reservation
                             ? "좌석 선점 남은 시간"
-                            : "좌석 선택 남은 시간"
+                            : hasHeldSeats
+                                ? "재선점 남은 시간"
+                                : "좌석 선택 남은 시간"
                         : "입장 토큰"
                 }
                 messageClassName="mx-[14px] mt-[10px] mb-[14px]"
@@ -129,8 +133,8 @@ export function BookingSeatSummary({
             )}
 
             <small className="block px-[14px] pt-[3px] pb-[18px] text-center text-xs text-muted-foreground">
-                입장 후 5분 안에 좌석을 선점해야 하며, 선점 후에는 예약 만료시간이
-                적용됩니다.
+                입장 후 3분 안에 처음 좌석을 선점해야 하며, 선점 후에는 예약 만료시간이
+                적용됩니다. 선점 해제 후에는 최초 선점 기준 재선점 가능 시간 안에 다시 선점할 수 있습니다.
             </small>
         </aside>
     );

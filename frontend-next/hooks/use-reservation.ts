@@ -12,6 +12,7 @@ export function useReservation(gameId: number) {
     const reservation = useBookingStore((state) => state.reservation);
     const setReservation = useBookingStore((state) => state.setReservation);
     const clearSeats = useBookingStore((state) => state.clearSeats);
+    const setFirstHoldExpiry = useBookingStore((state) => state.setFirstHoldExpiry);
 
     const create = useMutation({
         mutationFn: async () => {
@@ -24,6 +25,8 @@ export function useReservation(gameId: number) {
             return {reservation: created, holdTime};
         },
         onSuccess: ({reservation: created}) => {
+            // 선점 해제 후에도 첫 선점 기준의 재선점 기한을 유지한다.
+            setFirstHoldExpiry(created.holdExpiresAt);
             setReservation(created);
         },
     });

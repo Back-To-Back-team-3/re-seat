@@ -8,6 +8,10 @@ import type {GameSummary} from "@/types/game";
 
 const adminGames = vi.hoisted(() => ({
     games: [] as GameSummary[],
+    page: {
+        content: [] as GameSummary[], pageNumber: 0, pageSize: 10,
+        totalElements: 0, totalPages: 0, isFirst: true, isLast: true,
+    },
     isLoading: false,
     error: null as Error | null,
     updateStatus: vi.fn(),
@@ -35,27 +39,32 @@ const game: GameSummary = {
 };
 
 describe("관리자 경기 관리", () => {
-    it("최신 경기부터 10개씩 나누어 표시한다", () => {
-        adminGames.games = Array.from({length: 12}, (_, index) => ({
-            ...game,
-            gameId: index + 1,
-            title: `경기 ${index + 1}`,
-            gameAt: `2026-09-${String(index + 1).padStart(2, "0")} 18:30:00`,
-        }));
+    it("서버에서 받은 경기 페이지와 전체 건수를 표시한다", () => {
+        adminGames.games = [game];
+        adminGames.page = {
+            content: [game], pageNumber: 0, pageSize: 10,
+            totalElements: 12, totalPages: 2, isFirst: true, isLast: false,
+        };
 
         render(<AdminGameManagement/>);
 
-        const firstPageRows = within(screen.getByRole("table")).getAllByRole("row").slice(1);
-        expect(firstPageRows).toHaveLength(10);
-        expect(within(firstPageRows[0]).getByRole("button")).toHaveTextContent("경기 12");
-        expect(within(firstPageRows[9]).getByRole("button")).toHaveTextContent("경기 3");
+        expect(within(screen.getByRole("table")).getAllByRole("row")).toHaveLength(2);
+        expect(screen.getByText("총 12경기")).toBeInTheDocument();
+        expect(screen.getByText("1 / 2 페이지")).toBeInTheDocument();
+        expect(screen.getByRole("button", {name: "다음 페이지"})).toBeEnabled();
+    });
 
-        fireEvent.click(screen.getByRole("button", {name: "다음 페이지"}));
+    it("마지막 페이지에서는 다음 페이지 버튼을 비활성화한다", () => {
+        adminGames.games = [game];
+        adminGames.page = {
+            content: [game], pageNumber: 0, pageSize: 10,
+            totalElements: 1, totalPages: 1, isFirst: true, isLast: false,
+        };
 
-        const secondPageRows = within(screen.getByRole("table")).getAllByRole("row").slice(1);
-        expect(secondPageRows).toHaveLength(2);
-        expect(within(secondPageRows[0]).getByRole("button")).toHaveTextContent("경기 2");
-        expect(screen.getByText("2 / 2 페이지")).toBeInTheDocument();
+        render(<AdminGameManagement/>);
+
+        expect(screen.getByText("1 / 1 페이지")).toBeInTheDocument();
+        expect(screen.getByRole("button", {name: "다음 페이지"})).toBeDisabled();
     });
 
     it("선택한 경기의 운영 작업을 목록보다 먼저 표시한다", () => {

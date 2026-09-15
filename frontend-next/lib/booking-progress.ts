@@ -33,7 +33,14 @@ export function loadBookingProgress(): BookingData | null {
         return null;
     }
 
-    return stored.data;
+    // 기존 세션에는 최초 선점 기한이 없으므로 보관된 예약 만료 시각으로 복원한다.
+    const firstHoldExpiresAt = stored.data.firstHoldExpiresAt ??
+        stored.data.reservation?.holdExpiresAt ?? null;
+    return {
+        ...stored.data,
+        firstHoldExpiresAt,
+        queueTokenExpiresAt: firstHoldExpiresAt ?? stored.data.queueTokenExpiresAt,
+    };
 }
 
 /** 새로고침 후 복원할 예매 진행 상태를 현재 탭에 저장합니다. */
@@ -59,5 +66,6 @@ export function selectBookingProgress(state: BookingState): BookingData {
         orderId: state.orderId,
         paymentId: state.paymentId,
         queueTokenExpiresAt: state.queueTokenExpiresAt,
+        firstHoldExpiresAt: state.firstHoldExpiresAt,
     };
 }
