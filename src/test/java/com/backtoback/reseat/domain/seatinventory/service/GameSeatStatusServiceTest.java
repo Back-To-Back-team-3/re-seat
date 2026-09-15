@@ -17,7 +17,7 @@ import com.backtoback.reseat.domain.seatinventory.repository.GameSeatRepository;
 
 /**
  * GameSeatStatusService 단위 테스트.
- * <p> 서비스가 좌석을 조회해 올바른 엔티티 메서드에 위임하는지를 검증한다.
+ * <p>서비스가 좌석을 조회해 올바른 엔티티 메서드에 위임하는지를 검증한다.
  * 상태 전이 규칙(SOLD만 refund 가능 등) 자체는 GameSeatTest에서 검증한다.
  */
 @ExtendWith(MockitoExtension.class)
