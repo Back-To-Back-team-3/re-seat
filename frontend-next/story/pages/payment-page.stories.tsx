@@ -22,6 +22,7 @@ const meta = {
         error: null,
         onOpenPayment: () => undefined,
         onRefreshOrder: () => undefined,
+        onRetry: () => undefined,
         onTickets: () => undefined,
         onGames: () => undefined,
         onBack: () => undefined,

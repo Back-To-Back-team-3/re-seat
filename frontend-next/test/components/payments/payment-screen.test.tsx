@@ -55,6 +55,7 @@ const noop = {
     onGames: vi.fn(),
     onOpenPayment: vi.fn(),
     onRefreshOrder: vi.fn(),
+    onRetry: vi.fn(),
     onTickets: vi.fn(),
 };
 
