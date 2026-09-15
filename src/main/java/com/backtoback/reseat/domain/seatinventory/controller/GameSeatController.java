@@ -30,7 +30,10 @@ import lombok.RequiredArgsConstructor;
  * 에러 상태 코드는 GlobalExceptionHandler가 일괄 매핑한다.
  * <p>인가: JWT 인증 + Queue-Token 검증.
  * Queue-Token은 대기열 통과 사용자임을 보장하며, getSeats에서는 조회(validateToken)만 수행한다.
- * 토큰 소비(consumeToken)는 결제 승인·실패 또는 복구 완료가 확정된 시점에 PaymentService·PaymentApprovalService에서 호출한다.
+ * 토큰 소비는 두 경로로 나뉜다:
+ * 결제 승인·실패 시 PaymentService·PaymentApprovalService가 consumeToken(...)을 호출하고,
+ * 승인 복구 작업이 성공한 경우 PaymentRecoveryService가 finalizeTokenAfterPayment(...)를 호출한다.
+ * 부분 취소 복구와 빈 토큰은 이 복구 호출 대상에서 제외된다.
  */
 @RestController
 @RequiredArgsConstructor
@@ -66,7 +69,9 @@ public class GameSeatController implements GameSeatControllerDocs {
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         // getSeats는 validateToken(조회)만 수행한다.
-        // consumeToken(USED 전이)은 결제 승인·실패·복구 완료 시점에 Payment 도메인에서 호출한다.
+        // 토큰 소비는 결제 승인·실패 시 consumeToken(PaymentService·PaymentApprovalService),
+        // 승인 복구 성공 시 finalizeTokenAfterPayment(PaymentRecoveryService)로 나뉘어 호출된다.
+        // 부분 취소 복구·빈 토큰은 이 호출 대상에서 제외된다.
         admissionTokenService.validateToken(userDetails.getId(), gameId, queueToken);
 
         List<SeatStatusResponse> seats = seatQueryService.getSeats(gameId, zoneId, grade, status);

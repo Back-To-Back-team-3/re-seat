@@ -40,7 +40,10 @@ public interface GameSeatControllerDocs {
             - 필터 미지정 시 전체 500건 반환
             - zoneId 필터로 구역 단위 부분 조회 가능
             - Queue-Token 검증: validateToken(조회)만 수행.
-              토큰 소비(consumeToken)는 결제 승인·실패 또는 복구 완료 시점에 소비한다.
+              토큰 소비는 두 경로로 나뉜다.
+              결제 승인·실패 시 PaymentService·PaymentApprovalService가 consumeToken()을 호출하고,
+              승인 복구가 성공한 경우 PaymentRecoveryService가 finalizeTokenAfterPayment()를 호출한다.
+              부분 취소 복구와 빈 토큰은 이 복구 호출 대상에서 제외된다.
             - 재고 미오픈 경기 조회 시 409 SEAT_INVENTORY_NOT_OPENED
             """,
         security = {
