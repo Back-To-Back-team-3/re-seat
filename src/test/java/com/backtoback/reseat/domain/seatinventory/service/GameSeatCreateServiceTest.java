@@ -1,5 +1,17 @@
 package com.backtoback.reseat.domain.seatinventory.service;
 
+import static org.assertj.core.api.Assertions.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Import;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
 import com.backtoback.reseat.domain.game.exception.GameNotFoundException;
@@ -15,27 +27,14 @@ import com.backtoback.reseat.domain.stadium.entity.Stadium;
 import com.backtoback.reseat.domain.team.entity.Team;
 import com.backtoback.reseat.global.common.BaseIntegrationTest;
 import com.backtoback.reseat.global.config.QuerydslConfig;
+
 import jakarta.persistence.EntityManager;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Import;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
-import java.util.List;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * 좌석 재고 생성 서비스 통합 테스트.
- * <p>
- * 시드 데이터(teams.csv 등)에 의존하지 않고, 각 테스트가 필요한 구장·좌석·경기를
- *
- * @BeforeEach에서 직접 만든다. Testcontainers(BaseIntegrationTest)로 매번 빈 DB에서
- * 시작하므로 "이미 시드가 있다"는 가정을 두지 않는다.
+ * <p>시드 데이터(teams.csv 등)에 의존하지 않고,
+ * 각 테스트가 필요한 구장·좌석·경기를 {@code @BeforeEach}에서 직접 만든다.
+ * Testcontainers(BaseIntegrationTest)로 매번 빈 DB에서 시작한다.
  */
 @Import(QuerydslConfig.class)
 @Transactional

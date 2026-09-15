@@ -43,18 +43,16 @@ const game = {
 
 function mockGameList() {
     server.use(
-        http.get(`${API_BASE_URL}/games`, ({request}) => {
-            // 전체 목록 훅은 예매 상태별 페이지를 합치므로 각 상태 요청에 맞춰 응답합니다.
-            const status = new URL(request.url).searchParams.get("bookingStatus");
+        http.get(`${API_BASE_URL}/admin/games`, () => {
             return HttpResponse.json({
                 success: true,
                 errorCode: null,
                 message: "경기 목록 조회 성공",
                 data: {
-                    content: status === "OPEN" ? [game] : [],
+                    content: [game],
                     pageNumber: 0,
-                    pageSize: 100,
-                    totalElements: status === "OPEN" ? 1 : 0,
+                    pageSize: 10,
+                    totalElements: 1,
                     totalPages: 1,
                     isFirst: true,
                     isLast: true,
@@ -82,7 +80,7 @@ describe("관리자 경기 훅", () => {
                 },
             ),
         );
-        const {result} = renderHook(() => useAdminGames(), {
+        const {result} = renderHook(() => useAdminGames({}, 0), {
             wrapper: createWrapper(createQueryClient()),
         });
         await waitFor(() => expect(result.current.games).toHaveLength(1));
@@ -115,7 +113,7 @@ describe("관리자 경기 훅", () => {
                 });
             }),
         );
-        const {result} = renderHook(() => useAdminGames(), {
+        const {result} = renderHook(() => useAdminGames({}, 0), {
             wrapper: createWrapper(createQueryClient()),
         });
         await waitFor(() => expect(result.current.games).toHaveLength(1));

@@ -25,8 +25,8 @@ export function AdminGameList({
                 <tbody className="divide-y divide-border">
                     {games.map((game) => (
                         <tr className={cn("hover:bg-muted/40", selectedGameId === game.gameId && "bg-primary/5")} key={game.gameId}>
-                            <td className="px-4 py-3"><button aria-label={`경기 선택 ${game.title}`} className="font-bold text-primary hover:underline" onClick={() => onSelect(game.gameId)} type="button">{game.title}</button></td>
-                            <td className="px-4 py-3">{game.stadium.name}</td>
+                            <td className="px-4 py-3"><button aria-label={`경기 선택 ${game.title}`} className="font-bold text-primary hover:underline" onClick={() => onSelect(game.gameId)} type="button">{game.title}</button><p className="mt-1 text-xs text-muted-foreground">홈팀: {game.homeTeam.name} #{game.homeTeam.teamId}</p><p className="text-xs text-muted-foreground">원정팀: {game.awayTeam.name} #{game.awayTeam.teamId}</p></td>
+                            <td className="px-4 py-3">{game.stadium.name}<p className="mt-1 text-xs text-muted-foreground">구장 #{game.stadium.stadiumId}</p></td>
                             <td className="px-4 py-3">{formatGameDate(game.gameAt)}</td>
                             <td className="px-4 py-3 text-xs text-muted-foreground">{game.bookingOpenAt.slice(0, 16)}<br/>{game.bookingCloseAt.slice(0, 16)}</td>
                             <td className="px-4 py-3"><Badge variant={game.bookingStatus === "OPEN" ? "success" : game.bookingStatus === "CANCELLED" ? "destructive" : "secondary"}>{game.bookingStatus}</Badge></td>

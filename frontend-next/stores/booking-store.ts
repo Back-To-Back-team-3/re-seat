@@ -11,6 +11,7 @@ export type BookingData = {
     orderId: number | null;
     paymentId: number | null;
     queueTokenExpiresAt: string | null;
+    firstHoldExpiresAt?: string | null;
 };
 
 type BookingActions = {
@@ -24,6 +25,7 @@ type BookingActions = {
     setOrderId: (orderId: number | null) => void;
     setPaymentId: (paymentId: number | null) => void;
     setQueueExpiry: (expiresAt: string | null) => void;
+    setFirstHoldExpiry: (expiresAt: string) => void;
     reset: () => void;
 };
 
@@ -37,6 +39,7 @@ const initialBookingState: BookingData = {
     orderId: null,
     paymentId: null,
     queueTokenExpiresAt: null,
+    firstHoldExpiresAt: null,
 };
 
 /**
@@ -77,6 +80,11 @@ export function createBookingStore() {
         setOrderId: (orderId) => set({orderId}),
         setPaymentId: (paymentId) => set({paymentId}),
         setQueueExpiry: (queueTokenExpiresAt) => set({queueTokenExpiresAt}),
+        setFirstHoldExpiry: (firstHoldExpiresAt) =>
+            set((state) => ({
+                firstHoldExpiresAt: state.firstHoldExpiresAt ?? firstHoldExpiresAt,
+                queueTokenExpiresAt: state.firstHoldExpiresAt ?? firstHoldExpiresAt,
+            })),
         reset: () => set({...initialBookingState, hydrated: true}),
     }));
 }

@@ -13,8 +13,7 @@ import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
 
 /**
  * PricePolicy 단위 테스트.
- * <p>
- * LocalDateTime을 직접 만들어 넣기 때문에 7월 시드만 있어도
+ * <p>LocalDateTime을 직접 만들어 넣기 때문에 7월 시드만 있어도
  * 9월 로직(시기 배수 × 1.2)을 검증할 수 있다.
  */
 class PricePolicyTest {

@@ -15,6 +15,7 @@ const progress: BookingData = {
     orderId: 200,
     paymentId: null,
     queueTokenExpiresAt: "2026-09-10 20:00:00",
+    firstHoldExpiresAt: null,
 };
 
 describe("예매 진행 상태 저장소", () => {
@@ -35,6 +36,26 @@ describe("예매 진행 상태 저장소", () => {
         );
 
         expect(loadBookingProgress()).toBeNull();
+    });
+
+    it("기존 세션의 예약에서 최초 재선점 기한을 복원한다", () => {
+        saveBookingProgress({
+            ...progress,
+            firstHoldExpiresAt: undefined,
+            reservation: {
+                reservationId: 10,
+                reservationNo: "RES-10",
+                status: "HOLDING",
+                gameSeats: [],
+                holdExpiresAt: "2026-09-10 20:10:00",
+                gameAt: "2026-09-15 18:30:00",
+            },
+        });
+
+        expect(loadBookingProgress()).toMatchObject({
+            firstHoldExpiresAt: "2026-09-10 20:10:00",
+            queueTokenExpiresAt: "2026-09-10 20:10:00",
+        });
     });
 
     it("진행 상태를 초기화하면 저장값도 제거한다", () => {
