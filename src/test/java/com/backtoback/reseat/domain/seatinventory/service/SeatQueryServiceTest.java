@@ -79,7 +79,7 @@ class SeatQueryServiceTest {
         statistics.clear();
     }
 
-    @DisplayName("fetch join 적용 시 N+1 없이 단일 쿼리로 500건이 조회된다")
+    @DisplayName("fetch join 적용 시 N+1 없이 단일 쿼리로 조회된다")
     @Test
     void should_notCauseNPlusOne_when_fetchJoinApplied() {
         // when
