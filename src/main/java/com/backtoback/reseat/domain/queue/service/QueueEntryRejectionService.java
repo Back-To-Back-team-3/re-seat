@@ -63,18 +63,6 @@ public class QueueEntryRejectionService {
 
     private final RedisTemplate<String, String> redisTemplate;
 
-    // Consumer 거절 결과 key: queue:entry:rejection:game:{gameId}:user:{userId}
-    private String rejectionKey(Long gameId, Long userId) {
-
-        return "queue:entry:rejection:game:%d:user:%d".formatted(gameId, userId);
-    }
-
-    // 최신 대기열 진입 요청 eventId key: queue:entry:request:latest:game:{gameId}:user:{userId}
-    private String latestRequestKey(Long gameId, Long userId) {
-
-        return "queue:entry:request:latest:game:%d:user:%d".formatted(gameId, userId);
-    }
-
     /**
      * 사용자와 경기별 최신 대기열 진입 요청을 기록하고 이전 거절 결과를 삭제한다.
      * <p>최신 요청 식별자 저장과 이전 거절 결과 삭제를 Redis에서 원자적으로 처리하여
@@ -86,8 +74,8 @@ public class QueueEntryRejectionService {
      */
     public void prepareRequest(Long gameId, Long userId, UUID eventId) {
 
-        String latestRequestKey = latestRequestKey(gameId, userId);
-        String rejectionKey = rejectionKey(gameId, userId);
+        String latestRequestKey = QueueRedisKey.latestRequest(gameId, userId);
+        String rejectionKey = QueueRedisKey.rejection(gameId, userId);
 
         // 저장과 삭제 사이에 다른 요청이 끼어들지 않도록 Redis Lua Script에서 원자적으로 처리한다.
         redisTemplate
@@ -112,8 +100,8 @@ public class QueueEntryRejectionService {
      */
     public boolean saveRejectionIfLatest(Long gameId, Long userId, UUID eventId, QueueEntryRejectionReason reason) {
 
-        String latestRequestKey = latestRequestKey(gameId, userId);
-        String rejectionKey = rejectionKey(gameId, userId);
+        String latestRequestKey = QueueRedisKey.latestRequest(gameId, userId);
+        String rejectionKey = QueueRedisKey.rejection(gameId, userId);
 
         // 비교와 저장 사이에 최신 요청이 바뀌지 않도록 Redis Lua Script에서 원자적으로 처리한다.
         Long scriptResult
@@ -141,7 +129,7 @@ public class QueueEntryRejectionService {
      */
     public boolean completeRequestIfLatest(Long gameId, Long userId, UUID eventId) {
 
-        String latestRequestKey = latestRequestKey(gameId, userId);
+        String latestRequestKey = QueueRedisKey.latestRequest(gameId, userId);
 
         // 비교와 삭제 사이에 최신 요청이 바뀌지 않도록 Redis Lua Script에서 원자적으로 처리한다.
         Long scriptResult
@@ -159,7 +147,7 @@ public class QueueEntryRejectionService {
      */
     public Optional<QueueEntryRejectionResult> findRejection(Long gameId, Long userId) {
 
-        String rejectionKey = rejectionKey(gameId, userId);
+        String rejectionKey = QueueRedisKey.rejection(gameId, userId);
         String storedResult = redisTemplate.opsForValue().get(rejectionKey);
 
         if (storedResult == null || storedResult.isEmpty()) {
@@ -187,7 +175,7 @@ public class QueueEntryRejectionService {
      */
     public boolean deleteRejectionIfMatch(Long gameId, Long userId, QueueEntryRejectionResult rejectionResult) {
 
-        String rejectionKey = rejectionKey(gameId, userId);
+        String rejectionKey = QueueRedisKey.rejection(gameId, userId);
         String expectedResult = "%s:%s".formatted(rejectionResult.eventId(), rejectionResult.reason().name());
 
         Long scriptResult

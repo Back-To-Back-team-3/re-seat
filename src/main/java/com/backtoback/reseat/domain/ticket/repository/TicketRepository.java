@@ -15,7 +15,7 @@ import com.backtoback.reseat.domain.ticket.entity.Ticket;
 import com.backtoback.reseat.domain.ticket.entity.TicketStatus;
 
 @Repository
-public interface TicketRepository extends JpaRepository<Ticket, Long> {
+public interface TicketRepository extends JpaRepository<Ticket, Long>, TicketRepositoryCustom {
 
     List<Ticket> findByUserIdAndStatus(Long userId, TicketStatus status);
 
@@ -103,4 +103,6 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
      * 회원 탈퇴 가능 여부 판단(User 도메인, TicketService.hasUnsettledTicket) 등에 사용된다.
      */
     boolean existsByUserIdAndStatusIn(Long userId, Collection<TicketStatus> statuses);
+
+    List<Ticket> findByGameIdAndStatus(Long gameId, TicketStatus status);
 }

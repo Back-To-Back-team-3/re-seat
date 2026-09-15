@@ -3,15 +3,17 @@ import {act, renderHook} from "@testing-library/react";
 import type {ReactNode} from "react";
 import {beforeEach, describe, expect, it, vi} from "vitest";
 
-import {createReservation, getReservationHoldTime} from "@/api/reservations";
+import {cancelReservation, createReservation, getReservationHoldTime} from "@/api/reservations";
 import {useReservation} from "@/hooks/use-reservation";
+import type {ReservationResponse} from "@/types/reservation";
 
 const bookingState = vi.hoisted(() => ({
     selectedSeats: [{gameSeatId: 101}],
-    reservation: null,
+    reservation: null as ReservationResponse | null,
     setReservation: vi.fn(),
     clearSeats: vi.fn(),
     setQueueExpiry: vi.fn(),
+    setFirstHoldExpiry: vi.fn(),
 }));
 
 vi.mock("@/api/reservations", () => ({
@@ -40,7 +42,14 @@ describe("useReservation", () => {
     beforeEach(() => {
         localStorage.clear();
         bookingState.setReservation.mockClear();
+        bookingState.clearSeats.mockClear();
         bookingState.setQueueExpiry.mockClear();
+        bookingState.setFirstHoldExpiry.mockClear();
+        bookingState.reservation = null;
+        vi.mocked(cancelReservation).mockResolvedValue({
+            reservationId: 10,
+            status: "CANCELED",
+        });
         vi.mocked(createReservation).mockResolvedValue({
             reservationId: 10,
             reservationNo: "RES-10",
@@ -76,5 +85,38 @@ describe("useReservation", () => {
 
         expect(localStorage.getItem("queueToken")).toBe("queue-token");
         expect(bookingState.setQueueExpiry).not.toHaveBeenCalledWith(null);
+        expect(bookingState.setFirstHoldExpiry).toHaveBeenCalledWith("2026-09-10T18:40:00");
+    });
+
+    it("좌석 선점을 해제해도 입장 토큰은 유지한다", async () => {
+        const queryClient = new QueryClient({
+            defaultOptions: {
+                queries: {retry: false},
+                mutations: {retry: false},
+            },
+        });
+        bookingState.reservation = {
+            reservationId: 10,
+            reservationNo: "RES-10",
+            status: "HOLDING",
+            gameSeats: [{gameSeatId: 101, status: "HELD", price: 18000}],
+            holdExpiresAt: "2026-09-10T18:40:00",
+            gameAt: "2026-09-10T18:30:00",
+        };
+        localStorage.setItem("queueToken", "queue-token");
+
+        const {result} = renderHook(() => useReservation(40), {
+            wrapper: createWrapper(queryClient),
+        });
+
+        await act(async () => {
+            await result.current.cancel.mutateAsync();
+        });
+
+        expect(cancelReservation).toHaveBeenCalledWith(10);
+        expect(localStorage.getItem("queueToken")).toBe("queue-token");
+        expect(bookingState.setQueueExpiry).not.toHaveBeenCalledWith(null);
+        expect(bookingState.setReservation).toHaveBeenCalledWith(null);
+        expect(bookingState.clearSeats).toHaveBeenCalledOnce();
     });
 });

@@ -25,6 +25,7 @@ class PaymentTest {
     private static final String PAYMENT_NO = "PAY-20260725030500-000001";
     private static final String IDEMPOTENCY_KEY = "idempotency-key";
     private static final String PG_ORDER_ID = "ORD-20260725-000001";
+    private static final String QUEUE_TOKEN = "queue-token";
     private static final int AMOUNT = 10000;
 
     private Payment payment(PaymentStatus status) {
@@ -104,6 +105,21 @@ class PaymentTest {
             assertThatThrownBy(() -> payment.assignPgPaymentKey("different-payment-key"))
                 .isInstanceOf(PaymentCallbackMismatchException.class);
             assertThat(payment.getPgPaymentKey()).isEqualTo("payment-key");
+        }
+    }
+
+    @Nested
+    @DisplayName("Queue-Token을 연결한다")
+    class AssignQueueToken {
+
+        @Test
+        @DisplayName("결제 처리에 사용한 Queue-Token을 결제에 저장한다.")
+        void savesToken() {
+            Payment payment = readyPayment();
+
+            payment.assignQueueToken(QUEUE_TOKEN);
+
+            assertThat(payment.getQueueToken()).isEqualTo(QUEUE_TOKEN);
         }
     }
 

@@ -38,6 +38,9 @@ spring:
             client-secret: test-kakao-client-secret
             redirect-uri: http://localhost/login/oauth2/code/kakao
 
+scheduling:
+  enabled: false
+
 jwt:
   secret: ${TEST_JWT_SECRET:${JWT_SECRET:dGVzdC1kdW1teS1qd3Qtc2VjcmV0LWtleS1mb3ItdGVzdGluZy0xMjM0NTY3ODkw}}
 

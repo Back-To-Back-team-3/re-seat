@@ -193,6 +193,8 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
         queueService.registerQueueEntry(event);
     }
 
+    // ---------- DB · Redis 대기열 상태 정합성 ----------
+
     @Test
     @DisplayName("자동 입장 후 DB와 Redis의 대기열 상태가 일치한다.")
     void admit_keepsQueueStateConsistent() throws InterruptedException {
@@ -264,6 +266,8 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
             .isEqualTo(reentryRequestedAt.toEpochMilli());
     }
 
+    // ---------- Queue-Token 유효시간 ----------
+
     @Test
     @DisplayName("자동 입장으로 발급한 Queue-Token은 전체 21분과 좌석 탐색 3분의 만료시간을 가진다.")
     void admit_issuesTokenWithPolicyExpirationTimes() throws InterruptedException {
@@ -296,6 +300,8 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
         assertThat(Duration.between(activeToken.getIssuedAt(), activeToken.getSeatBrowsingExpiresAt()))
             .isEqualTo(Duration.ofMinutes(3));
     }
+
+    // ---------- 만료 Queue-Token 재진입 ----------
 
     @Test
     @DisplayName("전체 유효시간이 만료된 Queue-Token은 같은 대기열 진입 요청에서 정리되고 재진입할 수 있다.")
@@ -346,6 +352,64 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
         assertThat(reenteredHistory.getCanceledAt()).isNull();
 
         // 만료 정리에서는 새 토큰이나 DB 이력을 만들지 않고 기존 데이터를 한 건씩 유지해야 한다.
+        assertThat(queueEntryHistoryRepository.count()).isEqualTo(1);
+        assertThat(admissionTokenRepository.count()).isEqualTo(1);
+
+        // Redis 대기열에는 재진입 요청시간을 점수로 등록해야 한다.
+        assertThat(queueScore(waitingQueueRedisKey, waitingQueueRedisMember))
+            .isEqualTo(reentryRequestedAt.toEpochMilli());
+    }
+
+    @Test
+    @DisplayName("이미 전체 만료 상태인 Queue-Token의 ADMITTED 이력은 같은 대기열에 재진입할 수 있다.")
+    void registerQueueEntry_withExpiredToken_reentersQueue() {
+
+        // given
+        String waitingQueueRedisKey = WAITING_QUEUE_REDIS_KEY_FORMAT.formatted(game.getId());
+        String waitingQueueRedisMember = WAITING_QUEUE_REDIS_MEMBER_FORMAT.formatted(user.getId());
+        String queueEntryKey = QUEUE_ENTRY_KEY_FORMAT.formatted(game.getId(), user.getId());
+        String token = "qt_test";
+
+        LocalDateTime now = LocalDateTime.now();
+
+        LocalDateTime issuedAt = now.minusMinutes(22);
+        LocalDateTime expiresAt = issuedAt.plusMinutes(21);
+        LocalDateTime seatBrowsingExpiresAt = issuedAt.plusMinutes(3);
+
+        // 토큰은 이미 EXPIRED지만 대기 이력이 ADMITTED로 남은 장애 상태를 준비한다.
+        QueueEntryHistory queueEntryHistory = QueueEntryHistory.of(game, user, queueEntryKey, issuedAt);
+        queueEntryHistory.admit(now);
+        queueEntryHistoryRepository.save(queueEntryHistory);
+        Long savedQueueEntryHistoryId = queueEntryHistory.getId();
+
+        // 토큰을 미리 EXPIRED로 변경해 ACTIVE 토큰 조회에 포함되지 않는 상황을 재현한다.
+        AdmissionToken expiredToken = AdmissionToken.of(game, user, token, issuedAt, expiresAt, seatBrowsingExpiresAt);
+        expiredToken.expire(now);
+        admissionTokenRepository.save(expiredToken);
+
+        Instant reentryRequestedAt = Instant.now();
+        QueueEntryRequestedEvent reentryEvent = queueEntryEvent(reentryRequestedAt);
+
+        // when
+        // 이미 만료된 토큰은 다시 변경하지 않고 남은 ADMITTED 이력만 재진입시켜야 한다.
+        queueService.registerQueueEntry(reentryEvent);
+
+        // then
+        // 기존 EXPIRED 토큰은 유지하고 ADMITTED 이력은 WAITING으로 복구돼야 한다.
+        assertThat(admissionTokenRepository.findByToken(token).orElseThrow().getStatus())
+            .isEqualTo(AdmissionTokenStatus.EXPIRED);
+
+        QueueEntryHistory reenteredHistory = findQueueEntryHistory(queueEntryKey);
+        assertThat(reenteredHistory.getStatus()).isEqualTo(QueueEntryHistoryStatus.WAITING);
+
+        // 만료 이력 복구에서는 새 DB 이력을 만들지 않고 기존 이력을 재사용해야 한다.
+        assertThat(reenteredHistory.getId()).isEqualTo(savedQueueEntryHistoryId);
+
+        // 재진입한 이력에는 이전 입장 허용시간과 복구 과정의 취소 시간이 남지 않아야 한다.
+        assertThat(reenteredHistory.getAdmittedAt()).isNull();
+        assertThat(reenteredHistory.getCanceledAt()).isNull();
+
+        // 복구 과정에서 새 토큰이나 대기 이력이 추가되지 않아야 한다.
         assertThat(queueEntryHistoryRepository.count()).isEqualTo(1);
         assertThat(admissionTokenRepository.count()).isEqualTo(1);
 
@@ -410,6 +474,67 @@ public class QueueConsistencyTest extends BaseIntegrationTest {
         assertThat(queueScore(waitingQueueRedisKey, waitingQueueRedisMember))
             .isEqualTo(reentryRequestedAt.toEpochMilli());
     }
+
+    @Test
+    @DisplayName("이미 좌석 탐색 만료 상태인 Queue-Token의 ADMITTED 이력은 같은 대기열에 재진입할 수 있다.")
+    void registerQueueEntry_withBrowsingExpiredToken_reentersQueue() {
+
+        // given
+        String waitingQueueRedisKey = WAITING_QUEUE_REDIS_KEY_FORMAT.formatted(game.getId());
+        String waitingQueueRedisMember = WAITING_QUEUE_REDIS_MEMBER_FORMAT.formatted(user.getId());
+        String queueEntryKey = QUEUE_ENTRY_KEY_FORMAT.formatted(game.getId(), user.getId());
+        String token = "qt_test";
+
+        LocalDateTime now = LocalDateTime.now();
+
+        LocalDateTime issuedAt = now.minusMinutes(4);
+        LocalDateTime expiresAt = issuedAt.plusMinutes(21);
+        LocalDateTime seatBrowsingExpiresAt = issuedAt.plusMinutes(3);
+
+        // 토큰은 이미 BROWSING_EXPIRED지만 대기 이력이 ADMITTED로 남은 장애 상태를 준비한다.
+        QueueEntryHistory queueEntryHistory = QueueEntryHistory.of(game, user, queueEntryKey, issuedAt);
+        queueEntryHistory.admit(now);
+        queueEntryHistoryRepository.save(queueEntryHistory);
+        Long savedQueueEntryHistoryId = queueEntryHistory.getId();
+
+        // 토큰을 미리 BROWSING_EXPIRED로 변경해 ACTIVE 토큰 조회에 포함되지 않는 상황을 재현한다.
+        AdmissionToken browsingExpiredToken
+            = AdmissionToken.of(game, user, token, issuedAt, expiresAt, seatBrowsingExpiresAt);
+        browsingExpiredToken.expireBrowsing(now);
+        admissionTokenRepository.save(browsingExpiredToken);
+
+        Instant reentryRequestedAt = Instant.now();
+        QueueEntryRequestedEvent reentryEvent = queueEntryEvent(reentryRequestedAt);
+
+        // when
+        // 이미 좌석 탐색 만료된 토큰은 다시 변경하지 않고 남은 ADMITTED 이력만 재진입시켜야 한다.
+        queueService.registerQueueEntry(reentryEvent);
+
+        // then
+        // 기존 BROWSING_EXPIRED 토큰은 유지하고 ADMITTED 이력은 WAITING으로 복구돼야 한다.
+        assertThat(admissionTokenRepository.findByToken(token).orElseThrow().getStatus())
+            .isEqualTo(AdmissionTokenStatus.BROWSING_EXPIRED);
+
+        QueueEntryHistory reenteredHistory = findQueueEntryHistory(queueEntryKey);
+        assertThat(reenteredHistory.getStatus()).isEqualTo(QueueEntryHistoryStatus.WAITING);
+
+        // 만료 이력 복구에서는 새 DB 이력을 만들지 않고 기존 이력을 재사용해야 한다.
+        assertThat(reenteredHistory.getId()).isEqualTo(savedQueueEntryHistoryId);
+
+        // 재진입한 이력에는 이전 입장 허용시간과 복구 과정의 취소 시간이 남지 않아야 한다.
+        assertThat(reenteredHistory.getAdmittedAt()).isNull();
+        assertThat(reenteredHistory.getCanceledAt()).isNull();
+
+        // 복구 과정에서 새 토큰이나 대기 이력이 추가되지 않아야 한다.
+        assertThat(queueEntryHistoryRepository.count()).isEqualTo(1);
+        assertThat(admissionTokenRepository.count()).isEqualTo(1);
+
+        // Redis 대기열에는 재진입 요청시간을 점수로 등록해야 한다.
+        assertThat(queueScore(waitingQueueRedisKey, waitingQueueRedisMember))
+            .isEqualTo(reentryRequestedAt.toEpochMilli());
+    }
+
+    // ---------- 대기열 진입 거절 결과 ----------
 
     @Test
     @DisplayName("최신 대기열 진입 이벤트의 거절 결과를 Redis에 저장하고 요청 식별자를 삭제한다.")

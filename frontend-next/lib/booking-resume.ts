@@ -27,6 +27,7 @@ function freshProgress(gameId: number | null): BookingData {
         orderId: null,
         paymentId: null,
         queueTokenExpiresAt: null,
+        firstHoldExpiresAt: null,
     };
 }
 

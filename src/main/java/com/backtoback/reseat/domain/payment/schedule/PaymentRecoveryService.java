@@ -14,6 +14,7 @@ import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryType;
 import com.backtoback.reseat.domain.payment.exception.PaymentNotFoundException;
 import com.backtoback.reseat.domain.payment.repository.PaymentRecoveryTaskRepository;
 import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
+import com.backtoback.reseat.domain.queue.service.AdmissionTokenService;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -27,16 +28,19 @@ public class PaymentRecoveryService {
     private final PaymentRepository paymentRepository;
     private final TransactionTemplate transactionTemplate;
     private final Map<PaymentRecoveryType, PaymentRecoveryHandler> handlers;
+    private final AdmissionTokenService admissionTokenService;
 
     public PaymentRecoveryService(
         PaymentRecoveryTaskRepository paymentRecoveryTaskRepository,
         PaymentRepository paymentRepository,
         TransactionTemplate transactionTemplate,
-        List<PaymentRecoveryHandler> handlers
+        List<PaymentRecoveryHandler> handlers,
+        AdmissionTokenService admissionTokenService
     ) {
         this.paymentRecoveryTaskRepository = paymentRecoveryTaskRepository;
         this.paymentRepository = paymentRepository;
         this.transactionTemplate = transactionTemplate;
+        this.admissionTokenService = admissionTokenService;
         // 복구 유형별 Handler를 미리 등록해 실행 시 switch 없이 알맞은 구현체를 바로 조회한다.
         this.handlers = new EnumMap<>(PaymentRecoveryType.class);
         handlers.forEach(this::registerHandler);
@@ -106,8 +110,25 @@ public class PaymentRecoveryService {
             return;
         }
 
+        finalizeQueueTokenAfterApprovalRecovery(task);
         task.complete(now);
         log.info("결제 복구 작업 완료 (taskId={}, paymentId={}, type={})", taskId, task.getPayment().getId(), task.getType());
+    }
+
+    /** 승인 관련 복구가 성공하면 결제 시도에 저장된 Queue-Token을 멱등하게 최종화한다. */
+    private void finalizeQueueTokenAfterApprovalRecovery(PaymentRecoveryTask task) {
+        if (task.getType() == PaymentRecoveryType.PARTIAL_CANCEL) {
+            return;
+        }
+
+        String queueToken = task.getPayment().getQueueToken();
+        if (queueToken == null || queueToken.isBlank()) {
+            return;
+        }
+
+        Long userId = task.getPayment().getUser().getId();
+        Long gameId = task.getPayment().getOrder().getReservation().getGame().getId();
+        admissionTokenService.finalizeTokenAfterPayment(userId, gameId, queueToken);
     }
 
     /**

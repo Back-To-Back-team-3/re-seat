@@ -20,6 +20,8 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.backtoback.reseat.domain.game.entity.Game;
+import com.backtoback.reseat.domain.order.entity.Order;
 import com.backtoback.reseat.domain.payment.entity.Payment;
 import com.backtoback.reseat.domain.payment.entity.PaymentCancel;
 import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
@@ -33,6 +35,9 @@ import com.backtoback.reseat.domain.payment.schedule.ConfirmUnknownRecoveryHandl
 import com.backtoback.reseat.domain.payment.schedule.PaymentRecoveryHandler;
 import com.backtoback.reseat.domain.payment.schedule.PaymentRecoveryResult;
 import com.backtoback.reseat.domain.payment.schedule.PaymentRecoveryService;
+import com.backtoback.reseat.domain.queue.service.AdmissionTokenService;
+import com.backtoback.reseat.domain.reservation.entity.Reservation;
+import com.backtoback.reseat.domain.user.entity.User;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PaymentRecoveryService 결제 승인 복구")
@@ -40,6 +45,9 @@ class PaymentRecoveryServiceTest {
 
     private static final Long TASK_ID = 1L;
     private static final String PAYMENT_KEY = "payment-key";
+    private static final String QUEUE_TOKEN = "queue-token";
+    private static final Long USER_ID = 10L;
+    private static final Long GAME_ID = 20L;
     private static final String RECOVERY_CANCEL_REASON = "승인 상태 불명확 결제 자동 환불";
     private static final LocalDateTime NOW = LocalDateTime.of(2026, 7, 28, 12, 0);
 
@@ -51,6 +59,9 @@ class PaymentRecoveryServiceTest {
 
     @Mock
     private TossPaymentClient tossPaymentClient;
+
+    @Mock
+    private AdmissionTokenService admissionTokenService;
 
     @Mock
     private PlatformTransactionManager transactionManager;
@@ -72,7 +83,8 @@ class PaymentRecoveryServiceTest {
                 paymentRecoveryTaskRepository,
                 paymentRepository,
                 transactionTemplate,
-                List.of(new ConfirmUnknownRecoveryHandler(tossPaymentClient))
+                List.of(new ConfirmUnknownRecoveryHandler(tossPaymentClient)),
+                admissionTokenService
             );
     }
 
@@ -114,7 +126,8 @@ class PaymentRecoveryServiceTest {
                     paymentRecoveryTaskRepository,
                     paymentRepository,
                     transactionTemplate,
-                    List.of(firstHandler, secondHandler)
+                    List.of(firstHandler, secondHandler),
+                    admissionTokenService
                 )
             ).isInstanceOf(IllegalStateException.class).hasMessage("결제 복구 Handler가 중복 등록되었습니다: CONFIRM_UNKNOWN");
         }
@@ -123,6 +136,30 @@ class PaymentRecoveryServiceTest {
     @Nested
     @DisplayName("승인 상태가 불명확한 결제를 복구한다")
     class Recover {
+
+        @Test
+        @DisplayName("승인 복구가 완료되면 결제에 저장된 Queue-Token을 최종화한다.")
+        void finalizesQueueTokenAfterSuccessfulApprovalRecovery() {
+            Payment payment = paymentWithQueueToken();
+            PaymentRecoveryTask task = PaymentRecoveryTask.createConfirmUnknown(payment);
+            PaymentRecoveryHandler handler = mock(PaymentRecoveryHandler.class);
+            when(handler.getType()).thenReturn(PaymentRecoveryType.CONFIRM_UNKNOWN);
+            when(handler.recover(task)).thenReturn(PaymentRecoveryResult.success());
+            PaymentRecoveryService service
+                = new PaymentRecoveryService(
+                    paymentRecoveryTaskRepository,
+                    paymentRepository,
+                    transactionTemplate,
+                    List.of(handler),
+                    admissionTokenService
+                );
+            when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID)).thenReturn(Optional.of(task));
+
+            service.recover(TASK_ID, NOW);
+
+            verify(admissionTokenService).finalizeTokenAfterPayment(USER_ID, GAME_ID, QUEUE_TOKEN);
+            assertThat(task.getStatus()).isEqualTo(PaymentRecoveryStatus.COMPLETED);
+        }
 
         @Test
         @DisplayName("복구 작업이 존재하지 않으면 Toss를 호출하지 않는다.")
@@ -188,7 +225,8 @@ class PaymentRecoveryServiceTest {
                     paymentRecoveryTaskRepository,
                     paymentRepository,
                     transactionTemplate,
-                    List.of(handler)
+                    List.of(handler),
+                    admissionTokenService
                 );
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID)).thenReturn(Optional.of(task));
             when(paymentRepository.findByIdWithPessimisticWriteLock(2L)).thenReturn(Optional.of(task.getPayment()));
@@ -213,7 +251,8 @@ class PaymentRecoveryServiceTest {
                     paymentRecoveryTaskRepository,
                     paymentRepository,
                     transactionTemplate,
-                    List.of(handler)
+                    List.of(handler),
+                    admissionTokenService
                 );
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID)).thenReturn(Optional.of(task));
             when(paymentRepository.findByIdWithPessimisticWriteLock(2L)).thenReturn(Optional.of(task.getPayment()));
@@ -241,7 +280,8 @@ class PaymentRecoveryServiceTest {
                     paymentRecoveryTaskRepository,
                     paymentRepository,
                     transactionTemplate,
-                    List.of(handler)
+                    List.of(handler),
+                    admissionTokenService
                 );
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID)).thenReturn(Optional.of(task));
             when(paymentRepository.findByIdWithPessimisticWriteLock(2L)).thenReturn(Optional.of(task.getPayment()));
@@ -266,7 +306,8 @@ class PaymentRecoveryServiceTest {
                     paymentRecoveryTaskRepository,
                     paymentRepository,
                     transactionTemplate,
-                    List.of(handler)
+                    List.of(handler),
+                    admissionTokenService
                 );
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID))
                 .thenReturn(Optional.of(processingTask))
@@ -328,7 +369,11 @@ class PaymentRecoveryServiceTest {
         @Test
         @DisplayName("Toss 결제가 최종 상태가 아니면 다음 복구를 예약한다.")
         void schedulesRetryForNonFinalPaymentStatus() {
-            PaymentRecoveryTask task = confirmRecoveryTask();
+            Payment payment = mock(Payment.class);
+            when(payment.getId()).thenReturn(1L);
+            when(payment.getQueueToken()).thenReturn(QUEUE_TOKEN);
+            when(payment.getPgPaymentKey()).thenReturn(PAYMENT_KEY);
+            PaymentRecoveryTask task = PaymentRecoveryTask.createConfirmUnknown(payment);
             TossPaymentResponse paymentResponse = mock(TossPaymentResponse.class);
             when(paymentRecoveryTaskRepository.findByIdWithPessimisticWriteLock(TASK_ID)).thenReturn(Optional.of(task));
             when(tossPaymentClient.getPayment(PAYMENT_KEY)).thenReturn(paymentResponse);
@@ -336,6 +381,7 @@ class PaymentRecoveryServiceTest {
             when(paymentResponse.isConfirmFailureStatus()).thenReturn(false);
             when(paymentResponse.getStatus()).thenReturn("IN_PROGRESS");
 
+            assertThat(payment.getQueueToken()).isEqualTo(QUEUE_TOKEN);
             paymentRecoveryService.recover(TASK_ID, NOW);
 
             assertThat(task.getStatus()).isEqualTo(PaymentRecoveryStatus.RETRY);
@@ -343,6 +389,7 @@ class PaymentRecoveryServiceTest {
             assertThat(task.getNextRetryAt()).isEqualTo(NOW.plusMinutes(1));
             assertThat(task.getLastError()).isEqualTo("토스 결제가 아직 최종 상태가 아닙니다.");
             verify(tossPaymentClient, never()).cancel(PAYMENT_KEY, RECOVERY_CANCEL_REASON);
+            verifyNoInteractions(admissionTokenService);
         }
 
         @Test
@@ -398,5 +445,22 @@ class PaymentRecoveryServiceTest {
             assertThat(task.getNextRetryAt()).isNull();
             assertThat(task.getLastError()).isEqualTo("토스 결제 조회 또는 자동 환불 요청에 실패했습니다.");
         }
+    }
+
+    private Payment paymentWithQueueToken() {
+        Payment payment = mock(Payment.class);
+        User user = mock(User.class);
+        Order order = mock(Order.class);
+        Reservation reservation = mock(Reservation.class);
+        Game game = mock(Game.class);
+        when(payment.getId()).thenReturn(1L);
+        when(payment.getQueueToken()).thenReturn(QUEUE_TOKEN);
+        when(payment.getUser()).thenReturn(user);
+        when(user.getId()).thenReturn(USER_ID);
+        when(payment.getOrder()).thenReturn(order);
+        when(order.getReservation()).thenReturn(reservation);
+        when(reservation.getGame()).thenReturn(game);
+        when(game.getId()).thenReturn(GAME_ID);
+        return payment;
     }
 }

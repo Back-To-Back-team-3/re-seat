@@ -1,14 +1,15 @@
 "use client";
 
-import {CalendarCog, UsersRound} from "lucide-react";
+import {CalendarCog, TicketCheck, UsersRound} from "lucide-react";
 
 import {cn} from "@/lib/utils";
 
-export type AdminTab = "users" | "games";
+export type AdminTab = "users" | "games" | "tickets";
 
 const items = [
     {id: "users" as const, label: "회원 관리", icon: UsersRound},
     {id: "games" as const, label: "경기/좌석 관리", icon: CalendarCog},
+    {id: "tickets" as const, label: "티켓 관리", icon: TicketCheck},
 ];
 
 export function AdminNavigation({

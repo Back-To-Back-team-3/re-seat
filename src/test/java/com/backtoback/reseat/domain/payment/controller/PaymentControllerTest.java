@@ -1,5 +1,6 @@
 package com.backtoback.reseat.domain.payment.controller;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -20,6 +21,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.backtoback.reseat.domain.payment.service.PaymentService;
+import com.backtoback.reseat.domain.queue.exception.QueueTokenRequiredException;
 import com.backtoback.reseat.global.exception.GlobalExceptionHandler;
 import com.backtoback.reseat.global.security.CustomUserDetails;
 
@@ -27,6 +29,9 @@ import com.backtoback.reseat.global.security.CustomUserDetails;
 @AutoConfigureMockMvc(addFilters = false)
 @Import(GlobalExceptionHandler.class)
 class PaymentControllerTest {
+
+    private static final String IDEMPOTENCY_KEY = "idempotency-key";
+    private static final String QUEUE_TOKEN = "queue-token";
 
     private static final String PAYMENT_REQUEST_BODY = """
         {
@@ -108,11 +113,46 @@ class PaymentControllerTest {
     class CompletePayment {
 
         @Test
+        @DisplayName("Queue-Token 헤더를 결제 승인 서비스에 전달한다")
+        void passesQueueTokenToPaymentService() throws Exception {
+            mockMvc
+                .perform(
+                    post("/api/v1/payments/{paymentId}/complete", 1001L)
+                        .header("Idempotency-Key", IDEMPOTENCY_KEY)
+                        .header("Queue-Token", QUEUE_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(PAYMENT_COMPLETE_REQUEST_BODY)
+                )
+                .andExpect(status().isOk());
+
+            verify(paymentService).completePayment(eq(1L), eq(1001L), eq(IDEMPOTENCY_KEY), eq(QUEUE_TOKEN), any());
+        }
+
+        @Test
+        @DisplayName("Queue-Token 헤더가 없으면 403 QUEUE_TOKEN_REQUIRED를 반환한다")
+        void rejectsMissingQueueToken() throws Exception {
+            when(paymentService.completePayment(eq(1L), eq(1001L), eq(IDEMPOTENCY_KEY), isNull(), any()))
+                .thenThrow(new QueueTokenRequiredException());
+
+            mockMvc
+                .perform(
+                    post("/api/v1/payments/{paymentId}/complete", 1001L)
+                        .header("Idempotency-Key", IDEMPOTENCY_KEY)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(PAYMENT_COMPLETE_REQUEST_BODY)
+                )
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.errorCode").value("QUEUE_TOKEN_REQUIRED"));
+        }
+
+        @Test
         @DisplayName("Idempotency-Key 헤더가 없으면 400 IDEMPOTENCY_KEY_REQUIRED를 반환한다")
         void rejectsMissingIdempotencyKey() throws Exception {
             mockMvc
                 .perform(
                     post("/api/v1/payments/{paymentId}/complete", 1001L)
+                        .header("Queue-Token", QUEUE_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(PAYMENT_COMPLETE_REQUEST_BODY)
                 )
@@ -130,6 +170,7 @@ class PaymentControllerTest {
                 .perform(
                     post("/api/v1/payments/{paymentId}/complete", 1001L)
                         .header("Idempotency-Key", "   ")
+                        .header("Queue-Token", QUEUE_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(PAYMENT_COMPLETE_REQUEST_BODY)
                 )
@@ -146,11 +187,46 @@ class PaymentControllerTest {
     class FailPayment {
 
         @Test
+        @DisplayName("Queue-Token 헤더를 결제 실패 서비스에 전달한다")
+        void passesQueueTokenToPaymentService() throws Exception {
+            mockMvc
+                .perform(
+                    post("/api/v1/payments/{paymentId}/fail", 1001L)
+                        .header("Idempotency-Key", IDEMPOTENCY_KEY)
+                        .header("Queue-Token", QUEUE_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(PAYMENT_FAIL_REQUEST_BODY)
+                )
+                .andExpect(status().isOk());
+
+            verify(paymentService).failPayment(eq(1L), eq(1001L), eq(IDEMPOTENCY_KEY), eq(QUEUE_TOKEN), any());
+        }
+
+        @Test
+        @DisplayName("Queue-Token 헤더가 없으면 403 QUEUE_TOKEN_REQUIRED를 반환한다")
+        void rejectsMissingQueueToken() throws Exception {
+            when(paymentService.failPayment(eq(1L), eq(1001L), eq(IDEMPOTENCY_KEY), isNull(), any()))
+                .thenThrow(new QueueTokenRequiredException());
+
+            mockMvc
+                .perform(
+                    post("/api/v1/payments/{paymentId}/fail", 1001L)
+                        .header("Idempotency-Key", IDEMPOTENCY_KEY)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(PAYMENT_FAIL_REQUEST_BODY)
+                )
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.errorCode").value("QUEUE_TOKEN_REQUIRED"));
+        }
+
+        @Test
         @DisplayName("Idempotency-Key 헤더가 없으면 400 IDEMPOTENCY_KEY_REQUIRED를 반환한다")
         void rejectsMissingIdempotencyKey() throws Exception {
             mockMvc
                 .perform(
                     post("/api/v1/payments/{paymentId}/fail", 1001L)
+                        .header("Queue-Token", QUEUE_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(PAYMENT_FAIL_REQUEST_BODY)
                 )
@@ -168,6 +244,7 @@ class PaymentControllerTest {
                 .perform(
                     post("/api/v1/payments/{paymentId}/fail", 1001L)
                         .header("Idempotency-Key", "   ")
+                        .header("Queue-Token", QUEUE_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(PAYMENT_FAIL_REQUEST_BODY)
                 )

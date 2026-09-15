@@ -33,10 +33,9 @@ import jakarta.persistence.EntityManager;
 
 /**
  * 좌석 재고 오픈 동시성 테스트.
- * <p>
- * 클래스 레벨 @Transactional을 두지 않는다 — 여러 스레드가 각자 실제 커밋을 해야
- * 동시 오픈 경합이 재현되기 때문이다. 대신 @BeforeEach의 픽스처 생성만
- * TransactionTemplate으로 별도 트랜잭션을 열어 커밋한다.
+ * <p>클래스 레벨 @Transactional을 두지 않는다.
+ * 여러 스레드가 각자 실제 커밋을 해야 동시 오픈 경합이 재현된다.
+ * 대신 @BeforeEach의 픽스처 생성만 TransactionTemplate으로 별도 트랜잭션을 열어 커밋한다.
  */
 @ActiveProfiles(
     {

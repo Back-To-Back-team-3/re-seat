@@ -20,12 +20,21 @@ import com.backtoback.reseat.domain.order.repository.OrderRepository;
 import com.backtoback.reseat.domain.payment.dto.request.PaymentCompleteRequest;
 import com.backtoback.reseat.domain.payment.dto.response.PaymentCompleteResponse;
 import com.backtoback.reseat.domain.payment.entity.Payment;
+import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryStatus;
+import com.backtoback.reseat.domain.payment.entity.PaymentRecoveryTask;
 import com.backtoback.reseat.domain.payment.entity.PaymentStatus;
 import com.backtoback.reseat.domain.payment.entity.PgProvider;
 import com.backtoback.reseat.domain.payment.pg.toss.TossPaymentClient;
 import com.backtoback.reseat.domain.payment.pg.toss.dto.response.TossPaymentResponse;
+import com.backtoback.reseat.domain.payment.pg.toss.exception.TossPaymentStatusUnknownException;
+import com.backtoback.reseat.domain.payment.repository.PaymentRecoveryTaskRepository;
 import com.backtoback.reseat.domain.payment.repository.PaymentRepository;
+import com.backtoback.reseat.domain.payment.exception.PaymentConfirmStatusUnknownException;
+import com.backtoback.reseat.domain.payment.schedule.PaymentRecoveryService;
 import com.backtoback.reseat.domain.payment.service.PaymentService;
+import com.backtoback.reseat.domain.queue.entity.AdmissionToken;
+import com.backtoback.reseat.domain.queue.entity.AdmissionTokenStatus;
+import com.backtoback.reseat.domain.queue.repository.AdmissionTokenRepository;
 import com.backtoback.reseat.domain.reservation.entity.Reservation;
 import com.backtoback.reseat.domain.reservation.entity.ReservationStatus;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
@@ -56,6 +65,7 @@ class PaymentTicketIssuanceIntegrationTest extends BaseIntegrationTest {
     private static final String IDEMPOTENCY_KEY = "payment-ticket-integration-key";
     private static final String PAYMENT_KEY = "toss-payment-ticket-integration-key";
     private static final String PG_ORDER_ID = "ORD-PAYMENT-TICKET-INTEGRATION";
+    private static final String QUEUE_TOKEN = "queue-token";
 
     @Autowired
     private PaymentService paymentService;
@@ -68,6 +78,15 @@ class PaymentTicketIssuanceIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
     private TicketRepository ticketRepository;
+
+    @Autowired
+    private AdmissionTokenRepository admissionTokenRepository;
+
+    @Autowired
+    private PaymentRecoveryTaskRepository paymentRecoveryTaskRepository;
+
+    @Autowired
+    private PaymentRecoveryService paymentRecoveryService;
 
     @Autowired
     private EntityManager entityManager;
@@ -100,17 +119,21 @@ class PaymentTicketIssuanceIntegrationTest extends BaseIntegrationTest {
 
         // When: 결제 승인 유스케이스를 실행하면 결제 승인, 주문 완료, 티켓 발급이 차례로 수행된다.
         PaymentCompleteResponse response
-            = paymentService.completePayment(fixture.userId(), fixture.paymentId(), IDEMPOTENCY_KEY, request);
+            = paymentService
+                .completePayment(fixture.userId(), fixture.paymentId(), IDEMPOTENCY_KEY, QUEUE_TOKEN, request);
 
         // 서비스가 끝난 뒤 DB를 다시 조회해 실제로 저장된 최종 상태를 확인한다.
         Payment payment = paymentRepository.findById(fixture.paymentId()).orElseThrow();
         Order order = orderRepository.findById(fixture.orderId()).orElseThrow();
         Ticket ticket = ticketRepository.findByOrderItemId(fixture.orderItemId()).orElseThrow();
+        AdmissionToken admissionToken = admissionTokenRepository.findByToken(QUEUE_TOKEN).orElseThrow();
 
         // Then: Toss 승인 결과가 로컬 결제와 주문에 반영되고 주문 항목의 티켓까지 발급되어야 한다.
         assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED);
         assertThat(order.getStatus()).isEqualTo(OrderStatus.PAID);
         assertThat(ticket.getStatus()).isEqualTo(TicketStatus.ISSUED);
+        assertThat(admissionToken.getStatus()).isEqualTo(AdmissionTokenStatus.USED);
+        assertThat(admissionToken.getUsedAt()).isNotNull();
 
         // 클라이언트가 추가 조회 없이 발급 결과를 확인할 수 있도록 승인 응답에도 같은 티켓이 포함되어야 한다.
         assertThat(response.getStatus()).isEqualTo(PaymentStatus.APPROVED);
@@ -123,6 +146,44 @@ class PaymentTicketIssuanceIntegrationTest extends BaseIntegrationTest {
 
         // 로컬 상태만 변경한 것이 아니라 Toss confirm을 정확히 한 번 호출했는지 확인한다.
         verify(tossPaymentClient).confirm(PAYMENT_KEY, PG_ORDER_ID, AMOUNT);
+    }
+
+    @Test
+    @DisplayName("승인 상태 불명확 결제의 복구가 완료되면 저장된 Queue-Token을 사용 완료 처리한다.")
+    void finalizesQueueTokenAfterConfirmUnknownRecovery() {
+        PaymentFixture fixture = createFixture();
+        PaymentCompleteRequest request = mock(PaymentCompleteRequest.class);
+        when(request.getPaymentKey()).thenReturn(PAYMENT_KEY);
+        when(request.getOrderId()).thenReturn(PG_ORDER_ID);
+        when(request.getAmount()).thenReturn(AMOUNT);
+        when(tossPaymentClient.confirm(PAYMENT_KEY, PG_ORDER_ID, AMOUNT))
+            .thenThrow(new TossPaymentStatusUnknownException("승인", new RuntimeException("Toss 응답 없음")));
+
+        assertThatThrownBy(
+            () -> paymentService
+                .completePayment(fixture.userId(), fixture.paymentId(), IDEMPOTENCY_KEY, QUEUE_TOKEN, request)
+        ).isInstanceOf(PaymentConfirmStatusUnknownException.class);
+
+        Payment uncertainPayment = paymentRepository.findById(fixture.paymentId()).orElseThrow();
+        PaymentRecoveryTask recoveryTask
+            = paymentRecoveryTaskRepository.findByRecoveryKey("CONFIRM_UNKNOWN:" + fixture.paymentId()).orElseThrow();
+        AdmissionToken activeToken = admissionTokenRepository.findByToken(QUEUE_TOKEN).orElseThrow();
+        assertThat(uncertainPayment.getQueueToken()).isEqualTo(QUEUE_TOKEN);
+        assertThat(recoveryTask.getStatus()).isEqualTo(PaymentRecoveryStatus.PENDING);
+        assertThat(activeToken.getStatus()).isEqualTo(AdmissionTokenStatus.ACTIVE);
+
+        TossPaymentResponse recoveredResponse = mock(TossPaymentResponse.class);
+        when(tossPaymentClient.getPayment(PAYMENT_KEY)).thenReturn(recoveredResponse);
+        when(recoveredResponse.isApproved()).thenReturn(false);
+        when(recoveredResponse.isConfirmFailureStatus()).thenReturn(true);
+
+        paymentRecoveryService.recover(recoveryTask.getId(), LocalDateTime.now());
+
+        PaymentRecoveryTask completedTask = paymentRecoveryTaskRepository.findById(recoveryTask.getId()).orElseThrow();
+        AdmissionToken finalizedToken = admissionTokenRepository.findByToken(QUEUE_TOKEN).orElseThrow();
+        assertThat(completedTask.getStatus()).isEqualTo(PaymentRecoveryStatus.COMPLETED);
+        assertThat(finalizedToken.getStatus()).isEqualTo(AdmissionTokenStatus.USED);
+        assertThat(finalizedToken.getUsedAt()).isNotNull();
     }
 
     /**
@@ -178,6 +239,12 @@ class PaymentTicketIssuanceIntegrationTest extends BaseIntegrationTest {
                     .status(UserStatus.ACTIVE)
                     .build();
             entityManager.persist(user);
+
+            // 결제 완료 시 이번 예매 흐름에서 사용한 Queue-Token이 함께 소비되는 조건을 준비한다.
+            AdmissionToken admissionToken
+                = AdmissionToken.of(game, user, QUEUE_TOKEN, now, now.plusMinutes(21), now.plusMinutes(3));
+            admissionToken.completeSeatBrowsing(now);
+            entityManager.persist(admissionToken);
 
             // 좌석 선점 이후 주문이 생성된 시점을 표현하기 위해 유효한 HOLDING 예약을 준비한다.
             Reservation reservation
