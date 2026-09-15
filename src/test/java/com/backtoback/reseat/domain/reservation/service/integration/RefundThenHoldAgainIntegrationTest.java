@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.reservation.service;
+package com.backtoback.reseat.domain.reservation.service.integration;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -24,6 +24,7 @@ import com.backtoback.reseat.domain.queue.service.AdmissionTokenService;
 import com.backtoback.reseat.domain.queue.service.AdmissionTokenTiming;
 import com.backtoback.reseat.domain.reservation.dto.request.SeatHoldRequest;
 import com.backtoback.reseat.domain.reservation.dto.response.ReservationResponse;
+import com.backtoback.reseat.domain.reservation.service.SeatHoldFacade;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
 import com.backtoback.reseat.domain.seatinventory.repository.GameSeatRepository;
@@ -47,10 +48,10 @@ import com.backtoback.reseat.domain.user.repository.UserRepository;
 import com.backtoback.reseat.global.common.BaseIntegrationTest;
 
 /**
- * [이슈 #380]
- * 결제 완료 후 티켓 1매 환불 → 잔여 수량 기준 다른 좌석 재선점 성공까지 실제 예매 경로를 잇는 엔드투엔드 테스트.
- * 실제 예매 경로: Reservation → Order → Ticket → 재선점
- * <p>환불된 좌석과 다른 좌석으로 재선점한다.
+ * [이슈 #380] 환불 후 재선점 통합 테스트.
+ * <p>결제 완료 후 티켓 1매를 환불하면 잔여 수량 기준으로 다른 좌석을 재선점할 수 있는지,
+ * 실제 예매 경로(Reservation → Order → Ticket → 재선점)를 그대로 이어서 검증한다.
+ * 환불된 좌석과는 다른 좌석으로 재선점한다.
  */
 class RefundThenHoldAgainIntegrationTest extends BaseIntegrationTest {
 

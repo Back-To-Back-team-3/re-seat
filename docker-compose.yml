@@ -67,6 +67,7 @@ services:
       - MYSQL_DATABASE=reseat
     volumes:
       - mysql-data:/var/lib/mysql
+      - ./scripts/mysql-init:/docker-entrypoint-initdb.d:ro
     command:
       - --default-time-zone=+09:00
       - --log-timestamps=SYSTEM
@@ -125,6 +126,9 @@ services:
     container_name: reseat-prometheus
     ports:
       - "9090:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--web.enable-remote-write-receiver"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     networks:

@@ -11,7 +11,7 @@ checkstyle {
     toolVersion = '10.12.5'
     configFile = file("config/naver-checkstyle-rules.xml")
     configProperties = [
-        'suppressionFile': file("config/naver-checkstyle-suppressions.xml")
+            'suppressionFile': file("config/naver-checkstyle-suppressions.xml")
     ]
     ignoreFailures = true
     maxWarnings = 0
@@ -100,10 +100,23 @@ dependencies {
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags 'concurrency'
+    }
     systemProperty 'spring.profiles.active', 'test'
     systemProperty 'file.encoding', 'UTF-8'
     systemProperty 'user.timezone', 'Asia/Seoul'
+}
+
+tasks.register('concurrencyTest', Test) {
+    useJUnitPlatform {
+        includeTags 'concurrency'
+    }
+    systemProperty 'spring.profiles.active', 'test-concurrency'
+    systemProperty 'file.encoding', 'UTF-8'
+    systemProperty 'user.timezone', 'Asia/Seoul'
+    // 100스레드 반복 테스트(SeatHoldRepeatValidationTest)가 있어 기본 타임아웃보다 여유를 둔다.
+    timeout = java.time.Duration.ofMinutes(5)
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -117,7 +130,7 @@ bootJar {
 spotless {
     java {
         target 'src/**/*.java'
-        lineEndings 'UNIX'
+        lineEndings = com.diffplug.spotless.LineEnding.UNIX
         eclipse().configFile("config/naver-eclipse-formatter.xml")
         leadingTabsToSpaces(4)
         removeUnusedImports()

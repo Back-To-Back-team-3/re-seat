@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.reservation.service;
+package com.backtoback.reseat.domain.reservation.service.integration;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -42,8 +42,9 @@ import com.backtoback.reseat.domain.user.entity.UserStatus;
 import jakarta.persistence.EntityManager;
 
 /**
- * [이슈 #380] 2매 결제 완료 후 1매를 환불하면 TicketCountPort 집계가 즉시 감소하는지 검증한다.
- * <p>PartialCancelRecoveryHandler.recover()와 동일한 순서(refundOrder → completeTicketRefund)로
+ * [이슈 #380] 환불 후 수량 회복 통합 테스트.
+ * <p>2매 결제 완료 후 1매를 환불하면 TicketCountPort 집계가 즉시 감소하는지 검증한다.
+ * PartialCancelRecoveryHandler.recover()와 동일한 순서(refundOrder → completeTicketRefund)로
  * 호출해 실제 운영 경로를 그대로 재현한다.
  */
 @SpringBootTest

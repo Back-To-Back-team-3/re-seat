@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.reservation.service;
+package com.backtoback.reseat.domain.reservation.service.concurrency.distributed;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -31,6 +31,7 @@ import com.backtoback.reseat.domain.reservation.exception.LockFailedException;
 import com.backtoback.reseat.domain.reservation.exception.MaxSeatCountExceededException;
 import com.backtoback.reseat.domain.reservation.repository.ReservationRepository;
 import com.backtoback.reseat.domain.reservation.repository.ReservationSeatRepository;
+import com.backtoback.reseat.domain.reservation.service.SeatHoldFacade;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
 import com.backtoback.reseat.domain.seatinventory.repository.GameSeatRepository;
@@ -52,16 +53,13 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * 사용자·경기 단위 락 동시성 회귀 테스트.
- * <p> SeatHoldFacadeConcurrencyTest가 "동일 좌석" 경합을 검증하는 것과 달리,
- * 이 테스트는 "동일 사용자, 서로 다른 좌석" 경합을 검증한다.</p>
- * <p> 핵심 검증:
- * - 동일 사용자가 서로 다른 좌석 3개에 동시 요청 → 성공 2건(상한), 1건 MAX_SEAT_COUNT_EXCEEDED
- * - reservation_seats 행 2건 (over-booking 0건 — 4좌석 등 상한 초과 불가)
- * - DB 유니크 위반 0건
- * - 예상 외 예외 0건
- * </p>
+ * <p>SeatHoldFacadeConcurrencyTest가 "동일 좌석" 경합을 검증하는 것과 달리,
+ * 이 테스트는 "동일 사용자, 서로 다른 좌석" 경합을 검증한다.
+ * <p>핵심 검증은 네 가지다. 동일 사용자가 서로 다른 좌석 3개에 동시 요청하면
+ * 성공은 상한(2매)만큼인 2건이고 나머지 1건은 MAX_SEAT_COUNT_EXCEEDED로 차단되는지,
+ * reservation_seats 행이 2건만 생기는지(over-booking 0건), DB 유니크 위반이 0건인지,
+ * 그리고 예상 외 예외가 0건인지다.
  */
-
 @Slf4j
 @EnabledIfEnvironmentVariable(
     named = "RUN_CONCURRENCY_TESTS",
