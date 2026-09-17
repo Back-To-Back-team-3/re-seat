@@ -10,6 +10,10 @@
 param(
     [string]$ManifestPath = "",
     [switch]$Apply,
+    # 준비 후 60분(Access Token 유효기간)을 넘겨 다음 회차를 실행할 때 지정한다.
+    [switch]$RefreshAccessTokens,
+    [string]$TestPassword = "Test123!",
+    [string]$BaseUrl = "http://localhost:8080",
     [string]$MySqlService = "mysql-db",
     [string]$RedisService = "redis"
 )
