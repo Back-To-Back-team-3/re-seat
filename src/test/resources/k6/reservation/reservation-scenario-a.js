@@ -47,6 +47,8 @@ export const options = {
         },
     },
     thresholds: {
+        // 성공이 정확히 1건이어야 한다 — over-booking(2건 이상) 또는 전원 실패(0건) 모두 잡아낸다.
+        hold_success: ['count==1'],
         // 진짜 결함(5xx 등 원인 불명)은 반드시 0건이어야 over-booking 무결성이 증명된다.
         hold_unexpected_error: ['count==0'],
         // 아래 3개는 픽스처가 정상이라면 절대 나오면 안 되는 값들이다.
