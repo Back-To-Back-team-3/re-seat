@@ -45,15 +45,22 @@ export const options = {
             preAllocatedVUs: 100,
             maxVUs: 1000,
             stages: [
-                {target: 100, duration: '10s'},  // 여유 구간 — 기준선
-                {target: 300, duration: '10s'},  // 풀 처리 한계(~450) 근접
-                {target: 600, duration: '10s'},  // 한계 초과 — pending/5xx 관찰 목표 구간
-                {target: 0, duration: '10s'},    // 감소, 정상 복귀 확인
+                // 티켓팅 오픈 재현을 위해 각 목표 요청률에 즉시 도달한다(duration: '0s').
+                // "즉시 점프" stage와 "유지" stage를 분리해, 목표치에 순간 도달한 뒤 그 상태를 10초간 유지하는 흐름을 재현한다.
+                {target: 100, duration: '0s'},   // 즉시 100 req/s로 점프 — 여유 구간 기준선
+                {target: 100, duration: '10s'},  // 100 req/s 유지
+                {target: 300, duration: '0s'},   // 즉시 300 req/s로 점프 — 풀 처리 한계(~450) 근접
+                {target: 300, duration: '10s'},  // 300 req/s 유지
+                {target: 600, duration: '0s'},   // 즉시 600 req/s로 점프 — 한계 초과, pending/5xx 관찰 목표
+                {target: 600, duration: '10s'},  // 600 req/s 유지
+                {target: 0, duration: '10s'},    // 선형 감소, 정상 복귀 확인
             ],
         },
     },
     thresholds: {
-        http_req_failed: ['rate<0.7'], // 스파이크 구간
+        // 스파이크 구간
+        // 실패율은 이 시나리오의 판정 기준이 아니므로 threshold를 사실상 무력화한다.
+        http_req_failed: ['rate<0.99'],
     },
 };
 
