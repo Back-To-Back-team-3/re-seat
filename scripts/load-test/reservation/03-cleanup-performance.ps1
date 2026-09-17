@@ -66,6 +66,26 @@ if ($gameSeatIds.Count -gt 0) {
     }
 }
 
+# 좌석별 active hold 중복 검증 (over-booking 최종 확인) — 정리 전에 반드시 실행한다.
+# 좌석 하나에 두 번 HOLD가 걸릴 수 있으므로, 시나리오 구분 없이 경기 단위로 항상 검증한다.
+$duplicateSeats = Invoke-PerformanceMySql -NoHeaders -Sql @"
+SELECT rs.game_seat_id, COUNT(*) AS active_hold_count
+FROM reservation_seats rs
+JOIN reservations r ON r.id = rs.reservation_id
+JOIN game_seats gs ON gs.id = rs.game_seat_id
+WHERE r.game_id = $gameId
+  AND r.status = 'HOLDING'
+  AND r.hold_expires_at > NOW()
+  AND gs.status = 'HELD'
+GROUP BY rs.game_seat_id
+HAVING COUNT(*) > 1;
+"@
+if (@($duplicateSeats).Count -gt 0) {
+    Write-Warning "over-booking 발견 — 좌석별 활성 HOLDING 중복:"
+    $duplicateSeats | ForEach-Object { Write-Warning $_ }
+    throw "over-booking이 발견되어 정리를 중단합니다. game_seat_id별 중복 건수를 확인해주세요."
+}
+
 $unexpectedUsers = [int](Invoke-PerformanceMySql -Scalar -Sql @"
 SELECT COUNT(*) FROM (
     SELECT r.user_id FROM reservations r WHERE r.game_id = $gameId
