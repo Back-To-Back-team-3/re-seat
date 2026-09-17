@@ -1,6 +1,9 @@
-# reservation 성능 테스트 회차 사이에 좌석·예약 상태만 초기화합니다.
-# 사용자·경기·입장 토큰(admission_tokens)은 재사용을 위해 삭제하지 않습니다.
-# (Queue-Token은 검증만 하고 소비하지 않으므로 회차 반복에 그대로 재사용 가능)
+# reservation 성능 테스트 회차 사이에 좌석·예약 상태만 초기화힌다.
+# 사용자·경기·입장 토큰(admission_tokens)은 재사용을 위해 삭제하지 않는다 (Queue-Token은 검증만 하고 소비하지 않으므로 회차 반복에 그대로 재사용 가능).
+#
+# 주의(장시간 세션):
+# Access Token 유효기간은 60분 고정(JwtTokenProvider)이며 TestDurationMinutes와 무관하다. # 준비(01-prepare) 후 60분을 넘겨 회차를 실행하면 admission_tokens가 유효해도 Access Token 만료로 401이 발생한다.
+# -RefreshAccessTokens를 지정하면 users.json의 각 유저를 재로그인해 accessToken만 갱신한다(admissionToken·assignedSeatId는 그대로 유지).
 # Windows: pwsh.exe -NoProfile -File "./scripts/load-test/reservation/02-reset-performance.ps1" -ManifestPath "<manifest 경로>" -Apply
 # macOS/Linux: pwsh -NoProfile -File "./scripts/load-test/reservation/02-reset-performance.ps1" -ManifestPath "<manifest 경로>" -Apply
 
@@ -67,4 +70,27 @@ COMMIT;
 
 $deletedLockKeyCount = Invoke-RedisKeyCommand -Command 'DEL' -Keys $redisKeys
 Write-Host "정리한 잔존 락 키: ${deletedLockKeyCount}건"
+
+if ($RefreshAccessTokens) {
+    Write-Host '[추가] Access Token 만료 가능성에 대비해 재로그인합니다.'
+    $usersPath = Join-Path (Split-Path -Parent $ManifestPath) 'users.json'
+    $existingUsers = Get-Content -LiteralPath $usersPath -Raw | ConvertFrom-Json
+    $refreshedUsers = @($existingUsers | ForEach-Object {
+        $loginBody = @{ email = $_.email; password = $TestPassword } | ConvertTo-Json -Compress
+        $loginResponse = Invoke-RestMethod -Uri "$BaseUrl/api/v1/auth/login" -Method Post -ContentType "application/json" -Body $loginBody
+        if ([string]::IsNullOrWhiteSpace([string]$loginResponse.data.accessToken)) {
+            throw "Access Token 재발급 실패: $($_.email)"
+        }
+        # admissionToken·assignedSeatId는 그대로 유지하고 accessToken만 교체한다.
+        [PSCustomObject]@{
+            userId = $_.userId; email = $_.email
+            accessToken = $loginResponse.data.accessToken
+            admissionToken = $_.admissionToken
+            assignedSeatId = $_.assignedSeatId
+        }
+    })
+    [System.IO.File]::WriteAllText($usersPath, ($refreshedUsers | ConvertTo-Json -Depth 3), [System.Text.UTF8Encoding]::new($false))
+    Write-Host "Access Token을 재발급했습니다: $usersPath"
+}
+
 Write-Host '초기화가 완료됐습니다. 다음 회차를 실행할 수 있습니다.'
