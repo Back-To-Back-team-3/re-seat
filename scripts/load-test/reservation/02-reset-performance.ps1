@@ -39,6 +39,17 @@ $userIdList = $userIds -join ','
 $testGameCount = [int](Invoke-PerformanceMySql -Scalar -Sql "SELECT COUNT(*) FROM games WHERE id = $gameId AND title LIKE '[Reservation 성능테스트 $runId]%';")
 if ($testGameCount -ne 1) { throw 'manifest의 경기 ID가 이 실행의 성능 테스트 경기인지 확인하지 못했습니다.' }
 
+# manifest.gameSeatIds가 실제로 이 경기(gameId) 소속인지 재확인한다.
+# manifest가 오래됐거나 잘못 지정된 경우, 검증 없이 그대로 쓰면 다른 경기의 활성 Redis 락 키를 잘못 삭제할 위험이 있다.
+# game_seats.id는 IDENTITY라 정상 흐름에서는 안전하지만, 사람이 manifest를 잘못 지정하는 경우까지 방어한다.
+if ($gameSeatIds.Count -gt 0) {
+    $gameSeatIdList = $gameSeatIds -join ','
+    $actualSeatCount = int FROM game_seats WHERE game_id = $gameId AND id IN ($gameSeatIdList);")
+    if ($actualSeatCount -ne $gameSeatIds.Count) {
+        throw "manifest의 gameSeatIds 중 일부가 이 경기($gameId) 소속이 아닙니다. manifest를 다시 확인해주세요."
+    }
+}
+
 $summary = Invoke-PerformanceMySql -Sql @"
 SELECT 'reservation_seats' AS target, COUNT(*) AS count FROM reservation_seats rs JOIN reservations r ON r.id = rs.reservation_id WHERE r.game_id = $gameId AND r.user_id IN ($userIdList)
 UNION ALL SELECT 'reservations', COUNT(*) FROM reservations WHERE game_id = $gameId AND user_id IN ($userIdList)

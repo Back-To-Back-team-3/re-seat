@@ -56,6 +56,16 @@ $unexpectedUserFilter = if ($userIds.Count -gt 0) { "WHERE user_id NOT IN ($user
 
 $testGameCount = [int](Invoke-PerformanceMySql -Scalar -Sql "SELECT COUNT(*) FROM games WHERE id = $gameId AND title LIKE '[Reservation 성능테스트 $runId]%';")
 if ($testGameCount -ne 1) { throw 'manifest의 경기 ID가 이 실행의 성능 테스트 경기인지 확인하지 못했습니다. 삭제하지 않습니다.' }
+
+# manifest.gameSeatIds가 실제로 이 경기(gameId) 소속인지 재확인한다.
+if ($gameSeatIds.Count -gt 0) {
+    $gameSeatIdList = $gameSeatIds -join ','
+    $actualSeatCount = int FROM game_seats WHERE game_id = $gameId AND id IN ($gameSeatIdList);")
+    if ($actualSeatCount -ne $gameSeatIds.Count) {
+        throw "manifest의 gameSeatIds 중 일부가 이 경기($gameId) 소속이 아닙니다. 삭제하지 않습니다."
+    }
+}
+
 $unexpectedUsers = [int](Invoke-PerformanceMySql -Scalar -Sql @"
 SELECT COUNT(*) FROM (
     SELECT r.user_id FROM reservations r WHERE r.game_id = $gameId
