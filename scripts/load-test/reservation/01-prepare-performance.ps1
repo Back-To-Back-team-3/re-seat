@@ -148,6 +148,10 @@ Write-JsonFile -Path $manifestPath -Value $manifest
 # UserGameLockStrategy가 userId+gameId 단위이므로 같은 유저를 여러 VU가 공유하면
 # 바깥쪽 락에서 의도치 않게 직렬화되어 시나리오 B/C의 "전역 락 아님" 측정이 오염된다.
 $phonePrefix = $koreaNow.ToString('mmss')
+# RunId 끝에서 짧은 숫자 식별자를 뽑아 전화번호에 포함한다.
+$runIdDigits = ($RunId -replace '\D', '')
+$runIdSuffix = $runIdDigits.Substring([Math]::Max(0, $runIdDigits.Length - 4))
+
 $usersToCreate = @(1..$UserCount | ForEach-Object {
     $sequence = $_.ToString('0000')
     [PSCustomObject]@{
