@@ -54,6 +54,14 @@ if ($gameSeatIds.Count -gt 0) {
     }
 }
 
+# 이 경기에 manifest 유저 외 다른 사용자의 예약이 있는지 확인한다.
+$unexpectedUsers = [int](Invoke-PerformanceMySql -Scalar -Sql @"
+SELECT COUNT(*) FROM reservation WHERE game_id = $gameId AND user_id IN ($userIdList);")
+"@)
+if ($unexpectedUsers -ne 0) {
+    throw "다른 사용자와 연결된 예약이 ${unexpectedUsers}건 있습니다. 좌석 상태를 초기화하지 않습니다."
+}
+
 $summary = Invoke-PerformanceMySql -Sql @"
 SELECT 'reservation_seats' AS target, COUNT(*) AS count FROM reservation_seats rs JOIN reservations r ON r.id = rs.reservation_id WHERE r.game_id = $gameId AND r.user_id IN ($userIdList)
 UNION ALL SELECT 'reservations', COUNT(*) FROM reservations WHERE game_id = $gameId AND user_id IN ($userIdList)
