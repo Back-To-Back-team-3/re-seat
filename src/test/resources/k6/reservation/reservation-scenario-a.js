@@ -82,9 +82,16 @@ export default function () {
     // 종단(end-to-end) 응답 시간 — Queue-Token 검증부터 DB 트랜잭션 커밋까지 전체 구간.
     seatHoldDuration.add(res.timings.duration);
 
-    // 실패 응답의 errorCode는 GlobalExceptionHandler → ApiResponse.failure(code, message)로
-    // 내려오는 값이며, 성공(201) 응답에는 이 필드가 없으므로 실패일 때만 파싱한다.
-    const errorCode = res.status !== 201 ? res.json('errorCode') : null;
+    // res.json()은 응답이 JSON이 아니면 예외를 던져 iteration 자체가 중단된다.
+    // 이러면 가장 심각한 장애가 hold_unexpected_error에 잡히지 않고 조용히 사라지므로 try/catch로 감싼다.
+    let errorCode = null;
+    if (res.status !== 201) {
+        try {
+            errorCode = res.json('errorCode');
+        } catch (e) {
+            errorCode = null; // JSON 파싱 실패 — 아래 분기에서 holdUnexpectedError로 집계됨
+        }
+    }
 
     if (res.status === 201) {
         holdSuccess.add(1);

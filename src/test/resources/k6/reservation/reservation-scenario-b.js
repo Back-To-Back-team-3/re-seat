@@ -73,7 +73,16 @@ export default function () {
 
     seatHoldDuration.add(res.timings.duration);
 
-    const errorCode = res.status !== 201 ? res.json('errorCode') : null;
+    // res.json()은 응답이 JSON이 아니면 예외를 던져 iteration 자체가 중단된다.
+    // 이러면 가장 심각한 장애가 hold_unexpected_error에 잡히지 않고 조용히 사라지므로 try/catch로 감싼다.
+    let errorCode = null;
+    if (res.status !== 201) {
+        try {
+            errorCode = res.json('errorCode');
+        } catch (e) {
+            errorCode = null; // JSON 파싱 실패 — 아래 분기에서 holdUnexpectedError로 집계됨
+        }
+    }
 
     if (res.status === 201) {
         holdSuccess.add(1);
