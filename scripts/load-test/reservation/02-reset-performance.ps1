@@ -48,7 +48,7 @@ if ($testGameCount -ne 1) { throw 'manifest의 경기 ID가 이 실행의 성능
 # game_seats.id는 IDENTITY라 정상 흐름에서는 안전하지만, 사람이 manifest를 잘못 지정하는 경우까지 방어한다.
 if ($gameSeatIds.Count -gt 0) {
     $gameSeatIdList = $gameSeatIds -join ','
-    $actualSeatCount = int FROM game_seats WHERE game_id = $gameId AND id IN ($gameSeatIdList);")
+    $actualSeatCount = [int](Invoke-PerformanceMySql -Scalar -Sql "SELECT COUNT(*) FROM game_seats WHERE game_id = $gameId AND id IN ($gameSeatIdList);")
     if ($actualSeatCount -ne $gameSeatIds.Count) {
         throw "manifest의 gameSeatIds 중 일부가 이 경기($gameId) 소속이 아닙니다. manifest를 다시 확인해주세요."
     }

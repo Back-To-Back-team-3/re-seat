@@ -60,7 +60,7 @@ if ($testGameCount -ne 1) { throw 'manifest의 경기 ID가 이 실행의 성능
 # manifest.gameSeatIds가 실제로 이 경기(gameId) 소속인지 재확인한다.
 if ($gameSeatIds.Count -gt 0) {
     $gameSeatIdList = $gameSeatIds -join ','
-    $actualSeatCount = int FROM game_seats WHERE game_id = $gameId AND id IN ($gameSeatIdList);")
+    $actualSeatCount = [int](Invoke-PerformanceMySql -Scalar -Sql "SELECT COUNT(*) FROM game_seats WHERE game_id = $gameId AND id IN ($gameSeatIdList);")
     if ($actualSeatCount -ne $gameSeatIds.Count) {
         throw "manifest의 gameSeatIds 중 일부가 이 경기($gameId) 소속이 아닙니다. 삭제하지 않습니다."
     }
