@@ -193,6 +193,11 @@ Invoke-PerformanceMySql -Sql "UPDATE users SET status = 'ACTIVE', is_verified = 
 # 4. 입장 토큰(admission_tokens)을 SQL로 직접 시딩
 # 대기열 SSE 흐름은 측정 범위 밖이다.
 # 좌석 선점은 검증만 하고 소비하지 않으므로 만료 시각을 측정 시간보다 충분히 길게 잡아 회차 반복에도 재사용 가능하게 한다.
+#
+# 주의(회차 반복 시):
+# 이 토큰은 발급 후 TestDurationMinutes(기본 60분)가 지나면 AdmissionTokenService.expireIfNeeded()에 의해 ACTIVE → EXPIRED로 전환되어 이후 회차에서 재사용할 수 없다.
+# 02-reset-performance.ps1은 admission_tokens를 건드리지 않으므로 (reservation_seats·reservations·game_seats만 초기화),
+# 60분을 넘겨 반복 측정해야 하면 02-reset이 아니라 이 스크립트를 다시 실행해 새 토큰을 발급받아야 한다.
 Write-Host "[4/5] 입장 토큰(admission_tokens)을 유저별로 발급합니다."
 Invoke-PerformanceMySql -Sql @"
 INSERT INTO admission_tokens (game_id, user_id, token, status, issued_at, expires_at, seat_browsing_expires_at)
