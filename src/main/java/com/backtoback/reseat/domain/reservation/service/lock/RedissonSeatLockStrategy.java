@@ -7,6 +7,7 @@ import java.util.function.Supplier;
 
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 import com.backtoback.reseat.domain.reservation.exception.LockFailedException;
@@ -22,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
+@Primary
 @RequiredArgsConstructor
 public class RedissonSeatLockStrategy implements SeatLockStrategy {
 
