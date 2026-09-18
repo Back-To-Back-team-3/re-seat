@@ -121,8 +121,9 @@ public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
      * 경기 좌석에 비관적 쓰기 락(SELECT ... FOR UPDATE)을 걸고 단건 조회한다.
      * <p>
      * 락 대기 타임아웃(3초)은 {@code RedissonSeatLockStrategy.WAIT_SECONDS}와 동일하게 맞춰 락 전략 3종 비교 실험 조건을 통일한다.
-     * 타임아웃 초과 시 {@link jakarta.persistence.PessimisticLockException}이 발생하며,
-     * 호출부({@code PessimisticLockStrategy})에서 {@code LockFailedException}으로 변환한다.
+     * 타임아웃 초과 시 Spring Data JPA 리포지토리 프록시가 {@link jakarta.persistence.LockTimeoutException}을
+     * {@link org.springframework.dao.PessimisticLockingFailureException}으로 번역해 던지며,
+     * 호출부({@code PessimisticLockStrategy})에서 이를 {@code LockFailedException}으로 변환한다.
      *
      * @param id 경기 좌석 ID
      * @return 락이 걸린 경기 좌석 (없으면 empty)

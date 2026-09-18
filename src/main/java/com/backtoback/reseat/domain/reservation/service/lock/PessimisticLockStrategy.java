@@ -3,6 +3,7 @@ package com.backtoback.reseat.domain.reservation.service.lock;
 import java.util.List;
 import java.util.function.Supplier;
 
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -10,7 +11,6 @@ import com.backtoback.reseat.domain.reservation.exception.LockFailedException;
 import com.backtoback.reseat.domain.seatinventory.exception.GameSeatNotFoundException;
 import com.backtoback.reseat.domain.seatinventory.repository.GameSeatRepository;
 
-import jakarta.persistence.PessimisticLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -40,7 +40,9 @@ public class PessimisticLockStrategy implements SeatLockStrategy {
                 gameSeatRepository.findByIdWithPessimisticLock(id).orElseThrow(GameSeatNotFoundException::new);
             }
             return action.get();
-        } catch (PessimisticLockException e) {
+        } catch (PessimisticLockingFailureException e) {
+            // Spring Data JPA 리포지토리 프록시가 jakarta.persistence.PessimisticLockException·LockTimeoutException을
+            // 이 타입(및 하위 타입 CannotAcquireLockException)으로 이미 번역한 뒤 여기로 전달한다.
             log.warn("좌석 비관적 락 획득 실패 - gameSeatIds: {}", sortedIds);
             throw new LockFailedException();
         }
