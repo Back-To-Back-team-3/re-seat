@@ -36,6 +36,15 @@ const GAME_ID = __ENV.GAME_ID; // manifest.testGameId
 // 쓰지 않고, manifest.gameSeatIds 중 하나를 대상 좌석으로 명시적으로 지정받는다.
 const TARGET_SEAT_ID = __ENV.TARGET_SEAT_ID;
 
+// 이 실행이 어느 락 전략으로 기동된 서버를 대상으로 하는지 라벨링한다.
+// 서버 설정을 바꾸지 않는다 — 실제 전략 전환은 앱 재기동(04-run-strategy-matrix.ps1)이 담당한다.
+const LOCK_STRATEGY = __ENV.LOCK_STRATEGY;
+const ALLOWED_STRATEGIES = ['distributed', 'pessimistic', 'optimistic'];
+if (!ALLOWED_STRATEGIES.includes(LOCK_STRATEGY)) {
+    // 오타 라벨로 측정 결과 전체를 오독하는 사고를 기동 즉시 차단한다.
+    throw new Error(`LOCK_STRATEGY 값이 올바르지 않습니다: '${LOCK_STRATEGY}'. 허용값: ${ALLOWED_STRATEGIES.join(', ')}`);
+}
+
 export const options = {
     scenarios: {
         same_seat_race: {
@@ -80,7 +89,7 @@ export default function () {
     );
 
     // 종단(end-to-end) 응답 시간 — Queue-Token 검증부터 DB 트랜잭션 커밋까지 전체 구간.
-    seatHoldDuration.add(res.timings.duration);
+    seatHoldDuration.add(res.timings.duration, {lock_strategy: LOCK_STRATEGY});
 
     // res.json()은 응답이 JSON이 아니면 예외를 던져 iteration 자체가 중단된다.
     // 이러면 가장 심각한 장애가 hold_unexpected_error에 잡히지 않고 조용히 사라지므로 try/catch로 감싼다.

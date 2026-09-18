@@ -36,6 +36,15 @@ const POPULAR_SEAT_IDS = __ENV.POPULAR_SEAT_IDS.split(',').map(Number);
 // 동일한 그룹에 속해, 우연한 그룹 배정 차이로 결과가 흔들리는 것을 방지한다(시나리오 B와 동일 원칙).
 const POPULAR_GROUP_RATIO = 0.2;
 
+// 이 실행이 어느 락 전략으로 기동된 서버를 대상으로 하는지 라벨링한다.
+// 서버 설정을 바꾸지 않는다 — 실제 전략 전환은 앱 재기동(04-run-strategy-matrix.ps1)이 담당한다.
+const LOCK_STRATEGY = __ENV.LOCK_STRATEGY;
+const ALLOWED_STRATEGIES = ['distributed', 'pessimistic', 'optimistic'];
+if (!ALLOWED_STRATEGIES.includes(LOCK_STRATEGY)) {
+    // 오타 라벨로 측정 결과 전체를 오독하는 사고를 기동 즉시 차단한다.
+    throw new Error(`LOCK_STRATEGY 값이 올바르지 않습니다: '${LOCK_STRATEGY}'. 허용값: ${ALLOWED_STRATEGIES.join(', ')}`);
+}
+
 export const options = {
     scenarios: {
         mixed_load: {
@@ -81,8 +90,9 @@ export default function () {
         }
     );
 
-    // 풀별로 태깅해서 Grafana에서 인기/일반 지연시간을 분리 관찰한다.
-    seatHoldDuration.add(res.timings.duration, {seat_pool: pool});
+    // 기존 seat_pool 태그(popular/general)가 있는 4곳은 lock_strategy를 병합하고,
+    // 태그가 전혀 없던 나머지 4곳(holdUserNotVerified 등)은 lock_strategy만 신규로 붙인다.
+    seatHoldDuration.add(res.timings.duration, {seat_pool: pool, lock_strategy: LOCK_STRATEGY});
 
     // res.json()은 응답이 JSON이 아니면 예외를 던져 iteration 자체가 중단된다.
     // 이러면 가장 심각한 장애가 hold_unexpected_error에 잡히지 않고 조용히 사라지므로 try/catch로 감싼다.
@@ -96,20 +106,20 @@ export default function () {
     }
 
     if (res.status === 201) {
-        holdSuccess.add(1, {seat_pool: pool});
+        holdSuccess.add(1, {seat_pool: pool, lock_strategy: LOCK_STRATEGY});
     } else if (res.status === 409 && errorCode === 'SEAT_ALREADY_HELD') {
         // 인기 풀에서는 정상적으로 발생 가능(경합). 일반 풀에서 나오면 배정 겹침을 의심한다.
-        holdSeatAlreadyHeld.add(1, {seat_pool: pool});
+        holdSeatAlreadyHeld.add(1, {seat_pool: pool, lock_strategy: LOCK_STRATEGY});
     } else if (res.status === 409 && errorCode === 'LOCK_FAILED') {
-        holdLockFailed.add(1, {seat_pool: pool});
+        holdLockFailed.add(1, {seat_pool: pool, lock_strategy: LOCK_STRATEGY});
     } else if (res.status === 403 && errorCode === 'USER_NOT_VERIFIED') {
-        holdUserNotVerified.add(1);
+        holdUserNotVerified.add(1, {lock_strategy: LOCK_STRATEGY});
     } else if (res.status === 400 && errorCode === 'MAX_SEAT_COUNT_EXCEEDED') {
-        holdMaxSeatCountExceeded.add(1);
+        holdMaxSeatCountExceeded.add(1, {lock_strategy: LOCK_STRATEGY});
     } else if (res.status === 409 && errorCode === 'HOLD_EXTENSION_LIMIT_EXCEEDED') {
-        holdExtensionLimitExceeded.add(1);
+        holdExtensionLimitExceeded.add(1, {lock_strategy: LOCK_STRATEGY});
     } else {
-        holdUnexpectedError.add(1);
+        holdUnexpectedError.add(1, {lock_strategy: LOCK_STRATEGY});
     }
 
     check(res, {
