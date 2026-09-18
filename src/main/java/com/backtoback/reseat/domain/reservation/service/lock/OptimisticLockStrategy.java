@@ -3,7 +3,7 @@ package com.backtoback.reseat.domain.reservation.service.lock;
 import java.util.List;
 import java.util.function.Supplier;
 
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.stereotype.Component;
 
 import com.backtoback.reseat.domain.reservation.exception.LockFailedException;
@@ -39,12 +39,12 @@ public class OptimisticLockStrategy implements SeatLockStrategy {
         while (true) {
             try {
                 return action.get();
-            } catch (ObjectOptimisticLockingFailureException e) {
+            } catch (ConcurrencyFailureException e) {
                 attempt++;
                 meterRegistry.counter(RETRY_METRIC_NAME).increment();
 
                 if (attempt >= MAX_RETRY) {
-                    log.warn("좌석 낙관적 락 재시도 상한 초과 - gameSeatIds: {}", gameSeatIds);
+                    log.warn("좌석 낙관적 락 재시도 상한 초과 - gameSeatIds: {}, 원인: {}", gameSeatIds, e.getClass().getSimpleName());
                     throw new LockFailedException();
                 }
                 sleepWithBackoff(attempt);
