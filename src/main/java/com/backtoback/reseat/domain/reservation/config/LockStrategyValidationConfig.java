@@ -1,5 +1,7 @@
 package com.backtoback.reseat.domain.reservation.config;
 
+import java.util.Locale;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
@@ -23,7 +25,7 @@ public class LockStrategyValidationConfig {
     @PostConstruct
     void validate() {
         try {
-            LockStrategyType.valueOf(lockStrategy.toUpperCase());
+            LockStrategyType.valueOf(lockStrategy.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
             throw new IllegalStateException(
                 "reservation.lock-strategy 설정값이 올바르지 않습니다: '" + lockStrategy
