@@ -7,7 +7,7 @@ import java.util.function.Supplier;
 
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
-import org.springframework.context.annotation.Primary;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import com.backtoback.reseat.domain.reservation.exception.LockFailedException;
@@ -23,7 +23,12 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
-@Primary
+@ConditionalOnProperty(
+    prefix = "reservation",
+    name = "lock-strategy",
+    havingValue = "distributed",
+    matchIfMissing = true
+)
 @RequiredArgsConstructor
 public class RedissonSeatLockStrategy implements SeatLockStrategy {
 

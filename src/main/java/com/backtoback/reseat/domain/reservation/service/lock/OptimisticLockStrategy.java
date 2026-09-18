@@ -3,6 +3,7 @@ package com.backtoback.reseat.domain.reservation.service.lock;
 import java.util.List;
 import java.util.function.Supplier;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +21,12 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
+@ConditionalOnProperty(
+    prefix = "reservation",
+    name = "lock-strategy",
+    havingValue = "distributed",
+    matchIfMissing = true
+)
 @RequiredArgsConstructor
 public class OptimisticLockStrategy implements SeatLockStrategy {
 
