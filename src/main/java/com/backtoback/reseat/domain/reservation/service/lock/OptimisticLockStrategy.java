@@ -24,8 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 @ConditionalOnProperty(
     prefix = "reservation",
     name = "lock-strategy",
-    havingValue = "distributed",
-    matchIfMissing = true
+    havingValue = "optimistic"
 )
 @RequiredArgsConstructor
 public class OptimisticLockStrategy implements SeatLockStrategy {
