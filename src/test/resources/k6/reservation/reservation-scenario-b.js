@@ -30,6 +30,14 @@ const users = new SharedArray('reservation-users', function () {
 
 const GAME_ID = __ENV.GAME_ID; // manifest.testGameId
 
+// 이 실행이 어느 락 전략으로 기동된 서버를 대상으로 하는지 라벨링한다.
+const LOCK_STRATEGY = __ENV.LOCK_STRATEGY;
+const ALLOWED_STRATEGIES = ['distributed', 'pessimistic', 'optimistic'];
+if (!ALLOWED_STRATEGIES.includes(LOCK_STRATEGY)) {
+    // 오타 라벨로 측정 결과 전체를 오독하는 사고를 기동 즉시 차단한다.
+    throw new Error(`LOCK_STRATEGY 값이 올바르지 않습니다: '${LOCK_STRATEGY}'. 허용값: ${ALLOWED_STRATEGIES.join(', ')}`);
+}
+
 export const options = {
     scenarios: {
         different_seat_parallel: {
@@ -71,7 +79,7 @@ export default function () {
         }
     );
 
-    seatHoldDuration.add(res.timings.duration);
+    seatHoldDuration.add(res.timings.duration, {lock_strategy: LOCK_STRATEGY});
 
     // res.json()은 응답이 JSON이 아니면 예외를 던져 iteration 자체가 중단된다.
     // 이러면 가장 심각한 장애가 hold_unexpected_error에 잡히지 않고 조용히 사라지므로 try/catch로 감싼다.

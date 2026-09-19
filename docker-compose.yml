@@ -46,6 +46,8 @@ services:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:19092
       - SEOUL_CITYDATA_BASE_URL=${SEOUL_CITYDATA_BASE_URL:-http://openapi.seoul.go.kr:8088}
       - SEOUL_CITYDATA_API_KEY=${SEOUL_CITYDATA_API_KEY:-sample_key}
+
+      - RESERVATION_LOCK_STRATEGY=${RESERVATION_LOCK_STRATEGY:-distributed}
     depends_on:
       mysql-db:
         condition: service_healthy
