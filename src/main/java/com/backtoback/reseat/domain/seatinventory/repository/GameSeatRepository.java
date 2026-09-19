@@ -2,10 +2,13 @@ package com.backtoback.reseat.domain.seatinventory.repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,6 +16,9 @@ import com.backtoback.reseat.domain.seatinventory.dto.ZoneSummaryResponse;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeat;
 import com.backtoback.reseat.domain.seatinventory.entity.GameSeatStatus;
 import com.backtoback.reseat.domain.stadium.entity.SeatGrade;
+
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.QueryHint;
 
 public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
 
@@ -111,8 +117,26 @@ public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
         @Param("stadiumId") Long stadiumId
     );
 
-    // 이후에 추가 예정:
-    // findByIdWithPessimisticLock(Long id) — @Lock(PESSIMISTIC_WRITE)
+    /**
+     * 경기 좌석에 비관적 쓰기 락(SELECT ... FOR UPDATE)을 걸고 단건 조회한다.
+     * <p>
+     * 락 대기 타임아웃(3초)은 {@code RedissonSeatLockStrategy.WAIT_SECONDS}와 동일하게 맞춰 락 전략 3종 비교 실험 조건을 통일한다.
+     * 타임아웃 초과 시 Spring Data JPA 리포지토리 프록시가 {@link jakarta.persistence.LockTimeoutException}을
+     * {@link org.springframework.dao.PessimisticLockingFailureException}으로 번역해 던지며,
+     * 호출부({@code PessimisticLockStrategy})에서 이를 {@code LockFailedException}으로 변환한다.
+     *
+     * @param id 경기 좌석 ID
+     * @return 락이 걸린 경기 좌석 (없으면 empty)
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @QueryHints(
+        @QueryHint(
+            name = "jakarta.persistence.lock.timeout",
+            value = "3000"
+        )
+    )
+    @Query("select gs from GameSeat gs where gs.id = :id")
+    Optional<GameSeat> findByIdWithPessimisticLock(@Param("id") Long id);
 
     /**
      * 경기의 특정 상태 좌석 수를 집계한다.
