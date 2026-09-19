@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.user.admin.dto.response;
+package com.backtoback.reseat.domain.admin.user.dto.response;
 
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserRole;

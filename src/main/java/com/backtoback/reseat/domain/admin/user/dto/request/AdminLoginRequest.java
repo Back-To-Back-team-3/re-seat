@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.user.admin.dto.request;
+package com.backtoback.reseat.domain.admin.user.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

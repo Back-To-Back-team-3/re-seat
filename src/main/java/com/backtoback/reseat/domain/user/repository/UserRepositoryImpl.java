@@ -10,7 +10,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
-import com.backtoback.reseat.domain.user.admin.dto.request.UserSearchCondition;
+import com.backtoback.reseat.domain.admin.user.dto.request.UserSearchCondition;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserRole;
 import com.backtoback.reseat.domain.user.entity.UserStatus;

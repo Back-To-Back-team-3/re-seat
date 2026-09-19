@@ -1,9 +1,9 @@
-package com.backtoback.reseat.domain.user.admin.controller;
+package com.backtoback.reseat.domain.admin.user.controller;
 
 import org.springframework.http.ResponseEntity;
 
-import com.backtoback.reseat.domain.user.admin.dto.request.AdminLoginRequest;
-import com.backtoback.reseat.domain.user.admin.dto.response.AdminLoginResponse;
+import com.backtoback.reseat.domain.admin.user.dto.request.AdminLoginRequest;
+import com.backtoback.reseat.domain.admin.user.dto.response.AdminLoginResponse;
 import com.backtoback.reseat.global.common.ApiResponse;
 
 import io.swagger.v3.oas.annotations.Operation;

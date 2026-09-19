@@ -19,10 +19,11 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.backtoback.reseat.domain.user.admin.dto.request.AdminUserRoleUpdateRequest;
-import com.backtoback.reseat.domain.user.admin.dto.request.AdminUserStatusUpdateRequest;
-import com.backtoback.reseat.domain.user.admin.dto.response.AdminUserResponse;
-import com.backtoback.reseat.domain.user.admin.service.AdminUserService;
+import com.backtoback.reseat.domain.admin.user.controller.AdminUserController;
+import com.backtoback.reseat.domain.admin.user.dto.request.AdminUserRoleUpdateRequest;
+import com.backtoback.reseat.domain.admin.user.dto.request.AdminUserStatusUpdateRequest;
+import com.backtoback.reseat.domain.admin.user.dto.response.AdminUserResponse;
+import com.backtoback.reseat.domain.admin.user.service.AdminUserService;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserRole;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
