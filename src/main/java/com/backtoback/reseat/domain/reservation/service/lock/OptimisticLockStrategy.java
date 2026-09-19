@@ -23,7 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class OptimisticLockStrategy implements SeatLockStrategy {
 
-    // 재시도 정책: 최대 3회, 지수 백오프(50ms → 100ms → 200ms) — 재시도 폭풍을 완화한다.
+    // 재시도 정책: 최초 시도 1회 + 재시도 2회(총 3회), 지수 백오프(50ms → 100ms) — 재시도 폭풍을 완화한다.
     private static final int MAX_RETRY = 3;
     private static final long BASE_BACKOFF_MS = 50L;
     private static final String RETRY_METRIC_NAME = "optimistic_lock_retry_total";
@@ -41,12 +41,13 @@ public class OptimisticLockStrategy implements SeatLockStrategy {
                 return action.get();
             } catch (ConcurrencyFailureException e) {
                 attempt++;
-                meterRegistry.counter(RETRY_METRIC_NAME).increment();
 
                 if (attempt >= MAX_RETRY) {
                     log.warn("좌석 낙관적 락 재시도 상한 초과 - gameSeatIds: {}, 원인: {}", gameSeatIds, e.getClass().getSimpleName());
                     throw new LockFailedException();
                 }
+
+                meterRegistry.counter(RETRY_METRIC_NAME).increment();
                 sleepWithBackoff(attempt);
             }
         }
@@ -54,7 +55,7 @@ public class OptimisticLockStrategy implements SeatLockStrategy {
 
     private void sleepWithBackoff(int attempt) {
         try {
-            // 지수 백오프: 50ms, 100ms, 200ms
+            // 지수 백오프: 1차 재시도 50ms, 2차 재시도 100ms — MAX_RETRY=3이라 200ms 구간은 발생하지 않는다.
             Thread.sleep(BASE_BACKOFF_MS * (1L << (attempt - 1)));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

@@ -72,4 +72,23 @@ class OptimisticLockStrategyRetryTest {
             .isInstanceOf(LockFailedException.class);
         verify(action, times(3)).get();
     }
+
+    @Test
+    @DisplayName("충돌이 MAX_RETRY(3)회 연속 발생하면 metric은 실제 재시도 횟수(2회)만큼만 증가한다")
+    @SuppressWarnings("unchecked")
+    void should_incrementMetricOnlyOnActualRetries_when_conflictExceedsMaxRetry() {
+        // given
+        SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+        OptimisticLockStrategy strategyWithRealMetric = new OptimisticLockStrategy(meterRegistry);
+        Supplier<String> action = mock(Supplier.class);
+        when(action.get()).thenThrow(new ObjectOptimisticLockingFailureException(Object.class, 1L));
+
+        // when
+        assertThatThrownBy(() -> strategyWithRealMetric.executeWithLocks(List.of(1L), action))
+            .isInstanceOf(LockFailedException.class);
+
+        // then
+        // 총 시도 3회 중 실제 재시도(sleep 발생)는 2회뿐이므로, metric도 2회만 증가해야 한다.
+        assertThat(meterRegistry.counter("optimistic_lock_retry_total").count()).isEqualTo(2.0);
+    }
 }
