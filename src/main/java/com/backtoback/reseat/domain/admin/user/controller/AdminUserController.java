@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.user.admin.controller;
+package com.backtoback.reseat.domain.admin.user.controller;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -13,11 +13,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.backtoback.reseat.domain.user.admin.dto.request.AdminUserRoleUpdateRequest;
-import com.backtoback.reseat.domain.user.admin.dto.request.AdminUserStatusUpdateRequest;
-import com.backtoback.reseat.domain.user.admin.dto.request.UserSearchCondition;
-import com.backtoback.reseat.domain.user.admin.dto.response.AdminUserResponse;
-import com.backtoback.reseat.domain.user.admin.service.AdminUserService;
+import com.backtoback.reseat.domain.admin.user.dto.request.AdminUserRoleUpdateRequest;
+import com.backtoback.reseat.domain.admin.user.dto.request.AdminUserStatusUpdateRequest;
+import com.backtoback.reseat.domain.admin.user.dto.request.UserSearchCondition;
+import com.backtoback.reseat.domain.admin.user.dto.response.AdminUserResponse;
+import com.backtoback.reseat.domain.admin.user.service.AdminUserService;
 import com.backtoback.reseat.global.common.ApiResponse;
 import com.backtoback.reseat.global.common.PageResponse;
 

@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.user.admin.service;
+package com.backtoback.reseat.domain.admin.user.service;
 
 import java.time.Duration;
 
@@ -6,8 +6,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.backtoback.reseat.domain.user.admin.dto.request.AdminLoginRequest;
-import com.backtoback.reseat.domain.user.admin.dto.response.AdminLoginResponse;
+import com.backtoback.reseat.domain.admin.user.dto.request.AdminLoginRequest;
+import com.backtoback.reseat.domain.admin.user.dto.response.AdminLoginResponse;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserRole;
 import com.backtoback.reseat.domain.user.entity.UserStatus;

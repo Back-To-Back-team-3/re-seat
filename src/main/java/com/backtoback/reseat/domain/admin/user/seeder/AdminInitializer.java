@@ -1,4 +1,4 @@
-package com.backtoback.reseat.domain.user.admin.seeder;
+package com.backtoback.reseat.domain.admin.user.seeder;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;

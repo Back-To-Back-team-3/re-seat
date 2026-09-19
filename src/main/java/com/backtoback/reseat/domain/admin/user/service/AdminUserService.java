@@ -1,12 +1,12 @@
-package com.backtoback.reseat.domain.user.admin.service;
+package com.backtoback.reseat.domain.admin.user.service;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.backtoback.reseat.domain.user.admin.dto.request.UserSearchCondition;
-import com.backtoback.reseat.domain.user.admin.dto.response.AdminUserResponse;
+import com.backtoback.reseat.domain.admin.user.dto.request.UserSearchCondition;
+import com.backtoback.reseat.domain.admin.user.dto.response.AdminUserResponse;
 import com.backtoback.reseat.domain.user.entity.User;
 import com.backtoback.reseat.domain.user.entity.UserRole;
 import com.backtoback.reseat.domain.user.entity.UserStatus;
