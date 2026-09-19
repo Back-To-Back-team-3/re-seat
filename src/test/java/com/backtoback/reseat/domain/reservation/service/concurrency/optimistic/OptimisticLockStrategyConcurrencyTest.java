@@ -20,6 +20,7 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 
 import com.backtoback.reseat.domain.game.entity.BookingStatus;
 import com.backtoback.reseat.domain.game.entity.Game;
@@ -73,6 +74,7 @@ import lombok.extern.slf4j.Slf4j;
 )
 @Tag("concurrency")
 @ActiveProfiles("test-concurrency")
+@TestPropertySource(properties = "reservation.lock-strategy=optimistic")
 @SpringBootTest
 class OptimisticLockStrategyConcurrencyTest {
 

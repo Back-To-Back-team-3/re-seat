@@ -3,6 +3,7 @@ package com.backtoback.reseat.domain.reservation.service.lock;
 import java.util.List;
 import java.util.function.Supplier;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,11 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
+@ConditionalOnProperty(
+    prefix = "reservation",
+    name = "lock-strategy",
+    havingValue = "pessimistic"
+)
 @RequiredArgsConstructor
 public class PessimisticLockStrategy implements SeatLockStrategy {
 
