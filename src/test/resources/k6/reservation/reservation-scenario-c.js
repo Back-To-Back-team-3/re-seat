@@ -37,7 +37,6 @@ const POPULAR_SEAT_IDS = __ENV.POPULAR_SEAT_IDS.split(',').map(Number);
 const POPULAR_GROUP_RATIO = 0.2;
 
 // 이 실행이 어느 락 전략으로 기동된 서버를 대상으로 하는지 라벨링한다.
-// 서버 설정을 바꾸지 않는다 — 실제 전략 전환은 앱 재기동(04-run-strategy-matrix.ps1)이 담당한다.
 const LOCK_STRATEGY = __ENV.LOCK_STRATEGY;
 const ALLOWED_STRATEGIES = ['distributed', 'pessimistic', 'optimistic'];
 if (!ALLOWED_STRATEGIES.includes(LOCK_STRATEGY)) {
