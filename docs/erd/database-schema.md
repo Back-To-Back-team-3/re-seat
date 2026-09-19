@@ -764,5 +764,3 @@ MySQL은 partial unique index를 지원하지 않으므로 generated column으�
 > 
 
 ---
-
-end.
