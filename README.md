@@ -158,6 +158,8 @@ Kafka와 Redis를 이용해 경기별 대기열을 운영하고, Redis 임시 �
   <img src="./docs/flows/booking-flow.png" alt="Re:Seat 예매 흐름" width="100%"/>
 </p>
 
+[흐름·상태 다이어그램 상세 보기](./docs/architecture/다이어그램%20v5.md)
+
 ---
 
 <a id="system-architecture"></a>
@@ -168,13 +170,15 @@ Kafka와 Redis를 이용해 경기별 대기열을 운영하고, Redis 임시 �
   <img src="./docs/architecture/system-architecture.png" alt="Re:Seat 시스템 아키텍처" width="100%"/>
 </p>
 
+[시스템 구성도 상세 보기](./docs/architecture/시스템%20구성도.md)
+
 ---
 
 <a id="erd"></a>
 
 ## 🗃️ ERD
 
-[DB 구성 보기](docs/erd/DB%20구성.md)
+[DB 구성 보기](./docs/erd/도메인%20및%20데이터베이스%20설계%20v5.0.md)
 
 <img src="docs/erd/reseat-erd.png" alt="Re:Seat ERD" width="100%"/>
 
@@ -186,7 +190,7 @@ Kafka와 Redis를 이용해 경기별 대기열을 운영하고, Redis 임시 �
 
 ## 📖 API 명세서
 
-[API 명세서 보기](./docs/api/API%20명세서.md)
+[API 명세서 보기](./docs/api/API%20명세서%20v5.0.md)
 
 ---
 
@@ -284,6 +288,8 @@ Kafka와 Redis를 이용해 경기별 대기열을 운영하고, Redis 임시 �
 - `main` 반영 시 Docker 이미지를 `latest`와 commit SHA 태그로 게시하고 AWS EC2에 배포합니다.
 - k6 스크립트로 대기열 진입과 결제 생성 흐름의 부하를 측정합니다.
 
+[예매·대기열·결제 상태 정책 상세 보기](./docs/policy/정책%20및%20상태.md)
+
 ---
 
 <a id="project-structure"></a>
@@ -319,7 +325,7 @@ re-seat
 │   ├── hooks                                   # 공통 훅
 │   ├── stores                                  # 클라이언트 상태 관리
 │   └── test                                    # 프론트엔드 테스트 지원
-├── docs/readme                                 # README 예매 흐름·아키텍처 이미지
+├── docs                                       # 프로젝트 문서·설계 자료·발표 자료
 ├── scripts
 │   ├── demo-data                               # 시연 데이터 준비
 │   └── load-test                               # k6 부하 테스트와 준비 스크립트
@@ -453,6 +459,9 @@ npm run build
 
 - [3차 프로젝트 발표 자료 보기](./docs/presentation/reseat-3rd-presentation.pdf)
 - [3차 프로젝트 발표 자료 원본](./docs/presentation/reseat-3rd-presentation.pptx)
+- [기획서 v5.0](./docs/planning/기획서%20v5.0.md)
+- [스케줄러](./docs/architecture/스케줄러.md)
+- [Git/GitHub 메뉴얼](./docs/guides/Git%20GitHub%20메뉴얼.md)
 - [Next.js 프론트엔드 실행 안내](https://github.com/Back-To-Back-team-3/re-seat/blob/main/frontend-next/README.md)
 - [GitHub Actions CI](https://github.com/Back-To-Back-team-3/re-seat/blob/main/.github/workflows/ci.yml)
 - [GitHub Actions CD](https://github.com/Back-To-Back-team-3/re-seat/blob/main/.github/workflows/cd.yml)

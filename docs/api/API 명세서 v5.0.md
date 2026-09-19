@@ -1,4 +1,7 @@
-# API 명세서
+# API 명세서 v5.0
+
+> 수정일: 2026.09.15
+> 
 
 ## 0. 공통 규약
 
@@ -10,8 +13,7 @@
 | 인증 방식 | `Authorization: Bearer {accessToken}` (JWT) |
 | 좌석 선점 추가 인증 | `Queue-Token: {입장 토큰}` 헤더 필수 |
 | Content-Type | `application/json; charset=UTF-8` |
-| 날짜 형식 | ISO-8601 `yyyy-MM-dd HH:mm:ss` 
-(서비스·DB·API 전 구간 `Asia/Seoul` 통일, DB는 `DATETIME(6)`) |
+| 날짜 형식 | ISO-8601 `yyyy-MM-dd HH:mm:ss`<br>(서비스·DB·API 전 구간 `Asia/Seoul` 통일, DB는 `DATETIME(6)`) |
 | 페이지네이션 | `?page=0&size=20` (Offset 기반, 0-based) |
 | 정렬 | `?sort=field,asc` / `?sort=field,desc` |
 
@@ -83,7 +85,7 @@
 
 ### 0.4 에러 코드 표
 
-[04. 에러 코드 표](https://app.notion.com/p/04-b2aac7091a7482428f8d01d8af2e7a61?pvs=21)
+[04. 에러 코드 표](04%20에러%20코드%20표.md)
 
 ### 0.5 상태값 요약
 
@@ -108,9 +110,7 @@
 | 회원가입/로그인/토큰 재발급 | 불필요 |  |
 | 경기 목록/상세 조회 | 불필요 | 공개  |
 | 대기열/주문/결제/티켓 | JWT 필요 |  |
-| 좌석 조회·선점(HOLD) | JWT + Queue-Token 
-+ 본인인증(`is_verified=true`) | 입장 토큰 검증(대기열 우회 차단)
-+ 예매 게이트 |
+| 좌석 조회·선점(HOLD) | JWT + Queue-Token<br>+ 본인인증(`is_verified=true`) | 입장 토큰 검증(대기열 우회 차단)<br>+ 예매 게이트 |
 | 관리자(기준 데이터·경기·좌석 오픈) | JWT + role=ADMIN |  |
 | 구장 혼잡도 조회 | 불필요 | 공개, 비로그인 허용 |
 
@@ -1686,7 +1686,7 @@
 
 ## 9. 관리자 (admin)
 
-[9. 관리자 (admin) 페이지 API](https://app.notion.com/p/9-admin-API-d20ac7091a74835887788151d05563c3?pvs=21)
+[9. 관리자 (admin) 페이지 API](9%20관리자%20(admin)%20페이지%20API.md)
 
 ---
 
@@ -1799,21 +1799,15 @@
 | 주문 취소 | HELD→AVAILABLE | HOLDING→CANCELED | CREATED→CANCELED | - | - | - | #6.3 |
 | 결제 요청 | HELD | HOLDING | CREATED | (생성) READY | - | - | #7.1 |
 | 결제 성공 | HELD→SOLD | HOLDING→CONFIRMED | CREATED→PAID | READY→APPROVED | - | (발급) ISSUED | #7.2 |
-| 결제 실패 Case1
-(수단오류) | HELD 유지 | HOLDING 유지 | CREATED 유지 | READY→FAILED | - | - | #7.3 |
+| 결제 실패 Case1<br>(수단오류) | HELD 유지 | HOLDING 유지 | CREATED 유지 | READY→FAILED | - | - | #7.3 |
 | 결제 실패 Case2 |  |  |  |  |  |  |  |
 | (타임아웃/장애) | HELD→AVAILABLE | HOLDING→CANCELED | CREATED→CANCELED | READY→FAILED | - | - | #7.3 |
 | 환불 요청 접수 | SOLD 유지 | CONFIRMED 유지 | PAID 유지 | APPROVED 유지 | (생성) PENDING | ISSUED→REFUND_PENDING | #8.3 |
-| 환불 성공
-(2석 중 1석) | SOLD→AVAILABLE | CONFIRMED 유지 | PAID→PARTIALLY_CANCELED | APPROVED→PARTIALLY_CANCELED | PENDING→DONE | REFUND_PENDING→REFUNDED | #8.3(비동기) |
-| 환불 성공
-(전액·마지막 1석) | SOLD→AVAILABLE | CONFIRMED 유지 | PARTIALLY_CANCELED→CANCELED
-또는 PAID→CANCELED | PARTIALLY_CANCELED→CANCELED
-또는 APPROVED→CANCELED | PENDING→DONE | REFUND_PENDING→REFUNDED | #8.3(비동기) |
+| 환불 성공<br>(2석 중 1석) | SOLD→AVAILABLE | CONFIRMED 유지 | PAID→PARTIALLY_CANCELED | APPROVED→PARTIALLY_CANCELED | PENDING→DONE | REFUND_PENDING→REFUNDED | #8.3(비동기) |
+| 환불 성공<br>(전액·마지막 1석) | SOLD→AVAILABLE | CONFIRMED 유지 | PARTIALLY_CANCELED→CANCELED<br>또는 PAID→CANCELED | PARTIALLY_CANCELED→CANCELED<br>또는 APPROVED→CANCELED | PENDING→DONE | REFUND_PENDING→REFUNDED | #8.3(비동기) |
 | 환불 실패 | SOLD 유지 | CONFIRMED 유지 | 유지 | 유지 | PENDING→FAILED | REFUND_PENDING→REFUND_FAILED | #8.3(비동기) |
 | 환불 재시도 | - | - | - | - | FAILED→PENDING | REFUND_FAILED→REFUND_PENDING | #8.4 |
-| PENDING 복구 | DONE 시 전이
-(SOLD→AVAILABLE) | CONFIRMED 유지 | (DONE 시 전이) | (DONE 시 전이) | PENDING→DONE/FAILED | (DONE 시 REFUNDED) | (스케줄러) |
+| PENDING 복구 | DONE 시 전이<br>(SOLD→AVAILABLE) | CONFIRMED 유지 | (DONE 시 전이) | (DONE 시 전이) | PENDING→DONE/FAILED | (DONE 시 REFUNDED) | (스케줄러) |
 | 입장 검증 | SOLD | CONFIRMED | PAID | APPROVED | - | ISSUED→USED_ENTERED | #8.5 |
 | 미입장 자동 처리 | SOLD | CONFIRMED | PAID | APPROVED | - | ISSUED→USED_NO_SHOW | (스케줄러) |
 
@@ -1838,3 +1832,5 @@
 - §9.25(관리자 전용 좌석 그리드 조회)는 좌석 조회 목적상 §4.1과 로직을 공유하지만, 관리자는 대기열을 거치지 않으므로 Queue-Token을 요구하지 않는다(위 표의 #9 관리자 행과 동일하게 Queue-Token 불필요).
 
 ---
+
+end.
